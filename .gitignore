@@ -1,0 +1,52 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# env — never commit secrets
+.env
+.env.local
+.env*.local
+
+# database — lives outside /public, never committed
+/data/
+
+# uploads (user content)
+/public/uploads/
+
+# misc
+.DS_Store
+._*
+*.pem
+npm-debug.log*
+*.tsbuildinfo
+next-env.d.ts
+
+# AI tooling — plans, claude, ai assistants & superpowers scratch (not version-controlled)
+.superpowers/
+docs/superpowers/
+docs/CLAUDE.md
+CLAUDE.md
+.claude/
+.ai/
+
+# vendored Chrome for local browser testing — 356MB incl. a 232MB binary,
+# far over GitHub's 100MB per-file limit. Never commit it.
+/chrome/
+
+# Deployment kit belonging to the OTHER storefront on the shared VPS. Kept on
+# disk for reference; never published from this repo. Its scripts hardcode
+# that app's paths, service name and certbot cert, so running one from here
+# would edit the wrong site.
+/deploy/QUICKSTART.md
+/deploy/nginx/shifa.conf
+/deploy/systemd/
+/deploy/scripts/deploy.sh
+/deploy/scripts/backup.sh
+/deploy/scripts/add-domain.sh
+/deploy/scripts/provision-base.sh

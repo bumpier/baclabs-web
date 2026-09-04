@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────
+# BacLab storefront — second tenant on a shared VPS.
+#
+# ISOLATION FROM THE OTHER APP ON THIS BOX (do not break these):
+#   · Host port 3001; the existing app's service holds 3000.
+#   · Container/image names are all `baclab`.
+#   · Its own SQLite file under ./data.
+#   · The ONLY shared component is the host's nginx, which routes on
+#     server_name. Nothing here touches the other app's unit, config or cert.
+#
+# Run it with the env file explicit, ALWAYS:
+#     docker compose --env-file .env.local up -d --build
+# Compose substitutes ${...} below from its --env-file (default `.env`,
+# which does not hold these keys). Omit the flag and the client bundle is
+# built against the fallback origin instead of the real domain.
+# ─────────────────────────────────────────────────────────────────────
+
+services:
+  baclab:
+    build:
+      context: .
+      args:
+        # Build-time, because NEXT_PUBLIC_* is inlined into the client
+        # bundle. Change any of these and you must rebuild, not restart.
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?set NEXT_PUBLIC_SITE_URL in .env.local}
+        NEXT_PUBLIC_SALE_PREVIEW: ${NEXT_PUBLIC_SALE_PREVIEW:-false}
+        NEXT_PUBLIC_META_PIXEL_ID: ${NEXT_PUBLIC_META_PIXEL_ID:-}
+        NEXT_PUBLIC_GA4_ID: ${NEXT_PUBLIC_GA4_ID:-}
+    image: baclab-storefront
+    container_name: baclab
+    restart: unless-stopped
+
+    # Runtime secrets: Stripe keys, JWT_SECRET, ADMIN_PASSWORD, RESEND_API_KEY.
+    # Never baked into the image — see .dockerignore.
+    env_file: .env.local
+
+    environment:
+      # ABSOLUTE, deliberately. A relative `file:../data/…` is resolved from
+      # the schema directory by the Prisma client but from the process CWD by
+      # the schema engine that runs migrations — so the app would connect and
+      # `migrate deploy` would fail with "unable to open database file".
+      # An absolute path is read identically by both. Points at the bind
+      # mount below; set here, not in .env.local, so the container path can
+      # never drift from the mount.
+      DATABASE_URL: "file:/app/data/baclab.db"
+
+    # LOOPBACK ONLY. nginx is the sole public entry point, the same invariant
+    # the existing app holds. Never publish this on 0.0.0.0 — ufw allows 80/443,
+    # but a 0.0.0.0 bind lets Docker's own iptables rules bypass ufw entirely.
+    ports:
+      - "127.0.0.1:3001:3000"
+
+    volumes:
+      - ./data:/app/data
+
+    healthcheck:
+      # Any answer below 500 means Next is serving; a redirect is still healthy.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      # Without a cap, a busy container's JSON log grows until the disk fills —
+      # which would take the other app down too, on a shared box.
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"

@@ -1,0 +1,633 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* v4 auto-detects sources from the importing file's directory. `config/`
+   holds class strings (badge labels, chip text) that would otherwise be
+   dropped from the build. */
+@source "../config";
+@source "../components";
+@source "../app";
+
+/* ──────────────────────────────────────────────────────────────────────
+   THE PALETTE
+   Values live in lib/theme.ts and are injected onto <html> as custom
+   properties, so a white-label swap needs no rebuild. `@theme` (NOT
+   `@theme inline`) is deliberate: it keeps the var() indirection at
+   runtime, so an inline override on <html> still wins. `@theme inline`
+   would flatten these at parse time and break that.
+   ────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Grounds */
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-neutral: var(--neutral);
+  --color-abyss: var(--abyss);
+
+  /* Text and rules */
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  /* Structure. Links, icons, focus rings. Aliases of primary. */
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-tint: var(--brand-tint);
+
+  /* Calls to action. Same blue as primary — with a two-colour palette,
+     restraint comes from how rarely it appears, not from a second hue. */
+  --color-cta: var(--cta);
+  --color-cta-deep: var(--cta-deep);
+  --color-cta-tint: var(--cta-tint);
+
+  /* The product graphic colour. A FIELD colour: 1.82:1 on white, so it
+     never carries text on a light ground. */
+  --color-cyan: var(--cyan);
+  --color-cyan-tint: var(--cyan-tint);
+
+  /* Unconfirmed facts and errors. Magenta, so a TODO marker is never
+     mistaken for a primary control. */
+  --color-warn: var(--warn);
+  --color-warn-line: var(--warn-line);
+  --color-warn-tint: var(--warn-tint);
+
+  /* shadcn semantic tokens, mapped onto the same palette so a shadcn Card
+     and a hand-written panel are the same white with the same hairline. */
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--brand);
+  --color-primary-deep: var(--brand-deep);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--neutral);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--neutral);
+  --color-muted-foreground: var(--ink-soft);
+  --color-accent: var(--brand-tint);
+  --color-accent-foreground: var(--brand);
+  --color-destructive: var(--warn);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--line);
+  --color-input: var(--line-strong);
+  --color-ring: var(--brand);
+
+  /* Type. Inter carries `tnum` and `zero`, which is what makes .tabular
+     work; Schibsted Grotesk holds its nerve at 96px. */
+  --font-sans: var(--font-body), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-display-face), "Helvetica Neue", Arial, sans-serif;
+
+  /* Modular scale, base 16px, ~1.25, extended upward for the hero. Display
+     sizes get tighter leading and negative tracking. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.15rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.35rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.6rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.85rem;
+  --text-xl--letter-spacing: -0.01em;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 2.1rem;
+  --text-2xl--letter-spacing: -0.018em;
+  --text-3xl: 2.125rem;
+  --text-3xl--line-height: 2.35rem;
+  --text-3xl--letter-spacing: -0.022em;
+  --text-4xl: 2.75rem;
+  --text-4xl--line-height: 2.9rem;
+  --text-4xl--letter-spacing: -0.026em;
+  --text-5xl: 3.5rem;
+  --text-5xl--line-height: 3.5rem;
+  --text-5xl--letter-spacing: -0.03em;
+  --text-6xl: 4.5rem;
+  --text-6xl--line-height: 4.3rem;
+  --text-6xl--letter-spacing: -0.034em;
+  --text-7xl: 5.75rem;
+  --text-7xl--line-height: 5.4rem;
+  --text-7xl--letter-spacing: -0.038em;
+  --text-8xl: 7.5rem;
+  --text-8xl--line-height: 6.9rem;
+  --text-8xl--letter-spacing: -0.042em;
+
+  /* Radii carry hierarchy: colour fields largest, panels down, controls
+     down again, hairline-separated content none at all. */
+  --radius-control: 0.625rem;
+  --radius-panel: 1rem;
+  --radius-field: 1.75rem;
+
+  /* Elevation is rare. The purchase panel, the sticky bar, and the
+     floating hero chips — that is all. */
+  --shadow-panel:
+    0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent),
+    0 16px 40px -20px color-mix(in srgb, var(--ink) 22%, transparent);
+  --shadow-bar:
+    0 -1px 0 var(--line),
+    0 -8px 24px -12px color-mix(in srgb, var(--ink) 16%, transparent);
+  --shadow-lift:
+    0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent),
+    0 10px 24px -12px color-mix(in srgb, var(--ink) 28%, transparent);
+
+  /* Reading measure. Body copy never exceeds this. */
+  --container-measure: 65ch;
+
+  /* The page's ONE piece of non-user-triggered motion: the hero settling
+     on load. Nothing else animates on its own. */
+  --animate-rise: rise 620ms var(--ease-out) both;
+  --animate-drift-in: driftIn 720ms var(--ease-out) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes driftIn {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 16px, 0) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+  /* What both of the above collapse to under `prefers-reduced-motion`. The
+     arrival is still explained; only the travel is gone. */
+  @keyframes settleIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    /* The storefront is a single light theme. Declaring it means the UA paints
+       form controls, scrollbars and the canvas to match, instead of deciding
+       from the OS setting and handing a dark <select> to a light page. */
+    color-scheme: light;
+
+    /* Emil Kowalski's curves: the built-in CSS easings are too weak to read
+       as intentional. ease-in is never used — it delays the first frame,
+       which is exactly the frame the user is watching. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  }
+
+  /* v4 defaults borders and dividers to currentColor. This storefront is
+     built on a hairline system, so restore an explicit default. */
+  *,
+  ::after,
+  ::before {
+    border-color: var(--color-line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* The sticky header must not cover the anchor it scrolls to. */
+    scroll-padding-top: 5.5rem;
+  }
+
+  body {
+    @apply bg-paper text-ink antialiased;
+    /* Inter stylistic alternates: single-storey a, straight-tailed l. */
+    font-feature-settings: "ss01" on, "cv11" on;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-bold text-ink;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    @apply bg-primary text-white;
+  }
+
+  /* One visible focus treatment for everything, so keyboard users never
+     lose their place. Primary blue measures 6.28:1 on white, so the ring
+     is unmistakable on every surface the storefront uses. */
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-brand;
+  }
+
+  /* Primary blue measures 3.11:1 on `abyss` — a pass with nothing to spare.
+     White measures 19.55:1, so the dark band gets a white ring instead. */
+  .bg-abyss :focus-visible,
+  footer :focus-visible {
+    @apply outline-white;
+  }
+}
+
+@layer components {
+  /* Every figure that is a MEASUREMENT gets tabular figures and a slashed
+     zero — prices, volumes, quantities, totals. This is the technical
+     signal on this page; there is no monospace face.
+     TWO PLACES IT DOES NOT BELONG:
+       1. Prose that merely contains a number.
+       2. Display-size figures (text-3xl and up). Tabular spacing gives the
+          decimal point a full digit advance, so "0.9%" sets as "0 . 9%" at
+          72px. Alignment is the entire point of tnum, and a standalone
+          headline figure has no column to align to. */
+  .tabular {
+    font-variant-numeric: tabular-nums slashed-zero;
+    font-feature-settings: "tnum" 1, "zero" 1, "ss01" on, "cv11" on;
+  }
+
+  .measure {
+    @apply max-w-measure;
+  }
+
+  /* ── Action ─────────────────────────────────────────────────────
+     Solid primary blue, white text: 6.28:1. Hover deepens to 9.11:1, so
+     contrast only ever improves. Primary is also the link colour — with a
+     two-colour palette, restraint comes from how RARELY it appears, not
+     from reserving a second hue for buttons. */
+  .btn-cta {
+    @apply inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-control
+      bg-primary px-7 text-base font-semibold text-white
+      transition-[background-color,transform] duration-150;
+    transition-timing-function: var(--ease-out);
+  }
+  .btn-cta:active {
+    /* Instant confirmation the interface heard the press. */
+    transform: scale(0.985);
+  }
+  .btn-cta:disabled {
+    @apply cursor-not-allowed opacity-60;
+    transform: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-cta:not(:disabled):hover {
+      @apply bg-primary-deep;
+    }
+  }
+
+  /* ── Everything else. Never the accent colour. ─────────────────── */
+  .btn-quiet {
+    @apply inline-flex min-h-[52px] items-center justify-center gap-2 rounded-control
+      border border-line-strong/50 bg-surface px-6 text-sm font-semibold text-ink
+      transition-[background-color,border-color,transform] duration-150;
+    transition-timing-function: var(--ease-out);
+  }
+  .btn-quiet:active {
+    transform: scale(0.985);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-quiet:hover {
+      @apply border-brand/40 bg-brand-tint;
+    }
+  }
+
+  /* Quiet button sitting ON a dark band. */
+  .btn-onDark {
+    @apply inline-flex min-h-[52px] items-center justify-center gap-2 rounded-control
+      border border-white/25 bg-transparent px-6 text-sm font-semibold text-white
+      transition-[background-color,border-color] duration-150;
+    transition-timing-function: var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-onDark:hover {
+      @apply border-white/50 bg-white/10;
+    }
+  }
+
+  .link {
+    @apply font-medium text-brand underline decoration-brand/30 underline-offset-4
+      transition-colors duration-150 hover:decoration-brand;
+  }
+
+  .field {
+    @apply w-full rounded-control border border-line-strong/60 bg-surface px-4 py-3 text-base text-ink
+      placeholder:text-ink-soft/60 focus:border-brand focus:outline-none
+      focus:ring-2 focus:ring-brand/20 disabled:bg-paper;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink;
+  }
+
+  /* ── Messages ───────────────────────────────────────────────────
+     ONE appearance for "this went wrong", used by the purchase block, the
+     crypto checkout and the server-action forms. They used to be three:
+     `warn` tokens in the funnel and raw red-50/red-700 in the other two,
+     which meant a theme swap restyled one error and not the others.
+     `warn` on `warn-tint` measures 9.00:1. */
+  .alert-error {
+    @apply rounded-control border border-warn-line bg-warn-tint px-3 py-2 text-sm text-warn;
+  }
+
+  /* A neutral notice — a cancelled payment, a saved change. Never red: a
+     cancelled payment is information, not a failure. 8.59:1. */
+  .alert-note {
+    @apply rounded-control border border-brand/20 bg-brand-tint px-3 py-2 text-sm text-brand-deep;
+  }
+
+  /* The purchase panel — the one elevated surface in the buy section. */
+  .panel {
+    @apply rounded-panel border border-line bg-surface shadow-panel;
+  }
+
+  /* One card surface. The page used to carry three tinted grounds; it now
+     carries white and this. Fewer colours, and the eye has one thing to
+     learn instead of three. */
+  .surface-card {
+    @apply rounded-panel border border-line bg-neutral;
+  }
+
+  /* A stated fact, as a chip. Used for the floating hero specs and the
+     inline product attributes. Never interactive — if it can be clicked
+     it is a button, not a chip. */
+  .chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-line
+      bg-surface px-3.5 py-2 text-sm font-medium text-ink;
+  }
+  .chip-onDark {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/15
+      bg-white/5 px-3.5 py-2 text-sm font-medium text-white/80;
+  }
+
+  /* The graduation rule: a hairline carrying measurement ticks, borrowed
+     from a graduated cylinder. It is the page's section divider AND its
+     one recurring ornament — chosen because this product is sold by
+     volume, so a measuring mark is information, not decoration. */
+  .grad-rule {
+    @apply relative h-px w-full bg-line;
+  }
+  .grad-rule::before {
+    content: "";
+    @apply absolute left-0 top-0 h-2 w-full;
+    background-image: repeating-linear-gradient(
+      to right,
+      var(--line) 0 1px,
+      transparent 1px 40px
+    );
+  }
+
+  /* ── Admin-only primitives ─────────────────────────────────────
+     The /admin panel is an internal tool, not the storefront, and keeps
+     its original component vocabulary. These are built on `brand`, never
+     on `cta` — the accent stays exclusive to storefront calls to action. */
+  .eyebrow {
+    @apply text-2xs font-semibold uppercase tracking-[0.18em] text-brand;
+  }
+
+  .card {
+    @apply rounded-panel border border-line bg-surface;
+  }
+
+  .btn-primary {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-control
+      bg-brand px-6 py-3 text-sm font-semibold text-white
+      transition-colors duration-150 hover:bg-brand-deep
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-control
+      border border-brand/30 bg-transparent px-6 py-3 text-sm font-semibold text-brand
+      transition-colors duration-150 hover:border-brand hover:bg-brand-tint
+      disabled:opacity-50;
+  }
+
+  .rule {
+    @apply border-t border-line;
+  }
+
+  /* ── Skip link ─────────────────────────────────────────────────
+     Off screen until focused, then a real control pinned over the header.
+     It is the first thing in the tab order on every storefront page. */
+  .skip-link {
+    @apply sr-only;
+  }
+  .skip-link:focus-visible {
+    @apply not-sr-only fixed left-4 top-4 z-50 inline-flex min-h-[44px] items-center
+      rounded-control border border-line bg-surface px-4 text-sm font-semibold text-ink shadow-lift;
+  }
+
+  /* ── Panels that travel ────────────────────────────────────────
+     The mobile navigation sheet and the mobile buy bar. Their open/closed
+     transforms live here rather than in an inline style so the
+     reduced-motion block at the foot of this file can neutralise the
+     TRAVEL without also killing the colour and opacity that explain the
+     state change. */
+  .sheet-drop {
+    @apply grid transition-[grid-template-rows,opacity] duration-200;
+    transition-timing-function: var(--ease-out);
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  .sheet-drop[data-open="true"] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  .sheet-bottom {
+    @apply transition-[opacity,transform] duration-200;
+    transition-timing-function: var(--ease-out);
+    transform: translateY(100%);
+    opacity: 0;
+    visibility: hidden;
+  }
+  .sheet-bottom[data-shown="true"] {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* The header's compact CTA, revealed once the hero's own CTA is gone. The
+     box is always reserved, so revealing it shifts nothing. */
+  .reveal-cta {
+    @apply transition-[opacity,transform] duration-200;
+    transition-timing-function: var(--ease-out);
+    transform: translateY(4px);
+    opacity: 0;
+    visibility: hidden;
+  }
+  .reveal-cta[data-shown="true"] {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+  /* ── Legal prose ────────────────────────────────────────────────
+     The policy pages are the only long-form body copy on the site, so they
+     get their own type scale rather than each page repeating the same six
+     utility strings on every paragraph and list. Kept narrow via `.measure`
+     so a clause is still readable at desktop width. */
+  .prose-legal {
+    @apply max-w-measure text-sm leading-relaxed text-ink-soft;
+  }
+  .prose-legal p + p,
+  .prose-legal ul,
+  .prose-legal ol,
+  .prose-legal dl,
+  .prose-legal h3 {
+    @apply mt-4;
+  }
+  .prose-legal h3 {
+    @apply text-sm font-semibold text-ink;
+  }
+  /* NOTE: `space-y-*` cannot be used here. Tailwind v4 expands it to
+     `& > :not(:last-child)`, and nesting that inside a descendant selector
+     emits a malformed rule the browser discards. Space the items directly. */
+  .prose-legal ul {
+    @apply list-disc pl-5 marker:text-ink-soft/50;
+  }
+  .prose-legal ol {
+    @apply list-[lower-alpha] pl-5 marker:text-ink-soft/50;
+  }
+  .prose-legal li + li {
+    @apply mt-2;
+  }
+  .prose-legal dt {
+    @apply font-medium text-ink;
+  }
+  .prose-legal dd + dt {
+    @apply mt-3;
+  }
+  .prose-legal strong {
+    @apply font-semibold text-ink;
+  }
+  .prose-legal a {
+    @apply font-medium text-brand underline decoration-brand/30 underline-offset-4
+      transition-colors duration-150 hover:decoration-brand;
+  }
+}
+
+@layer utilities {
+  /* The background grid — graph paper, which is the right register for a
+     product sold by measured volume. Masked so it fades out rather than
+     running under the copy at full strength. */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--line) 75%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--line) 75%, transparent) 1px, transparent 1px);
+    background-size: 72px 72px;
+    background-position: center top;
+  }
+  .bg-grid-fade {
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%);
+  }
+
+  /* The page container. Wider than the old max-w-3xl so two- and
+     three-column sections have room to breathe; prose inside still caps
+     at .measure, so line length is unaffected by the wider shell. */
+  .shell {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+  }
+  /* Full-bleed colour bands use this for their inner content. */
+  .shell-wide {
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-8;
+  }
+  .section {
+    @apply mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24;
+  }
+
+  /* Stagger for the hero's load sequence. The ONE orchestrated moment on
+     the page: everything else is triggered by the person, not the clock. */
+  .stagger-1 {
+    animation-delay: 60ms;
+  }
+  .stagger-2 {
+    animation-delay: 140ms;
+  }
+  .stagger-3 {
+    animation-delay: 220ms;
+  }
+  .stagger-4 {
+    animation-delay: 300ms;
+  }
+  .stagger-5 {
+    animation-delay: 380ms;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   REDUCED MOTION
+
+   Fewer and gentler, not zero. The blanket
+   `*{animation-duration:0.01ms;transition-duration:0.01ms}` this file used
+   to carry is the thing it warned against: it removes the 150ms colour
+   change that confirms a press, the dot that confirms a tier, and the panel
+   that confirms an answer opened — none of which is what makes motion
+   uncomfortable. What causes trouble is TRAVEL and SCALE across distance,
+   so that is what comes out.
+
+   Removed here: the hero's rise and drift, its stagger, the navigation
+   sheet's height change, the buy bar's slide, and smooth scrolling.
+   Kept at full duration: colour, opacity, the 1.5% press response, the
+   45° rotation of the FAQ marker, and the selection dot.
+   ────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  /* The one orchestrated moment becomes a single quiet fade, all at once. */
+  .animate-rise,
+  .animate-drift-in {
+    animation-name: settleIn;
+    animation-duration: 240ms;
+  }
+  .stagger-1,
+  .stagger-2,
+  .stagger-3,
+  .stagger-4,
+  .stagger-5 {
+    animation-delay: 0ms !important;
+  }
+
+  /* Panels arrive and leave by opacity alone. */
+  .sheet-bottom,
+  .sheet-bottom[data-shown="true"],
+  .reveal-cta,
+  .reveal-cta[data-shown="true"] {
+    transform: none;
+  }
+  .sheet-drop {
+    transition-property: opacity;
+  }
+
+  /* Anything decorative that loops has no business looping here. */
+  *,
+  *::before,
+  *::after {
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Print styles — packing slips render clean with no chrome */
+@media print {
+  body {
+    background: white !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-area {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

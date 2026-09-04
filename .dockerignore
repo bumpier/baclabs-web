@@ -1,0 +1,23 @@
+# Build context hygiene. node_modules MUST be excluded: it is installed inside
+# the image, and copying the host's would clobber the Linux-native Prisma
+# query engine with whatever the build machine happened to have.
+node_modules
+.next
+.git
+.gitignore
+
+# Secrets never enter an image layer. They arrive at runtime via env_file.
+.env
+.env.local
+.env.*.local
+
+# The live database is a host bind mount, never baked into the image.
+data
+
+# Local-only weight: a vendored Chrome build, planning docs, build caches.
+chrome
+docs
+tsconfig.tsbuildinfo
+*.zip
+.DS_Store
+.vscode

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="BacLab">
+  <!-- Colours are literals because an SVG loaded via <img> cannot read the
+       page's CSS variables. Keep in step with LITERAL in lib/theme.ts.
+       app/icon.svg is the same file served as the favicon. -->
+  <rect x="11" y="3" width="10" height="5" rx="1.2" fill="#0047FF"/>
+  <path d="M12.5 8h7v2h-7z" fill="#0035C4"/>
+  <path d="M10.5 19.5h11v8A1.5 1.5 0 0 1 20 29h-8a1.5 1.5 0 0 1-1.5-1.5z" fill="#00D1FF"/>
+  <path d="M13 10v2.6L10.5 16v11.5A1.5 1.5 0 0 0 12 29h8a1.5 1.5 0 0 0 1.5-1.5V16L19 12.6V10"
+        fill="none" stroke="#0047FF" stroke-width="1.7" stroke-linejoin="round"/>
+  <path d="M10.5 19.5h11" stroke="#0047FF" stroke-width="1.2" stroke-dasharray="2 2.2"/>
+</svg>

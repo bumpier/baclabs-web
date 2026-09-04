@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  // Resolves to <project-root>/data/baclab.db — outside /public, never
+  // web-accessible. Prisma resolves `file:` relative to prisma/, not the
+  // repo root, so the correct value is DATABASE_URL="file:../data/baclab.db".
+  url      = env("DATABASE_URL")
+}
+
+// ONE row: the physical thing you put in a box — a single 10ml vial.
+//
+// Bundles are a pricing construct, not an inventory one, so they are NOT rows
+// here. `stock` therefore counts VIALS, which is the only number worth
+// managing, and an order for 2 × the 3-vial pack decrements it by 6.
+// Stripe Price IDs live in env (STRIPE_PRICE_*), not on this row, because
+// four Prices map to this one product.
+//
+// Created and kept in step with config/funnel.ts by
+// `npx tsx scripts/stripe-setup.ts`.
+model Product {
+  id          String   @id @default(uuid())
+  slug        String   @unique // "baclab-10ml"
+  name        String
+  description String
+  priceGbp    Decimal  @map("price_gbp") // price of ONE vial (GBP)
+  images      String   @default("[]") // JSON array of image paths
+  stock       Int      @default(0) // vials on hand
+  weightGrams Int      @default(0) // per vial, for postage
+  supplyDays  Int      @default(0) @map("supply_days") // days one vial lasts; 0 = never nudge
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Order {
+  id     String @id @default(uuid())
+  status String @default("pending") // pending | paid | packed | shipped | delivered | cancelled
+
+  // For the card path these are blank until the Stripe webhook backfills them
+  // from the Checkout Session, because Stripe collects the address, not us.
+  customerName    String @default("")
+  customerEmail   String @default("")
+  customerPhone   String @default("")
+  shippingAddress String @default("") // JSON
+
+  items       String // JSON [{productId, slug, name, qty, unitPrice, unitPriceUsd}]
+  currency    String
+  totalAmount Decimal
+  subtotalUsd Decimal @default(0) // USD basis; the crypto gateway settles in USD
+
+  paymentRef      String? // gateway payment id (Stripe PaymentIntent, or crypto "pay_…")
+  paymentProvider String? // "stripe" | the crypto gateway provider id
+  paymentMethod   String // card | btc | eth | usdt | xmr
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  emailLogs EmailLog[]
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("PACKER") // ADMIN | PACKER
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model EmailLog {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  type      String // confirmation | shipped | delivered | nudge
+  recipient String
+  sentAt    DateTime @default(now())
+
+  @@unique([orderId, type])
+}
+
+model EmailOptOut {
+  email     String   @id
+  createdAt DateTime @default(now())
+}

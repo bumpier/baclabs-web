@@ -1,0 +1,91 @@
+// ─────────────────────────────────────────────────────────────────
+// WHITE-LABEL CONFIG — names, contact details and legal identity.
+// To rebrand: edit this file + swap /public/logo.svg (and app/icon.svg,
+// which is the same mark served as the favicon).
+//
+// COLOUR DOES NOT LIVE HERE. It lives in lib/theme.ts, as literal values
+// with a measured contrast ratio against every ground they are used on.
+// This file used to claim the palette was "derived automatically from
+// primaryColor + accentColor" — it never was, and the two fields sat here
+// holding a retired blue that still shipped to customers in transactional
+// email while the site rendered a different one. They are gone; every
+// surface, email included, now reads lib/theme.ts.
+//
+// Product prices and bundle tiers do NOT live here — see config/funnel.ts.
+// ─────────────────────────────────────────────────────────────────
+
+export const brand = {
+  name: "BacLab",
+  tagline: "Bacteriostatic water for laboratory use.",
+  // The vial mark only — the "BacLab" wordmark is rendered as real text
+  // in components/Header.tsx so it uses the display typeface. Swap this
+  // file to change the mark. SVG loaded via <img> cannot read the page's
+  // CSS variables, so the brand colour is hard-coded inside it.
+  logo: "/logo.svg",
+  // Body font is Inter; the display face is loaded in app/fonts.ts.
+  // To change fonts, edit the imports there (next/font needs literal names).
+  fontFamily: "Inter",
+  currency: {
+    // The storefront is GBP-only: one UK seller, one authored price.
+    default: "GBP" as const,
+    // USD is NOT offered to shoppers. It is here solely because the crypto
+    // gateway settles in USD, so lib/fx.ts must be able to convert into it.
+    // Never render a currency switcher from this list.
+    supported: ["GBP", "USD"] as const,
+  },
+  contact: {
+    email: "hello@baclab.co.uk",
+    // Leave "" to omit the phone from JSON-LD.
+    phone: "",
+  },
+  // Company details for the footer and legal pages. Each renders only when
+  // non-empty, so an unfilled entry is invisible rather than a placeholder.
+  // Nothing here is ever rendered as a stand-in: an unsupplied fact is left
+  // out of the sentence entirely, including on /terms and /privacy.
+  company: {
+    legalName: "",
+    companyNumber: "",
+    registeredAddress: "",
+    vatNumber: "",
+    // ICO data-protection register entry, shown on /privacy. Leave "" if the
+    // fee exemption applies — the row is then omitted rather than qualified.
+    icoRegistration: "",
+  },
+  // Printed at the bottom of every packing slip
+  packingSlipThankYou: "Thank you for your order.",
+  trust: {
+    // Empty strings render nothing.
+    shippingLine: "",
+    qualityLine: "",
+    secureLine: "Payments processed securely by Stripe.",
+  },
+  // Compliance line shown in the footer. This is the SHORT FORM of the
+  // /disclaimer page — if you change one, change the other. It must never
+  // state or imply a therapeutic use: doing so turns an unlicensed reagent
+  // into an unlicensed medicinal product under the Human Medicines
+  // Regulations 2012.
+  disclaimer:
+    "Sold as a laboratory reagent for research use. Not a medicine and not a medical device. Not supplied for human or veterinary use, and not for administration to humans or animals. No therapeutic claim is made. See the product disclaimer.",
+};
+
+export type Currency = (typeof brand.currency.supported)[number];
+
+export const CURRENCY_SYMBOLS: Record<Currency, string> = {
+  GBP: "£",
+  USD: "$",
+};
+
+const CURRENCY_DECIMALS: Record<Currency, number> = {
+  GBP: 2,
+  USD: 2,
+};
+
+export function formatPrice(amount: number | string, currency: Currency): string {
+  const n = typeof amount === "string" ? parseFloat(amount) : amount;
+  const dp = CURRENCY_DECIMALS[currency];
+  const formatted = n.toLocaleString("en-GB", {
+    minimumFractionDigits: dp,
+    maximumFractionDigits: dp,
+  });
+  return `${CURRENCY_SYMBOLS[currency]}${formatted}`;
+}
