@@ -69,6 +69,16 @@ COPY --from=builder --chown=baclab:baclab /app/public         ./public
 COPY --from=builder --chown=baclab:baclab /app/prisma         ./prisma
 COPY --from=builder --chown=baclab:baclab /app/package.json   ./package.json
 COPY --from=builder --chown=baclab:baclab /app/next.config.js ./next.config.js
+
+# Operator scripts, and the modules they import. ~200KB of TypeScript, and it
+# is the difference between being able to run scripts/stripe-setup.ts against
+# the REAL database and not. Running it from a laptop instead would write the
+# Product row to the developer's local SQLite file while creating the Prices
+# in live Stripe — the two halves landing in different places.
+COPY --from=builder --chown=baclab:baclab /app/scripts        ./scripts
+COPY --from=builder --chown=baclab:baclab /app/config         ./config
+COPY --from=builder --chown=baclab:baclab /app/lib            ./lib
+COPY --from=builder --chown=baclab:baclab /app/tsconfig.json  ./tsconfig.json
 COPY --chown=baclab:baclab deploy/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
