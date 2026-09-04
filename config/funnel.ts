@@ -249,16 +249,43 @@ export const SHIPPING_COUNTRIES = ["GB"] as const;
  *  - "unknown"  → "Delivery calculated at checkout"
  */
 export const DELIVERY: {
-  mode: "free" | "flat" | "unknown";
+  mode: "free" | "flat" | "threshold" | "unknown";
   priceMinor: number | null;
+  /**
+   * Vial count at or ABOVE which delivery is free. Counts vials, not packs,
+   * so 2 x the 5-vial bundle qualifies exactly as the 10-vial bundle does.
+   * Only read when mode is "threshold".
+   */
+  freeFromVials: number | null;
   note: string;
   dispatchLine: string;
 } = {
-  mode: "unknown",
-  priceMinor: null,
-  note: "",
+  mode: "threshold",
+  priceMinor: 399,
+  freeFromVials: 10,
+  note: "Free UK delivery on orders of 10 vials or more.",
   dispatchLine: "",
 };
+
+/**
+ * Whether an order of this many vials ships free.
+ *
+ * THE single source of truth: the storefront and the Stripe session both call
+ * it, so the delivery a customer is shown and the delivery they are charged
+ * cannot drift apart. Change the rule here and both follow.
+ */
+export function shipsFree(totalVials: number): boolean {
+  if (DELIVERY.mode === "free") return true;
+  if (DELIVERY.mode !== "threshold") return false;
+  return DELIVERY.freeFromVials !== null && totalVials >= DELIVERY.freeFromVials;
+}
+
+/** Delivery charge in pence for this many vials. 0 when it ships free. */
+export function deliveryMinorFor(totalVials: number): number {
+  if (DELIVERY.mode === "unknown") return 0;
+  if (shipsFree(totalVials)) return 0;
+  return DELIVERY.priceMinor ?? 0;
+}
 
 /**
  * VAT treatment shown before the customer reaches Stripe.

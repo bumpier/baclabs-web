@@ -94,10 +94,18 @@ export async function POST(req: Request) {
       // This does not block fulfilment — the money is already taken, and
       // refusing here would only strand a paid order — but a mismatch means
       // a Price drifted from config and must be investigated.
+      // order.totalAmount is the GOODS total; Stripe's amount_total includes
+      // any delivery it charged. Subtract it, or every order below the
+      // free-delivery threshold trips this alarm and the alarm stops meaning
+      // anything.
       const expectedMinor = Math.round(Number(order.totalAmount) * 100);
-      if (typeof session.amount_total === "number" && session.amount_total !== expectedMinor) {
+      const capturedGoodsMinor =
+        typeof session.amount_total === "number"
+          ? session.amount_total - (session.total_details?.amount_shipping ?? 0)
+          : null;
+      if (capturedGoodsMinor !== null && capturedGoodsMinor !== expectedMinor) {
         console.error(
-          `[stripe] AMOUNT MISMATCH on order ${orderId}: Stripe captured ${session.amount_total} but the order records ${expectedMinor}. A promotion code explains a lower figure; anything else means STRIPE_PRICE_* has drifted from config/funnel.ts.`
+          `[stripe] AMOUNT MISMATCH on order ${orderId}: Stripe captured ${capturedGoodsMinor} in goods (${session.amount_total} incl. delivery) but the order records ${expectedMinor}. A promotion code explains a lower figure; anything else means STRIPE_PRICE_* has drifted from config/funnel.ts.`
         );
       }
 

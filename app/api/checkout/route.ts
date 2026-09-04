@@ -163,6 +163,7 @@ export async function POST(req: Request) {
         bundleId: bundle.id as BundleId,
         priceId,
         quantity: input.quantity,
+        totalVials,
         shippingCountries: SHIPPING_COUNTRIES,
         origin,
       });

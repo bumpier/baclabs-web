@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { BUNDLES, bundleById, type BundleId } from "@/config/funnel";
+import { BUNDLES, bundleById, shipsFree, type BundleId } from "@/config/funnel";
 
 let _stripe: Stripe | null = null;
 
@@ -63,6 +63,12 @@ export interface BundleCheckoutParams {
   bundleId: BundleId;
   priceId: string;
   quantity: number;
+  /**
+   * Vials in the whole order (bundle.vials x quantity). Decides free delivery
+   * via shipsFree() — passed in rather than recomputed so the route and the
+   * session agree on one figure.
+   */
+  totalVials: number;
   /** ISO-3166-1 alpha-2 codes Stripe will collect a shipping address for. */
   shippingCountries: readonly string[];
   origin: string;
@@ -78,7 +84,7 @@ export interface BundleCheckoutParams {
 export async function createBundleCheckout(
   params: BundleCheckoutParams
 ): Promise<{ paymentUrl: string; paymentRef: string }> {
-  const { orderId, priceId, quantity, shippingCountries, origin } = params;
+  const { orderId, priceId, quantity, totalVials, shippingCountries, origin } = params;
 
   // Dev simulator: STRIPE_ENABLED=true with no keys, in development only.
   // Guarded again by getPaymentConfig().stripe.mock at the page itself.
@@ -112,7 +118,10 @@ export async function createBundleCheckout(
       // Stripe collects the delivery address — the funnel deliberately does
       // not ask for one before the customer has decided to buy.
       shipping_address_collection: { allowed_countries: allowedCountries },
-      ...(process.env.STRIPE_SHIPPING_RATE_ID
+      // Delivery is charged ONLY when the order misses the free-delivery
+      // threshold. shipsFree() is the same function the purchase block calls,
+      // so the customer is never charged for delivery the page showed as free.
+      ...(process.env.STRIPE_SHIPPING_RATE_ID && !shipsFree(totalVials)
         ? { shipping_options: [{ shipping_rate: process.env.STRIPE_SHIPPING_RATE_ID }] }
         : {}),
 

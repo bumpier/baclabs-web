@@ -5,6 +5,8 @@ import Link from "next/link";
 import {
   BUNDLES,
   DELIVERY,
+  deliveryMinorFor,
+  shipsFree,
   LOW_STOCK_THRESHOLD,
   MAX_QUANTITY,
   MIN_QUANTITY,
@@ -78,6 +80,13 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
       setPending(false);
     }
   }
+
+  // Same function the Stripe session calls, so the delivery shown here and
+  // the delivery charged cannot disagree.
+  const orderVials = bundle.vials * quantity;
+  const deliveryMinor = deliveryMinorFor(orderVials);
+  const deliveryFree = shipsFree(orderVials);
+  const deliveryKnown = DELIVERY.mode !== "unknown";
 
   const sale = saleVisible();
   const referenceTotal = referencePriceMinor(bundle) * quantity;
@@ -251,20 +260,20 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
           <div className="flex justify-between gap-4">
             <dt className="text-ink-soft">Delivery</dt>
             <dd className="text-ink">
-              {DELIVERY.mode === "free" ? (
-                "Free"
-              ) : DELIVERY.mode === "flat" && DELIVERY.priceMinor !== null ? (
-                <span className="tabular">{formatMinor(DELIVERY.priceMinor)}</span>
-              ) : (
+              {!deliveryKnown ? (
                 "Calculated at checkout"
+              ) : deliveryFree ? (
+                "Free"
+              ) : (
+                <span className="tabular">{formatMinor(deliveryMinor)}</span>
               )}
             </dd>
           </div>
           <div className="flex justify-between gap-4 border-t border-line pt-3 text-base font-semibold">
             <dt>Total</dt>
             <dd className="tabular">
-              {formatMinor(totalMinor)}
-              {DELIVERY.mode === "unknown" ? (
+              {formatMinor(totalMinor + deliveryMinor)}
+              {!deliveryKnown ? (
                 <span className="ml-1 text-xs font-normal text-ink-soft">+ delivery</span>
               ) : null}
             </dd>
