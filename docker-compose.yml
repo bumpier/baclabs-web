@@ -47,8 +47,13 @@ services:
     # LOOPBACK ONLY. nginx is the sole public entry point, the same invariant
     # the existing app holds. Never publish this on 0.0.0.0 — ufw allows 80/443,
     # but a 0.0.0.0 bind lets Docker's own iptables rules bypass ufw entirely.
+    #
+    # The host port is a setting, not a constant: which ports are free is a
+    # property of the box, not of this app. Set BACLAB_HOST_PORT in .env.local
+    # if 3001 is taken — check with `sudo ss -tlnp | grep :<port>` first — and
+    # make deploy/nginx/baclab.conf's upstream match.
     ports:
-      - "127.0.0.1:3001:3000"
+      - "127.0.0.1:${BACLAB_HOST_PORT:-3001}:3000"
 
     volumes:
       - ./data:/app/data

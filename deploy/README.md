@@ -16,7 +16,7 @@ Break any of these and you take the other site down with you.
 |---|---|---|
 | App directory | `/srv/<existing>` | `/srv/baclab` |
 | Process | systemd unit `<existing>` | Docker container `baclab` |
-| Loopback port | `127.0.0.1:3000` | `127.0.0.1:3001` |
+| Loopback port | `127.0.0.1:3000` | `127.0.0.1:3001` (see below) |
 | nginx site | `<existing>.conf` | `baclab.conf` |
 | nginx upstream | `<existing>_app` | `baclab_app` |
 | certbot cert name | `<existing>` | `baclab` |
@@ -45,6 +45,18 @@ its vhost.
       `config/brand.ts`. Confirm or change it, then set A records for apex and
       www to the server's IP and check with `dig +short <domain>`.
 - [ ] **Docker Compose v2** available: `docker compose version`.
+- [ ] **A free host port.** BacLab defaults to `3001`, but that is a guess about
+      YOUR box — other services (a payment gateway, a staging app) often sit
+      there. Check before you build:
+
+      ```bash
+      sudo ss -tlnp | grep ':3001'      # anything printed = taken
+      ```
+
+      If it is taken, set `BACLAB_HOST_PORT=<free port>` in `.env.local` AND
+      change the `server 127.0.0.1:<port>` line in
+      `deploy/nginx/baclab.conf` to match. They are two files that must agree
+      — a mismatch shows up as a 502 from nginx, not as a build error.
 - [ ] **The legal pages filled in.** `lib/legal.ts` lists what is still
       outstanding — company details, returns address, VAT statement. Nothing is
       flagged on the pages any more, so that list is the only record.
@@ -87,6 +99,10 @@ cat > /srv/baclab/.env.local <<'EOF'
 # Public origin. BUILD-TIME: change it and you must rebuild, not restart.
 NEXT_PUBLIC_SITE_URL=https://YOUR_DOMAIN
 NEXT_PUBLIC_SALE_PREVIEW=false
+
+# Host port for the container. Only needed if 3001 is already in use;
+# deploy/nginx/baclab.conf must name the same port.
+# BACLAB_HOST_PORT=3001
 
 # Payments
 STRIPE_ENABLED=true
