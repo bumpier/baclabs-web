@@ -78,10 +78,18 @@ install -d -o baclab -g baclab /srv/baclab
 As `baclab`:
 
 ```bash
-git clone <your-remote> /srv/baclab
+git clone https://github.com/bumpier/baclabs-web.git /srv/baclab
 cd /srv/baclab
 mkdir -p data                      # the SQLite bind mount
+ln -sf .env.local .env             # see below — do not skip this
 ```
+
+That symlink matters. Compose interpolates `${...}` from its env file on
+**every** subcommand, not just `up`, and `NEXT_PUBLIC_SITE_URL` is declared
+required — so without it `exec`, `logs`, `ps` and `down` all fail with
+"required variable NEXT_PUBLIC_SITE_URL is missing a value". Compose reads
+`.env` automatically, so the symlink makes every command work bare, while the
+required-variable guard still fires if the file is genuinely absent.
 
 You do **not** need to chown `data/`. A bind mount arrives in the container
 with the host's numeric ownership, which will not match the container's app
