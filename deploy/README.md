@@ -199,12 +199,43 @@ Check both certificates still exist and renew independently:
 certbot certificates | grep -E 'Certificate Name|Domains'
 ```
 
-## 5. Stripe webhook
+## 5. Stripe
 
-Point a Stripe webhook endpoint at `https://YOUR_DOMAIN/api/webhooks/stripe`
-and put its signing secret in `STRIPE_WEBHOOK_SECRET`. Restart afterwards
+Two separate things, and the store is broken in a different way without each.
+
+### 5a. Price IDs — all five
+
+`line_items` references a Stripe **Price object by ID**, not an amount, so an
+unset ID means there is nothing to charge. Do not write these by hand:
+
+```bash
+STRIPE_SECRET_KEY=sk_… npx tsx scripts/stripe-setup.ts --apply
+```
+
+It creates the Products and Prices from `config/funnel.ts` and prints the
+`STRIPE_PRICE_*=` lines ready to paste into `.env.local`. Run it **twice** —
+once with your test key, once with your live key — because the IDs differ per
+mode and test IDs will not work on a live deployment.
+
+**Set all five.** The Card button's visibility is gated only on the secret key
+and webhook secret, so a bundle with no Price ID still *shows* Card at
+checkout and then fails with a 503 the customer reads as a dead button. The
+server log names it: `[internal] no Stripe Price configured for bundle "…"`.
+
+A wrong ID cannot cause a wrong charge: `assertPriceMatchesConfig` refuses
+unless the Price is GBP and its amount matches the bundle exactly.
+
+### 5b. Webhook
+
+Point a Stripe webhook endpoint at `https://YOUR_DOMAIN/api/webhooks/stripe`,
+subscribed to `checkout.session.completed`, and put its signing secret in
+`STRIPE_WEBHOOK_SECRET`. Restart afterwards
 (`docker compose --env-file .env.local up -d`). Without it, payments succeed at
-Stripe and **no order is ever marked paid**.
+Stripe and **no order is ever marked paid** — you hold money with no record of
+what to ship.
+
+`STRIPE_SHIPPING_RATE_ID` is genuinely optional; unset, Stripe still collects
+the delivery address but adds no shipping charge.
 
 ## 6. Backups and cron
 
@@ -242,6 +273,7 @@ docker compose -f /srv/baclab/docker-compose.yml logs -f --tail 100 baclab
 - [ ] `https://YOUR_DOMAIN` returns 200 with a valid cert; www redirects to apex.
 - [ ] The existing app still returns 200 on its own domains and its service is active.
 - [ ] `http://<VPS_IP>:3001` is refused from off-box.
+- [ ] All five `STRIPE_PRICE_*` are set — test EVERY bundle, not just one.
 - [ ] A test order reaches Stripe, the webhook fires, and the order shows **paid** in `/admin`.
 - [ ] An order confirmation email arrives and passes SPF/DKIM.
 - [ ] `baclab-backup.sh` produces a local + offsite copy that opens in sqlite3.
