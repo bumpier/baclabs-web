@@ -1,11 +1,10 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { trackPageView } from "@/lib/analytics";
 
-const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
 
 /**
@@ -13,28 +12,21 @@ const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
  * view on client-side navigation — which the vendor snippets do not do on
  * their own under the App Router.
  *
- * Renders nothing at all when neither env var is set.
+ * The two providers are configured differently, on purpose:
  *
- * Note: both IDs are inlined at BUILD time. Setting them later and only
- * restarting the server will not take effect; you must rebuild.
+ *  - META PIXEL — runtime. The tag below always renders, and /api/pixel
+ *    returns either the bootstrap or an empty file depending on what is set
+ *    in /admin/settings. An operator can therefore add a pixel without a
+ *    rebuild, and it survives redeploys. See app/api/pixel/route.ts for why
+ *    it is a route rather than an inline snippet.
+ *  - GA4 — still NEXT_PUBLIC_GA4_ID, inlined at BUILD time. Setting it later
+ *    and only restarting the server will not take effect; you must rebuild.
+ *    Move it to lib/settings.ts the same way if that ever becomes a chore.
  */
 export function Analytics() {
   return (
     <>
-      {PIXEL_ID ? (
-        <Script id="meta-pixel" strategy="afterInteractive">
-          {`!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window,document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '${PIXEL_ID}');
-fbq('track', 'PageView');`}
-        </Script>
-      ) : null}
+      <Script id="meta-pixel" src="/api/pixel" strategy="afterInteractive" />
 
       {GA4_ID ? (
         <>
@@ -52,7 +44,15 @@ gtag('config', '${GA4_ID}');`}
         </>
       ) : null}
 
-      {PIXEL_ID || GA4_ID ? <RouteChangePageViews /> : null}
+      {/* useSearchParams() forces a client-side bail-out unless it sits under
+          a Suspense boundary, and this renders in the ROOT layout — without
+          the boundary every statically prerendered page would deopt. It used
+          to render only when a build-time id was set, which is why the
+          storefront never hit this; the pixel is runtime now, so it always
+          mounts and the boundary is mandatory. */}
+      <Suspense fallback={null}>
+        <RouteChangePageViews />
+      </Suspense>
     </>
   );
 }

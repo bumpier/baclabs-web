@@ -324,4 +324,9 @@ export const EXIT_INTENT: { enabled: boolean; heading: string; body: string; pro
  * Product photography. Empty array falls back to the neutral placeholder.
  * Shot list lives in LAUNCH-CHECKLIST.md.
  */
-export const PRODUCT_IMAGES: readonly { src: string; alt: string }[] = [];
+export const PRODUCT_IMAGES: readonly { src: string; alt: string }[] = [
+  {
+    src: "/product-vial.jpg",
+    alt: `A sealed ${PRODUCT.name.toLowerCase()} vial with a crimped aluminium collar and red flip cap, standing on a marble surface.`,
+  },
+];

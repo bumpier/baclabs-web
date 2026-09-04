@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
 import { brand } from "@/config/brand";
 import { RECORD_RETENTION_YEARS, isSet, legalName, supportEmail } from "@/lib/legal";
+import { getMetaPixelStatus } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Privacy policy",
@@ -20,28 +21,40 @@ export const metadata: Metadata = {
  *  - Cart state is localStorage (components/CartProvider.tsx), not a cookie.
  *  - The only cookie set for a visitor is `admin_session`, and only for staff
  *    signing into /admin (lib/adminAuth.ts).
- *  - Meta Pixel and GA4 load ONLY when NEXT_PUBLIC_META_PIXEL_ID /
- *    NEXT_PUBLIC_GA4_ID are set at BUILD time (components/Analytics.tsx).
+ *  - The Meta Pixel loads when one is set in /admin/settings (or, as a
+ *    fallback, NEXT_PUBLIC_META_PIXEL_ID at build time) — see lib/settings.ts.
+ *    Because an operator can now switch it on at RUNTIME, this page is
+ *    force-dynamic and reads the live setting: a static prerender would go on
+ *    claiming "we run no tracking" minutes after a pixel went live.
+ *  - GA4 still loads only when NEXT_PUBLIC_GA4_ID is set at BUILD time
+ *    (components/Analytics.tsx).
  *    No consent banner exists, so those must stay unset until one is built —
- *    the analytics clause below says exactly that.
+ *    the analytics clause below says exactly that. /admin/settings repeats
+ *    that warning at the point of switching the pixel on.
  *  - Repurchase nudges (app/api/cron/nudges) are marketing, sent under the
  *    PECR soft opt-in with a working unsubscribe (app/api/email/unsubscribe).
  *
  * If any of those change, this page must change with them.
  */
-const ANALYTICS_PROVIDERS = [
-  process.env.NEXT_PUBLIC_GA4_ID ? "Google Analytics" : null,
-  process.env.NEXT_PUBLIC_META_PIXEL_ID ? "the Meta Pixel" : null,
-].filter((p): p is string => p !== null);
+// The set of trackers actually running is no longer knowable at build time,
+// so this page is rendered per request. It is a legal notice on a low-traffic
+// URL; correctness beats a cached millisecond.
+export const dynamic = "force-dynamic";
 
-const ANALYTICS_ENABLED = ANALYTICS_PROVIDERS.length > 0;
-
-/** "A and B", or just "A" — read into a sentence, so no Oxford list. */
-const ANALYTICS_PROVIDER_LIST = ANALYTICS_PROVIDERS.join(" and ");
-
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
   const { company } = brand;
   const email = supportEmail();
+
+  const metaPixel = await getMetaPixelStatus();
+  const ANALYTICS_PROVIDERS = [
+    process.env.NEXT_PUBLIC_GA4_ID ? "Google Analytics" : null,
+    metaPixel.pixelId ? "the Meta Pixel" : null,
+  ].filter((p): p is string => p !== null);
+
+  const ANALYTICS_ENABLED = ANALYTICS_PROVIDERS.length > 0;
+
+  /** "A and B", or just "A" — read into a sentence, so no Oxford list. */
+  const ANALYTICS_PROVIDER_LIST = ANALYTICS_PROVIDERS.join(" and ");
 
   const contactLine = email ? (
     <a href={`mailto:${email}`}>{email}</a>
@@ -232,14 +245,15 @@ export default function PrivacyPage() {
               {/* ⚠ This build loads analytics, and no consent mechanism exists.
                   PECR requires consent BEFORE a non-essential cookie is set, so
                   the clause below describes what runs but does not cure that:
-                  build a consent banner, or unset NEXT_PUBLIC_META_PIXEL_ID and
-                  NEXT_PUBLIC_GA4_ID and rebuild. Customer-facing wording must
+                  build a consent banner, or clear the pixel in /admin/settings
+                  and unset NEXT_PUBLIC_GA4_ID and rebuild. Customer-facing wording must
                   never carry a note to ourselves, which is why this is a code
                   comment and not a marker on the page. */}
               {ANALYTICS_ENABLED ? (
                 <p>
-                  This build also loads {ANALYTICS_PROVIDER_LIST}, which measure how the site is
-                  used. {ANALYTICS_PROVIDERS.length > 1 ? "They set their" : "It sets its"} own
+                  This build also loads {ANALYTICS_PROVIDER_LIST}, which{" "}
+                  {ANALYTICS_PROVIDERS.length > 1 ? "measure" : "measures"} how the site is used.{" "}
+                  {ANALYTICS_PROVIDERS.length > 1 ? "They set their" : "It sets its"} own
                   cookies and identifiers on your device and{" "}
                   {ANALYTICS_PROVIDERS.length > 1 ? "process" : "processes"} data about your visit
                   under {ANALYTICS_PROVIDERS.length > 1 ? "their" : "its"} own privacy notice. You

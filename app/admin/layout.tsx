@@ -9,6 +9,7 @@ const ALL_NAV = [
   { href: "/admin/products", label: "Products", adminOnly: true },
   { href: "/admin/affiliates", label: "Affiliates", adminOnly: true },
   { href: "/admin/subusers", label: "Team", adminOnly: true },
+  { href: "/admin/settings", label: "Settings", adminOnly: true },
 ];
 
 export default async function AdminLayout({

@@ -85,3 +85,20 @@ model EmailOptOut {
   email     String   @id
   createdAt DateTime @default(now())
 }
+
+// Operator-editable runtime configuration — one row per key.
+//
+// This table exists because NEXT_PUBLIC_* is inlined into the client bundle
+// at BUILD time (see the Dockerfile): changing a tracking id in env means a
+// full rebuild and redeploy, which is not something a marketer can do. Values
+// here are read PER REQUEST by app/api/pixel/route.ts, so switching the Meta
+// Pixel on in /admin/settings takes effect on the next page load.
+//
+// Keys are the constants in lib/settings.ts — never a string literal at the
+// call site. An empty value means "explicitly off", which is distinct from a
+// missing row ("not configured, fall back to env").
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

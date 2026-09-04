@@ -23,9 +23,9 @@ export function VialImage({ priority = false }: { priority?: boolean }) {
       <img
         src={hero.src}
         alt={hero.alt}
-        width={800}
-        height={1000}
-        className="aspect-[4/5] w-full rounded-panel object-cover"
+        width={1400}
+        height={1400}
+        className="aspect-square w-full rounded-panel object-cover"
         fetchPriority={priority ? "high" : "auto"}
         decoding="async"
       />
@@ -42,11 +42,11 @@ export function VialImage({ priority = false }: { priority?: boolean }) {
 
   return (
     <div
-      className="aspect-[4/5] w-full"
+      className="aspect-square w-full"
       role="img"
       aria-label={`Illustration of a sealed ${PRODUCT.size}. Product photography is not yet available.`}
     >
-      <svg viewBox="0 0 320 400" className="h-full w-full" aria-hidden="true">
+      <svg viewBox="-40 0 400 400" className="h-full w-full" aria-hidden="true">
         {/* ── Cap: crimped aluminium collar over a rubber septum ── */}
         <rect x="126" y="44" width="68" height="10" rx="3" fill="var(--color-primary-deep)" />
         <rect x="118" y="54" width="84" height="40" rx="5" fill="var(--color-primary)" />
