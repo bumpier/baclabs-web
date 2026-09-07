@@ -12,6 +12,8 @@ interface OrderItem {
   name: string;
   qty: number;
   unitPrice: string;
+  /** Exact line total. Falls back to unitPrice × qty for orders placed before this field existed. */
+  lineTotal?: string;
 }
 
 interface Address {
@@ -191,7 +193,10 @@ export default async function AdminOrderDetailPage({
                 <td className="py-3 text-center">{item.qty}</td>
                 <td className="py-3 text-right">{formatPrice(item.unitPrice, currency)}</td>
                 <td className="py-3 text-right font-medium">
-                  {formatPrice(parseFloat(item.unitPrice) * item.qty, currency)}
+                  {formatPrice(
+                    item.lineTotal ? parseFloat(item.lineTotal) : parseFloat(item.unitPrice) * item.qty,
+                    currency
+                  )}
                 </td>
               </tr>
             ))}

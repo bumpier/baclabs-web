@@ -32,6 +32,8 @@ export default async function OrderConfirmationPage({
     name: string;
     qty: number;
     unitPrice: string;
+    /** Exact line total. Falls back to unitPrice × qty for orders placed before this field existed. */
+    lineTotal?: string;
     bundleName?: string;
     bundleQty?: number;
   }[];
@@ -63,8 +65,11 @@ export default async function OrderConfirmationPage({
           items={items.map((i) => ({
             item_id: i.bundleName ?? "baclab-10ml",
             item_name: i.name,
-            price: Number(i.unitPrice),
-            quantity: i.qty,
+            // One "item" per line at its exact total, so per-item revenue
+            // always sums to the order total regardless of how the bundle's
+            // price splits across vials or packs.
+            price: Number(i.lineTotal ?? (Number(i.unitPrice) * i.qty).toFixed(2)),
+            quantity: 1,
           }))}
         />
       ) : null}
@@ -116,7 +121,9 @@ export default async function OrderConfirmationPage({
                 ) : null}
               </dt>
               <dd className="tabular shrink-0 text-ink">
-                {formatMinor(toMinor(item.unitPrice) * item.qty)}
+                {formatMinor(
+                  item.lineTotal ? toMinor(item.lineTotal) : toMinor(item.unitPrice) * item.qty
+                )}
               </dd>
             </div>
           ))}

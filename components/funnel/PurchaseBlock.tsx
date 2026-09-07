@@ -82,10 +82,10 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
   }
 
   // Same function the Stripe session calls, so the delivery shown here and
-  // the delivery charged cannot disagree.
-  const orderVials = bundle.vials * quantity;
-  const deliveryMinor = deliveryMinorFor(orderVials);
-  const deliveryFree = shipsFree(orderVials);
+  // the delivery charged cannot disagree. Threshold is against the amount
+  // actually charged (post-sale), not the pre-sale reference price.
+  const deliveryMinor = deliveryMinorFor(totalMinor);
+  const deliveryFree = shipsFree(totalMinor);
   const deliveryKnown = DELIVERY.mode !== "unknown";
 
   const sale = saleVisible();

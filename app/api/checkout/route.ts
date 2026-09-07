@@ -63,10 +63,11 @@ export async function POST(req: Request) {
     const totalVials = bundle.vials * input.quantity;
     const grandTotalMinor = totalMinor(bundle, input.quantity);
 
-    // Bundles divide exactly into whole pence per vial by construction
-    // (750/1, 1950/3, 3000/5, 5000/10, 40000/100), so the packing slip's
-    // unitPrice × qty always reconciles to the amount charged.
-    const perVialMinorEffective = grandTotalMinor / totalVials;
+    // Bundle prices do NOT divide evenly into whole pence per vial (e.g.
+    // 2199/5 = 439.8p), so the packing slip prices by the BUNDLE, not the
+    // vial: unitPrice × bundleQty reconciles exactly to the amount charged.
+    // `qty` (vials) stays separate — it is what fulfilment packs, not what
+    // is priced.
 
     const product = await prisma.product.findUnique({ where: { slug: VIAL_SLUG } });
     if (!product || !product.active) {
@@ -97,8 +98,15 @@ export async function POST(req: Request) {
         slug: product.slug,
         name: `${PRODUCT.name} ${PRODUCT.size}`,
         qty: totalVials,
-        unitPrice: (perVialMinorEffective / 100).toFixed(2),
-        unitPriceUsd: subtotalUsd.div(totalVials).toFixed(2),
+        // Priced per BUNDLE, not per vial — see comment above. Multiply by
+        // bundleQty, not qty, to get back to the order total.
+        unitPrice: (bundle.priceMinor / 100).toFixed(2),
+        unitPriceUsd: subtotalUsd.div(input.quantity).toFixed(2),
+        // The exact line total, stored rather than re-derived, so every
+        // reader (admin, confirmation page, emails) reconciles perfectly
+        // even though unitPrice × qty no longer does.
+        lineTotal: (grandTotalMinor / 100).toFixed(2),
+        lineTotalUsd: subtotalUsd.toFixed(2),
         // Kept so the admin and the packing slip can show what was actually
         // bought, rather than an undifferentiated vial count.
         bundleId: bundle.id,
@@ -163,7 +171,7 @@ export async function POST(req: Request) {
         bundleId: bundle.id as BundleId,
         priceId,
         quantity: input.quantity,
-        totalVials,
+        orderValueMinor: grandTotalMinor,
         shippingCountries: SHIPPING_COUNTRIES,
         origin,
       });

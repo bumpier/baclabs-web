@@ -20,6 +20,8 @@ interface OrderItem {
   qty: number;
   unitPrice: string;
   unitPriceUsd: string;
+  /** Exact line total. Falls back to unitPrice × qty for orders placed before this field existed. */
+  lineTotal?: string;
 }
 
 // Order + nudge emails are sent from the payment webhook and the cron job —
@@ -74,7 +76,7 @@ function itemsTable(items: OrderItem[], currency: Currency): string {
       (i) =>
         `<tr><td style="padding:6px 0">${i.name} × ${i.qty}</td>
          <td style="padding:6px 0;text-align:right">${formatPrice(
-           parseFloat(i.unitPrice) * i.qty,
+           i.lineTotal ? parseFloat(i.lineTotal) : parseFloat(i.unitPrice) * i.qty,
            currency
          )}</td></tr>`
     )

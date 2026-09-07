@@ -36,7 +36,7 @@ export const PRODUCT = {
   name: "Bacteriostatic Water",
   size: "10ml vial",
   /** Price of a single vial, in pence. */
-  unitPriceMinor: 750,
+  unitPriceMinor: 599,
   // 0.9% is w/v (9 mg/mL), the USP basis — NOT by volume. The two differ
   // (benzyl alcohol is ~1.044 g/mL, so 0.9% w/v is ~0.86% v/v), and the page
   // previously said "by volume". State the basis wherever the figure appears.
@@ -54,8 +54,8 @@ export const PRODUCT = {
 
 // ── Bundle tiers ──────────────────────────────────────────────────
 // `quantity` on the checkout route means "how many of THIS bundle", not
-// how many vials. Buying 2 × starter = 6 vials.
-export type BundleId = "single" | "starter" | "value" | "bulk" | "wholesale";
+// how many vials. Buying 2 × five = 10 vials.
+export type BundleId = "single" | "five" | "seven" | "eight" | "ten" | "twenty" | "fifty" | "hundred";
 
 export interface Bundle {
   id: BundleId;
@@ -70,15 +70,18 @@ export interface Bundle {
 }
 
 export const BUNDLES: readonly Bundle[] = [
-  { id: "single", vials: 1, priceMinor: 750, label: "", sku: "baclab-10ml-x1" },
-  { id: "starter", vials: 3, priceMinor: 1950, label: "Most popular", sku: "baclab-10ml-x3" },
-  { id: "value", vials: 5, priceMinor: 3000, label: "Best value", sku: "baclab-10ml-x5" },
-  { id: "bulk", vials: 10, priceMinor: 5000, label: "Stock up", sku: "baclab-10ml-x10" },
-  { id: "wholesale", vials: 100, priceMinor: 40000, label: "Wholesale", sku: "baclab-10ml-x100" },
+  { id: "single", vials: 1, priceMinor: 599, label: "", sku: "baclab-10ml-x1" },
+  { id: "five", vials: 5, priceMinor: 2199, label: "Most popular", sku: "baclab-10ml-x5" },
+  { id: "seven", vials: 7, priceMinor: 2589, label: "", sku: "baclab-10ml-x7" },
+  { id: "eight", vials: 8, priceMinor: 2949, label: "Best value", sku: "baclab-10ml-x8" },
+  { id: "ten", vials: 10, priceMinor: 3499, label: "Stock up", sku: "baclab-10ml-x10" },
+  { id: "twenty", vials: 20, priceMinor: 6499, label: "", sku: "baclab-10ml-x20" },
+  { id: "fifty", vials: 50, priceMinor: 14999, label: "", sku: "baclab-10ml-x50" },
+  { id: "hundred", vials: 100, priceMinor: 27499, label: "Wholesale", sku: "baclab-10ml-x100" },
 ] as const;
 
 /** Pre-selected tier in the purchase block. */
-export const DEFAULT_BUNDLE_ID: BundleId = "starter";
+export const DEFAULT_BUNDLE_ID: BundleId = "five";
 
 /** Bundle quantity a single order may contain. Enforced server-side. */
 export const MIN_QUANTITY = 1;
@@ -197,10 +200,13 @@ export function bestSavingPercent(): number {
 // these lines ready to paste. Server-side only — never exposed to the client.
 const PRICE_ENV: Record<BundleId, string> = {
   single: "STRIPE_PRICE_SINGLE",
-  starter: "STRIPE_PRICE_STARTER",
-  value: "STRIPE_PRICE_VALUE",
-  bulk: "STRIPE_PRICE_BULK",
-  wholesale: "STRIPE_PRICE_WHOLESALE",
+  five: "STRIPE_PRICE_FIVE",
+  seven: "STRIPE_PRICE_SEVEN",
+  eight: "STRIPE_PRICE_EIGHT",
+  ten: "STRIPE_PRICE_TEN",
+  twenty: "STRIPE_PRICE_TWENTY",
+  fifty: "STRIPE_PRICE_FIFTY",
+  hundred: "STRIPE_PRICE_HUNDRED",
 };
 
 /** The Price ID configured for a bundle, or null when unset. */
@@ -252,38 +258,39 @@ export const DELIVERY: {
   mode: "free" | "flat" | "threshold" | "unknown";
   priceMinor: number | null;
   /**
-   * Vial count at or ABOVE which delivery is free. Counts vials, not packs,
-   * so 2 x the 5-vial bundle qualifies exactly as the 10-vial bundle does.
-   * Only read when mode is "threshold".
+   * Order value, in pence, AT OR ABOVE which delivery is free. Compared
+   * against the amount actually charged for the order (post-sale if a sale
+   * is live), not the pre-sale reference price. Only read when mode is
+   * "threshold".
    */
-  freeFromVials: number | null;
+  freeFromMinor: number | null;
   note: string;
   dispatchLine: string;
 } = {
   mode: "threshold",
-  priceMinor: 399,
-  freeFromVials: 10,
-  note: "Free UK delivery on orders of 10 vials or more.",
+  priceMinor: 200,
+  freeFromMinor: 3000,
+  note: "Free UK delivery on orders of £30 or more.",
   dispatchLine: "",
 };
 
 /**
- * Whether an order of this many vials ships free.
+ * Whether an order of this value ships free.
  *
  * THE single source of truth: the storefront and the Stripe session both call
  * it, so the delivery a customer is shown and the delivery they are charged
  * cannot drift apart. Change the rule here and both follow.
  */
-export function shipsFree(totalVials: number): boolean {
+export function shipsFree(orderValueMinor: number): boolean {
   if (DELIVERY.mode === "free") return true;
   if (DELIVERY.mode !== "threshold") return false;
-  return DELIVERY.freeFromVials !== null && totalVials >= DELIVERY.freeFromVials;
+  return DELIVERY.freeFromMinor !== null && orderValueMinor >= DELIVERY.freeFromMinor;
 }
 
-/** Delivery charge in pence for this many vials. 0 when it ships free. */
-export function deliveryMinorFor(totalVials: number): number {
+/** Delivery charge in pence for an order of this value. 0 when it ships free. */
+export function deliveryMinorFor(orderValueMinor: number): number {
   if (DELIVERY.mode === "unknown") return 0;
-  if (shipsFree(totalVials)) return 0;
+  if (shipsFree(orderValueMinor)) return 0;
   return DELIVERY.priceMinor ?? 0;
 }
 

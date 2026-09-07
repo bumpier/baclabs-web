@@ -17,10 +17,13 @@
 // Must precede every import that reads env at module scope.
 process.env.STRIPE_ENABLED = "true";
 process.env.STRIPE_PRICE_SINGLE = "price_smoke_single";
-process.env.STRIPE_PRICE_STARTER = "price_smoke_starter";
-process.env.STRIPE_PRICE_VALUE = "price_smoke_value";
-process.env.STRIPE_PRICE_BULK = "price_smoke_bulk";
-process.env.STRIPE_PRICE_WHOLESALE = "price_smoke_wholesale";
+process.env.STRIPE_PRICE_FIVE = "price_smoke_five";
+process.env.STRIPE_PRICE_SEVEN = "price_smoke_seven";
+process.env.STRIPE_PRICE_EIGHT = "price_smoke_eight";
+process.env.STRIPE_PRICE_TEN = "price_smoke_ten";
+process.env.STRIPE_PRICE_TWENTY = "price_smoke_twenty";
+process.env.STRIPE_PRICE_FIFTY = "price_smoke_fifty";
+process.env.STRIPE_PRICE_HUNDRED = "price_smoke_hundred";
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:4310";
 // Point FX at a dead port so the lookup fails fast and uses the static
 // fallback — this test must not depend on the network.
@@ -137,15 +140,13 @@ async function main() {
   await cleanup();
 
   // ── Bundle arithmetic (pure, no DB) ─────────────────────────────
+  // Bundle prices are set per pack, not per vial, and do NOT divide evenly
+  // into whole pence per vial (e.g. the five-pack is 2199p / 5 = 439.8p) —
+  // so bundles are priced and reconciled by the pack (priceMinor × quantity
+  // of packs), never by vial count.
   section("Bundle pricing");
-  for (const b of BUNDLES) {
-    assert(
-      b.priceMinor % b.vials === 0,
-      `${b.id}: ${b.priceMinor}p divides exactly into ${b.vials} vials (${b.priceMinor / b.vials}p each)`
-    );
-  }
-  const starter = bundleById("starter")!;
-  assert(totalMinor(starter, 2) === 3900, "2 × starter = 3900p (£39.00)");
+  const five = bundleById("five")!;
+  assert(totalMinor(five, 2) === 4398, "2 × five-pack = 4398p (£43.98)");
 
   // ── Payment config ──────────────────────────────────────────────
   section("Payment configuration");
@@ -158,8 +159,8 @@ async function main() {
       slug: VIAL_SLUG,
       name: "Bacteriostatic Water 10ml",
       description: "smoke fixture",
-      priceGbp: 7.5,
-      stock: 10,
+      priceGbp: 5.99,
+      stock: 20,
       weightGrams: 40,
       active: true,
     },
@@ -167,7 +168,7 @@ async function main() {
 
   // ── Checkout route ──────────────────────────────────────────────
   section("Checkout route");
-  const ok = await postCheckout({ tierId: "starter", quantity: 2, method: "card" });
+  const ok = await postCheckout({ tierId: "five", quantity: 2, method: "card" });
   assert(ok.status === 200, `valid order returns 200 (got ${ok.status})`);
   assert(
     typeof ok.json.paymentUrl === "string" && (ok.json.paymentUrl as string).includes("/dev/stripe"),
@@ -177,32 +178,42 @@ async function main() {
   const orderId = ok.json.orderId as string;
   const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
   assert(
-    Number(order.totalAmount) === 39,
-    "order total is £39.00, taken from config not the client"
+    Number(order.totalAmount) === 43.98,
+    "order total is £43.98, taken from config not the client"
   );
   assert(order.currency === "GBP", "order is priced in GBP");
   assert(order.status === "pending", "order starts pending");
   assert(order.customerEmail === "", "card order starts with no email — Stripe collects it");
   assert(order.shippingAddress === "", "card order starts with no address — Stripe collects it");
 
-  const items = JSON.parse(order.items) as { qty: number; unitPrice: string; bundleId: string }[];
-  assert(items[0]!.qty === 6, "2 × 3-vial pack records 6 vials for the packer");
-  assert(items[0]!.unitPrice === "6.50", "effective unit price is £6.50 per vial");
-  assert(items[0]!.bundleId === "starter", "the bundle bought is recorded on the line");
+  const items = JSON.parse(order.items) as {
+    qty: number;
+    unitPrice: string;
+    lineTotal: string;
+    bundleId: string;
+    bundleQty: number;
+  }[];
+  assert(items[0]!.qty === 10, "2 × 5-vial pack records 10 vials for the packer");
+  assert(items[0]!.unitPrice === "21.99", "unit price is the pack price, £21.99 per 5-vial pack");
+  assert(items[0]!.bundleId === "five", "the bundle bought is recorded on the line");
   assert(
-    Number(items[0]!.unitPrice) * items[0]!.qty === Number(order.totalAmount),
-    "unitPrice × qty reconciles exactly to the order total"
+    Number(items[0]!.unitPrice) * items[0]!.bundleQty === Number(order.totalAmount),
+    "unitPrice × bundleQty reconciles exactly to the order total"
+  );
+  assert(
+    items[0]!.lineTotal === order.totalAmount.toString(),
+    "the stored lineTotal matches the order total exactly, with no per-vial rounding"
   );
 
   // ── Input validation ────────────────────────────────────────────
   section("Input validation");
   const badBodies: [string, Record<string, unknown>][] = [
-    ["quantity 0 is rejected", { tierId: "starter", quantity: 0, method: "card" }],
-    ["quantity 11 is rejected", { tierId: "starter", quantity: 11, method: "card" }],
+    ["quantity 0 is rejected", { tierId: "five", quantity: 0, method: "card" }],
+    ["quantity 11 is rejected", { tierId: "five", quantity: 11, method: "card" }],
     ["unknown tier is rejected", { tierId: "enormous", quantity: 1, method: "card" }],
     [
       "a client-supplied price is rejected outright",
-      { tierId: "starter", quantity: 1, method: "card", priceMinor: 1 },
+      { tierId: "five", quantity: 1, method: "card", priceMinor: 1 },
     ],
   ];
   for (const [label, body] of badBodies) {
@@ -210,9 +221,9 @@ async function main() {
     assert(r.status === 400, `${label} (got ${r.status})`);
   }
 
-  // Stock is still 10 here — the webhook that decrements it runs below.
-  // 2 × the 10-vial pack is 20 vials, comfortably over.
-  const tooMany = await postCheckout({ tierId: "bulk", quantity: 2, method: "card" });
+  // Stock is still 20 here — the webhook that decrements it runs below.
+  // The 100-vial pack is comfortably over.
+  const tooMany = await postCheckout({ tierId: "hundred", quantity: 1, method: "card" });
   assert(tooMany.status === 409, `insufficient stock returns 409 (got ${tooMany.status})`);
   await prisma.order.deleteMany({ where: { status: "pending", id: { not: orderId } } });
 
@@ -220,7 +231,7 @@ async function main() {
   section("Kill switch");
   process.env.STRIPE_ENABLED = "false";
   const before = await prisma.order.count();
-  const killed = await postCheckout({ tierId: "starter", quantity: 1, method: "card" });
+  const killed = await postCheckout({ tierId: "five", quantity: 1, method: "card" });
   assert(
     killed.status === 400,
     `STRIPE_ENABLED=false rejects a forged card order (got ${killed.status})`
@@ -237,21 +248,21 @@ async function main() {
   process.env.STRIPE_SECRET_KEY = "sk_test_smoke";
   process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET;
 
-  const bad = await postWebhook(orderId, { amountTotal: 3900, badSignature: true });
+  const bad = await postWebhook(orderId, { amountTotal: 4398, badSignature: true });
   assert(bad.status === 400, `a forged signature is rejected with 400 (got ${bad.status})`);
   assert(
     (await prisma.order.findUniqueOrThrow({ where: { id: orderId } })).status === "pending",
     "and the order stays pending"
   );
 
-  const live = await postWebhook(orderId, { amountTotal: 3900, livemode: true });
+  const live = await postWebhook(orderId, { amountTotal: 4398, livemode: true });
   assert(live.status === 200, "a live-mode event on a test key is acknowledged, not processed");
   assert(
     (await prisma.order.findUniqueOrThrow({ where: { id: orderId } })).status === "pending",
     "and the order stays pending (livemode mismatch guard)"
   );
 
-  const good = await postWebhook(orderId, { amountTotal: 3900 });
+  const good = await postWebhook(orderId, { amountTotal: 4398 });
   assert(good.status === 200, `a correctly signed event returns 200 (got ${good.status})`);
 
   const paid = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
@@ -268,14 +279,14 @@ async function main() {
   assert(addr.city === "London", "the delivery city is backfilled from the session");
 
   const afterFirst = await prisma.product.findUniqueOrThrow({ where: { slug: VIAL_SLUG } });
-  assert(afterFirst.stock === 4, `stock fell 10 → 4 (6 vials), got ${afterFirst.stock}`);
+  assert(afterFirst.stock === 10, `stock fell 20 → 10 (10 vials), got ${afterFirst.stock}`);
 
   // ── Idempotency ─────────────────────────────────────────────────
   section("Idempotency");
-  const replay = await postWebhook(orderId, { amountTotal: 3900 });
+  const replay = await postWebhook(orderId, { amountTotal: 4398 });
   assert(replay.status === 200, "a replayed delivery is acknowledged");
   const afterReplay = await prisma.product.findUniqueOrThrow({ where: { slug: VIAL_SLUG } });
-  assert(afterReplay.stock === 4, `stock is unchanged on replay (still ${afterReplay.stock})`);
+  assert(afterReplay.stock === 10, `stock is unchanged on replay (still ${afterReplay.stock})`);
   assert(
     (await prisma.emailLog.count({ where: { orderId, type: "confirmation" } })) <= 1,
     "the confirmation email is logged at most once"
