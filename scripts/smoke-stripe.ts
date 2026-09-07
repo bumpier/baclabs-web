@@ -20,7 +20,11 @@ process.env.STRIPE_PRICE_SINGLE = "price_smoke_single";
 process.env.STRIPE_PRICE_STARTER = "price_smoke_starter";
 process.env.STRIPE_PRICE_VALUE = "price_smoke_value";
 process.env.STRIPE_PRICE_BULK = "price_smoke_bulk";
-process.env.STRIPE_PRICE_WHOLESALE = "price_smoke_wholesale";
+process.env.STRIPE_PRICE_BULK_50 = "price_smoke_bulk_50";
+process.env.STRIPE_PRICE_BULK_250 = "price_smoke_bulk_250";
+process.env.STRIPE_PRICE_BULK_500 = "price_smoke_bulk_500";
+process.env.STRIPE_PRICE_BULK_1K = "price_smoke_bulk_1k";
+process.env.STRIPE_PRICE_BULK_10K = "price_smoke_bulk_10k";
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:4310";
 // Point FX at a dead port so the lookup fails fast and uses the static
 // fallback — this test must not depend on the network.
@@ -145,7 +149,7 @@ async function main() {
     );
   }
   const starter = bundleById("starter")!;
-  assert(totalMinor(starter, 2) === 3900, "2 × starter = 3900p (£39.00)");
+  assert(totalMinor(starter, 2) === 3594, "2 × starter = 3594p (£35.94)");
 
   // ── Payment config ──────────────────────────────────────────────
   section("Payment configuration");
@@ -177,8 +181,8 @@ async function main() {
   const orderId = ok.json.orderId as string;
   const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
   assert(
-    Number(order.totalAmount) === 39,
-    "order total is £39.00, taken from config not the client"
+    Number(order.totalAmount) === 35.94,
+    "order total is £35.94, taken from config not the client"
   );
   assert(order.currency === "GBP", "order is priced in GBP");
   assert(order.status === "pending", "order starts pending");
@@ -187,7 +191,7 @@ async function main() {
 
   const items = JSON.parse(order.items) as { qty: number; unitPrice: string; bundleId: string }[];
   assert(items[0]!.qty === 6, "2 × 3-vial pack records 6 vials for the packer");
-  assert(items[0]!.unitPrice === "6.50", "effective unit price is £6.50 per vial");
+  assert(items[0]!.unitPrice === "5.99", "effective unit price is £5.99 per vial");
   assert(items[0]!.bundleId === "starter", "the bundle bought is recorded on the line");
   assert(
     Number(items[0]!.unitPrice) * items[0]!.qty === Number(order.totalAmount),
@@ -237,7 +241,7 @@ async function main() {
   process.env.STRIPE_SECRET_KEY = "sk_test_smoke";
   process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET;
 
-  const bad = await postWebhook(orderId, { amountTotal: 3900, badSignature: true });
+  const bad = await postWebhook(orderId, { amountTotal: 3594, badSignature: true });
   assert(bad.status === 400, `a forged signature is rejected with 400 (got ${bad.status})`);
   assert(
     (await prisma.order.findUniqueOrThrow({ where: { id: orderId } })).status === "pending",

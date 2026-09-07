@@ -36,7 +36,7 @@ export const PRODUCT = {
   name: "Bacteriostatic Water",
   size: "10ml vial",
   /** Price of a single vial, in pence. */
-  unitPriceMinor: 750,
+  unitPriceMinor: 599,
   // 0.9% is w/v (9 mg/mL), the USP basis — NOT by volume. The two differ
   // (benzyl alcohol is ~1.044 g/mL, so 0.9% w/v is ~0.86% v/v), and the page
   // previously said "by volume". State the basis wherever the figure appears.
@@ -55,7 +55,7 @@ export const PRODUCT = {
 // ── Bundle tiers ──────────────────────────────────────────────────
 // `quantity` on the checkout route means "how many of THIS bundle", not
 // how many vials. Buying 2 × starter = 6 vials.
-export type BundleId = "single" | "starter" | "value" | "bulk" | "wholesale";
+export type BundleId = "single" | "starter" | "value" | "bulk" | "bulk_50" | "bulk_250" | "bulk_500" | "bulk_1k" | "bulk_10k";
 
 export interface Bundle {
   id: BundleId;
@@ -70,11 +70,15 @@ export interface Bundle {
 }
 
 export const BUNDLES: readonly Bundle[] = [
-  { id: "single", vials: 1, priceMinor: 750, label: "", sku: "baclab-10ml-x1" },
-  { id: "starter", vials: 3, priceMinor: 1950, label: "Most popular", sku: "baclab-10ml-x3" },
-  { id: "value", vials: 5, priceMinor: 3000, label: "Best value", sku: "baclab-10ml-x5" },
-  { id: "bulk", vials: 10, priceMinor: 5000, label: "Stock up", sku: "baclab-10ml-x10" },
-  { id: "wholesale", vials: 100, priceMinor: 40000, label: "Wholesale", sku: "baclab-10ml-x100" },
+  { id: "single", vials: 1, priceMinor: 599, label: "", sku: "baclab-10ml-x1" },
+  { id: "starter", vials: 3, priceMinor: 1797, label: "Most popular", sku: "baclab-10ml-x3" },
+  { id: "value", vials: 5, priceMinor: 2995, label: "Best value", sku: "baclab-10ml-x5" },
+  { id: "bulk", vials: 10, priceMinor: 4950, label: "Stock up", sku: "baclab-10ml-x10" },
+  { id: "bulk_50", vials: 50, priceMinor: 222500, label: "", sku: "baclab-10ml-x50" },
+  { id: "bulk_250", vials: 250, priceMinor: 1000000, label: "", sku: "baclab-10ml-x250" },
+  { id: "bulk_500", vials: 500, priceMinor: 1750000, label: "", sku: "baclab-10ml-x500" },
+  { id: "bulk_1k", vials: 1000, priceMinor: 3000000, label: "", sku: "baclab-10ml-x1k" },
+  { id: "bulk_10k", vials: 10000, priceMinor: 27500000, label: "Wholesale", sku: "baclab-10ml-x10k" },
 ] as const;
 
 /** Pre-selected tier in the purchase block. */
@@ -200,7 +204,11 @@ const PRICE_ENV: Record<BundleId, string> = {
   starter: "STRIPE_PRICE_STARTER",
   value: "STRIPE_PRICE_VALUE",
   bulk: "STRIPE_PRICE_BULK",
-  wholesale: "STRIPE_PRICE_WHOLESALE",
+  bulk_50: "STRIPE_PRICE_BULK_50",
+  bulk_250: "STRIPE_PRICE_BULK_250",
+  bulk_500: "STRIPE_PRICE_BULK_500",
+  bulk_1k: "STRIPE_PRICE_BULK_1K",
+  bulk_10k: "STRIPE_PRICE_BULK_10K",
 };
 
 /** The Price ID configured for a bundle, or null when unset. */
