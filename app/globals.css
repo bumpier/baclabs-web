@@ -124,17 +124,23 @@
   --radius-panel: 1rem;
   --radius-field: 1.75rem;
 
-  /* Elevation is rare. The purchase panel, the sticky bar, and the
-     floating hero chips — that is all. */
+  /* Elevation is rare and, since the grid was retired, now carries some of
+     the structural work colour and pattern used to. Kept soft and diffuse
+     rather than crisp, so a lift reads as quiet depth, not a UI-kit card. */
   --shadow-panel:
-    0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent),
-    0 16px 40px -20px color-mix(in srgb, var(--ink) 22%, transparent);
+    0 1px 2px color-mix(in srgb, var(--ink) 4%, transparent),
+    0 24px 48px -24px color-mix(in srgb, var(--ink) 18%, transparent);
   --shadow-bar:
     0 -1px 0 var(--line),
-    0 -8px 24px -12px color-mix(in srgb, var(--ink) 16%, transparent);
+    0 -8px 24px -12px color-mix(in srgb, var(--ink) 14%, transparent);
   --shadow-lift:
-    0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent),
-    0 10px 24px -12px color-mix(in srgb, var(--ink) 28%, transparent);
+    0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent),
+    0 14px 32px -16px color-mix(in srgb, var(--ink) 22%, transparent);
+  /* The quiet lift for a flat surface-card — softer again than --shadow-lift,
+     so a whole row of cards doesn't compete with the one true panel. */
+  --shadow-card:
+    0 1px 2px color-mix(in srgb, var(--ink) 3%, transparent),
+    0 10px 24px -16px color-mix(in srgb, var(--ink) 14%, transparent);
 
   /* Reading measure. Body copy never exceeds this. */
   --container-measure: 65ch;
@@ -267,7 +273,7 @@
   .btn-cta {
     @apply inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-control
       bg-primary px-7 text-base font-semibold text-white
-      transition-[background-color,transform] duration-150;
+      transition-[background-color,box-shadow,transform] duration-150;
     transition-timing-function: var(--ease-out);
   }
   .btn-cta:active {
@@ -281,6 +287,8 @@
   @media (hover: hover) and (pointer: fine) {
     .btn-cta:not(:disabled):hover {
       @apply bg-primary-deep;
+      /* Tactile depth on the one button that matters most. */
+      box-shadow: var(--shadow-lift);
     }
   }
 
@@ -351,9 +359,11 @@
 
   /* One card surface. The page used to carry three tinted grounds; it now
      carries white and this. Fewer colours, and the eye has one thing to
-     learn instead of three. */
+     learn instead of three. A quiet shadow — not just a border — is what
+     separates it from the page now that there's no grid underneath it. */
   .surface-card {
     @apply rounded-panel border border-line bg-neutral;
+    box-shadow: var(--shadow-card);
   }
 
   /* A stated fact, as a chip. Used for the floating hero specs and the
@@ -516,21 +526,6 @@
 }
 
 @layer utilities {
-  /* The background grid — graph paper, which is the right register for a
-     product sold by measured volume. Masked so it fades out rather than
-     running under the copy at full strength. */
-  .bg-grid {
-    background-image:
-      linear-gradient(to right, color-mix(in srgb, var(--line) 75%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in srgb, var(--line) 75%, transparent) 1px, transparent 1px);
-    background-size: 72px 72px;
-    background-position: center top;
-  }
-  .bg-grid-fade {
-    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%);
-  }
-
   /* The page container. Wider than the old max-w-3xl so two- and
      three-column sections have room to breathe; prose inside still caps
      at .measure, so line length is unaffected by the wider shell. */
@@ -542,7 +537,7 @@
     @apply mx-auto w-full max-w-7xl px-5 sm:px-8;
   }
   .section {
-    @apply mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24;
+    @apply mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28;
   }
 
   /* Stagger for the hero's load sequence. The ONE orchestrated moment on

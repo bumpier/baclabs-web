@@ -11,7 +11,7 @@
  *   ink        #0B1220   near-black slate
  *
  * Everything else is white, one neutral wash, and two greys. The page gets
- * its structure from a hairline grid and generous space rather than from
+ * its structure from generous space and soft elevation rather than from
  * coloured panels, so colour only ever appears where something is
  * clickable or where the product itself is drawn.
  *
@@ -32,7 +32,7 @@
 const c = (hex: string): string => hex;
 
 // ── Grounds ───────────────────────────────────────────────────────────
-/** The page is white. The grid does the work a tint used to do. */
+/** The page is white. Space and soft elevation do the work a tint used to do. */
 const PAPER = "#FFFFFF";
 const SURFACE = "#FFFFFF";
 /** The one neutral wash, for cards that need to separate from the page. */
@@ -45,7 +45,7 @@ const INK = "#0B1220";
 const INK_SOFT = "#4B5675";
 
 // ── Rules ─────────────────────────────────────────────────────────────
-/** The background grid and hairline dividers. Decorative — not text, not state. */
+/** Hairline dividers and card borders. Decorative — not text, not state. */
 const LINE = "#E2E8F0";
 /** Borders on real UI controls (unselected radio, input). 3.15:1 (AA non-text). */
 const LINE_STRONG = "#8592A8";

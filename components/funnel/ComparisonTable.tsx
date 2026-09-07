@@ -32,44 +32,56 @@ export function ComparisonTable() {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
+      <table className="w-full min-w-[36rem] border-separate border-spacing-0 text-left text-sm">
         <caption className="sr-only">
           Attributes of this product compared with typical alternatives
         </caption>
         <thead>
-          <tr className="border-y border-line">
-            <th scope="col" className="py-3 pr-4 font-medium text-ink-soft">
+          <tr>
+            <th scope="col" className="border-y border-line py-3 pr-4 font-medium text-ink-soft">
               Attribute
             </th>
-            <th scope="col" className="rounded-t-control bg-accent px-4 py-3 font-semibold text-ink">
+            <th
+              scope="col"
+              className="rounded-t-panel border-x border-t border-brand/20 bg-brand-tint px-4 py-3 font-semibold text-ink"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
               This product
             </th>
-            <th scope="col" className="py-3 font-medium text-ink-soft">
+            <th scope="col" className="border-y border-line py-3 font-medium text-ink-soft">
               Typical alternative
             </th>
           </tr>
         </thead>
         <tbody>
           {ROWS.map((r) => (
-            <tr key={r.attribute} className="border-b border-line align-top">
-              <th scope="row" className="py-3 pr-4 font-medium text-ink-soft">
+            <tr key={r.attribute} className="align-top">
+              <th scope="row" className="border-b border-line py-3 pr-4 font-medium text-ink-soft">
                 {r.attribute}
               </th>
-              <td className="bg-accent px-4 py-3 text-ink">{r.ours}</td>
-              <td className="py-3 text-ink-soft">{r.theirs}</td>
+              <td
+                className="border-x border-brand/20 bg-brand-tint px-4 py-3 text-ink"
+                style={{ boxShadow: "var(--shadow-card)" }}
+              >
+                {r.ours}
+              </td>
+              <td className="border-b border-line py-3 text-ink-soft">{r.theirs}</td>
             </tr>
           ))}
-          <tr className="border-b border-line align-top">
-            <th scope="row" className="py-3 pr-4 font-medium text-ink-soft">
+          <tr className="align-top">
+            <th scope="row" className="border-b border-line py-3 pr-4 font-medium text-ink-soft">
               Price per ml
             </th>
-            <td className="rounded-b-control bg-accent px-4 py-3 text-ink">
+            <td
+              className="rounded-b-panel border-x border-b border-brand/20 bg-brand-tint px-4 py-3 text-ink"
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
               <span className="tabular">{formatMinor(Math.round(perMlMinor(single)))}</span> for one
               vial, down to{" "}
               <span className="tabular">{formatMinor(Math.round(perMlMinor(cheapest)))}</span> at{" "}
               <span className="tabular">{cheapest.vials}</span> vials
             </td>
-            <td className="py-3 text-ink-soft">Varies</td>
+            <td className="border-b border-line py-3 text-ink-soft">Varies</td>
           </tr>
         </tbody>
       </table>

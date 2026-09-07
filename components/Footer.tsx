@@ -22,7 +22,7 @@ export function Footer() {
 
   return (
     <footer className="no-print mt-auto bg-abyss text-white/70">
-      <div className="shell-wide py-16 sm:py-20">
+      <div className="shell-wide py-20 sm:py-24">
         <div className="grid gap-10 lg:grid-cols-12">
           {/* Identity and the product line, so the footer restates what is
               sold rather than being purely navigational. */}

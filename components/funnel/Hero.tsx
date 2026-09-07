@@ -60,15 +60,7 @@ export function Hero() {
 
   return (
     <section className="relative overflow-hidden bg-paper" aria-labelledby="hero-heading">
-      {/* Graph paper. It gives the hero structure without spending a
-          colour on it, and reads as measurement — which is what this
-          product is sold by. */}
-      <div
-        aria-hidden="true"
-        className="bg-grid bg-grid-fade pointer-events-none absolute inset-0"
-      />
-
-      <div className="shell-wide relative py-14 sm:py-20 lg:py-24">
+      <div className="shell-wide relative py-20 sm:py-28 lg:py-32">
         <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
           {/* ── Left: the pitch ─────────────────────────────────── */}
           <div className="lg:col-span-7">
