@@ -65,12 +65,67 @@ export async function send(to: string, subject: string, html: string) {
   }
 }
 
-export function layout(body: string): string {
-  return `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1b2b24">
-    <h2 style="color:${LITERAL.brand}">${brand.name}</h2>
-    ${body}
-    <p style="margin-top:32px;font-size:12px;color:#6b7a72">${brand.name} · ${brand.contact.email}</p>
-  </div>`;
+// Single-quoted font names: this stack is interpolated into a
+// double-quoted style="..." attribute, so a literal " would close it early.
+const FONT_STACK = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+
+/**
+ * Escapes user-supplied text (customer name, shipping address, etc.) before
+ * it's interpolated into an email. Nothing upstream of these templates
+ * escapes for us — they're plain strings, not a templating engine's tree.
+ */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** The brand-blue pill CTA used across every transactional email. */
+export function ctaButton(url: string, label: string): string {
+  return `<a href="${url}" style="display:inline-block;background:${LITERAL.brand};color:#ffffff;padding:12px 28px;border-radius:24px;text-decoration:none;font-weight:600;font-size:14px">${escapeHtml(label)}</a>`;
+}
+
+/**
+ * Wraps an email body in the shared BacLab shell: dark header band, white
+ * card, neutral footer with the compliance line. Table-based markup, not
+ * flex/grid — Outlook's rendering engine (Word) only understands tables.
+ *
+ * `preheader` is the hidden text inbox lists show as the preview snippet;
+ * without it clients fall back to the email's opening HTML (e.g. a stray
+ * "Hi ,") which reads as broken before the message is even opened.
+ */
+export function layout(body: string, opts?: { preheader?: string }): string {
+  const preheader = opts?.preheader;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>${brand.name}</title>
+</head>
+<body style="margin:0;padding:0;background:${LITERAL.neutral};font-family:${FONT_STACK}">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${escapeHtml(preheader)}</div>` : ""}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${LITERAL.neutral}">
+<tr><td align="center" style="padding:32px 16px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:${LITERAL.paper};border-radius:12px;overflow:hidden">
+<tr><td style="background:${LITERAL.abyss};padding:24px 32px">
+<span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.02em">${brand.name}</span>
+</td></tr>
+<tr><td style="padding:32px;color:${LITERAL.ink};font-size:15px;line-height:1.6">
+${body}
+</td></tr>
+<tr><td style="padding:20px 32px;background:${LITERAL.neutral};border-top:1px solid ${LITERAL.line}">
+<p style="margin:0 0 6px;font-size:12px;color:${LITERAL.inkSoft}">${brand.name} &middot; <a href="mailto:${brand.contact.email}" style="color:${LITERAL.inkSoft}">${brand.contact.email}</a></p>
+<p style="margin:0;font-size:11px;color:${LITERAL.inkSoft};line-height:1.5">${escapeHtml(brand.disclaimer)}</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 export async function sendVerificationEmail(to: string, token: string) {

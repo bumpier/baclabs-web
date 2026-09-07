@@ -1,4 +1,4 @@
-import { BUNDLES, PRODUCT, formatMinor, perMlMinor } from "@/config/funnel";
+import { BUNDLES, PRICE_MATCH_BADGE, PRODUCT, formatMinor, perMlMinor } from "@/config/funnel";
 
 /**
  * Objective attributes only, and no named competitors.
@@ -76,6 +76,13 @@ export function ComparisonTable() {
       <p className="mt-3 text-xs text-ink-soft">
         &ldquo;Typical alternative&rdquo; describes the category generally. We do not compare
         against named sellers, and we do not make claims about other suppliers&rsquo; products.
+      </p>
+      <p className="mt-2 text-xs text-ink-soft">
+        Found it cheaper from another UK seller? We&rsquo;ll match it &mdash; see our{" "}
+        <a href="#guarantee" className="link">
+          {PRICE_MATCH_BADGE.toLowerCase()}
+        </a>
+        .
       </p>
     </div>
   );

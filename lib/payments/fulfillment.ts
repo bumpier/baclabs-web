@@ -6,7 +6,16 @@ import type { PaymentProvider } from "@/lib/payments/config";
 // Idempotent: only the pending → paid transition does work; retries are no-ops.
 export async function fulfillPaidOrder(
   orderId: string,
-  opts: { paymentRef?: string | null; provider: PaymentProvider; notes?: string }
+  opts: {
+    paymentRef?: string | null;
+    provider: PaymentProvider;
+    notes?: string;
+    /** Shipping actually charged, in pence — order.totalAmount is goods-only,
+     * so this is needed to show a correct total in the confirmation/alert
+     * emails. Omit when unknown (e.g. crypto orders never charge delivery
+     * through Stripe). */
+    deliveryMinor?: number;
+  }
 ): Promise<{ alreadyPaid: boolean }> {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return { alreadyPaid: false }; // unknown order — caller acknowledges
@@ -47,8 +56,9 @@ export async function fulfillPaidOrder(
 
   const paidOrder = await prisma.order.findUnique({ where: { id: orderId } });
   if (paidOrder) {
-    void sendOrderConfirmationEmail(paidOrder); // to the customer
-    void sendNewOrderAlert(paidOrder); // to the shop owner (ORDER_NOTIFY_EMAIL)
+    const emailOpts = { deliveryMinor: opts.deliveryMinor ?? 0 };
+    void sendOrderConfirmationEmail(paidOrder, emailOpts); // to the customer
+    void sendNewOrderAlert(paidOrder, emailOpts); // to the shop owner (ORDER_NOTIFY_EMAIL)
   }
   return { alreadyPaid: false };
 }

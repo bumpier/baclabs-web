@@ -16,7 +16,7 @@ export const LEGAL_LINKS = [
 ] as const;
 
 export function Footer() {
-  const { company, contact, disclaimer } = brand;
+  const { company, contact, disclaimer, trust } = brand;
   const year = new Date().getFullYear();
   const hasEmail = Boolean(contact.email);
 
@@ -84,6 +84,16 @@ export function Footer() {
               </p>
             )}
             <p className="mt-4 text-sm text-white/50">Payments processed securely by Stripe.</p>
+            {trust.qualityLine ? (
+              <p className="mt-2 text-sm">
+                <Link
+                  href="/#guarantee"
+                  className="text-white/65 underline decoration-white/25 underline-offset-4 transition-colors duration-150 hover:text-white"
+                >
+                  {trust.qualityLine}
+                </Link>
+              </p>
+            ) : null}
           </div>
         </div>
 

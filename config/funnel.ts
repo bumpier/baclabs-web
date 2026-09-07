@@ -10,6 +10,8 @@
 // placeholder a customer could mistake for a claim.
 // ─────────────────────────────────────────────────────────────────
 
+import { brand } from "@/config/brand";
+
 /** Money is held in integer pence everywhere. Never use floats for totals. */
 export const CURRENCY = "GBP" as const;
 
@@ -311,9 +313,17 @@ export const WHY_BUY: readonly { title: string; body: string }[] = [];
 
 /** Guarantee / risk-reversal block. Empty body renders nothing at all. */
 export const GUARANTEE: { title: string; body: string } = {
-  title: "",
-  body: "",
+  title: "The UK's lowest price — guaranteed",
+  body: `Found this exact product cheaper, in stock, from another UK-based seller? Email us the listing${brand.contact.email ? ` at ${brand.contact.email}` : ""} and we'll match the price.`,
 };
+
+/**
+ * Short badge text for the hero, comparison table, footer and sticky bar.
+ * The full terms live in GUARANTEE.body — every use of this string should
+ * link to the guarantee section (id="guarantee" on the page) rather than
+ * restate the terms.
+ */
+export const PRICE_MATCH_BADGE = "UK price match guarantee";
 
 /**
  * Desktop-only, dismissible exit-intent offer. Disabled by default.

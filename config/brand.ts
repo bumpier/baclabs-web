@@ -56,7 +56,7 @@ export const brand = {
   trust: {
     // Empty strings render nothing.
     shippingLine: "",
-    qualityLine: "",
+    qualityLine: "UK price match guarantee",
     secureLine: "Payments processed securely by Stripe.",
   },
   // Compliance line shown in the footer. This is the SHORT FORM of the

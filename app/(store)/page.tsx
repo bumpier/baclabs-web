@@ -262,7 +262,7 @@ export default function FunnelPage() {
 
         {/* ── Guarantee — only with a real policy ──────────────── */}
         {GUARANTEE.body ? (
-          <section className="section pt-0" aria-labelledby="guarantee-heading">
+          <section id="guarantee" className="section scroll-mt-24 pt-0" aria-labelledby="guarantee-heading">
             <div className="surface-card p-8 sm:p-12">
               <h2 id="guarantee-heading" className="text-2xl">
                 {GUARANTEE.title || "Our guarantee"}
@@ -300,8 +300,10 @@ export default function FunnelPage() {
           </div>
         </section>
 
-        {/* Reserve room so the mobile bar never covers the footer links. */}
-        <div aria-hidden="true" className="h-24 lg:hidden" />
+        {/* Reserve room so the mobile bar never covers the footer links.
+            Bumped from h-24: StickyBuyBar now has a third text line
+            (the price-match badge). */}
+        <div aria-hidden="true" className="h-28 lg:hidden" />
         <StickyBuyBar />
       </FunnelStateProvider>
     </>

@@ -142,6 +142,7 @@ export async function POST(req: Request) {
       const { alreadyPaid } = await fulfillPaidOrder(orderId, {
         paymentRef,
         provider: "stripe",
+        deliveryMinor: session.total_details?.amount_shipping ?? 0,
       });
 
       // The customer confirmation and the owner alert are sent from

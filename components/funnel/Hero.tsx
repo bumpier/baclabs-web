@@ -1,5 +1,6 @@
 import {
   BUNDLES,
+  PRICE_MATCH_BADGE,
   PRODUCT,
   SALE,
   referenceUnitPriceMinor,
@@ -40,10 +41,11 @@ const SPEC_CHIPS = [
 ];
 
 /** Things that are true today. Dispatch is absent until it is confirmed. */
-const TRUST = [
-  "Secure checkout by Stripe",
-  "Sealed, tamper-evident vial",
-  "Sold as a laboratory and research diluent",
+const TRUST: { label: string; href?: string }[] = [
+  { label: "Secure checkout by Stripe" },
+  { label: "Sealed, tamper-evident vial" },
+  { label: "Sold as a laboratory and research diluent" },
+  { label: PRICE_MATCH_BADGE, href: "#guarantee" },
 ];
 
 export function Hero() {
@@ -114,9 +116,15 @@ export function Hero() {
 
             <ul className="animate-rise stagger-5 mt-8 flex flex-wrap gap-x-6 gap-y-2">
               {TRUST.map((t) => (
-                <li key={t} className="flex items-center gap-2 text-sm text-ink-soft">
+                <li key={t.label} className="flex items-center gap-2 text-sm text-ink-soft">
                   <CheckMark />
-                  {t}
+                  {t.href ? (
+                    <a href={t.href} className="underline decoration-line underline-offset-4 hover:text-ink">
+                      {t.label}
+                    </a>
+                  ) : (
+                    t.label
+                  )}
                 </li>
               ))}
             </ul>

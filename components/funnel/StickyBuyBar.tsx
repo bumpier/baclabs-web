@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatMinor, VIAL_ML } from "@/config/funnel";
+import { formatMinor, PRICE_MATCH_BADGE, VIAL_ML } from "@/config/funnel";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
 
@@ -62,6 +62,9 @@ export function StickyBuyBar() {
           <p className="tabular text-lg font-semibold leading-tight text-ink">
             {formatMinor(totalMinor)}
           </p>
+          <a href="#guarantee" className="truncate text-[11px] text-ink-soft underline decoration-line underline-offset-2">
+            {PRICE_MATCH_BADGE}
+          </a>
         </div>
         <a
           href="#buy"

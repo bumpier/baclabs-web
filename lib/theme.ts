@@ -121,6 +121,7 @@ export const LITERAL = {
   abyss: ABYSS,
   ink: INK,
   inkSoft: INK_SOFT,
+  line: LINE,
   brand: PRIMARY,
   primary: PRIMARY,
   secondary: SECONDARY,

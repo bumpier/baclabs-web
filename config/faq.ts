@@ -47,10 +47,6 @@ export const FAQ: readonly FaqItem[] = [
     a: `${PRODUCT.use} It is a diluent, not a product with any activity of its own.`,
   },
   {
-    q: "Is it for human use?",
-    a: "It is sold as a diluent for laboratory and research purposes.",
-  },
-  {
     q: "How large is the vial, and how many times can it be used?",
     a: "Each vial holds 10ml and is sealed. How many times it can be drawn from depends entirely on the volume taken each time — a 10ml vial gives ten 1ml draws, or five 2ml draws.",
   },
@@ -59,24 +55,12 @@ export const FAQ: readonly FaqItem[] = [
     a: `Store the sealed vial as stated on its label. Once it has been entered, the limit is ${PRODUCT.shelfLifeAfterOpening.toLowerCase()}.`,
   },
   {
-    q: "How long does it last once opened?",
-    a: `${PRODUCT.shelfLifeAfterOpening}. Write the date on the vial the first time you draw from it, and discard it once that period is up. The benzyl alcohol inhibits bacterial growth in the vial between draws — it does not sterilise the contents, so the limit applies however much liquid is left.`,
-  },
-  {
     q: `How much benzyl alcohol is in a ${VIAL_ML}ml vial?`,
     a: `0.9% w/v, which is 9 mg/mL — so a ${VIAL_ML}ml vial contains ${VIAL_ML * 9} mg of benzyl alcohol in total.`,
   },
   {
-    q: "Can I return an order?",
-    a: "An unopened vial with its seal intact can be returned within 14 days of delivery for a full refund. A vial that has been opened or unsealed cannot be — it is sealed for hygiene reasons, and regulation 28(3) of the Consumer Contracts Regulations 2013 excludes it. Anything faulty, damaged or not as described is refunded whether or not it was opened. Full terms are on the returns and refunds page.",
-  },
-  {
     q: "How do I pay, and is it secure?",
     a: "Payment is taken by Stripe on Stripe's own hosted checkout page — cards, Apple Pay and Google Pay. Your card details are entered on Stripe's page and are never sent to, or stored by, this site.",
-  },
-  {
-    q: "Can I get a VAT invoice?",
-    a: "Stripe emails a payment receipt for every order automatically.",
   },
   {
     q: "Do you sell in bulk or wholesale?",
