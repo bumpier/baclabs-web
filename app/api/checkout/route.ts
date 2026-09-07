@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     const grandTotalMinor = totalMinor(bundle, input.quantity);
 
     // Bundles divide exactly into whole pence per vial by construction
-    // (599/1, 1797/3, 2995/5, 4950/10, 222500/50, 27500000/10000), so the packing slip's
+    // (750/1, 1950/3, 3000/5, 5000/10, 40000/100), so the packing slip's
     // unitPrice × qty always reconciles to the amount charged.
     const perVialMinorEffective = grandTotalMinor / totalVials;
 
