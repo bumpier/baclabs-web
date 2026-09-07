@@ -23,8 +23,8 @@ export function VialImage({ priority = false }: { priority?: boolean }) {
       <img
         src={hero.src}
         alt={hero.alt}
-        width={1400}
-        height={1400}
+        width={768}
+        height={768}
         className="aspect-square w-full rounded-panel object-cover"
         fetchPriority={priority ? "high" : "auto"}
         decoding="async"
