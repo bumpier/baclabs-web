@@ -19,13 +19,18 @@ export function VialImage({ priority = false }: { priority?: boolean }) {
 
   if (hero) {
     return (
+      // Rendered at the photograph's own aspect ratio. The shot is a portrait
+      // of a single upright vial, so cropping it to a square would cut the cap
+      // off the top and the base off the bottom — the two parts that say
+      // "sealed vial" rather than "tube of liquid".
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={hero.src}
         alt={hero.alt}
-        width={768}
-        height={768}
-        className="aspect-square w-full rounded-panel object-cover"
+        width={hero.width}
+        height={hero.height}
+        style={{ aspectRatio: `${hero.width} / ${hero.height}` }}
+        className="w-full rounded-panel object-cover"
         fetchPriority={priority ? "high" : "auto"}
         decoding="async"
       />

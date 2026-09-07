@@ -341,9 +341,17 @@ export const EXIT_INTENT: { enabled: boolean; heading: string; body: string; pro
  * Product photography. Empty array falls back to the neutral placeholder.
  * Shot list lives in LAUNCH-CHECKLIST.md.
  */
-export const PRODUCT_IMAGES: readonly { src: string; alt: string }[] = [
+export const PRODUCT_IMAGES: readonly {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+}[] = [
   {
-    src: "/product-vial.jpg",
-    alt: `A sealed ${PRODUCT.name.toLowerCase()} vial with a crimped aluminium collar and red flip cap, standing on a marble surface.`,
+    src: "/bacteriostatic-water-10ml-research-vial-uk-astra-labs.webp",
+    alt: `A sealed ${PRODUCT.size} of ${PRODUCT.name.toLowerCase()} with a crimped aluminium collar and white flip cap, labelled for research use only, ${VIAL_ML}ml, storage 2–8°C.`,
+    /** Intrinsic pixel size, so the layout reserves the right box before the file loads. */
+    width: 1122,
+    height: 1402,
   },
 ];
