@@ -253,7 +253,7 @@
      TWO PLACES IT DOES NOT BELONG:
        1. Prose that merely contains a number.
        2. Display-size figures (text-3xl and up). Tabular spacing gives the
-          decimal point a full digit advance, so "0.9%" sets as "0 . 9%" at
+          decimal point a full digit advance, so "5.99" sets as "5 . 99" at
           72px. Alignment is the entire point of tnum, and a standalone
           headline figure has no column to align to. */
   .tabular {

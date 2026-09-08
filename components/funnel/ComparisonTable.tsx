@@ -16,7 +16,7 @@ const ROWS: { attribute: string; ours: string; theirs: string }[] = [
   },
   {
     attribute: "Preservative",
-    ours: "0.9% benzyl alcohol",
+    ours: "Bacteriostatic preservative",
     theirs: "None in plain sterile water",
   },
   {

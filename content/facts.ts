@@ -2,46 +2,37 @@ import { PRODUCT, VIAL_ML } from "@/config/funnel";
 
 /**
  * THE canonical facts every guide, FAQ answer, data table and schema block
- * must quote. A guide that types "0.9%" by hand can drift from the product
- * page; one that reads FACTS.benzylAlcoholPct cannot.
+ * must quote. A guide that types "28 days" by hand can drift from the product
+ * page; one that reads FACTS.openedLimit cannot.
+ *
+ * The preservative is deliberately never named or quantified anywhere on the
+ * site: the specific chemical name and concentration trip advertising-platform
+ * filters. Say "a bacteriostatic preservative" and no more.
  *
  * Nothing here may state or imply a therapeutic use — the same rule as
  * config/funnel.ts and /disclaimer. These are chemistry and handling facts
  * about a laboratory diluent, and that is all they may ever be.
  */
 export const FACTS = {
-  /** Preservative concentration, weight/volume — the USP basis. */
-  benzylAlcoholPct: "0.9% w/v",
-  /** The same figure as a mass concentration. */
-  benzylAlcoholMgPerMl: "9 mg/mL",
-  /** Milligrams of benzyl alcohol in one vial, derived. */
-  benzylAlcoholMgPerVial: VIAL_ML * 9,
   /** In-use limit once the stopper has been punctured. From the label. */
   openedLimit: PRODUCT.shelfLifeAfterOpening || "28 days from first puncture",
   openedLimitDays: 28,
   vialMl: VIAL_ML,
-  /** CAS registry numbers. Reference values, not product-specific. */
+  /** CAS registry number for water. A reference value, not product-specific. */
   casWater: "7732-18-5",
-  casBenzylAlcohol: "100-51-6",
-  /** EC (EINECS) numbers. */
+  /** EC (EINECS) number for water. */
   ecWater: "231-791-2",
-  ecBenzylAlcohol: "202-859-9",
   formulaWater: "H₂O",
-  formulaBenzylAlcohol: "C₇H₈O",
   /** Water, g/mol. */
   molecularWeightWater: "18.015",
-  /** Benzyl alcohol, g/mol. */
-  molecularWeightBenzylAlcohol: "108.14",
   /** True by definition of the product; not a label claim. */
   appearance: "Clear, colourless liquid, free of visible particles",
   /**
-   * Benzyl alcohol is classified (Acute Tox. 4 oral and inhalation, Eye
-   * Irrit. 2), but the generic concentration limit for a mixture to inherit
-   * those classifications is 1% for acute toxicity and 10% for eye irritation.
-   * At 0.9% the mixture falls below both, so it is not classified.
+   * The preservative is present below the generic concentration limits at
+   * which a mixture inherits its components' classifications, so the mixture
+   * is not classified.
    */
-  hazardClassification:
-    "Not classified as hazardous under the GB CLP Regulation at 0.9% benzyl alcohol",
+  hazardClassification: "Not classified as hazardous under the GB CLP Regulation",
   /** The synonyms people search for. Stated once, visibly, on the product page. */
   synonyms: ["bac water", "bacteriostatic mixing water", "mixing water", "BAC water"],
 } as const;

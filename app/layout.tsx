@@ -23,7 +23,7 @@ const LOWEST_PER_VIAL = formatMinor(Math.min(...BUNDLES.map(perVialMinor)));
 // there is no therapeutic language: the product is described only as a diluent
 // for laboratory/research use. Do NOT add a delivery or dispatch claim here
 // until DELIVERY.dispatchLine in config/funnel.ts holds a real figure.
-const DESCRIPTION = `Sealed multi-dose ${PRODUCT.size} with 0.9% benzyl alcohol, ${PRICE} — down to ${LOWEST_PER_VIAL} a vial in bulk. Sold as a laboratory and research diluent.`;
+const DESCRIPTION = `Sealed multi-dose ${PRODUCT.size} with a bacteriostatic preservative, ${PRICE} — down to ${LOWEST_PER_VIAL} a vial in bulk. Sold as a laboratory and research diluent.`;
 
 // "Buy" and "UK" are the two commercial modifiers every competing UK seller
 // carries in its title tag; the price is ours alone, and is the CTR hook.

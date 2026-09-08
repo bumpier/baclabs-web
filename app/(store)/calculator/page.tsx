@@ -42,7 +42,7 @@ const FAQ: GuideFaq[] = [
   },
   {
     q: "Which diluent does this assume?",
-    a: `Any. The arithmetic is the same for bacteriostatic water, sterile water or saline. The difference between them is the preservative: bacteriostatic water contains ${FACTS.benzylAlcoholPct} benzyl alcohol, which is what allows one vial to be entered more than once.`,
+    a: `Any. The arithmetic is the same for bacteriostatic water, sterile water or saline. The difference between them is the preservative: bacteriostatic water contains a bacteriostatic preservative, which is what allows one vial to be entered more than once.`,
   },
 ];
 

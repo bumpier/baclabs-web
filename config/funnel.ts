@@ -39,11 +39,10 @@ export const PRODUCT = {
   size: "10ml vial",
   /** Price of a single vial, in pence. */
   unitPriceMinor: 599,
-  // 0.9% is w/v (9 mg/mL), the USP basis — NOT by volume. The two differ
-  // (benzyl alcohol is ~1.044 g/mL, so 0.9% w/v is ~0.86% v/v), and the page
-  // previously said "by volume". State the basis wherever the figure appears.
+  // The preservative is never named or quantified on the site — see the note
+  // at the top of content/facts.ts.
   composition:
-    "Sterile water with 0.9% w/v benzyl alcohol (9 mg/mL) as a bacteriostatic preservative, in a sealed multi-dose vial.",
+    "Sterile water with a bacteriostatic preservative, in a sealed multi-dose vial.",
   use: "A sterile diluent and solvent, used to reconstitute or dilute substances for laboratory and research purposes.",
   // Empty strings render nothing.
   // Printed on the label ("Storage: 2–8°C"); see the vial photograph in
@@ -476,7 +475,7 @@ export function trustBadges(): TrustBadge[] {
     },
     {
       label: "Sealed, tamper-evident vial",
-      detail: `${VIAL_ML}ml, 0.9% benzyl alcohol w/v, sold as a laboratory and research diluent.`,
+      detail: `${VIAL_ML}ml, sterile water with a bacteriostatic preservative, sold as a laboratory and research diluent.`,
       icon: "sealed",
     },
   ];

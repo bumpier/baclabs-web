@@ -101,6 +101,8 @@ const nextConfig = {
       { source: "/auth/:path*", destination: "/", permanent: true },
       { source: "/dashboard", destination: "/", permanent: true },
       { source: "/refunds", destination: "/returns", permanent: true },
+      // Guide retired; its subject is covered by the "what is" guide.
+      { source: "/guides/benzyl-alcohol-in-bacteriostatic-water", destination: "/guides/what-is-bacteriostatic-water", permanent: true },
       // There is no /delivery page — the delivery terms sit in the trust bar
       // and purchase block on the home page, so that is where /shipping goes.
       { source: "/shipping", destination: "/", permanent: true },

@@ -26,7 +26,7 @@ export const howManyDrawsFromAVial: Guide = {
     {
       heading: `How many draws does a ${FACTS.vialMl} ml vial give?`,
       paragraphs: [
-        `The first answer is division. A vial holds a nominal ${FACTS.vialMl} ml, so the number of draws is ${FACTS.vialMl} divided by the volume withdrawn each time. Draw 1 ml and you get ${drawsAt1ml} draws. Draw 2 ml and you get ${drawsAt2ml}. Draw 0.5 ml and you get ${drawsAtHalfMl}. The liquid is the same sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol from the first draw to the last.`,
+        `The first answer is division. A vial holds a nominal ${FACTS.vialMl} ml, so the number of draws is ${FACTS.vialMl} divided by the volume withdrawn each time. Draw 1 ml and you get ${drawsAt1ml} draws. Draw 2 ml and you get ${drawsAt2ml}. Draw 0.5 ml and you get ${drawsAtHalfMl}. The liquid is the same sterile water with a bacteriostatic preservative from the first draw to the last.`,
         `Two things push the real count below the paper figure. The in-use limit of ${FACTS.openedLimit} stops the clock whether or not the vial is empty, and a small volume never reaches the receiving vessel because it stays in the syringe hub, the needle and the bottom of the vial. The table gives the arithmetic; the sections below make the adjustments.`,
       ],
       table: {

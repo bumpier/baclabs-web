@@ -7,14 +7,14 @@ export const whereToBuyUk: Guide = {
   metaTitle: "Where to Buy Bacteriostatic Water in the UK",
   description:
     "UK pharmacies do not stock bacteriostatic water. Where it is sold, what a listing must show, typical prices per 10 ml vial and how BacLab supplies it.",
-  quickAnswer: `UK high-street pharmacies do not generally stock bacteriostatic water, and there is no UK-licensed over-the-counter version to ask for. It is sold online as a laboratory diluent by lab-supply shops, marketplace sellers and specialist single-product sellers such as BacLab. Look for ${FACTS.benzylAlcoholPct} benzyl alcohol on the label, a sealed vial, a printed expiry and UK dispatch.`,
+  quickAnswer: `UK high-street pharmacies do not generally stock bacteriostatic water, and there is no UK-licensed over-the-counter version to ask for. It is sold online as a laboratory diluent by lab-supply shops, marketplace sellers and specialist single-product sellers such as BacLab. Look for a stated bacteriostatic preservative on the label, a sealed vial, a printed expiry and UK dispatch.`,
   updated: "2026-09-08",
   sections: [
     {
       heading: "Can you buy bacteriostatic water at a UK pharmacy?",
       paragraphs: [
         "Not as a rule. Neither the national pharmacy chains nor independent pharmacies keep bacteriostatic water as a stock line, and a pharmacist will not usually be able to order it in for you. The reason is simple: there is no bacteriostatic water product holding a UK marketing authorisation for over-the-counter sale, so there is nothing on the pharmacy wholesaler lists for the counter to pick from.",
-        `The product does exist in the UK, but it lives in a different category. It is supplied as a **laboratory diluent**: sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol (${FACTS.benzylAlcoholMgPerMl}) as a preservative, in a sealed vial, for research and laboratory use. That is how every UK seller lists it, and it is why the search for it starts online rather than on the high street.`,
+        `The product does exist in the UK, but it lives in a different category. It is supplied as a **laboratory diluent**: sterile water with a bacteriostatic preservative, in a sealed vial, for research and laboratory use. That is how every UK seller lists it, and it is why the search for it starts online rather than on the high street.`,
       ],
     },
     {
@@ -66,7 +66,7 @@ export const whereToBuyUk: Guide = {
         "Whatever the seller, the listing and the vial should between them answer the following before you pay. A seller who cannot tell you these things does not know enough about the product to be selling it.",
       ],
       list: [
-        `**Preservative stated as ${FACTS.benzylAlcoholPct} benzyl alcohol**, ideally with the equivalent ${FACTS.benzylAlcoholMgPerMl} figure. If the concentration is missing, or given as a vague "benzyl alcohol" with no number, treat it as unknown.`,
+        `**A bacteriostatic preservative stated on the label.** If the label says sterile water only, the vial has no preservative and is single-use once opened.`,
         "**A sealed, tamper-evident vial**: a crimped aluminium collar over the stopper and a flip-off cap, so it is obvious whether the vial has been entered.",
         `**The fill volume** printed on the label, normally ${FACTS.vialMl} ml in the UK, so you know what you are paying per millilitre.`,
         "**A batch or lot number** on the vial. This is how a seller traces a batch if there is ever a problem, and its absence is a warning sign.",
@@ -100,7 +100,7 @@ export const whereToBuyUk: Guide = {
     {
       heading: "How does BacLab supply bacteriostatic water in the UK?",
       paragraphs: [
-        `BacLab sells one product and nothing else: bacteriostatic water, sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol (${FACTS.benzylAlcoholMgPerMl}), in a sealed ${FACTS.vialMl} ml vial with a crimped tamper-evident collar and flip-off cap. The label carries the composition, the fill volume, the batch number and the expiry.`,
+        `BacLab sells one product and nothing else: bacteriostatic water, sterile water with a bacteriostatic preservative, in a sealed ${FACTS.vialMl} ml vial with a crimped tamper-evident collar and flip-off cap. The label carries the composition, the fill volume, the batch number and the expiry.`,
         "Vials are sold in packs from 1 to 100, with the per-vial price falling as the pack size rises, and delivery is to UK addresses only. Orders at or above the free-delivery threshold shown on the product page ship free; smaller orders carry a flat delivery charge shown before you pay. Dispatch times are stated at checkout.",
         "Because each vial is sealed for hygiene reasons, the returns policy follows the UK sealed-goods rule: an unopened vial with its seal intact can be returned under your 14-day right to cancel, and anything that arrives damaged is replaced or refunded. The full policy is published on the returns page.",
       ],
@@ -113,11 +113,11 @@ export const whereToBuyUk: Guide = {
     },
     {
       q: "Is bacteriostatic water sold on Amazon or eBay in the UK?",
-      a: "Yes, from third-party sellers, and listings change often. Check who the seller actually is, that the vial states 0.9% w/v benzyl alcohol, volume, batch and expiry, and that it ships from the UK.",
+      a: "Yes, from third-party sellers, and listings change often. Check who the seller actually is, that the vial states a bacteriostatic preservative, volume, batch and expiry, and that it ships from the UK.",
     },
     {
       q: "Is bacteriostatic water legal to buy in the UK?",
-      a: `Yes. It is a laboratory diluent, not a controlled or restricted substance, and at ${FACTS.benzylAlcoholPct} benzyl alcohol it is not classified as hazardous under the GB CLP Regulation. Any adult can order it from a UK seller.`,
+      a: `Yes. It is a laboratory diluent, not a controlled or restricted substance, and it is not classified as hazardous under the GB CLP Regulation. Any adult can order it from a UK seller.`,
     },
     {
       q: "Can I get bacteriostatic water with next day delivery in the UK?",

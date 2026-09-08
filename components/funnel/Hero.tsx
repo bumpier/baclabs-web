@@ -14,6 +14,7 @@ import {
   perMlMinor,
 } from "@/config/funnel";
 import { VialImage } from "@/components/funnel/VialImage";
+import { FACTS } from "@/content/facts";
 import { HERO_CTA_ID } from "@/lib/use-hero-cta-passed";
 
 /**
@@ -37,7 +38,6 @@ const PRICE = formatMinor(PRODUCT.unitPriceMinor);
 /** Facts pinned around the vial. Each is verifiable from the product itself. */
 const SPEC_CHIPS = [
   `${VIAL_ML}ml fill`,
-  "0.9% benzyl alcohol",
   "Sealed multi-dose vial",
 ];
 
@@ -89,7 +89,7 @@ export function Hero() {
             </p>
 
             <p className="animate-rise stagger-3 measure mt-5 text-lg text-ink-soft">
-              Sterile water with 0.9% benzyl alcohol as a bacteriostatic preservative. A sealed
+              Sterile water with a bacteriostatic preservative. A sealed
               multi-dose vial &mdash; <span className="tabular">{drawsPerVial(1)}</span> draws at
               1ml, or <span className="tabular">{drawsPerVial(2)}</span> at 2ml. Also sold as bac
               water or mixing water.
@@ -162,11 +162,8 @@ export function Hero() {
                 <span className="chip animate-drift-in stagger-3 absolute -left-4 top-12 shadow-lift">
                   {SPEC_CHIPS[0]}
                 </span>
-                <span className="chip animate-drift-in stagger-4 absolute -right-2 top-1/2 shadow-lift">
+                <span className="chip animate-drift-in stagger-4 absolute -left-2 bottom-14 shadow-lift">
                   {SPEC_CHIPS[1]}
-                </span>
-                <span className="chip animate-drift-in stagger-5 absolute -left-2 bottom-14 shadow-lift">
-                  {SPEC_CHIPS[2]}
                 </span>
               </div>
             </div>
@@ -179,7 +176,7 @@ export function Hero() {
             repeated card. */}
         <ul className="mt-16 grid gap-4 sm:grid-cols-3 lg:mt-20">
           <StatCard figure={`${VIAL_ML}ml`} label="Fill volume per sealed vial" />
-          <StatCard figure="0.9%" label="Benzyl alcohol, the preservative" />
+          <StatCard figure={`${FACTS.openedLimitDays} days`} label="In use after the first puncture" />
           <StatCard
             figure={perMlBest}
             label={`Per ml at ${cheapest.vials} vials, from ${perMlSingle} at one`}

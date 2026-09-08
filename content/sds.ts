@@ -48,7 +48,7 @@ export const SDS_SECTIONS: SdsSection[] = [
       ["Hazard pictograms", "None"],
       ["Hazard statements", "None"],
       ["Precautionary statements", "None required"],
-      ["Other hazards", "None known. The preservative, benzyl alcohol, is classified as a pure substance (see section 3); at 0.9% w/v the mixture does not meet the criteria for classification. Broken glass presents a cut hazard."],
+      ["Other hazards", "None known. The preservative is present below the concentration limits at which the mixture would inherit any classification (see section 3). Broken glass presents a cut hazard."],
     ],
   },
   {
@@ -56,7 +56,7 @@ export const SDS_SECTIONS: SdsSection[] = [
     paragraphs: ["Mixture. Components and their classification as pure substances:"],
     rows: [
       [`Water (CAS ${FACTS.casWater}, EC ${FACTS.ecWater})`, "≥ 99% w/v. Not classified."],
-      [`Benzyl alcohol (CAS ${FACTS.casBenzylAlcohol}, EC ${FACTS.ecBenzylAlcohol})`, `${FACTS.benzylAlcoholPct} (${FACTS.benzylAlcoholMgPerMl}). Pure substance: Acute Tox. 4 (H302, H332), Eye Irrit. 2 (H319). Below the generic concentration limits (1% acute toxicity, 10% eye irritation) in this mixture.`],
+      ["Bacteriostatic preservative", "< 1% w/v. Below the generic concentration limits at which the mixture would inherit the classification of the pure substance. Not classified in this mixture."],
     ],
   },
   {
@@ -66,7 +66,7 @@ export const SDS_SECTIONS: SdsSection[] = [
       ["Skin contact", "Wash with soap and water. No adverse effects expected."],
       ["Ingestion", "Rinse the mouth. Do not induce vomiting. Seek medical advice if a large quantity is swallowed or if symptoms occur."],
       ["Inhalation", "Not a relevant route of exposure for an aqueous solution at this concentration. Move to fresh air if discomfort occurs."],
-      ["Most important symptoms", "None expected from the mixture. Benzyl alcohol may cause mild eye irritation on direct contact."],
+      ["Most important symptoms", "None expected from the mixture. May cause mild eye irritation on direct contact."],
       ["Medical attention", "Treat symptomatically."],
     ],
   },
@@ -75,7 +75,7 @@ export const SDS_SECTIONS: SdsSection[] = [
     rows: [
       ["Suitable extinguishing media", "The product is an aqueous solution and is not flammable. Use media appropriate to the surrounding fire."],
       ["Unsuitable media", "None known."],
-      ["Special hazards", "None. Thermal decomposition of the small benzyl alcohol content may produce carbon oxides."],
+      ["Special hazards", "None."],
       ["Advice for fire-fighters", "Standard protective equipment for the surrounding fire."],
     ],
   },
@@ -93,13 +93,13 @@ export const SDS_SECTIONS: SdsSection[] = [
       ["Handling", "Use aseptic technique. Swab the stopper before each entry. Allow a refrigerated vial to reach room temperature before opening to avoid condensation. Do not leave a needle in the stopper. Record the date of first puncture on the vial."],
       ["Storage", PRODUCT.storage ? `${PRODUCT.storage}. Keep upright, sealed and protected from light.` : "As printed on the label. Keep upright, sealed and protected from light."],
       ["In-use period", `Discard ${FACTS.openedLimitDays} days after the stopper is first punctured (${FACTS.openedLimit}). An unopened vial is governed by the printed expiry date.`],
-      ["Incompatibilities", "Strong oxidising agents (benzyl alcohol)."],
+      ["Incompatibilities", "Strong oxidising agents."],
     ],
   },
   {
     heading: "Exposure controls / personal protection",
     rows: [
-      ["Occupational exposure limits", "No UK workplace exposure limit (EH40/2005) is assigned to the mixture or to benzyl alcohol."],
+      ["Occupational exposure limits", "No UK workplace exposure limit (EH40/2005) is assigned to the mixture."],
       ["Engineering controls", "General laboratory ventilation is sufficient."],
       ["Eye protection", "Safety glasses, as good laboratory practice."],
       ["Hand protection", "Nitrile gloves, as good laboratory practice and for handling glass."],
@@ -110,7 +110,7 @@ export const SDS_SECTIONS: SdsSection[] = [
     heading: "Physical and chemical properties",
     rows: [
       ["Appearance", FACTS.appearance],
-      ["Odour", "Faint, slightly aromatic (benzyl alcohol)"],
+      ["Odour", "Faint, slightly aromatic"],
       ["pH", PRODUCT.ph || "Not determined for this product. Bacteriostatic water is typically in the range 4.5 to 7.0."],
       ["Melting point / freezing point", "Approximately 0 °C"],
       ["Boiling point", "Approximately 100 °C"],
@@ -138,9 +138,9 @@ export const SDS_SECTIONS: SdsSection[] = [
       "The mixture is not classified for any health hazard. Information on the pure preservative is given for completeness.",
     ],
     rows: [
-      ["Acute toxicity", "Mixture: not classified. Benzyl alcohol (pure): Acute Tox. 4, oral and inhalation."],
+      ["Acute toxicity", "Mixture: not classified."],
       ["Skin corrosion / irritation", "Not classified."],
-      ["Serious eye damage / irritation", "Mixture: not classified. Benzyl alcohol (pure): Eye Irrit. 2."],
+      ["Serious eye damage / irritation", "Mixture: not classified."],
       ["Sensitisation", "Not classified."],
       ["Germ cell mutagenicity", "Not classified."],
       ["Carcinogenicity", "Not classified."],
@@ -153,8 +153,8 @@ export const SDS_SECTIONS: SdsSection[] = [
     heading: "Ecological information",
     rows: [
       ["Toxicity", "Not classified as hazardous to the aquatic environment."],
-      ["Persistence and degradability", "Benzyl alcohol is readily biodegradable."],
-      ["Bioaccumulative potential", "Low (benzyl alcohol log Kow approximately 1.1)."],
+      ["Persistence and degradability", "The preservative is readily biodegradable."],
+      ["Bioaccumulative potential", "Low."],
       ["Mobility in soil", "Miscible with water; mobile."],
       ["Other adverse effects", "None known."],
     ],
@@ -192,7 +192,6 @@ export const SDS_SECTIONS: SdsSection[] = [
       ["Revision date", SDS_REVISION],
       ["Version", SDS_VERSION],
       ["Abbreviations", "CAS: Chemical Abstracts Service. EC: European Community number. CLP: Classification, Labelling and Packaging. STOT: specific target organ toxicity. EH40: HSE workplace exposure limits publication. w/v: weight per volume."],
-      ["Full text of H statements in section 3", "H302 Harmful if swallowed. H332 Harmful if inhaled. H319 Causes serious eye irritation. These apply to pure benzyl alcohol, not to this mixture."],
       ["Basis", "Prepared from the composition of the product and the published classification of its components. The information is believed accurate at the revision date and describes the product for the purpose of safe handling; it is not a specification and does not constitute a warranty."],
     ],
   },

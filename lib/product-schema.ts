@@ -70,9 +70,8 @@ export function returnPolicySchema(): Record<string, unknown> {
 /** The chemistry facts as PropertyValue entries. */
 export function productPropertiesSchema(): Record<string, unknown>[] {
   return [
-    { "@type": "PropertyValue", name: "Preservative", value: `Benzyl alcohol ${FACTS.benzylAlcoholPct} (${FACTS.benzylAlcoholMgPerMl})` },
+    { "@type": "PropertyValue", name: "Preservative", value: "Bacteriostatic preservative" },
     { "@type": "PropertyValue", name: "CAS number (water)", value: FACTS.casWater },
-    { "@type": "PropertyValue", name: "CAS number (benzyl alcohol)", value: FACTS.casBenzylAlcohol },
     { "@type": "PropertyValue", name: "Appearance", value: FACTS.appearance },
     { "@type": "PropertyValue", name: "In-use limit once opened", value: FACTS.openedLimit },
     { "@type": "PropertyValue", name: "Hazard classification", value: FACTS.hazardClassification },

@@ -234,11 +234,10 @@ export default function FunnelPage() {
             </div>
             <div className="min-w-0 lg:col-span-8">
               <p className="measure text-lg text-ink-soft" data-explainer>
-                Bacteriostatic water is sterile, purified water to which{" "}
-                {FACTS.benzylAlcoholPct} benzyl alcohol (
-                {FACTS.benzylAlcoholMgPerMl}) has been added as a preservative.
-                It is supplied in a sealed multi-dose vial with a rubber stopper
-                and a crimped collar. The benzyl alcohol inhibits the growth of
+                Bacteriostatic water is sterile, purified water to which a
+                bacteriostatic preservative has been added. It is supplied in a
+                sealed multi-dose vial with a rubber stopper and a crimped
+                collar. The preservative inhibits the growth of
                 bacteria that may enter the vial once the stopper has been
                 punctured, which is why the same vial can be entered more than
                 once, for up to {FACTS.openedLimit}. Plain sterile water
@@ -372,12 +371,10 @@ export default function FunnelPage() {
             <div className="grid items-center gap-12 lg:grid-cols-12">
               <div className="lg:col-span-5">
                 <p className="font-display text-7xl font-bold leading-none text-cyan sm:text-8xl">
-                  0.9%
+                  {FACTS.openedLimitDays}
                 </p>
-                {/* w/v, not v/v — see the note on PRODUCT.composition. */}
                 <p className="mt-4 text-lg text-white/60">
-                  benzyl alcohol, w/v &mdash;{" "}
-                  <span className="tabular">9 mg/mL</span>
+                  days in use after the first puncture
                 </p>
               </div>
               <div className="lg:col-span-7">
@@ -389,10 +386,10 @@ export default function FunnelPage() {
                 </h2>
                 <p className="measure mt-5 text-lg text-white/75">
                   Sterile water contains no preservative, so once its container
-                  is opened it is single-use. Bacteriostatic water contains 0.9%
-                  benzyl alcohol, which inhibits bacterial growth inside the
-                  vial after it has been entered. That is what makes this a
-                  multi-dose vial rather than a single-use one.
+                  is opened it is single-use. Bacteriostatic water contains a
+                  bacteriostatic preservative, which inhibits bacterial growth
+                  inside the vial after it has been entered. That is what makes
+                  this a multi-dose vial rather than a single-use one.
                 </p>
                 <ul className="mt-8 flex flex-wrap gap-2">
                   <li className="chip-onDark">

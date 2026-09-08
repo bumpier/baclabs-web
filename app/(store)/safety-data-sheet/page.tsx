@@ -14,7 +14,7 @@ import { pageBreadcrumbSchema } from "@/lib/guide-seo";
 export const dynamic = "force-static";
 
 const DESCRIPTION =
-  "Sixteen-section safety data sheet for bacteriostatic water, 0.9% w/v benzyl alcohol in sterile water. Hazard classification, composition, CAS numbers, handling, storage, disposal and transport.";
+  "Sixteen-section safety data sheet for bacteriostatic water, sterile water with a bacteriostatic preservative. Hazard classification, composition, handling, storage, disposal and transport.";
 
 export const metadata: Metadata = pageMetadata({
   title: "Bacteriostatic water safety data sheet (SDS)",
@@ -34,7 +34,7 @@ export default function SafetyDataSheetPage() {
     name: PRODUCT.name,
     alternateName: [...FACTS.synonyms],
     description: PRODUCT.composition,
-    chemicalComposition: `Water (CAS ${FACTS.casWater}) with benzyl alcohol (CAS ${FACTS.casBenzylAlcohol}) at ${FACTS.benzylAlcoholPct}`,
+    chemicalComposition: `Water (CAS ${FACTS.casWater}) with a bacteriostatic preservative`,
     potentialUse: "Laboratory and research diluent",
     safetyConsideration: FACTS.hazardClassification,
     url,

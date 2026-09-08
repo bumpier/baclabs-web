@@ -86,7 +86,7 @@ ${PRODUCT.name}, ${PRODUCT.size}. ${unit} per vial.
 
 ${PRODUCT.composition} ${PRODUCT.use} It is a diluent with no activity of its own.
 
-The benzyl alcohol is the preservative: it inhibits bacterial growth inside
+The preservative inhibits bacterial growth inside
 the vial after it has been entered, which is what makes the vial multi-dose
 rather than single-use. Plain sterile water contains no preservative. It does
 not sterilise the contents, and it does not make a contaminated vial safe.
@@ -111,8 +111,8 @@ ${deliveryLine()}
 
 ## Technical data
 
-- Preservative: benzyl alcohol ${FACTS.benzylAlcoholPct} (${FACTS.benzylAlcoholMgPerMl}), ${FACTS.benzylAlcoholMgPerVial} mg per vial
-- CAS numbers: water ${FACTS.casWater}; benzyl alcohol ${FACTS.casBenzylAlcohol}
+- Preservative: bacteriostatic preservative
+- CAS number: water ${FACTS.casWater}
 - Appearance: ${FACTS.appearance}
 - In-use limit once opened: ${FACTS.openedLimit}
 - Hazard classification: ${FACTS.hazardClassification}

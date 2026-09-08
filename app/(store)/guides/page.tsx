@@ -24,7 +24,7 @@ const TOOLS = [
   {
     href: "/safety-data-sheet",
     title: "Safety data sheet",
-    description: "The 16-section SDS for bacteriostatic water with 0.9% benzyl alcohol.",
+    description: "The 16-section SDS for bacteriostatic water.",
   },
   {
     href: "/faq",

@@ -43,7 +43,7 @@ export default function OpengraphImage() {
         </div>
 
         <div style={{ fontSize: 26, color: LITERAL.inkSoft, display: "flex" }}>
-          Sterile water with 0.9% benzyl alcohol · sealed multi-dose vial
+          Sterile water with a bacteriostatic preservative · sealed multi-dose vial
         </div>
       </div>
     ),

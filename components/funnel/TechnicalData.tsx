@@ -15,10 +15,9 @@ import { FACTS } from "@/content/facts";
 export function TechnicalData() {
   const rows: { term: string; value: string }[] = [
     { term: "Also sold as", value: FACTS.synonyms.filter((s) => s !== "BAC water").join(", ") },
-    { term: "Preservative", value: `Benzyl alcohol, ${FACTS.benzylAlcoholPct} (${FACTS.benzylAlcoholMgPerMl}); ${FACTS.benzylAlcoholMgPerVial} mg per vial` },
+    { term: "Preservative", value: "Bacteriostatic preservative" },
     { term: "CAS number, water", value: `${FACTS.casWater} (EC ${FACTS.ecWater})` },
-    { term: "CAS number, benzyl alcohol", value: `${FACTS.casBenzylAlcohol} (EC ${FACTS.ecBenzylAlcohol})` },
-    { term: "Molecular formula", value: `${FACTS.formulaWater}; preservative ${FACTS.formulaBenzylAlcohol}` },
+    { term: "Molecular formula, water", value: FACTS.formulaWater },
     { term: "Appearance", value: FACTS.appearance },
     { term: "pH", value: PRODUCT.ph },
     { term: "Shelf life, unopened", value: PRODUCT.shelfLifeUnopened || "Expiry date printed on each vial" },

@@ -20,7 +20,7 @@ export const vialSizes: Guide = {
     {
       heading: "Which bacteriostatic water vial sizes are sold in the UK?",
       paragraphs: [
-        `Four sizes turn up in UK listings: 3 ml, 10 ml, 20 ml and 30 ml. They all contain the same liquid, sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol (${FACTS.benzylAlcoholMgPerMl}) as a preservative, in a glass vial closed with a rubber stopper and an aluminium crimp. What changes is the volume, who sells it, and how much of it you will realistically use before the in-use limit.`,
+        `Four sizes turn up in UK listings: 3 ml, 10 ml, 20 ml and 30 ml. They all contain the same liquid, sterile water with a bacteriostatic preservative, in a glass vial closed with a rubber stopper and an aluminium crimp. What changes is the volume, who sells it, and how much of it you will realistically use before the in-use limit.`,
         `The ${FACTS.vialMl} ml vial is the common UK laboratory size and the one most UK-based diluent sellers stock. The 30 ml vial is a US product that some UK resellers import. The 3 ml and 20 ml sizes are less common and tend to appear on marketplaces or as part of bundles rather than as a seller's main line.`,
       ],
       table: {
@@ -89,7 +89,7 @@ export const vialSizes: Guide = {
       heading: "What is Hospira or Pfizer bacteriostatic water, and is it sold in the UK?",
       paragraphs: [
         "Hospira, now part of Pfizer, manufactures a 30 ml vial labelled Bacteriostatic Water for Injection, USP. That is a United States pharmacopoeial product name: the vial is made to the USP monograph for the US market. It is not a UK-licensed product and UK pharmacies do not generally stock it. Some UK resellers import it and list it at a higher price than a UK-supplied vial, which reflects the import route as much as the larger volume.",
-        `Its stated composition is the same as the standard laboratory diluent: sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol. A UK-supplied ${FACTS.vialMl} ml laboratory diluent with the same benzyl alcohol content is the usual alternative. That is a statement about composition only, not a comparison of quality, and each product stands on its own label and documentation.`,
+        `Its stated composition is the same as the standard laboratory diluent: sterile water with a bacteriostatic preservative. A UK-supplied ${FACTS.vialMl} ml laboratory diluent with the same stated composition is the usual alternative. That is a statement about composition only, not a comparison of quality, and each product stands on its own label and documentation.`,
         "Searches for Hospira or Pfizer bacteriostatic water in the UK mostly lead to imported 30 ml listings, and sometimes to marketplace listings whose origin is harder to establish. Whichever you look at, check that the seller is identifiable, that the label in the photograph matches the description, and that the expiry date is printed and current.",
       ],
     },
@@ -107,7 +107,7 @@ export const vialSizes: Guide = {
         "Vial size changes nothing on this list. A 30 ml import and a 10 ml UK vial should both carry every item, and a listing that shows none of them, or a photograph of a label that does not match the description, is a reason to look elsewhere.",
       ],
       list: [
-        `**Composition**: sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol. If the label says sterile water only, it has no preservative and is single-use once opened.`,
+        `**Composition**: sterile water with a bacteriostatic preservative. If the label says sterile water only, it has no preservative and is single-use once opened.`,
         "**Nominal volume** in ml, with a fill level that looks right for it.",
         "**Expiry date** for the unopened vial. Unopened, the printed expiry governs; a typical shelf life is around two years, but the label decides.",
         `**In-use limit** after first puncture, normally ${FACTS.openedLimit}.`,
@@ -125,7 +125,7 @@ export const vialSizes: Guide = {
     },
     {
       q: `What is the difference between ${FACTS.vialMl} ml and 30 ml bacteriostatic water?`,
-      a: `Only the volume. Both are sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol. A 30 ml vial gives three times the draws but is still discarded ${FACTS.openedLimitDays} days after first puncture, so for low-volume laboratory use most of it is never drawn.`,
+      a: `Only the volume. Both are sterile water with a bacteriostatic preservative. A 30 ml vial gives three times the draws but is still discarded ${FACTS.openedLimitDays} days after first puncture, so for low-volume laboratory use most of it is never drawn.`,
     },
     {
       q: `How many draws do I get from a ${FACTS.vialMl} ml vial?`,
@@ -137,7 +137,7 @@ export const vialSizes: Guide = {
     },
     {
       q: "Is Hospira bacteriostatic water the same as UK bacteriostatic water?",
-      a: `The Hospira and Pfizer product is Bacteriostatic Water for Injection, USP, a 30 ml vial made for the US market. A UK laboratory diluent has the same stated composition, sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol. That is a statement about composition only; check each product's own label and documentation.`,
+      a: `The Hospira and Pfizer product is Bacteriostatic Water for Injection, USP, a 30 ml vial made for the US market. A UK laboratory diluent has the same stated composition, sterile water with a bacteriostatic preservative. That is a statement about composition only; check each product's own label and documentation.`,
     },
     {
       q: "Why does BacLab not sell 30 ml vials?",

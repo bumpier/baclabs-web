@@ -25,22 +25,22 @@ export interface FaqItem {
 export const FAQ: readonly FaqItem[] = [
   {
     q: "What is bacteriostatic water?",
-    a: "Sterile water containing 0.9% benzyl alcohol as a bacteriostatic preservative. The preservative inhibits the growth of bacteria in the vial, which is what allows a single vial to be entered more than once.",
+    a: "Sterile water containing a bacteriostatic preservative. The preservative inhibits the growth of bacteria in the vial, which is what allows a single vial to be entered more than once.",
   },
   {
     q: "How is it different from sterile water?",
-    a: "Sterile water contains no preservative. Bacteriostatic water contains 0.9% benzyl alcohol, and that preservative is the whole difference: it is what makes this a multi-dose vial rather than a single-use one.",
+    a: "Sterile water contains no preservative. Bacteriostatic water contains a bacteriostatic preservative, and that is the whole difference: it is what makes this a multi-dose vial rather than a single-use one.",
   },
   {
-    q: "What is the benzyl alcohol for?",
-    a: "It is the bacteriostatic preservative. At 0.9% it inhibits bacterial growth inside the vial after it has been entered.",
+    q: "What is the preservative for?",
+    a: "It inhibits bacterial growth inside the vial after it has been entered, which is what allows the same vial to be used more than once.",
   },
   // Safety clarification, and a genuine gap in most competing listings: people
   // conflate "bacteriostatic" with "sterilising". True of bacteriostatic water
   // generally, so it needs no fact from this product's own label.
   {
     q: "Does bacteriostatic water sterilise a contaminated vial?",
-    a: "No. The benzyl alcohol inhibits the growth of bacteria inside the vial; it does not sterilise the contents, and it does not make a contaminated vial safe to use. It is a preservative, not a steriliser.",
+    a: "No. The preservative inhibits the growth of bacteria inside the vial; it does not sterilise the contents, and it does not make a contaminated vial safe to use. It is a preservative, not a steriliser.",
   },
   {
     q: "What is it used for?",
@@ -53,10 +53,6 @@ export const FAQ: readonly FaqItem[] = [
   {
     q: "How should it be stored, and what is the shelf life?",
     a: `Store the sealed vial as stated on its label. Once it has been entered, the limit is ${PRODUCT.shelfLifeAfterOpening.toLowerCase()}.`,
-  },
-  {
-    q: `How much benzyl alcohol is in a ${VIAL_ML}ml vial?`,
-    a: `0.9% w/v, which is 9 mg/mL — so a ${VIAL_ML}ml vial contains ${VIAL_ML * 9} mg of benzyl alcohol in total.`,
   },
   {
     q: "How do I pay, and is it secure?",

@@ -62,19 +62,19 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ...FAQ,
       {
         q: "Is bac water the same thing as bacteriostatic water?",
-        a: "Yes. Bac water, bacteriostatic mixing water and mixing water are all names for the same thing: sterile water with a bacteriostatic preservative, which here is benzyl alcohol at 0.9% w/v.",
+        a: "Yes. Bac water, bacteriostatic mixing water and mixing water are all names for the same thing: sterile water with a bacteriostatic preservative.",
       },
       {
         q: "What does bacteriostatic water look like?",
         a: `${FACTS.appearance}. If a vial is cloudy, discoloured or contains particles it should not be used, whatever the date.`,
       },
       {
-        q: "What are the CAS numbers?",
-        a: `Water is CAS ${FACTS.casWater}. Benzyl alcohol, the preservative, is CAS ${FACTS.casBenzylAlcohol}. Both are listed in the technical data on the product page and in the safety data sheet.`,
+        q: "What is the CAS number?",
+        a: `Water is CAS ${FACTS.casWater}. It is listed in the technical data on the product page and in the safety data sheet.`,
       },
       {
         q: "Is it classified as hazardous?",
-        a: `No. ${FACTS.hazardClassification}. Benzyl alcohol is classified as a pure substance, but the mixture falls below the concentration limits for those classifications.`,
+        a: `No. ${FACTS.hazardClassification}. The preservative is present below the concentration limits at which the mixture would inherit any classification.`,
       },
       {
         q: "Do you supply a safety data sheet?",
