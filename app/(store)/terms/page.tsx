@@ -127,8 +127,7 @@ export default function TermsPage() {
               </p>
               <p>
                 <strong>
-                  The product is not a medicine, is not a medical device, and is not supplied for
-                  administration to humans or animals.
+                  The product is not a medicine and is not a medical device.
                 </strong>{" "}
                 It is not authorised under the Human Medicines Regulations 2012, is not
                 CE/UKCA-marked under the Medical Devices Regulations 2002, and is not a food,

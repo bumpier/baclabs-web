@@ -35,7 +35,7 @@ export const SDS_SECTIONS: SdsSection[] = [
       ["Synonyms", "Bac water; bacteriostatic mixing water; mixing water"],
       ["Product form", `Liquid, ${VIAL_ML} mL sealed multi-dose glass vial`],
       ["Recommended use", "Sterile diluent and solvent for reconstituting or diluting substances for laboratory and research purposes."],
-      ["Uses advised against", "Not for human or veterinary use. Not a medicinal product or a medical device. Not for administration to humans or animals by any route."],
+      ["Uses advised against", "Use as a medicinal product or a medical device. It is neither, and is not supplied as one."],
       ["Supplier", supplier + (contact ? `. ${contact}` : "")],
       ["Emergency contact", brand.contact.email || "See the contact page"],
     ],
@@ -183,7 +183,7 @@ export const SDS_SECTIONS: SdsSection[] = [
       "GB CLP Regulation (Regulation (EC) No 1272/2008 as retained in UK law): not classified.",
       "UK REACH: a safety data sheet is not required for a mixture that is not classified; this sheet is provided as product information under Article 32 and on request.",
       "Human Medicines Regulations 2012: this product is not a medicinal product and is not supplied as one.",
-      "Supplied for laboratory and research use only. The receiving laboratory is responsible for compliance with its own COSHH assessment.",
+      "The receiving laboratory is responsible for compliance with its own COSHH assessment.",
     ],
   },
   {

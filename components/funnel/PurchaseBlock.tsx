@@ -6,7 +6,6 @@ import {
   BUNDLES,
   DELIVERY,
   deliveryMinorFor,
-  LOWEST_PRICE_BADGE,
   remainingForFreeDeliveryMinor,
   shipsFree,
   LOW_STOCK_THRESHOLD,
@@ -20,8 +19,6 @@ import {
   referencePriceMinor,
   saleLabel,
   saleVisible,
-  savingMinor,
-  savingPercent,
   type BundleId,
 } from "@/config/funnel";
 import { trackEvent } from "@/lib/analytics";
@@ -29,8 +26,9 @@ import { useFunnel } from "@/components/funnel/FunnelState";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
 import { Badge } from "@/components/ui/badge";
 
-/** Most vials one order can hold: the largest tier at the maximum quantity. */
-const MAX_ORDER_VIALS = Math.max(...BUNDLES.map((b) => b.vials)) * MAX_QUANTITY;
+/** The largest tier, and the most vials one order can hold: that tier at the maximum quantity. */
+const MAX_TIER_VIALS = Math.max(...BUNDLES.map((b) => b.vials));
+const MAX_ORDER_VIALS = MAX_TIER_VIALS * MAX_QUANTITY;
 
 /**
  * The purchase block: tier selector, quantity, live total, and the one button
@@ -106,17 +104,17 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
   return (
     <div className="panel overflow-hidden">
       <fieldset className="border-0 p-0">
+        {/* One heading labels both the fieldset and the radio group: the
+            legend is the accessible name, so no second, hidden label. */}
         <legend className="w-full border-b border-line px-5 py-5 sm:px-6">
-          <span className="font-display text-xl font-bold text-ink">Choose your quantity</span>
+          <span id={groupId} className="font-display text-xl font-bold text-ink">
+            Choose your quantity
+          </span>
         </legend>
 
         <div role="radiogroup" aria-labelledby={groupId}>
-          <span id={groupId} className="sr-only">
-            Bundle size
-          </span>
           {BUNDLES.map((b) => {
             const selected = b.id === bundle.id;
-            const saving = savingMinor(b);
             return (
               <label
                 key={b.id}
@@ -179,28 +177,17 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
                       </Badge>
                     ) : null}
                   </span>
+                  {/* Per-vial price only. The saving is what the falling
+                      per-vial figure already says, and the sale reference
+                      price is shown once, in the summary, rather than struck
+                      through on every row. */}
                   <span className="mt-0.5 block text-sm text-ink-soft">
                     <span className="tabular">{formatMinor(perVialMinor(b))}</span> per vial
-                    {saving > 0 ? (
-                      <>
-                        {" · save "}
-                        <span className="tabular font-medium text-ink">
-                          {formatMinor(saving)} ({savingPercent(b)}%)
-                        </span>
-                      </>
-                    ) : null}
                   </span>
                 </span>
 
-                <span className="shrink-0 text-right">
-                  {sale ? (
-                    <span className="tabular block text-xs text-ink-soft line-through">
-                      {formatMinor(referencePriceMinor(b))}
-                    </span>
-                  ) : null}
-                  <span className="tabular text-lg font-semibold text-ink">
-                    {formatMinor(b.priceMinor)}
-                  </span>
+                <span className="tabular shrink-0 text-lg font-semibold text-ink">
+                  {formatMinor(b.priceMinor)}
                 </span>
               </label>
             );
@@ -342,29 +329,20 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
           You will be taken to Stripe to pay. Delivery address is collected there.
         </p>
 
-        {/* The price claim, at the last point before they commit. It links to
-            the guarantee rather than restating it — the terms live in one
-            place so they cannot drift between the four spots that cite them. */}
-        {LOWEST_PRICE_BADGE ? (
+        {/* The path past the largest order this form can take. Shown only
+            once the largest tier is selected — that is the one buyer it is
+            for, and everyone else gets a shorter panel. */}
+        {bundle.vials === MAX_TIER_VIALS ? (
           <p className="mt-2 text-center text-xs text-ink-soft">
-            <a href="#guarantee" className="underline decoration-line underline-offset-4 hover:text-ink">
-              {LOWEST_PRICE_BADGE}
-            </a>
+            Need more than <span className="tabular">{MAX_ORDER_VIALS}</span> vials?{" "}
+            <Link
+              href="/contact#wholesale"
+              className="underline decoration-line underline-offset-4 hover:text-ink"
+            >
+              Ask for a wholesale quote
+            </Link>
           </p>
         ) : null}
-
-        {/* The path past the largest order this form can take. It used to
-            exist only inside a collapsed FAQ answer; a buyer who needs more
-            than the selector allows should not have to go looking for it. */}
-        <p className="mt-2 text-center text-xs text-ink-soft">
-          Need more than <span className="tabular">{MAX_ORDER_VIALS}</span> vials?{" "}
-          <Link
-            href="/contact#wholesale"
-            className="underline decoration-line underline-offset-4 hover:text-ink"
-          >
-            Ask for a wholesale quote
-          </Link>
-        </p>
 
         {cryptoEnabled ? (
           <p className="mt-3 text-center text-xs">

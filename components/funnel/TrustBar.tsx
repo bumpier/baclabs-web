@@ -14,38 +14,53 @@ import { trustBadges, type TrustIcon } from "@/config/funnel";
  * carries its own substantiation line rather than the label alone, which is
  * what keeps a superlative like "cheapest in the UK" attached to the
  * undertaking that backs it.
+ *
+ * The price card is also the `#guarantee` target that the hero, sticky bar,
+ * comparison table, footer and final CTA link to: the full price-match
+ * terms are its detail line, so there is no separate guarantee section. A
+ * card that is the anchor renders its label as plain text, not a self-link.
  */
 export function TrustBar() {
   const badges = trustBadges();
   if (badges.length === 0) return null;
 
   return (
-    <section className="border-y border-line bg-neutral" aria-labelledby="trust-heading">
+    <section
+      className="border-y border-line bg-neutral"
+      aria-labelledby="trust-heading"
+    >
       <div className="shell-wide py-10 sm:py-12">
         <h2 id="trust-heading" className="sr-only">
           Why buy from us
         </h2>
         <ul className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
-          {badges.map((b) => (
-            <li key={b.label} className="flex gap-3">
-              <TrustMark icon={b.icon} />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold leading-snug text-ink">
-                  {b.href ? (
-                    <a
-                      href={b.href}
-                      className="underline decoration-line underline-offset-4 transition-colors duration-150 hover:decoration-brand"
-                    >
-                      {b.label}
-                    </a>
-                  ) : (
-                    b.label
-                  )}
-                </p>
-                <p className="mt-1 text-sm text-ink-soft">{b.detail}</p>
-              </div>
-            </li>
-          ))}
+          {badges.map((b) => {
+            const isGuarantee = b.href === "#guarantee";
+            return (
+              <li
+                key={b.label}
+                id={isGuarantee ? "guarantee" : undefined}
+                className="flex scroll-mt-24 gap-3"
+              >
+                <TrustMark icon={b.icon} />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-snug text-ink">
+                    {b.href && !isGuarantee ? (
+                      <a
+                        href={b.href}
+                        className="underline decoration-line underline-offset-4 transition-colors duration-150 hover:decoration-brand"
+                      >
+                        {b.label}
+                      </a>
+                    ) : (
+                      b.label
+                    )}
+                  </p>
+                  <p className="mt-1 text-sm text-ink-soft">{b.detail}</p>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </section>

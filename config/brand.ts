@@ -51,7 +51,9 @@ export const brand = {
     url: "",
   },
   contact: {
-    email: "hello@baclab.co.uk",
+    // Leave "" to omit the address everywhere: contact page, footer, order
+    // confirmation, FAQ answers, JSON-LD contactPoint and the email footer.
+    email: "",
     // Leave "" to omit the phone from JSON-LD.
     phone: "",
   },
@@ -95,7 +97,7 @@ export const brand = {
   // into an unlicensed medicinal product under the Human Medicines
   // Regulations 2012.
   disclaimer:
-    "Sold as a laboratory reagent for research use. Not a medicine and not a medical device. Not supplied for human or veterinary use, and not for administration to humans or animals. No therapeutic claim is made. See the product disclaimer.",
+    "Sold as a laboratory reagent. Not a medicine and not a medical device. No therapeutic claim is made. See the product disclaimer.",
 };
 
 export type Currency = (typeof brand.currency.supported)[number];

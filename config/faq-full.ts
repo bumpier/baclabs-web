@@ -82,7 +82,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       },
       {
         q: "Is this a medicine?",
-        a: "No. It is sold as a laboratory reagent for research use. It is not a medicine, not a medical device, and not supplied for human or veterinary use. The product disclaimer sets this out in full.",
+        a: "No. It is sold as a laboratory reagent. It is not a medicine and not a medical device. The product disclaimer sets this out in full.",
       },
     ],
   },
@@ -194,7 +194,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       },
       {
         q: "Do you offer trade or laboratory accounts?",
-        a: `Not as a separate account type at present. Larger or repeat orders are handled by email${email ? ` at ${email}` : ""}.`,
+        a: `Not as a separate account type at present. Larger or repeat orders are handled individually${email ? ` — get in touch at ${email}` : ""}.`,
       },
       {
         q: `Why is a single vial ${formatMinor(PRODUCT.unitPriceMinor)} but the packs cost less per vial?`,

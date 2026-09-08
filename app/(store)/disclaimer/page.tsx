@@ -45,25 +45,6 @@ export default function DisclaimerPage() {
           ),
         },
         {
-          heading: "Research and laboratory use only",
-          body: (
-            <>
-              <p>
-                <strong>
-                  This product is supplied strictly for laboratory and research use. It is not
-                  supplied for human or veterinary use, and it must not be administered to any human
-                  or animal.
-                </strong>
-              </p>
-              <p>
-                By ordering, you confirm that you are acquiring the product for laboratory or
-                research purposes only, that you will not administer it to any person or animal, and
-                that you will not supply it to anyone you know or suspect intends to do so.
-              </p>
-            </>
-          ),
-        },
-        {
           heading: "Not a medicine and not a medical device",
           body: (
             <>
@@ -147,9 +128,8 @@ export default function DisclaimerPage() {
               <p>
                 We accept no liability of any kind for loss, injury, damage or expense arising from
                 use of the product other than as described on this page &mdash; including, without
-                limitation, from administering it to any human or animal, from use by a person who
-                is not competent to handle it, or from use in breach of any law or licence that
-                applies to you.
+                limitation, from use by a person who is not competent to handle it, or from use in
+                breach of any law or licence that applies to you.
               </p>
               <p>
                 <strong>Nothing on this page limits our liability</strong> for death or personal

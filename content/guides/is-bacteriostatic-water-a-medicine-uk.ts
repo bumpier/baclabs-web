@@ -15,14 +15,14 @@ export const isBacteriostaticWaterAMedicineUk: Guide = {
       paragraphs: [
         "No. A medicine can only be sold in the UK if a specific product holds a marketing authorisation, the licence the MHRA grants after assessing quality, safety and efficacy. No bacteriostatic water product holds one. There is no UK-licensed bacteriostatic water, over the counter or otherwise, and nothing for a pharmacy to order from its wholesaler, which is why UK pharmacies do not generally stock it.",
         "The familiar medicine categories do not apply either. Prescription-only, pharmacy and general-sale are classifications attached to a licensed product when the licence is granted. With no licence there is no classification, so bacteriostatic water in the UK is not a prescription item, a pharmacy item or an over-the-counter item. It sits outside that system altogether.",
-        `What is sold in the UK is a different thing in law, even though the liquid has the same composition: sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol (${FACTS.benzylAlcoholMgPerMl}) as a preservative. Laboratory-supply and research-chemical sellers supply it as a **laboratory reagent and diluent** for research use. It has not been assessed by the MHRA, holds no marketing authorisation, and is not presented or sold for any medical purpose. This guide describes that position and is not legal advice.`,
+        `What is sold in the UK is a different thing in law, even though the liquid has the same composition: sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol (${FACTS.benzylAlcoholMgPerMl}) as a preservative. Laboratory-supply and research-chemical sellers supply it as a **laboratory reagent and diluent**. It has not been assessed by the MHRA, holds no marketing authorisation, and is not presented or sold for any medical purpose. This guide describes that position and is not legal advice.`,
       ],
     },
     {
       heading: "What makes something a medicinal product under the Human Medicines Regulations 2012?",
       paragraphs: [
         "The Human Medicines Regulations 2012 define a medicinal product in two limbs, usually called presentation and function. The presentation limb asks how a product is offered: any substance presented as having properties for treating or preventing disease falls within it. The function limb asks what the substance does: whether it exerts a pharmacological, immunological or metabolic action, or is used for medical diagnosis. A product that meets either limb needs a marketing authorisation before it can be placed on the market.",
-        "Bacteriostatic water sold as a reagent meets neither. It has no pharmacological, immunological or metabolic action of its own; it is a diluent, and the benzyl alcohol is there to preserve the contents of the vial after the stopper is first punctured. A reagent labelled and sold for research use is not presented as treating or preventing anything. The presentation limb is the one that matters most to sellers, because presentation is created by words, and a product's legal status can change without the contents of the vial changing at all.",
+        "Bacteriostatic water sold as a reagent meets neither. It has no pharmacological, immunological or metabolic action of its own; it is a diluent, and the benzyl alcohol is there to preserve the contents of the vial after the stopper is first punctured. A reagent sold as a diluent is not presented as treating or preventing anything. The presentation limb is the one that matters most to sellers, because presentation is created by words, and a product's legal status can change without the contents of the vial changing at all.",
         "That is why a compliant seller makes no therapeutic claim about the product and never describes it in connection with a medical purpose. If a listing, label, email or advertisement presented bacteriostatic water as having medicinal properties, the presentation limb would be met and the seller would be placing an unlicensed medicinal product on the market, an offence enforced by the MHRA. Where a product's status is genuinely unclear, the MHRA's borderline classification team decides.",
       ],
     },
@@ -50,7 +50,7 @@ export const isBacteriostaticWaterAMedicineUk: Guide = {
       heading: "Is bacteriostatic water a medical device in the UK?",
       paragraphs: [
         "No. A medical device under the Medical Devices Regulations 2002 is an instrument, apparatus, material or article that its manufacturer intends for a medical purpose and that works principally by physical rather than pharmacological means. A device placed on the market in Great Britain carries a UKCA mark, or a CE mark while transitional recognition lasts.",
-        "Bacteriostatic water sold as a reagent has no intended medical purpose assigned by its manufacturer, so it never enters the device framework. It carries no UKCA or CE mark, is not registered with the MHRA as a device, and is not a food, a food supplement or a cosmetic either. It is a chemical mixture supplied for research use, and that is the framework that governs it.",
+        "Bacteriostatic water sold as a reagent has no intended medical purpose assigned by its manufacturer, so it never enters the device framework. It carries no UKCA or CE mark, is not registered with the MHRA as a device, and is not a food, a food supplement or a cosmetic either. It is a chemical mixture, and that is the framework that governs it.",
       ],
     },
     {
@@ -71,28 +71,20 @@ export const isBacteriostaticWaterAMedicineUk: Guide = {
         "Because no regulator has assessed the product, the burden of describing it correctly sits entirely with the seller, and the quality of that description shows whether a seller understands what they are supplying. A compliant listing and vial should between them show the following.",
       ],
       list: [
-        "**A clear statement of what the product is**: sterile water with benzyl alcohol as a preservative, supplied as a laboratory reagent and diluent for research use, with the concentration given as a figure.",
-        "**A clear statement of what it is not**: not a medicinal product, not assessed by the MHRA, not a medical device, and not for human or veterinary use.",
+        "**A clear statement of what the product is**: sterile water with benzyl alcohol as a preservative, supplied as a laboratory reagent and diluent, with the concentration given as a figure.",
+        "**A clear statement of what it is not**: not a medicinal product, not assessed by the MHRA, and not a medical device.",
         "**No therapeutic claim of any kind** in listings, packaging, emails or advertising.",
-        "**Research-use labelling on the vial itself**, not only on the website, together with the composition and the fill volume.",
+        "**The composition and the fill volume printed on the vial itself**, not only on the website.",
         `**A batch or lot number and an expiry date printed on the vial**, which anchor traceability, the ${FACTS.openedLimit} in-use limit and the unopened shelf life to a real product.`,
         "**A safety data sheet** available before purchase, and batch information on request.",
         "**A UK business address, a contact route and a returns policy** that explains the sealed-goods rule plainly.",
-      ],
-    },
-    {
-      heading: "What does research use only mean, and what does it not mean?",
-      paragraphs: [
-        "The phrase for research use only, and its variants for laboratory use only and not for human or veterinary use, is not a regulatory category with a rulebook of its own. It is the seller's statement of the product's intended purpose, and it carries legal weight because intended purpose is what the medicines and devices definitions turn on. By stating that the product is a research reagent, and presenting it in no other way, the seller keeps it outside the medicinal product definition.",
-        "It does not mean the product was made to a lower standard or tested for anything in particular. A research-use label makes no promise about pharmacopoeial compliance, sterility assurance or manufacturing conditions beyond what the seller separately states, which is why the batch number, expiry date, specification and safety data sheet matter more, not less, outside the medicines system. Nor does it mean the product is unregulated: the chemical, workplace and consumer rules above apply whatever the label says.",
-        "Finally, it is not small print a seller can print and then contradict. The presentation limb looks at the whole of how a product is offered, so a seller that labels a product for research use while presenting it for another purpose has not moved it outside the medicinal product definition. Anyone with a specific question about a product's status should ask the MHRA or a regulatory adviser.",
       ],
     },
   ],
   faq: [
     {
       q: "Is bacteriostatic water legal in the UK?",
-      a: `Yes. It is not a controlled or restricted substance, and at ${FACTS.benzylAlcoholPct} benzyl alcohol it is not classified as hazardous under the GB CLP Regulation. It is sold lawfully as a laboratory reagent for research use.`,
+      a: `Yes. It is not a controlled or restricted substance, and at ${FACTS.benzylAlcoholPct} benzyl alcohol it is not classified as hazardous under the GB CLP Regulation. It is sold lawfully as a laboratory reagent.`,
     },
     {
       q: "Do you need a prescription for bacteriostatic water in the UK?",
@@ -100,7 +92,7 @@ export const isBacteriostaticWaterAMedicineUk: Guide = {
     },
     {
       q: "Can you buy bacteriostatic water over the counter in the UK?",
-      a: "Not from a pharmacy. There is no licensed over-the-counter product for a pharmacy to stock. It is sold by laboratory-supply and research-chemical sellers online as a research reagent.",
+      a: "Not from a pharmacy. There is no licensed over-the-counter product for a pharmacy to stock. It is sold by laboratory-supply and research-chemical sellers online as a laboratory reagent.",
     },
     {
       q: "Has bacteriostatic water been approved by the MHRA?",

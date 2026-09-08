@@ -38,7 +38,7 @@ export default function ContactPage() {
       <h1 className="text-3xl">Contact</h1>
       <p className="measure mt-3 text-base text-ink-soft">
         Questions about an order, delivery or a return, product questions before you buy, and
-        wholesale enquiries all come to the same address.
+        wholesale enquiries.
       </p>
 
       <dl className="mt-10 divide-y divide-line border-y border-line">
@@ -106,7 +106,7 @@ export default function ContactPage() {
           <Link href="/safety-data-sheet" className="link">
             safety data sheet
           </Link>
-          . If yours is not there, email it. We can answer questions about the product as sold, a
+          . If yours is not there, get in touch. We can answer questions about the product as sold, a
           laboratory and research diluent; we cannot advise on any other use.
         </p>
       </section>
@@ -118,8 +118,8 @@ export default function ContactPage() {
         <p className="measure mt-3 text-base text-ink-soft">
           The order form takes up to <span className="tabular">{MAX_ORDER_VIALS}</span> vials in one
           order. For more than that, for a standing order, or for an institutional purchase order,
-          email with the quantity you need, the delivery postcode and whether it is a one-off or
-          recurring, and we will reply with a quote.
+          get in touch with the quantity you need, the delivery postcode and whether it is a
+          one-off or recurring, and we will reply with a quote.
         </p>
         {wholesaleHref ? (
           <p className="mt-4">

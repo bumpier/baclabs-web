@@ -23,10 +23,16 @@ import { canonicalOrigin } from "@/lib/site-url";
 // Indexable pages that are neither the home page nor a footer legal link.
 // Paths only ("/faq"); the origin is prefixed below. Guides, FAQ, calculator
 // and safety-data-sheet pages belong here once they exist.
+// The guides hub lists every guide, so it last changed when the newest
+// guide did. That is a real date (each guide's hand-bumped `updated`), which
+// is the only kind allowed here.
+const GUIDES_HUB_UPDATED = GUIDES.map((g) => g.updated).sort().at(-1);
+
 const TOP_LEVEL: MetadataRoute.Sitemap = [
   // The hub pages, from the footer's list so the two cannot disagree.
   ...LEARN_LINKS.map((l) => ({
     url: l.href,
+    ...(l.href === "/guides" && GUIDES_HUB_UPDATED ? { lastModified: GUIDES_HUB_UPDATED } : {}),
     changeFrequency: "monthly" as const,
     priority: l.href === "/guides" ? 0.7 : 0.6,
   })),

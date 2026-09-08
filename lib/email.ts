@@ -118,7 +118,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;c
 ${body}
 </td></tr>
 <tr><td style="padding:20px 32px;background:${LITERAL.neutral};border-top:1px solid ${LITERAL.line}">
-<p style="margin:0 0 6px;font-size:12px;color:${LITERAL.inkSoft}">${brand.name} &middot; <a href="mailto:${brand.contact.email}" style="color:${LITERAL.inkSoft}">${brand.contact.email}</a></p>
+<p style="margin:0 0 6px;font-size:12px;color:${LITERAL.inkSoft}">${brand.name}${brand.contact.email ? ` &middot; <a href="mailto:${brand.contact.email}" style="color:${LITERAL.inkSoft}">${brand.contact.email}</a>` : ""}</p>
 <p style="margin:0;font-size:11px;color:${LITERAL.inkSoft};line-height:1.5">${escapeHtml(brand.disclaimer)}</p>
 </td></tr>
 </table>

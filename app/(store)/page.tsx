@@ -8,14 +8,12 @@ import {
   saleVisible,
   BUNDLES,
   DELIVERY,
-  GUARANTEE,
   LOWEST_PRICE_BADGE,
   PRICE_MATCH_BADGE,
   PRICES_UPDATED,
   PRODUCT,
   PRODUCT_IMAGES,
   STOCK_LEVEL,
-  VIAL_ML,
   WHY_BUY,
   drawsPerVial,
   formatMinor,
@@ -36,8 +34,6 @@ import { Faq } from "@/components/funnel/Faq";
 import { Reviews } from "@/components/funnel/Reviews";
 import { ComparisonTable } from "@/components/funnel/ComparisonTable";
 import { TechnicalData } from "@/components/funnel/TechnicalData";
-import { PriceLadder } from "@/components/funnel/PriceLadder";
-import { LearnStrip } from "@/components/funnel/LearnStrip";
 import {
   priceValidUntil,
   productAlternateNames,
@@ -101,7 +97,9 @@ export default function FunnelPage() {
         STOCK_LEVEL === null || STOCK_LEVEL > 0
           ? "https://schema.org/InStock"
           : "https://schema.org/OutOfStock",
-      ...(shippingDetailsFor(b.priceMinor) ? { shippingDetails: shippingDetailsFor(b.priceMinor) } : {}),
+      ...(shippingDetailsFor(b.priceMinor)
+        ? { shippingDetails: shippingDetailsFor(b.priceMinor) }
+        : {}),
       hasMerchantReturnPolicy: returnPolicySchema(),
     })),
     // AggregateRating and Review are emitted ONLY when real reviews exist.
@@ -118,7 +116,11 @@ export default function FunnelPage() {
             datePublished: r.datePublished,
             name: r.title,
             reviewBody: r.body,
-            reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 },
+            reviewRating: {
+              "@type": "Rating",
+              ratingValue: r.rating,
+              bestRating: 5,
+            },
           })),
         }
       : {}),
@@ -151,12 +153,18 @@ export default function FunnelPage() {
   };
 
   const whyBuy = WHY_BUY.filter((w) => w.title && w.body);
-  const bannerText = saleVisible() ? SALE.bannerText || saleLabel() : ANNOUNCEMENT;
+  const bannerText = saleVisible()
+    ? SALE.bannerText || saleLabel()
+    : ANNOUNCEMENT;
 
   // The announcement bar now carries up to three lines rather than one. Each
   // is dropped when its source config goes empty, so the bar shortens to two,
   // to one, or vanishes entirely without any of them needing a guard here.
-  const bannerParts = [bannerText, freeDeliveryBadge(), PRICE_MATCH_BADGE].filter(Boolean);
+  const bannerParts = [
+    bannerText,
+    freeDeliveryBadge(),
+    PRICE_MATCH_BADGE,
+  ].filter(Boolean);
 
   return (
     <>
@@ -226,25 +234,35 @@ export default function FunnelPage() {
             </div>
             <div className="min-w-0 lg:col-span-8">
               <p className="measure text-lg text-ink-soft" data-explainer>
-                Bacteriostatic water is sterile, purified water to which {FACTS.benzylAlcoholPct}{" "}
-                benzyl alcohol ({FACTS.benzylAlcoholMgPerMl}) has been added as a preservative. It
-                is supplied in a sealed multi-dose vial with a rubber stopper and a crimped collar.
-                The benzyl alcohol inhibits the growth of bacteria that may enter the vial once the
-                stopper has been punctured, which is why the same vial can be entered more than
-                once, for up to {FACTS.openedLimit}. Plain sterile water contains no preservative
-                and is single-use once opened; that one ingredient is the whole difference between
-                the two. The preservative is bacteriostatic, not bactericidal: it slows bacterial
-                growth but does not sterilise the contents and cannot make a contaminated vial
-                safe. It is used as a diluent and solvent to dissolve or dilute substances in
-                laboratory and research work, and has no activity of its own. It is not a medicine
-                and is not supplied for human or veterinary use.
+                Bacteriostatic water is sterile, purified water to which{" "}
+                {FACTS.benzylAlcoholPct} benzyl alcohol (
+                {FACTS.benzylAlcoholMgPerMl}) has been added as a preservative.
+                It is supplied in a sealed multi-dose vial with a rubber stopper
+                and a crimped collar. The benzyl alcohol inhibits the growth of
+                bacteria that may enter the vial once the stopper has been
+                punctured, which is why the same vial can be entered more than
+                once, for up to {FACTS.openedLimit}. Plain sterile water
+                contains no preservative and is single-use once opened; that one
+                ingredient is the whole difference between the two. The
+                preservative is bacteriostatic, not bactericidal: it slows
+                bacterial growth but does not sterilise the contents and cannot
+                make a contaminated vial safe. It is used as a diluent and
+                solvent to dissolve or dilute substances in laboratory and
+                research work, and has no activity of its own. It is not a
+                medicine.
               </p>
               <p className="mt-5 text-sm text-ink-soft">
-                <Link href="/guides/what-is-bacteriostatic-water" className="link">
+                <Link
+                  href="/guides/what-is-bacteriostatic-water"
+                  className="link"
+                >
                   Read the full guide
                 </Link>
                 {" · "}
-                <Link href="/guides/bacteriostatic-water-vs-sterile-water" className="link">
+                <Link
+                  href="/guides/bacteriostatic-water-vs-sterile-water"
+                  className="link"
+                >
                   How it compares with sterile water and saline
                 </Link>
               </p>
@@ -256,56 +274,80 @@ export default function FunnelPage() {
             Specification on the left, the thing that charges on the right.
             The panel is sticky on desktop so the price stays with the
             reader as they work down the specification. */}
-        <section id="product" className="section scroll-mt-24" aria-labelledby="product-heading">
+        <section
+          id="product"
+          className="section scroll-mt-24"
+          aria-labelledby="product-heading"
+        >
           <div className="grid gap-12 lg:grid-cols-12 lg:gap-12">
             <div className="min-w-0 lg:col-span-7">
               <h2 id="product-heading" className="text-3xl sm:text-4xl">
                 What you are buying
               </h2>
-              <p className="measure mt-4 text-lg text-ink-soft">{PRODUCT.use}</p>
+              <p className="measure mt-4 text-lg text-ink-soft">
+                {PRODUCT.use}
+              </p>
 
               <dl className="mt-10 divide-y divide-line border-y border-line">
                 <SpecRow term="Composition">{PRODUCT.composition}</SpecRow>
                 <SpecRow term="Format">
-                  Sealed multi-dose vial, <span className="tabular">{PRODUCT.size}</span>
+                  Sealed multi-dose vial,{" "}
+                  <span className="tabular">{PRODUCT.size}</span>
                 </SpecRow>
                 <SpecRow term="Draws per vial">
                   <span className="tabular">{drawsPerVial(1)}</span> at 1ml, or{" "}
-                  <span className="tabular">{drawsPerVial(2)}</span> at 2ml. How many you get
-                  depends entirely on the volume taken each time.
+                  <span className="tabular">{drawsPerVial(2)}</span> at 2ml. How
+                  many you get depends entirely on the volume taken each time.
                 </SpecRow>
                 {PRODUCT.storage ? (
                   <SpecRow term="Storage">{PRODUCT.storage}</SpecRow>
                 ) : null}
                 {PRODUCT.shelfLifeAfterOpening ? (
-                  <SpecRow term="Once opened">{PRODUCT.shelfLifeAfterOpening}</SpecRow>
+                  <SpecRow term="Once opened">
+                    {PRODUCT.shelfLifeAfterOpening}
+                  </SpecRow>
                 ) : null}
               </dl>
 
-              <div className="mt-8 flex flex-wrap gap-2">
-                <span className="chip">Sterile water</span>
-                <span className="chip">0.9% benzyl alcohol</span>
-                <span className="chip tabular">{VIAL_ML}ml fill</span>
-                <span className="chip">Sealed multi-dose</span>
-              </div>
-
-              {/* The reference table. Chemistry constants and label facts
-                  only; rows with no confirmed value do not render. */}
-              <h3 id="technical-data" className="mt-14 scroll-mt-24 text-xl">
-                Technical data
-              </h3>
-              <div className="mt-4">
-                <TechnicalData />
-              </div>
-
-              {/* The whole ladder as text, for anyone comparing pack sizes
-                  and for a search engine reading the page. */}
-              <h3 id="prices" className="mt-14 scroll-mt-24 text-xl">
-                Price per vial by pack size
-              </h3>
-              <div className="mt-4">
-                <PriceLadder />
-              </div>
+              {/* The reference rows a laboratory buyer checks — CAS numbers,
+                  formula, appearance, hazard class — behind a disclosure so
+                  the specification above stays the thing you read. Closed
+                  by default; the rows are still in the HTML, so a search
+                  engine reads them either way. Only rows the list above does
+                  not already state are in here. */}
+              <details
+                id="technical-data"
+                className="group mt-8 scroll-mt-24 rounded-panel border border-line bg-surface open:border-brand/35"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left [&::-webkit-details-marker]:hidden sm:px-6">
+                  <span className="text-base font-semibold text-ink">
+                    Full technical data
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 transition-transform duration-200 group-open:rotate-45"
+                    style={{ transitionTimingFunction: "var(--ease-out)" }}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M8 1v14M1 8h14"
+                        stroke="var(--color-primary)"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </span>
+                </summary>
+                <div className="border-t border-line">
+                  <TechnicalData />
+                </div>
+              </details>
             </div>
 
             {/* ── The purchase block ── */}
@@ -334,23 +376,32 @@ export default function FunnelPage() {
                 </p>
                 {/* w/v, not v/v — see the note on PRODUCT.composition. */}
                 <p className="mt-4 text-lg text-white/60">
-                  benzyl alcohol, w/v &mdash; <span className="tabular">9 mg/mL</span>
+                  benzyl alcohol, w/v &mdash;{" "}
+                  <span className="tabular">9 mg/mL</span>
                 </p>
               </div>
               <div className="lg:col-span-7">
-                <h2 id="preservative-heading" className="text-3xl text-white sm:text-4xl">
+                <h2
+                  id="preservative-heading"
+                  className="text-3xl text-white sm:text-4xl"
+                >
                   The preservative is the whole difference
                 </h2>
                 <p className="measure mt-5 text-lg text-white/75">
-                  Sterile water contains no preservative, so once its container is opened it is
-                  single-use. Bacteriostatic water contains 0.9% benzyl alcohol, which inhibits
-                  bacterial growth inside the vial after it has been entered. That is what makes
-                  this a multi-dose vial rather than a single-use one.
+                  Sterile water contains no preservative, so once its container
+                  is opened it is single-use. Bacteriostatic water contains 0.9%
+                  benzyl alcohol, which inhibits bacterial growth inside the
+                  vial after it has been entered. That is what makes this a
+                  multi-dose vial rather than a single-use one.
                 </p>
                 <ul className="mt-8 flex flex-wrap gap-2">
-                  <li className="chip-onDark">Inhibits bacterial growth in the vial</li>
+                  <li className="chip-onDark">
+                    Inhibits bacterial growth in the vial
+                  </li>
                   <li className="chip-onDark">Multi-dose, not single-use</li>
-                  <li className="chip-onDark">Laboratory and research diluent</li>
+                  <li className="chip-onDark">
+                    Laboratory and research diluent
+                  </li>
                 </ul>
               </div>
             </div>
@@ -379,7 +430,10 @@ export default function FunnelPage() {
             </h2>
             <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {whyBuy.map((w) => (
-                <li key={w.title} className="rounded-panel border border-line bg-surface p-6">
+                <li
+                  key={w.title}
+                  className="rounded-panel border border-line bg-surface p-6"
+                >
                   <h3 className="text-lg">{w.title}</h3>
                   <p className="mt-2 text-base text-ink-soft">{w.body}</p>
                 </li>
@@ -393,37 +447,28 @@ export default function FunnelPage() {
 
         {/* ══ 4. FAQ ════════════════════════════════════════════════ */}
         <section className="section" aria-labelledby="faq-heading">
-          <div className="grid gap-10 lg:grid-cols-12 lg:gap-14">
-            <div className="lg:col-span-4">
-              <h2 id="faq-heading" className="text-3xl sm:text-4xl">
-                Questions
-              </h2>
-              <p className="mt-6">
-                <Link href="/contact" className="link">
-                  Contact us
-                </Link>
-              </p>
-            </div>
-            <div className="min-w-0 lg:col-span-8">
-              <Faq />
-            </div>
+          {/* Heading and links share one row so the list can take the full
+              width below it, split into two columns on wider screens. */}
+          <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
+            <h2 id="faq-heading" className="text-3xl sm:text-4xl">
+              Questions
+            </h2>
+            <p className="text-sm text-ink-soft">
+              <Link href="/faq" className="link">
+                All questions
+              </Link>
+              <span aria-hidden="true" className="mx-2">
+                &middot;
+              </span>
+              <Link href="/contact" className="link">
+                Contact us
+              </Link>
+            </p>
+          </div>
+          <div className="mt-8">
+            <Faq />
           </div>
         </section>
-
-        {/* ── Learn: the guide hub ─────────────────────────────── */}
-        <LearnStrip />
-
-        {/* ── Guarantee — only with a real policy ──────────────── */}
-        {GUARANTEE.body ? (
-          <section id="guarantee" className="section scroll-mt-24 pt-0" aria-labelledby="guarantee-heading">
-            <div className="surface-card p-8 sm:p-12">
-              <h2 id="guarantee-heading" className="text-2xl">
-                {GUARANTEE.title || "Our guarantee"}
-              </h2>
-              <p className="measure mt-4 text-base text-ink-soft">{GUARANTEE.body}</p>
-            </div>
-          </section>
-        ) : null}
 
         {/* ── Final CTA ────────────────────────────────────────── */}
         <section className="section pt-4" aria-labelledby="final-heading">
@@ -432,8 +477,9 @@ export default function FunnelPage() {
               Ready to order?
             </h2>
             <p className="measure mx-auto mt-4 text-lg text-ink-soft">
-              {PRODUCT.name}, {PRODUCT.size}, from <span className="tabular">{PRICE}</span> a vial.
-              Your delivery address is collected by Stripe at checkout.
+              {PRODUCT.name}, {PRODUCT.size}, from{" "}
+              <span className="tabular">{PRICE}</span> a vial. Your delivery
+              address is collected by Stripe at checkout.
             </p>
             <div className="mx-auto mt-8 max-w-xs">
               <a href="#buy" className="btn-cta">
@@ -460,7 +506,9 @@ export default function FunnelPage() {
                 </Link>
               </li>
             </ul>
-            {DELIVERY.dispatchLine ? <p className="mt-4">{DELIVERY.dispatchLine}</p> : null}
+            {DELIVERY.dispatchLine ? (
+              <p className="mt-4">{DELIVERY.dispatchLine}</p>
+            ) : null}
           </div>
         </section>
 
@@ -475,7 +523,13 @@ export default function FunnelPage() {
 }
 
 /** One row of the specification list. */
-function SpecRow({ term, children }: { term: string; children: React.ReactNode }) {
+function SpecRow({
+  term,
+  children,
+}: {
+  term: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="grid gap-1 py-5 sm:grid-cols-[11rem_1fr] sm:gap-6">
       <dt className="text-sm font-semibold text-ink">{term}</dt>

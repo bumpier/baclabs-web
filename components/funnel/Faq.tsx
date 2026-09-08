@@ -12,45 +12,47 @@ import { FAQ } from "@/config/faq";
  * transitions smoothly without needing a measured pixel height and without
  * ever blocking the click.
  *
- * Rows are cards rather than hairline-separated lines: at the wider measure
- * the page now uses, a bare rule left the question stranded from its answer.
+ * Layout: two independent columns on wider screens, hairline-separated rows
+ * rather than cards. Twelve stacked cards was the tallest block on the page.
+ * The columns are separate lists, not one CSS grid, so opening a row only
+ * grows its own column instead of leaving a hole beside it. Every row starts
+ * closed: the plain-English definition now has its own section higher up.
  */
 export function Faq() {
+  const half = Math.ceil(FAQ.length / 2);
+  const columns = [FAQ.slice(0, half), FAQ.slice(half)];
+
   return (
-    <div className="space-y-3">
-      {FAQ.map((item, i) => (
-        // The first row opens by default so the plain-English definition is
-        // readable without a click — it was the only place on the page a
-        // first-time visitor could find one, and it was collapsed.
-        <FaqRow key={i} question={item.q} answer={item.a} defaultOpen={i === 0} />
+    <div className="grid gap-x-12 border-t border-line md:grid-cols-2">
+      {columns.map((items, c) => (
+        <div key={c}>
+          {items.map((item) => (
+            <FaqRow key={item.q} question={item.q} answer={item.a} />
+          ))}
+        </div>
       ))}
     </div>
   );
 }
 
-function FaqRow({
-  question,
-  answer,
-  defaultOpen = false,
-}: {
-  question: string;
-  answer: string;
-  defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
+function FaqRow({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
 
   return (
     <details
       open={open}
       onToggle={(e) => setOpen(e.currentTarget.open)}
-      className={[
-        "rounded-panel border bg-surface px-5 transition-colors duration-150 sm:px-6",
-        open ? "border-brand/35" : "border-line",
-      ].join(" ")}
-      style={{ transitionTimingFunction: "var(--ease-out)" }}
+      className="border-b border-line"
     >
-      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 py-5 text-left [&::-webkit-details-marker]:hidden">
-        <span className="text-base font-semibold text-ink">{question}</span>
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 py-3.5 text-left [&::-webkit-details-marker]:hidden">
+        <span
+          className={[
+            "text-[15px] font-medium",
+            open ? "text-brand" : "text-ink",
+          ].join(" ")}
+        >
+          {question}
+        </span>
         {/* A 45° rotation reads as +/− without needing two icons. 200ms is
             long enough to see, short enough not to gate the reading. */}
         <span
@@ -61,7 +63,13 @@ function FaqRow({
             transform: open ? "rotate(45deg)" : "rotate(0deg)",
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+          >
             <path
               d="M8 1v14M1 8h14"
               stroke="var(--color-primary)"
@@ -82,9 +90,9 @@ function FaqRow({
         }}
       >
         <div className="overflow-hidden">
-          <div className="measure pb-5 text-base text-ink-soft">
-            <p>{answer}</p>
-          </div>
+          <p className="pb-4 pr-8 text-[15px] leading-relaxed text-ink-soft">
+            {answer}
+          </p>
         </div>
       </div>
     </details>

@@ -356,7 +356,11 @@ export const VAT: { statement: string } = {
  */
 export const WHY_BUY: readonly { title: string; body: string }[] = [];
 
-/** Guarantee / risk-reversal block. Empty body renders nothing at all. */
+/**
+ * Guarantee / risk-reversal terms. Shown as the detail line of the price
+ * badge in the trust bar (the `#guarantee` anchor); there is no standalone
+ * section. Empty body drops the badge, and with it every link to it.
+ */
 export const GUARANTEE: { title: string; body: string } = {
   title: "The UK's lowest price — guaranteed",
   body: `Found this exact product cheaper, in stock, from another UK-based seller? Email us the listing${brand.contact.email ? ` at ${brand.contact.email}` : ""} and we'll match the price.`,
@@ -365,8 +369,8 @@ export const GUARANTEE: { title: string; body: string } = {
 /**
  * Short badge text for the hero, comparison table, footer and sticky bar.
  * The full terms live in GUARANTEE.body — every use of this string should
- * link to the guarantee section (id="guarantee" on the page) rather than
- * restate the terms.
+ * link to the trust-bar price card (id="guarantee" on the home page) rather
+ * than restate the terms.
  */
 export const PRICE_MATCH_BADGE = "UK price match guarantee";
 
@@ -383,8 +387,9 @@ export const PRICE_MATCH_BADGE = "UK price match guarantee";
  *     clearing the guarantee withdraws the claim automatically rather than
  *     leaving a superlative standing on nothing.
  *  2. Every use of it links to `#guarantee`, putting the terms one click from
- *     the claim on all four surfaces that state it: the hero strip, the trust
- *     bar, the purchase block and the closing CTA.
+ *     the claim on all three surfaces that state it: the hero strip, the trust
+ *     bar and the closing CTA. (The purchase block deliberately does not
+ *     repeat it — the hero and trust bar are on screen moments earlier.)
  *
  * Neither of those makes the claim TRUE. That depends on the prices in
  * BUNDLES really being the lowest in the UK -- a fact about the market, not
@@ -502,8 +507,8 @@ export const PRODUCT_IMAGES: readonly {
   height: number;
 }[] = [
   {
-    src: "/bacteriostatic-water-10ml-vial-uk.webp",
-    alt: `A sealed ${PRODUCT.size} of ${PRODUCT.name.toLowerCase()} with a crimped aluminium collar and white flip cap, labelled for research use only, ${VIAL_ML}ml, storage 2–8°C.`,
+    src: "/static-water.png",
+    alt: `A sealed ${PRODUCT.size} of ${PRODUCT.name.toLowerCase()} with a crimped aluminium collar and white flip cap, ${VIAL_ML}ml, storage 2–8°C.`,
     /** Intrinsic pixel size, so the layout reserves the right box before the file loads. */
     width: 1122,
     height: 1402,

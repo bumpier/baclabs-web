@@ -100,7 +100,7 @@ export const whereToBuyUk: Guide = {
     {
       heading: "How does BacLab supply bacteriostatic water in the UK?",
       paragraphs: [
-        `BacLab sells one product and nothing else: bacteriostatic water, sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol (${FACTS.benzylAlcoholMgPerMl}), in a sealed ${FACTS.vialMl} ml vial with a crimped tamper-evident collar and flip-off cap. The label carries the composition, the fill volume, the batch number and the expiry, and states that the product is for research use.`,
+        `BacLab sells one product and nothing else: bacteriostatic water, sterile water with ${FACTS.benzylAlcoholPct} benzyl alcohol (${FACTS.benzylAlcoholMgPerMl}), in a sealed ${FACTS.vialMl} ml vial with a crimped tamper-evident collar and flip-off cap. The label carries the composition, the fill volume, the batch number and the expiry.`,
         "Vials are sold in packs from 1 to 100, with the per-vial price falling as the pack size rises, and delivery is to UK addresses only. Orders at or above the free-delivery threshold shown on the product page ship free; smaller orders carry a flat delivery charge shown before you pay. Dispatch times are stated at checkout.",
         "Because each vial is sealed for hygiene reasons, the returns policy follows the UK sealed-goods rule: an unopened vial with its seal intact can be returned under your 14-day right to cancel, and anything that arrives damaged is replaced or refunded. The full policy is published on the returns page.",
       ],
