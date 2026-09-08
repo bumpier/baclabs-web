@@ -43,10 +43,37 @@ const securityHeaders = [
   },
 ];
 
+// Host of the canonical origin, for the www → apex redirect below. Empty when
+// NEXT_PUBLIC_SITE_URL is unset or already a www host, in which case no
+// redirect is emitted.
+const SITE_HOST = (() => {
+  try {
+    const host = new URL(process.env.NEXT_PUBLIC_SITE_URL || "").host;
+    return host.startsWith("www.") ? "" : host;
+  } catch {
+    return "";
+  }
+})();
+
 const nextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // Inline the stylesheet into the HTML. The one render-blocking resource
+    // on the home page was a 14KB synchronous <link rel="stylesheet">, and
+    // 96% of the measured LCP was element render delay waiting on it. Inline
+    // CSS paints on the first byte of HTML. The stylesheet is small enough
+    // that losing its separate cache entry costs less than the round trip.
+    inlineCss: true,
+  },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Defence in depth for the admin area: robots.txt stops crawling and
+      // the layout metadata says noindex, but a header reaches non-HTML
+      // responses and any crawler that reads headers before the body.
+      { source: "/admin", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+    ];
   },
   // The multi-product catalogue and the affiliate area are gone. These paths
   // never went live on this domain, but the redirects are free and stop any
@@ -54,13 +81,29 @@ const nextConfig = {
   // /privacy keeps the address it has always had.
   async redirects() {
     return [
+      // www → apex. The canonical tag already points every www page at the
+      // apex, but a tag is a hint; a 301 is the consolidation. Only the www
+      // variant of the canonical host is redirected, so any other storefront
+      // domain this deployment serves is untouched.
+      ...(SITE_HOST
+        ? [
+            {
+              source: "/:path*",
+              has: [{ type: "host", value: `www.${SITE_HOST}` }],
+              destination: `https://${SITE_HOST}/:path*`,
+              permanent: true,
+            },
+          ]
+        : []),
       { source: "/products", destination: "/", permanent: true },
       { source: "/products/:slug", destination: "/", permanent: true },
       { source: "/cart", destination: "/#buy", permanent: true },
       { source: "/auth/:path*", destination: "/", permanent: true },
       { source: "/dashboard", destination: "/", permanent: true },
       { source: "/refunds", destination: "/returns", permanent: true },
-      { source: "/shipping", destination: "/delivery", permanent: true },
+      // There is no /delivery page — the delivery terms sit in the trust bar
+      // and purchase block on the home page, so that is where /shipping goes.
+      { source: "/shipping", destination: "/", permanent: true },
     ];
   },
 };

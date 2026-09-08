@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
 import {
@@ -9,11 +10,11 @@ import {
   supportEmail,
 } from "@/lib/legal";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Returns and refunds",
   description: "Your right to cancel, how to return an order, and how refunds are handled.",
-  alternates: { canonical: "/returns" },
-};
+  path: "/returns",
+});
 
 /**
  * Returns policy for a UK distance-selling retailer.
@@ -39,6 +40,7 @@ export default function ReturnsPage() {
 
   return (
     <LegalPage
+      path="/returns"
       title="Returns and refunds"
       intro="How to cancel an order, what happens if something arrives damaged, and how we refund you."
       sections={[

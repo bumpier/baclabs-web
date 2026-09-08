@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
 import { brand } from "@/config/brand";
 import { MAX_QUANTITY, PRODUCT, VAT, formatMinor } from "@/config/funnel";
 import { COMPLAINT_ACK_DAYS, isSet, legalName, supportEmail } from "@/lib/legal";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Terms and conditions",
   description: "The terms on which we sell bacteriostatic water, and the terms of use of this site.",
-  alternates: { canonical: "/terms" },
-};
+  path: "/terms",
+});
 
 /**
  * Terms of sale for a UK distance-selling retailer, plus the website terms of
@@ -25,6 +26,7 @@ export default function TermsPage() {
 
   return (
     <LegalPage
+      path="/terms"
       title="Terms and conditions"
       intro="The terms on which we sell to you, and the terms on which you may use this website."
       sections={[

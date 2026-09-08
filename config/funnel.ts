@@ -46,8 +46,13 @@ export const PRODUCT = {
     "Sterile water with 0.9% w/v benzyl alcohol (9 mg/mL) as a bacteriostatic preservative, in a sealed multi-dose vial.",
   use: "A sterile diluent and solvent, used to reconstitute or dilute substances for laboratory and research purposes.",
   // Empty strings render nothing.
-  storage: "",
+  // Printed on the label ("Storage: 2–8°C"); see the vial photograph in
+  // public/. The unopened expiry is batch-specific and printed on each vial,
+  // so it is NOT stated here as a single figure.
+  storage: "2–8°C, as printed on the label",
   shelfLifeUnopened: "",
+  /** pH range from the supplier's specification. Empty until supplied. */
+  ph: "",
   // Confirmed from the supplier's label. Rendered as a spec row and answered
   // in config/faq.ts; both go silent again if this is ever cleared.
   shelfLifeAfterOpening: "28 days from first puncture",
@@ -81,6 +86,14 @@ export const BUNDLES: readonly Bundle[] = [
   { id: "fifty", vials: 50, priceMinor: 14999, label: "", sku: "baclab-10ml-x50" },
   { id: "hundred", vials: 100, priceMinor: 27499, label: "Wholesale", sku: "baclab-10ml-x100" },
 ] as const;
+
+/**
+ * The date the figures in BUNDLES or PRODUCT.unitPriceMinor last changed,
+ * YYYY-MM-DD. Bump it in the same commit as a price change. It is the
+ * `dateModified` on the home page's WebPage structured data — a real
+ * date from a real edit, never a build timestamp.
+ */
+export const PRICES_UPDATED = "2026-09-07";
 
 /** Pre-selected tier in the purchase block. */
 export const DEFAULT_BUNDLE_ID: BundleId = "five";
@@ -124,6 +137,16 @@ export function totalMinor(b: Bundle, quantity: number): number {
 /** £7.50 — the canonical way to render pence. Used in copy and CTAs. */
 export function formatMinor(minor: number): string {
   return `£${(minor / 100).toFixed(2)}`;
+}
+
+/**
+ * "£30" for a whole number of pounds, "£7.50" otherwise. BADGE COPY ONLY.
+ * A trailing ".00" on a round threshold reads as noise in a sentence, but a
+ * price, a line item or a total must always show two decimals — those stay on
+ * `formatMinor`, and nothing in the totals table uses this.
+ */
+export function formatMinorShort(minor: number): string {
+  return minor % 100 === 0 ? `£${minor / 100}` : formatMinor(minor);
 }
 
 /** Price per millilitre, for the comparison table. */
@@ -268,13 +291,35 @@ export const DELIVERY: {
   freeFromMinor: number | null;
   note: string;
   dispatchLine: string;
+  handlingDays: [number, number] | null;
+  transitDays: [number, number] | null;
 } = {
   mode: "threshold",
   priceMinor: 200,
   freeFromMinor: 3000,
   note: "Free UK delivery on orders of £30 or more.",
   dispatchLine: "",
+  /**
+   * Working days from order to dispatch, and from dispatch to arrival, as
+   * `[min, max]`. Feed Product `shippingDetails.deliveryTime`; null omits the
+   * block, so the structured data never asserts a speed the shop has not
+   * committed to on the page. Set both, and dispatchLine above, together.
+   */
+  handlingDays: null,
+  transitDays: null,
 };
+
+/**
+ * The returns policy as structured data reads it. Every figure here is the
+ * one written on /returns — change them together. `customerPaysReturn` is
+ * the "you pay the cost of returning the goods" clause; the sealed-goods
+ * exception cannot be expressed in schema and is left to the page.
+ */
+export const RETURNS = {
+  windowDays: 14,
+  customerPaysReturn: true,
+  path: "/returns",
+} as const;
 
 /**
  * Whether an order of this value ships free.
@@ -326,6 +371,115 @@ export const GUARANTEE: { title: string; body: string } = {
 export const PRICE_MATCH_BADGE = "UK price match guarantee";
 
 /**
+ * The headline price claim. Empty string renders nothing, everywhere.
+ *
+ * READ THIS BEFORE CHANGING IT. This is a bare SUPERLATIVE: the qualified
+ * wording ("... or we match it") was considered and the bare form chosen
+ * deliberately. Under the CPUTR and the DMCC Act the burden of substantiating
+ * a superlative sits with the seller, and two things carry it here:
+ *
+ *  1. GUARANTEE.body, the undertaking to match any cheaper UK listing.
+ *     `trustBadges()` will not emit this badge while that body is empty, so
+ *     clearing the guarantee withdraws the claim automatically rather than
+ *     leaving a superlative standing on nothing.
+ *  2. Every use of it links to `#guarantee`, putting the terms one click from
+ *     the claim on all four surfaces that state it: the hero strip, the trust
+ *     bar, the purchase block and the closing CTA.
+ *
+ * Neither of those makes the claim TRUE. That depends on the prices in
+ * BUNDLES really being the lowest in the UK -- a fact about the market, not
+ * about this file, and one worth re-checking against real competitor listings
+ * periodically. If it stops holding, change this string; do not leave the
+ * price-match promise to absorb the difference.
+ */
+export const LOWEST_PRICE_BADGE = "Cheapest in the UK";
+
+/**
+ * "Free UK delivery over £30", DERIVED from DELIVERY rather than typed.
+ * The badge, the basket nudge and the amount Stripe charges all resolve from
+ * the same figure, so re-pricing delivery can never leave a stale promise on
+ * the page. Returns "" when the current mode makes no free-delivery claim.
+ */
+export function freeDeliveryBadge(): string {
+  if (DELIVERY.mode === "free") return "Free UK delivery";
+  if (DELIVERY.mode === "threshold" && DELIVERY.freeFromMinor !== null) {
+    return `Free UK delivery over ${formatMinorShort(DELIVERY.freeFromMinor)}`;
+  }
+  return "";
+}
+
+/**
+ * Pence still to add before this order ships free. 0 once it already does,
+ * and 0 when no threshold applies \u2014 so a caller can render the nudge on a
+ * positive number alone without re-checking the delivery mode.
+ */
+export function remainingForFreeDeliveryMinor(orderValueMinor: number): number {
+  if (DELIVERY.mode !== "threshold" || DELIVERY.freeFromMinor === null) return 0;
+  if (shipsFree(orderValueMinor)) return 0;
+  return DELIVERY.freeFromMinor - orderValueMinor;
+}
+
+/** Which mark a badge draws. Mapped to an SVG in components/funnel/TrustBar. */
+export type TrustIcon = "price" | "delivery" | "secure" | "sealed";
+
+export interface TrustBadge {
+  /** The short line. Also the React key, so it must be unique. */
+  label: string;
+  /** One sentence of substantiation, shown wherever there is room for it. */
+  detail: string;
+  icon: TrustIcon;
+  /** Anchor holding the full terms. Omitted when there are none to link to. */
+  href?: string;
+}
+
+/**
+ * THE badge set. The hero strip, the trust bar, the sticky bar, the final CTA
+ * and the announcement bar all read this, so a claim is added, reworded or
+ * withdrawn in exactly one place.
+ *
+ * Entries whose text resolves empty are dropped, keeping the "an unconfirmed
+ * fact renders nothing" rule of this file: clear LOWEST_PRICE_BADGE or switch
+ * DELIVERY.mode and the badge disappears everywhere at once.
+ */
+export function trustBadges(): TrustBadge[] {
+  const delivery = freeDeliveryBadge();
+  const underThreshold =
+    DELIVERY.mode === "threshold" && DELIVERY.priceMinor !== null
+      ? ` Below that it is ${formatMinorShort(DELIVERY.priceMinor)}, shown before you pay.`
+      : "";
+
+  const all: (TrustBadge | null)[] = [
+    LOWEST_PRICE_BADGE && GUARANTEE.body
+      ? {
+          label: LOWEST_PRICE_BADGE,
+          detail: GUARANTEE.body,
+          icon: "price",
+          href: "#guarantee",
+        }
+      : null,
+    delivery
+      ? {
+          label: delivery,
+          detail: `Sent to any UK address.${underThreshold}`,
+          icon: "delivery",
+        }
+      : null,
+    {
+      label: "Secure checkout by Stripe",
+      detail: "Card details go straight to Stripe. We never see or store them.",
+      icon: "secure",
+    },
+    {
+      label: "Sealed, tamper-evident vial",
+      detail: `${VIAL_ML}ml, 0.9% benzyl alcohol w/v, sold as a laboratory and research diluent.`,
+      icon: "sealed",
+    },
+  ];
+
+  return all.filter((b): b is TrustBadge => b !== null);
+}
+
+/**
  * Desktop-only, dismissible exit-intent offer. Disabled by default.
  * Never enable this with an invented discount — wire `promoCode` to a real
  * Stripe promotion code, which `allow_promotion_codes` will accept.
@@ -348,7 +502,7 @@ export const PRODUCT_IMAGES: readonly {
   height: number;
 }[] = [
   {
-    src: "/bacteriostatic-water-10ml-research-vial-uk-astra-labs.webp",
+    src: "/bacteriostatic-water-10ml-vial-uk.webp",
     alt: `A sealed ${PRODUCT.size} of ${PRODUCT.name.toLowerCase()} with a crimped aluminium collar and white flip cap, labelled for research use only, ${VIAL_ML}ml, storage 2–8°C.`,
     /** Intrinsic pixel size, so the layout reserves the right box before the file loads. */
     width: 1122,

@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
 import { brand } from "@/config/brand";
 import { RECORD_RETENTION_YEARS, isSet, legalName, supportEmail } from "@/lib/legal";
 import { getMetaPixelStatus } from "@/lib/settings";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy policy",
   description: "What personal data we collect, why, who we share it with, and your rights.",
-  alternates: { canonical: "/privacy" },
-};
+  path: "/privacy",
+});
 
 /**
  * UK GDPR / DPA 2018 / PECR privacy notice.
@@ -64,6 +65,7 @@ export default async function PrivacyPage() {
 
   return (
     <LegalPage
+      path="/privacy"
       title="Privacy policy"
       intro="What we collect, why we collect it, who sees it, and what you can ask us to do about it."
       sections={[

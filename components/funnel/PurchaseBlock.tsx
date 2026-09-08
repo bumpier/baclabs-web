@@ -6,6 +6,8 @@ import {
   BUNDLES,
   DELIVERY,
   deliveryMinorFor,
+  LOWEST_PRICE_BADGE,
+  remainingForFreeDeliveryMinor,
   shipsFree,
   LOW_STOCK_THRESHOLD,
   MAX_QUANTITY,
@@ -26,6 +28,9 @@ import { trackEvent } from "@/lib/analytics";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
 import { Badge } from "@/components/ui/badge";
+
+/** Most vials one order can hold: the largest tier at the maximum quantity. */
+const MAX_ORDER_VIALS = Math.max(...BUNDLES.map((b) => b.vials)) * MAX_QUANTITY;
 
 /**
  * The purchase block: tier selector, quantity, live total, and the one button
@@ -87,6 +92,10 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
   const deliveryMinor = deliveryMinorFor(totalMinor);
   const deliveryFree = shipsFree(totalMinor);
   const deliveryKnown = DELIVERY.mode !== "unknown";
+  // Pence still to add before this basket ships free. 0 once it does, and 0
+  // when no threshold exists — so the nudge renders on a positive number
+  // alone. It reads the same figure Stripe is handed, never a second copy.
+  const toFreeDelivery = remainingForFreeDeliveryMinor(totalMinor);
 
   const sale = saleVisible();
   const referenceTotal = referencePriceMinor(bundle) * quantity;
@@ -283,7 +292,28 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
         {/* VAT treatment, stated before the customer reaches Stripe. Renders
             only when config supplies it. */}
         {VAT.statement ? <p className="mt-2 text-xs text-ink-soft">{VAT.statement}</p> : null}
-        {DELIVERY.note ? <p className="mt-1 text-xs text-ink-soft">{DELIVERY.note}</p> : null}
+
+        {/* Free-delivery status, and the one nudge on this page.
+            It states a shortfall against a threshold that is really applied at
+            checkout — it is not a countdown, a fake deadline or an invented
+            scarcity signal, and it disappears the moment the basket qualifies.
+            `aria-live="polite"` because it changes as the tier or quantity
+            changes, and a screen-reader user should hear that it has. */}
+        <p aria-live="polite" className="mt-3">
+          {toFreeDelivery > 0 ? (
+            <span className="alert-note block">
+              Add <span className="tabular font-semibold">{formatMinor(toFreeDelivery)}</span> more
+              for free UK delivery.
+            </span>
+          ) : deliveryKnown && deliveryFree ? (
+            <span className="alert-note block">
+              This order qualifies for <span className="font-semibold">free UK delivery</span>.
+            </span>
+          ) : (
+            // No threshold in play — fall back to the plain policy line.
+            <span className="block text-xs text-ink-soft">{DELIVERY.note}</span>
+          )}
+        </p>
 
         {/* Real stock signal only — renders nothing while STOCK_LEVEL is null. */}
         {lowStock ? (
@@ -310,6 +340,30 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
 
         <p className="mt-3 text-center text-xs text-ink-soft">
           You will be taken to Stripe to pay. Delivery address is collected there.
+        </p>
+
+        {/* The price claim, at the last point before they commit. It links to
+            the guarantee rather than restating it — the terms live in one
+            place so they cannot drift between the four spots that cite them. */}
+        {LOWEST_PRICE_BADGE ? (
+          <p className="mt-2 text-center text-xs text-ink-soft">
+            <a href="#guarantee" className="underline decoration-line underline-offset-4 hover:text-ink">
+              {LOWEST_PRICE_BADGE}
+            </a>
+          </p>
+        ) : null}
+
+        {/* The path past the largest order this form can take. It used to
+            exist only inside a collapsed FAQ answer; a buyer who needs more
+            than the selector allows should not have to go looking for it. */}
+        <p className="mt-2 text-center text-xs text-ink-soft">
+          Need more than <span className="tabular">{MAX_ORDER_VIALS}</span> vials?{" "}
+          <Link
+            href="/contact#wholesale"
+            className="underline decoration-line underline-offset-4 hover:text-ink"
+          >
+            Ask for a wholesale quote
+          </Link>
         </p>
 
         {cryptoEnabled ? (

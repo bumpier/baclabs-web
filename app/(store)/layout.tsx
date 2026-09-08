@@ -1,6 +1,16 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 
+/**
+ * Bound how long any cache may hold a storefront page. Fully static pages
+ * ship `s-maxage=31536000`, which is safe only while Cloudflare declines to
+ * cache HTML; one cache rule change would then serve year-old prices. With
+ * a five-minute revalidation the header becomes `s-maxage=300` and a price
+ * change is live within minutes of a deploy, whatever sits in front. Pages
+ * that opt into `force-dynamic` (/privacy) are unaffected.
+ */
+export const revalidate = 300;
+
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">

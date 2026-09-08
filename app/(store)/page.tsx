@@ -9,24 +9,42 @@ import {
   BUNDLES,
   DELIVERY,
   GUARANTEE,
+  LOWEST_PRICE_BADGE,
+  PRICE_MATCH_BADGE,
+  PRICES_UPDATED,
   PRODUCT,
+  PRODUCT_IMAGES,
   STOCK_LEVEL,
   VIAL_ML,
   WHY_BUY,
   drawsPerVial,
   formatMinor,
+  freeDeliveryBadge,
 } from "@/config/funnel";
 import { FAQ_PUBLISHABLE } from "@/config/faq";
+import { FACTS } from "@/content/facts";
 import { REVIEWS, HAS_REVIEWS, averageRating } from "@/lib/reviews";
 import { canonicalOrigin } from "@/lib/site-url";
 import { getPaymentConfig } from "@/lib/payments/config";
+import { JsonLd } from "@/components/JsonLd";
 import { FunnelStateProvider } from "@/components/funnel/FunnelState";
 import { Hero } from "@/components/funnel/Hero";
+import { TrustBar } from "@/components/funnel/TrustBar";
 import { PurchaseBlock } from "@/components/funnel/PurchaseBlock";
 import { StickyBuyBar } from "@/components/funnel/StickyBuyBar";
 import { Faq } from "@/components/funnel/Faq";
 import { Reviews } from "@/components/funnel/Reviews";
 import { ComparisonTable } from "@/components/funnel/ComparisonTable";
+import { TechnicalData } from "@/components/funnel/TechnicalData";
+import { PriceLadder } from "@/components/funnel/PriceLadder";
+import { LearnStrip } from "@/components/funnel/LearnStrip";
+import {
+  priceValidUntil,
+  productAlternateNames,
+  productPropertiesSchema,
+  returnPolicySchema,
+  shippingDetailsFor,
+} from "@/lib/product-schema";
 
 // Nothing on this page depends on the request, so it prerenders. Keep it
 // that way: adding per-request data here also makes middleware run on every
@@ -50,18 +68,41 @@ export default function FunnelPage() {
     name: `${PRODUCT.name} ${PRODUCT.size}`,
     description: `${PRODUCT.composition} ${PRODUCT.use}`,
     sku: "baclab-10ml",
+    url: SITE,
+    // Google will not show a Product rich result without an image. Taken from
+    // the same list the hero renders, so the photo in search is the photo on
+    // the page. Omitted, not faked, while there is no photograph.
+    ...(PRODUCT_IMAGES.length > 0
+      ? { image: PRODUCT_IMAGES.map((i) => `${SITE}${i.src}`) }
+      : {}),
     brand: { "@type": "Brand", name: brand.name },
-    // Every bundle is a real, purchasable offer.
+    // The names people search by. Visible on the page ("also sold as…").
+    alternateName: productAlternateNames(),
+    // The technical-data rows, as PropertyValue.
+    additionalProperty: productPropertiesSchema(),
+    // Every bundle is a real, purchasable offer. Each carries its own shipping
+    // rate (free at or over the threshold, charged below it) and the returns
+    // policy, which is what the "delivery · returns" line under a result
+    // reads from.
     offers: BUNDLES.map((b) => ({
       "@type": "Offer",
       name: `${b.vials} × ${PRODUCT.size}`,
+      // The same SKU Stripe and the packing slip use, so a machine reader
+      // can tell the eight offers apart without parsing `name`.
+      sku: b.sku,
+      // The charged price only. The sale's struck-through reference figure
+      // is presentation and never reaches structured data.
       price: (b.priceMinor / 100).toFixed(2),
       priceCurrency: "GBP",
+      priceValidUntil: priceValidUntil(),
       url: `${SITE}/#buy`,
+      itemCondition: "https://schema.org/NewCondition",
       availability:
         STOCK_LEVEL === null || STOCK_LEVEL > 0
           ? "https://schema.org/InStock"
           : "https://schema.org/OutOfStock",
+      ...(shippingDetailsFor(b.priceMinor) ? { shippingDetails: shippingDetailsFor(b.priceMinor) } : {}),
+      hasMerchantReturnPolicy: returnPolicySchema(),
     })),
     // AggregateRating and Review are emitted ONLY when real reviews exist.
     ...(HAS_REVIEWS
@@ -94,31 +135,122 @@ export default function FunnelPage() {
     })),
   };
 
+  // The page as a page, so it can carry a `dateModified`. Product has no such
+  // field in schema.org; WebPage does, and the date is the one recorded in
+  // config when the prices last changed — not a build timestamp.
+  const webPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${SITE}/#webpage`,
+    url: SITE,
+    name: `${PRODUCT.name} ${PRODUCT.size}`,
+    inLanguage: "en-GB",
+    dateModified: PRICES_UPDATED,
+    isPartOf: { "@type": "WebSite", url: SITE, name: brand.name },
+    about: { "@id": `${SITE}/#organization` },
+  };
+
   const whyBuy = WHY_BUY.filter((w) => w.title && w.body);
   const bannerText = saleVisible() ? SALE.bannerText || saleLabel() : ANNOUNCEMENT;
 
+  // The announcement bar now carries up to three lines rather than one. Each
+  // is dropped when its source config goes empty, so the bar shortens to two,
+  // to one, or vanishes entirely without any of them needing a guard here.
+  const bannerParts = [bannerText, freeDeliveryBadge(), PRICE_MATCH_BADGE].filter(Boolean);
+
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
+      <JsonLd data={productSchema} />
+      <JsonLd data={faqSchema} />
+      <JsonLd data={webPageSchema} />
 
-      {/* Announcement bar. The sale line takes precedence over ANNOUNCEMENT;
-          both hide the bar entirely when empty. */}
-      {bannerText ? (
-        <div className="border-b border-line bg-brand-tint px-4 py-2 text-center text-sm font-medium text-ink">
-          {bannerText}
+      {/* Announcement bar. The sale line takes precedence over ANNOUNCEMENT,
+          and sits alongside the delivery and price-match lines. The whole bar
+          disappears when every part resolves empty.
+
+          The third part is hidden below `sm`: on a narrow phone three parts
+          wrap to two lines and push the hero down, and the price-match claim
+          is the one already repeated in the hero, the trust bar and the buy
+          bar — so it is the one that can afford to go. */}
+      {bannerParts.length > 0 ? (
+        <div className="border-b border-line bg-brand-tint px-4 py-2 text-sm font-medium text-ink">
+          <ul className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            {bannerParts.map((part, i) => (
+              <li
+                key={part}
+                // `hidden sm:flex` rather than `flex hidden sm:flex`: two
+                // display utilities on one element resolve by stylesheet
+                // order, not by the order they are written here, so the
+                // conditional supplies the base display itself.
+                className={[
+                  i > 1 ? "hidden sm:flex" : "flex",
+                  "items-center gap-3",
+                ].join(" ")}
+              >
+                {i > 0 ? (
+                  <span aria-hidden="true" className="text-ink-soft">
+                    &middot;
+                  </span>
+                ) : null}
+                {part}
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 
       <FunnelStateProvider>
         {/* ══ 1. LANDING HERO ═══════════════════════════════════════ */}
         <Hero />
+
+        {/* The reasons to buy here rather than elsewhere, immediately after
+            the price. Placed above the specification because "is this the
+            best price?" and "what is delivery?" are asked before anyone
+            reads a composition line. */}
+        <TrustBar />
+
+        {/* ── The definition, in one quotable paragraph ────────────
+            The only plain-English definition used to sit in a collapsed FAQ
+            item below three other sections. This is the passage an answer
+            engine lifts and a first-time visitor reads before the price
+            ladder: definition, mechanism, the "not a steriliser" caveat and
+            the laboratory-only use, in that order. Every figure is read from
+            content/facts.ts. The heading is a question because that is the
+            query it answers. */}
+        <section className="section pb-0" aria-labelledby="what-heading">
+          <div className="grid gap-8 lg:grid-cols-12 lg:gap-14">
+            <div className="lg:col-span-4">
+              <h2 id="what-heading" className="text-3xl sm:text-4xl">
+                What is bacteriostatic water?
+              </h2>
+            </div>
+            <div className="min-w-0 lg:col-span-8">
+              <p className="measure text-lg text-ink-soft" data-explainer>
+                Bacteriostatic water is sterile, purified water to which {FACTS.benzylAlcoholPct}{" "}
+                benzyl alcohol ({FACTS.benzylAlcoholMgPerMl}) has been added as a preservative. It
+                is supplied in a sealed multi-dose vial with a rubber stopper and a crimped collar.
+                The benzyl alcohol inhibits the growth of bacteria that may enter the vial once the
+                stopper has been punctured, which is why the same vial can be entered more than
+                once, for up to {FACTS.openedLimit}. Plain sterile water contains no preservative
+                and is single-use once opened; that one ingredient is the whole difference between
+                the two. The preservative is bacteriostatic, not bactericidal: it slows bacterial
+                growth but does not sterilise the contents and cannot make a contaminated vial
+                safe. It is used as a diluent and solvent to dissolve or dilute substances in
+                laboratory and research work, and has no activity of its own. It is not a medicine
+                and is not supplied for human or veterinary use.
+              </p>
+              <p className="mt-5 text-sm text-ink-soft">
+                <Link href="/guides/what-is-bacteriostatic-water" className="link">
+                  Read the full guide
+                </Link>
+                {" · "}
+                <Link href="/guides/bacteriostatic-water-vs-sterile-water" className="link">
+                  How it compares with sterile water and saline
+                </Link>
+              </p>
+            </div>
+          </div>
+        </section>
 
         {/* ══ 2. PRODUCT ════════════════════════════════════════════
             Specification on the left, the thing that charges on the right.
@@ -155,6 +287,24 @@ export default function FunnelPage() {
                 <span className="chip">0.9% benzyl alcohol</span>
                 <span className="chip tabular">{VIAL_ML}ml fill</span>
                 <span className="chip">Sealed multi-dose</span>
+              </div>
+
+              {/* The reference table. Chemistry constants and label facts
+                  only; rows with no confirmed value do not render. */}
+              <h3 id="technical-data" className="mt-14 scroll-mt-24 text-xl">
+                Technical data
+              </h3>
+              <div className="mt-4">
+                <TechnicalData />
+              </div>
+
+              {/* The whole ladder as text, for anyone comparing pack sizes
+                  and for a search engine reading the page. */}
+              <h3 id="prices" className="mt-14 scroll-mt-24 text-xl">
+                Price per vial by pack size
+              </h3>
+              <div className="mt-4">
+                <PriceLadder />
               </div>
             </div>
 
@@ -260,6 +410,9 @@ export default function FunnelPage() {
           </div>
         </section>
 
+        {/* ── Learn: the guide hub ─────────────────────────────── */}
+        <LearnStrip />
+
         {/* ── Guarantee — only with a real policy ──────────────── */}
         {GUARANTEE.body ? (
           <section id="guarantee" className="section scroll-mt-24 pt-0" aria-labelledby="guarantee-heading">
@@ -287,7 +440,18 @@ export default function FunnelPage() {
                 Buy now &mdash; {PRICE}
               </a>
             </div>
+            {/* The same claims as the hero, restated where the decision is
+                actually made. Both price and delivery lines come from config,
+                so this row can never outlive the policy behind it. */}
             <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-ink-soft">
+              {LOWEST_PRICE_BADGE ? (
+                <li>
+                  <a href="#guarantee" className="link">
+                    {LOWEST_PRICE_BADGE}
+                  </a>
+                </li>
+              ) : null}
+              {freeDeliveryBadge() ? <li>{freeDeliveryBadge()}</li> : null}
               <li>Secure checkout by Stripe</li>
               {DELIVERY.dispatchLine ? <li>{DELIVERY.dispatchLine}</li> : null}
               <li>

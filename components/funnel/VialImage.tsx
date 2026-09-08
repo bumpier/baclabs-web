@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { PRODUCT_IMAGES, PRODUCT, VIAL_ML } from "@/config/funnel";
 
 /**
@@ -23,16 +24,22 @@ export function VialImage({ priority = false }: { priority?: boolean }) {
       // of a single upright vial, so cropping it to a square would cut the cap
       // off the top and the base off the bottom — the two parts that say
       // "sealed vial" rather than "tube of liquid".
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      //
+      // next/image rather than a bare <img>: the source is 1122px wide but
+      // the slot is 564 CSS px at most, so a phone was downloading four times
+      // the pixels it could show. `sizes` mirrors the hero grid (five of
+      // twelve columns from `lg`, a 24rem card below that, full width on a
+      // phone) so the srcset picks a fitting variant. `priority` emits the
+      // preload and fetchpriority=high the old markup carried by hand.
+      <Image
         src={hero.src}
         alt={hero.alt}
         width={hero.width}
         height={hero.height}
+        sizes="(min-width: 1024px) 36vw, (min-width: 640px) 24rem, 100vw"
+        priority={priority}
         style={{ aspectRatio: `${hero.width} / ${hero.height}` }}
-        className="w-full rounded-panel object-cover"
-        fetchPriority={priority ? "high" : "auto"}
-        decoding="async"
+        className="h-auto w-full rounded-panel object-cover"
       />
     );
   }

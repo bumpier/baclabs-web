@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
 import { PRODUCT } from "@/config/funnel";
 import { legalName } from "@/lib/legal";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Product disclaimer",
-  description:
-    "What this product is sold as, what it is not, and the limits of what we can be responsible for.",
-  alternates: { canonical: "/disclaimer" },
-};
+  description: "What this product is sold as, what it is not, and the limits of what we can be responsible for.",
+  path: "/disclaimer",
+});
 
 /**
  * The compliance page. This is the single place the product framing is stated
@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 export default function DisclaimerPage() {
   return (
     <LegalPage
+      path="/disclaimer"
       title="Product disclaimer"
       intro="Read this before ordering. It sets out exactly what we sell, and what we do not."
       sections={[

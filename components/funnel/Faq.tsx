@@ -19,14 +19,25 @@ export function Faq() {
   return (
     <div className="space-y-3">
       {FAQ.map((item, i) => (
-        <FaqRow key={i} question={item.q} answer={item.a} />
+        // The first row opens by default so the plain-English definition is
+        // readable without a click — it was the only place on the page a
+        // first-time visitor could find one, and it was collapsed.
+        <FaqRow key={i} question={item.q} answer={item.a} defaultOpen={i === 0} />
       ))}
     </div>
   );
 }
 
-function FaqRow({ question, answer }: { question: string; answer: string }) {
-  const [open, setOpen] = useState(false);
+function FaqRow({
+  question,
+  answer,
+  defaultOpen = false,
+}: {
+  question: string;
+  answer: string;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
     <details
