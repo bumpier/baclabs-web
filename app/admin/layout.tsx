@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { brand } from "@/config/brand";
 import { getAdminSession } from "@/lib/adminAuth";
 import { adminLogoutAction } from "@/app/admin/actions";
+
+// robots.txt already disallows /admin/, but a disallow stops crawling, not
+// indexing: a URL linked from elsewhere can still appear as a bare result.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 const ALL_NAV = [
   { href: "/admin", label: "Overview", adminOnly: true },

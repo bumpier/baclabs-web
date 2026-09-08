@@ -1,0 +1,372 @@
+{
+  "summary": {
+    "health_score": 66,
+    "business_type": "Single-product UK e-commerce funnel (laboratory/research diluent), Next.js App Router behind Cloudflare",
+    "top_findings": [
+      "Production is behind the repo: live /llms.txt quotes £7.50 vs £5.99, live sitemap has fake lastmod, live Product schema lacks image, no breadcrumbs on interior pages",
+      "\"UK's lowest price — guaranteed\" superlative is false at the entry price (competitor £5.95 vs £5.99)",
+      "No trader identity anywhere (legal name, company number, address); brand.company fields empty",
+      "HTML served with cache-control s-maxage=31536000; safe only because Cloudflare currently bypasses HTML",
+      "No page for comparison intent (bacteriostatic vs sterile water); comparison persona scores 42/100"
+    ],
+    "quick_wins": [
+      "Deploy main + working tree",
+      "301 www to apex at Cloudflare",
+      "Populate brand.company.* and render in footer, contact, terms, Organization schema",
+      "Serve hero image at displayed size via next/image (~31KB on LCP path)",
+      "Add per-Offer sku and priceValidUntil to Product schema"
+    ]
+  },
+  "categories": [
+    {
+      "name": "Technical SEO",
+      "score": 64,
+      "weight": 0.22,
+      "what_works": [
+        "Self-consistent apex canonicals on all 6 pages",
+        "Full SSR, strong CSP/HSTS, exact robots/sitemap scope, true 404s"
+      ],
+      "findings": [
+        {
+          "title": "Stale /llms.txt pricing in production",
+          "severity": "Critical",
+          "description": "Live file states £7.50/vial and 5 tiers; site sells £5.99 and 8 tiers.",
+          "recommendation": "Deploy app/llms.txt/route.ts (untracked in repo)."
+        },
+        {
+          "title": "Sitemap lastmod equals build timestamp",
+          "severity": "High",
+          "description": "All 6 URLs share one lastmod; Google ignores fake freshness.",
+          "recommendation": "Deploy rewritten app/sitemap.ts (lastmod removed)."
+        },
+        {
+          "title": "s-maxage=31536000 on HTML",
+          "severity": "High",
+          "description": "Only safe because cf-cache-status is DYNAMIC; nothing enforces that.",
+          "recommendation": "Cloudflare cache rule bypassing HTML or lower header for /."
+        },
+        {
+          "title": "www host returns 200",
+          "severity": "Medium",
+          "description": "No redirect to apex; canonical tag is the only signal.",
+          "recommendation": "301 www → apex at Cloudflare."
+        },
+        {
+          "title": "/admin/login indexable metadata",
+          "severity": "Medium",
+          "description": "Inherits home title and index,follow; robots.txt is the only barrier.",
+          "recommendation": "Add robots noindex in admin login metadata."
+        },
+        {
+          "title": "Cloudflare email obfuscation",
+          "severity": "Medium",
+          "description": "No mailto links; raw HTML shows [email protected].",
+          "recommendation": "Disable Email Address Obfuscation for the zone."
+        },
+        {
+          "title": "Hero image plain <img>, no icons set",
+          "severity": "Low",
+          "description": "No srcset, 4h cache; no apple-touch-icon/manifest/favicon.ico.",
+          "recommendation": "Use next/image; add icon set."
+        }
+      ]
+    },
+    {
+      "name": "Content Quality",
+      "score": 58,
+      "weight": 0.23,
+      "what_works": [
+        "Legal pages substantive with correct UK statute citations",
+        "Consistent no-therapeutic-claim discipline sitewide"
+      ],
+      "findings": [
+        {
+          "title": "No trader identity",
+          "severity": "High",
+          "description": "No legal name, company number or address on any page or in schema.",
+          "recommendation": "Populate brand.company.* and render it."
+        },
+        {
+          "title": "No Experience/Authoritativeness signals",
+          "severity": "High",
+          "description": "No About, sourcing, QC or manufacturer detail.",
+          "recommendation": "Add an evidenced About/sourcing page."
+        },
+        {
+          "title": "Contact email unreadable to non-JS crawlers",
+          "severity": "Medium",
+          "description": "Obfuscated by Cloudflare.",
+          "recommendation": "Render as text or disable obfuscation."
+        },
+        {
+          "title": "/contact thin",
+          "severity": "Low",
+          "description": "~130 words, 60% boilerplate.",
+          "recommendation": "Add company details, hours, response time."
+        }
+      ]
+    },
+    {
+      "name": "On-Page SEO",
+      "score": 78,
+      "weight": 0.2,
+      "what_works": [
+        "Unique, well-scoped titles and descriptions",
+        "Natural keyword use, descriptive anchors"
+      ],
+      "findings": [
+        {
+          "title": "Identical og:title/og:description on all pages",
+          "severity": "Low",
+          "description": "Home copy leaks onto legal-page social previews.",
+          "recommendation": "Per-page openGraph in each page's metadata."
+        },
+        {
+          "title": "H1 omits buy/UK modifiers",
+          "severity": "Info",
+          "description": "48-char H1 targets a different phrasing than the title tag.",
+          "recommendation": "Optional alignment; not a defect."
+        }
+      ]
+    },
+    {
+      "name": "Schema / Structured Data",
+      "score": 61,
+      "weight": 0.1,
+      "what_works": [
+        "Valid JSON-LD on all 6 pages, prices match page and meta",
+        "No fabricated ratings, no medical types"
+      ],
+      "findings": [
+        {
+          "title": "Product has no image (live)",
+          "severity": "High",
+          "description": "Disqualifies Product rich result.",
+          "recommendation": "Deploy working tree fix."
+        },
+        {
+          "title": "BreadcrumbList absent on interior pages (live)",
+          "severity": "High",
+          "description": "breadcrumbSchema() never wired.",
+          "recommendation": "Deploy working tree fix."
+        },
+        {
+          "title": "hasMerchantReturnPolicy / shippingDetails not yet live",
+          "severity": "Medium",
+          "description": "Added in working tree since snapshot: return policy with sealed-goods caveat and customer-pays postage from RETURNS config; shippingDetails with Stripe rate; deliveryTime omitted pending config.",
+          "recommendation": "Deploy; add deliveryTime when handling/transit days are set; verify in Rich Results Test."
+        },
+        {
+          "title": "No priceValidUntil; SKUs not on Offers",
+          "severity": "Medium",
+          "description": "Bundle SKUs exist in config but only Product-level sku emitted.",
+          "recommendation": "Emit per-Offer sku and priceValidUntil."
+        }
+      ]
+    },
+    {
+      "name": "Performance (CWV)",
+      "score": 78,
+      "weight": 0.1,
+      "what_works": [
+        "CLS 0.0001, TBT 38ms, TTFB 114ms",
+        "Fonts, DOM size, unused code all clean"
+      ],
+      "findings": [
+        {
+          "title": "LCP 3.08s mobile (lab)",
+          "severity": "High",
+          "description": "LCP element is H1 text; 2,966ms element render delay; 14KB render-blocking stylesheet.",
+          "recommendation": "Inline critical CSS or split stylesheet."
+        },
+        {
+          "title": "Hero image oversized",
+          "severity": "Medium",
+          "description": "1122×1402 intrinsic for 564×704 slot, ~31KB waste.",
+          "recommendation": "Serve at displayed size with srcset."
+        },
+        {
+          "title": "97.8KB HTML, 46% RSC payload",
+          "severity": "Medium",
+          "description": "Includes ~5.3KB duplicate JSON-LD.",
+          "recommendation": "Trim server-component props; avoid passing schema objects twice."
+        },
+        {
+          "title": "No field data",
+          "severity": "Info",
+          "description": "CrUX unavailable (no key; keyless quota exhausted).",
+          "recommendation": "Configure a PageSpeed API key."
+        }
+      ]
+    },
+    {
+      "name": "AI Search Readiness",
+      "score": 58,
+      "weight": 0.1,
+      "what_works": [
+        "robots.txt admits all major AI search crawlers, blocks CCBot",
+        "Explicit instruction to AI systems not to attribute therapeutic use"
+      ],
+      "findings": [
+        {
+          "title": "llms.txt price drift",
+          "severity": "Critical",
+          "description": "AI citing it would misquote price ~25%.",
+          "recommendation": "Deploy."
+        },
+        {
+          "title": "Organization lacks sameAs / legal entity",
+          "severity": "High",
+          "description": "Weak off-site entity signal.",
+          "recommendation": "Add Companies House URL and any profiles."
+        },
+        {
+          "title": "No consolidated citable explainer; no dateModified",
+          "severity": "Low",
+          "description": "Headings declarative outside FAQ.",
+          "recommendation": "Add ~150-word definitional passage; add dateModified to Product."
+        }
+      ]
+    },
+    {
+      "name": "Images",
+      "score": 65,
+      "weight": 0.05,
+      "what_works": [
+        "Descriptive hero alt",
+        "Generated 1200×630 OG image with alt"
+      ],
+      "findings": [
+        {
+          "title": "Hero oversized, no srcset",
+          "severity": "Medium",
+          "description": "See performance.",
+          "recommendation": "next/image."
+        },
+        {
+          "title": "Product schema image missing live",
+          "severity": "High",
+          "description": "See schema.",
+          "recommendation": "Deploy."
+        }
+      ]
+    },
+    {
+      "name": "Search Experience (supplementary)",
+      "score": 54,
+      "weight": 0,
+      "what_works": [
+        "FAQPage matches likely People-Also-Ask cluster",
+        "Price-per-ml buyer persona well served (80/100)"
+      ],
+      "findings": [
+        {
+          "title": "No comparison-intent page",
+          "severity": "Critical",
+          "description": "'bacteriostatic water vs sterile water' won by explainer articles; comparison persona 42/100.",
+          "recommendation": "Publish research-register comparison page."
+        },
+        {
+          "title": "Trust signals 10.2/25 average",
+          "severity": "High",
+          "description": "No company identity, reviews, or COA.",
+          "recommendation": "Identity fields, About page, COA where evidenced."
+        }
+      ]
+    },
+    {
+      "name": "E-commerce (supplementary)",
+      "score": 44,
+      "weight": 0,
+      "what_works": [
+        "Honest savings comparator; sale UI correctly suppressed",
+        "Bundle pricing server-rendered and crawlable"
+      ],
+      "findings": [
+        {
+          "title": "'Lowest price' superlative false at entry price",
+          "severity": "Critical",
+          "description": "Competitor £5.95 vs £5.99 on identical vial.",
+          "recommendation": "Reword to price-match or reprice."
+        },
+        {
+          "title": "Merchant Center category risk",
+          "severity": "High",
+          "description": "Market bundles product with injectable reconstitution.",
+          "recommendation": "Policy pre-check before Shopping spend."
+        },
+        {
+          "title": "No indexable pack-size URLs",
+          "severity": "Info",
+          "description": "Resolved in working tree: content/guides/index.ts, six guides, /faq, /calculator, /safety-data-sheet exist and build (24 pages), wired into sitemap with real lastmod.",
+          "recommendation": "Deploy, then audit the new pages."
+        },
+        {
+          "title": "No wholesale enquiry link",
+          "severity": "Low",
+          "description": "Only mentioned in FAQ text.",
+          "recommendation": "Link under bundle selector."
+        }
+      ]
+    }
+  ],
+  "action_plan": {
+    "phases": [
+      {
+        "name": "Phase 1: Critical Fixes",
+        "timeframe": "Week 1",
+        "items": [
+          "Deploy main + working tree",
+          "Resolve 'lowest price' claim",
+          "Populate trader identity",
+          "Protect HTML from long-lived caching"
+        ]
+      },
+      {
+        "name": "Phase 2: High-Impact Improvements",
+        "timeframe": "Weeks 2-3",
+        "items": [
+          "301 www→apex",
+          "noindex /admin/login",
+          "Merchant fields on Product schema",
+          "Fix LCP: critical CSS + resized hero",
+          "Disable email obfuscation",
+          "Per-page Open Graph",
+          "Organization sameAs"
+        ]
+      },
+      {
+        "name": "Phase 3: Content & Authority",
+        "timeframe": "Month 2",
+        "items": [
+          "Comparison page: bacteriostatic vs sterile water",
+          "Ship /guides, /faq, /calculator, /safety-data-sheet (built and in sitemap) and audit them post-deploy",
+          "About/sourcing page",
+          "Wholesale enquiry link",
+          "Merchant Center policy pre-check"
+        ]
+      },
+      {
+        "name": "Phase 4: Monitoring & Iteration",
+        "timeframe": "Ongoing",
+        "items": [
+          "PageSpeed/CrUX API key",
+          "Search Console sitemap + rich-result reports",
+          "Re-audit after Phase 2/3",
+          "Install Python 3.10+ for plugin scripts"
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "No Python 3.10+: plugin render/CrUX/drift/PDF scripts unavailable",
+    "Lab Lighthouse only (headless Brave/Chromium), no CrUX field data",
+    "No screenshot/visual pass",
+    "Competitor pricing from repo competitor-profiles/ scrape"
+  ],
+  "artifacts": {
+    "findings_dir": "findings/",
+    "screenshots_dir": "screenshots/",
+    "raw_dir": "raw/"
+  }
+}

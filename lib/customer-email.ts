@@ -11,7 +11,7 @@ import { brand, formatPrice, type Currency } from "@/config/brand";
 // Senders never throw — a Resend outage must not break a webhook or
 // admin action. Callers fire-and-forget.
 
-export type EmailType = "confirmation" | "shipped" | "delivered" | "nudge";
+export type EmailType = "confirmation" | "shipped" | "delivered" | "nudge" | "review";
 
 interface OrderItem {
   productId: string;
@@ -221,6 +221,43 @@ export async function sendRepurchaseNudgeEmail(
       <p><a href="${siteUrl()}/products" style="background:${LITERAL.brand};color:#fff;padding:12px 24px;border-radius:24px;text-decoration:none">Shop again</a></p>
       <p style="font-size:11px;color:#6b7a72;margin-top:24px">Don't want reminders like this?
         <a href="${unsubscribeUrl(order.customerEmail)}" style="color:#6b7a72">Unsubscribe</a></p>`)
+  );
+}
+
+/**
+ * One request for a review, a few days after delivery. Sent by the daily
+ * cron (app/api/cron/nudges/route.ts), never from a webhook, so it cannot
+ * arrive before the parcel does. The EmailLog slot makes it once per order.
+ *
+ * Where it sends them is config: brand.reviews.url when a public review page
+ * exists, otherwise a reply to the support address. Reviews received are
+ * added to config/reviews.json by hand — nothing here writes one, and the
+ * email must never offer anything in return for a review (the DMCC Act 2024
+ * treats an incentivised review that does not say so as a fake one).
+ */
+export async function sendReviewRequestEmail(order: Order): Promise<boolean> {
+  const reviewUrl = brand.reviews.url;
+  const support = brand.contact.email;
+  const ask = reviewUrl
+    ? `<p style="margin:24px 0 0">${ctaButton(reviewUrl, "Leave a review")}</p>`
+    : support
+      ? `<p>Reply to this email, or write to <a href="mailto:${support}" style="color:${LITERAL.brand}">${support}</a>. A sentence or two is plenty.</p>`
+      : `<p>Reply to this email. A sentence or two is plenty.</p>`;
+
+  return logAndSend(
+    order,
+    "review",
+    `How was your ${brand.name} order?`,
+    layout(
+      `<p>Hi ${escapeHtml(order.customerName)},</p>
+      <p>Your order should have arrived by now. If you have a minute, we would value a few words on how it went: the vial, the packaging, the delivery.</p>
+      <p>Honest reviews, good or bad, are the only kind we publish, and we do not offer anything in return for one.</p>
+      ${ask}
+      <p style="margin:24px 0 0;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id}</p>
+      <p style="font-size:11px;color:#6b7a72;margin-top:24px">Don't want emails like this?
+        <a href="${unsubscribeUrl(order.customerEmail)}" style="color:#6b7a72">Unsubscribe</a></p>`,
+      { preheader: `A quick word on order ${order.id}?` }
+    )
   );
 }
 

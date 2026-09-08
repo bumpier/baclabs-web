@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { LEARN_LINKS, LEGAL_LINKS } from "@/components/Footer";
+import { GUIDES } from "@/content/guides";
 import { canonicalOrigin } from "@/lib/site-url";
 
 /**
@@ -6,17 +8,49 @@ import { canonicalOrigin } from "@/lib/site-url";
  * enumerate, so this needs no database access and no `force-dynamic` — which
  * also removes the old constraint that the database had to exist and be
  * migrated before `next build` could run.
+ *
+ * The legal pages come from the footer's LEGAL_LINKS so the sitemap cannot
+ * list a page the site no longer links to, or miss one it does. Every URL
+ * here must have a matching self-referencing `alternates.canonical` in its
+ * page metadata, and nothing under app/robots.ts `privateRoutes` may appear.
+ *
+ * No `lastModified`: the old value was `new Date()`, which re-stamped every
+ * URL at each build. Google ignores lastmod once it sees it is not tied to
+ * real content changes, so a fake one is worse than none. Add it back only
+ * from a real source (git date, CMS field).
  */
+
+// Indexable pages that are neither the home page nor a footer legal link.
+// Paths only ("/faq"); the origin is prefixed below. Guides, FAQ, calculator
+// and safety-data-sheet pages belong here once they exist.
+const TOP_LEVEL: MetadataRoute.Sitemap = [
+  // The hub pages, from the footer's list so the two cannot disagree.
+  ...LEARN_LINKS.map((l) => ({
+    url: l.href,
+    changeFrequency: "monthly" as const,
+    priority: l.href === "/guides" ? 0.7 : 0.6,
+  })),
+  // One entry per guide. `updated` is a real, hand-bumped date on each guide,
+  // so it is a legitimate lastModified.
+  ...GUIDES.map((g) => ({
+    url: `/guides/${g.slug}`,
+    lastModified: g.updated,
+    changeFrequency: "monthly" as const,
+    priority: 0.5,
+  })),
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const site = canonicalOrigin();
-  const now = new Date();
 
-  return [
-    { url: site, lastModified: now, changeFrequency: "weekly", priority: 1 },
-    { url: `${site}/returns`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
-    { url: `${site}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
-    { url: `${site}/terms`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
-    { url: `${site}/privacy`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
-    { url: `${site}/disclaimer`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
-  ];
+  const home: MetadataRoute.Sitemap = [{ url: site, changeFrequency: "weekly", priority: 1 }];
+
+  const legal: MetadataRoute.Sitemap = LEGAL_LINKS.map((l) => ({
+    url: `${site}${l.href}`,
+    changeFrequency: "monthly",
+    // Contact and returns are commercial trust pages; the rest is boilerplate.
+    priority: l.href === "/contact" || l.href === "/returns" ? 0.4 : 0.3,
+  }));
+
+  return [...home, ...TOP_LEVEL.map((e) => ({ ...e, url: `${site}${e.url}` })), ...legal];
 }

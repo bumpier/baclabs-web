@@ -1,0 +1,23 @@
+HTTP/2 200 
+date: Tue, 08 Sep 2026 12:23:32 GMT
+content-type: text/html; charset=utf-8
+server: cloudflare
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+x-dns-prefetch-control: on
+x-frame-options: SAMEORIGIN
+x-content-type-options: nosniff
+referrer-policy: strict-origin-when-cross-origin
+permissions-policy: camera=(), microphone=(), geolocation=()
+content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google-analytics.com; connect-src 'self' https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google-analytics.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+x-nextjs-cache: HIT
+x-nextjs-prerender: 1
+x-nextjs-prerender: 1
+x-nextjs-stale-time: 300
+cache-control: s-maxage=31536000
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=VympZPV0Id7Va%2BqoDFxgCJgPpNJzyLgh8ubCh1eHTdQDfreCxOmxyNHO1%2F2OfiKT%2BRoMl%2Fu99UVnilKLzps6XL553fXlBRIX6I%2BYiJ%2BNs1VY9vYDiHQx6xo%2BQpVyN%2FlicoMARe0GO2Mr26I%3D"}]}
+cf-cache-status: DYNAMIC
+cf-ray: a37decceaf059566-LHR
+alt-svc: h3=":443"; ma=86400
+

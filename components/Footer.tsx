@@ -15,6 +15,17 @@ export const LEGAL_LINKS = [
   { href: "/contact", label: "Contact" },
 ] as const;
 
+/**
+ * The guide hub and its reference pages. Read by the sitemap and llms.txt as
+ * well as rendered here, so a page cannot be listed in one and not the other.
+ */
+export const LEARN_LINKS = [
+  { href: "/guides", label: "Guides" },
+  { href: "/faq", label: "All questions" },
+  { href: "/calculator", label: "Dilution calculator" },
+  { href: "/safety-data-sheet", label: "Safety data sheet" },
+] as const;
+
 export function Footer() {
   const { company, contact, disclaimer, trust } = brand;
   const year = new Date().getFullYear();
@@ -44,7 +55,23 @@ export function Footer() {
             </p>
           </div>
 
-          <nav aria-label="Legal and support" className="lg:col-span-4">
+          <nav aria-label="Guides and reference" className="lg:col-span-2">
+            <h2 className="text-sm font-semibold text-white">Learn</h2>
+            <ul className="mt-4 space-y-2.5">
+              {LEARN_LINKS.map((l) => (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    className="text-sm text-white/65 underline decoration-white/25 underline-offset-4 transition-colors duration-150 hover:text-white hover:decoration-white/60"
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <nav aria-label="Legal and support" className="lg:col-span-2">
             <h2 className="text-sm font-semibold text-white">Policies</h2>
             <ul className="mt-4 space-y-2.5">
               {LEGAL_LINKS.map((l) => (

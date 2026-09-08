@@ -74,7 +74,7 @@ model EmailLog {
   id        String   @id @default(uuid())
   orderId   String
   order     Order    @relation(fields: [orderId], references: [id])
-  type      String // confirmation | shipped | delivered | nudge
+  type      String // confirmation | shipped | delivered | nudge | review
   recipient String
   sentAt    DateTime @default(now())
 

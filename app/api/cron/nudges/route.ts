@@ -1,16 +1,25 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { sendRepurchaseNudgeEmail } from "@/lib/customer-email";
+import { sendRepurchaseNudgeEmail, sendReviewRequestEmail } from "@/lib/customer-email";
 
 export const dynamic = "force-dynamic";
 
-// Daily repurchase-nudge job. Hit by server cron:
+// Daily job: repurchase nudges, then review requests. Hit by server cron:
 //   15 9 * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<site>/api/cron/nudges
 // EmailLog's unique(orderId, type) makes re-runs harmless.
 
 const LEAD_DAYS = 4; // nudge this many days before the supply runs out
 const NUDGEABLE_STATUSES = ["paid", "packed", "shipped", "delivered"];
+
+/** Days after an order is marked delivered before the review request goes. */
+const REVIEW_DELAY_DAYS = 5;
+/**
+ * An order still "shipped" this many days after it was marked so is treated
+ * as delivered for the review request — most are never marked delivered by
+ * hand. Long enough that a UK parcel has arrived either way.
+ */
+const REVIEW_SHIPPED_FALLBACK_DAYS = 12;
 
 interface OrderItem {
   productId: string;
@@ -108,6 +117,52 @@ async function runNudges() {
   return { scanned: orders.length, sent, skipped };
 }
 
+/**
+ * Review requests. One per order, only once the parcel has had time to
+ * arrive, never to an opted-out address. `updatedAt` is the last status
+ * change, which for a delivered or shipped order is the moment it was marked
+ * so — that is the clock the delay runs from.
+ */
+async function runReviewRequests() {
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+  const orders = await prisma.order.findMany({
+    where: {
+      emailLogs: { none: { type: "review" } },
+      OR: [
+        { status: "delivered", updatedAt: { lte: new Date(now - REVIEW_DELAY_DAYS * day) } },
+        { status: "shipped", updatedAt: { lte: new Date(now - REVIEW_SHIPPED_FALLBACK_DAYS * day) } },
+      ],
+    },
+    orderBy: { updatedAt: "asc" },
+  });
+
+  let sent = 0;
+  let skipped = 0;
+  for (const order of orders) {
+    try {
+      if (!order.customerEmail) {
+        skipped++;
+        continue;
+      }
+      const optedOut = await prisma.emailOptOut.findUnique({
+        where: { email: order.customerEmail.toLowerCase() },
+      });
+      if (optedOut) {
+        skipped++;
+        continue;
+      }
+      const didSend = await sendReviewRequestEmail(order);
+      if (didSend) sent++;
+      else skipped++;
+    } catch (err) {
+      console.error(`[review] order ${order.id} failed`, err);
+      skipped++;
+    }
+  }
+  return { scanned: orders.length, sent, skipped };
+}
+
 export async function POST(req: Request) {
   if (!process.env.CRON_SECRET) {
     return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 503 });
@@ -115,8 +170,9 @@ export async function POST(req: Request) {
   if (!authorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const result = await runNudges();
-  return NextResponse.json(result);
+  const nudges = await runNudges();
+  const reviews = await runReviewRequests();
+  return NextResponse.json({ ...nudges, reviews });
 }
 
 // GET supported so the crontab line can use plain curl

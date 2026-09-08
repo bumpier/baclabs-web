@@ -1,9 +1,10 @@
 "use client";
 
-export function PrintButton() {
+/** Prints the current page. The label defaults to the packing-slip use it was built for. */
+export function PrintButton({ label = "Print packing slip" }: { label?: string }) {
   return (
     <button type="button" className="btn-primary" onClick={() => window.print()}>
-      Print packing slip
+      {label}
     </button>
   );
 }

@@ -1,0 +1,41 @@
+User-agent: *
+Allow: /
+Allow: /index.php?route=product/
+Allow: /index.php?route=category/
+
+# Block filter and sort parameters (prevents duplicate content crawling)
+Disallow: /*?page=
+Disallow: /*&page=
+Disallow: /*?sort=
+Disallow: /*&sort=
+Disallow: /*?order=
+Disallow: /*&order=
+Disallow: /*?limit=
+Disallow: /*&limit=
+Disallow: /*?filter_name=
+Disallow: /*&filter_name=
+Disallow: /*?filter_sub_category=
+Disallow: /*&filter_sub_category=
+Disallow: /*?filter_description=
+Disallow: /*&filter_description=
+
+# Block unnecessary internal pages
+Disallow: /index.php?route=product/latest/
+Disallow: /index.php?route=product/featured/
+
+# Protect backend and system folders
+Disallow: /admin/
+Disallow: /system/
+
+# Block cart and account pages (not useful for SEO)
+Disallow: /index.php?route=checkout/
+Disallow: /index.php?route=account/
+
+# COA preview (Chris B review — demo data, not for indexing yet).
+# Remove these two lines + add the sitemap-coa line once real Peptide Verify data lands.
+Disallow: /certificates-of-analysis/
+Disallow: /coa/
+
+Sitemap: https://www.uk-peptides.com/sitemap.xml
+
+Sitemap: https://www.uk-peptides.com/sitemap-sds.xml

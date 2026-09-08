@@ -9,7 +9,8 @@ import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
 /** Section links. Anchors resolve on the storefront home page only. */
 const NAV = [
   { href: "/#product", label: "Product" },
-  { href: "/#faq-heading", label: "Questions" },
+  { href: "/guides", label: "Guides" },
+  { href: "/faq", label: "Questions" },
   { href: "/contact", label: "Contact" },
 ] as const;
 

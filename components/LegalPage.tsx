@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { brand } from "@/config/brand";
 import { LEGAL_LAST_UPDATED, legalName, supportEmail } from "@/lib/legal";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbSchema } from "@/lib/seo";
 
 /**
  * Shared shell for the legal pages.
@@ -27,10 +29,13 @@ function anchor(heading: string): string {
 
 export function LegalPage({
   title,
+  path,
   intro,
   sections,
 }: {
   title: string;
+  /** Canonical path of the page, e.g. "/returns". Feeds the breadcrumb data. */
+  path: string;
   intro?: string;
   sections: LegalSection[];
 }) {
@@ -38,6 +43,7 @@ export function LegalPage({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-16 sm:px-8 sm:py-24">
+      <JsonLd data={breadcrumbSchema(title, path)} />
       <h1 className="text-3xl">{title}</h1>
       {intro ? <p className="measure mt-3 text-base text-ink-soft">{intro}</p> : null}
       <p className="mt-3 text-sm text-ink-soft">

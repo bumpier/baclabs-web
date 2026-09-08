@@ -1,0 +1,20 @@
+HTTP/2 200 
+date: Tue, 08 Sep 2026 12:23:33 GMT
+content-type: text/html; charset=utf-8
+server: cloudflare
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+x-dns-prefetch-control: on
+x-frame-options: SAMEORIGIN
+x-content-type-options: nosniff
+referrer-policy: strict-origin-when-cross-origin
+permissions-policy: camera=(), microphone=(), geolocation=()
+content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google-analytics.com; connect-src 'self' https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google-analytics.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+link: </_next/static/media/91601dd83defba07-s.p.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/e4af272ccee01ff0-s.p.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </logo.svg>; rel=preload; as="image", </_next/static/css/18468d019ceb9f2a.css>; rel=preload; as="style"
+cache-control: private, no-cache, no-store, max-age=0, must-revalidate
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=N6nfdM%2FaIPjTKSvuIG%2FbCt5ojBHXCYpnUHDYGcQMYlNsViJVAGEIyE2ALltrF3W2LJwUv2dhxj8z8uXwNw5MstHbRl1WnomPM1WUJyBAIqjgOlpbGyQEd3TdjMHTs7rV5mhOOuFKKFpqCy8%3D"}]}
+cf-cache-status: DYNAMIC
+cf-ray: a37decd31dd2edf7-LHR
+alt-svc: h3=":443"; ma=86400
+

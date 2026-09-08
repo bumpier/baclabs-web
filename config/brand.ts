@@ -33,6 +33,23 @@ export const brand = {
     // Never render a currency switcher from this list.
     supported: ["GBP", "USD"] as const,
   },
+  /**
+   * Brand-name variants people type or search. Emitted as Organization
+   * `alternateName` so the entity resolves whichever spelling is used.
+   */
+  alternateNames: ["Bac Lab", "BacLab UK", "baclab.co.uk"],
+  /**
+   * Public profiles for Organization `sameAs` (Trustpilot, Google Business
+   * Profile, Companies House…). Empty list emits nothing.
+   */
+  sameAs: [] as string[],
+  /**
+   * Where a review request sends the customer. Empty means the request email
+   * asks them to reply by email instead, and nothing links out.
+   */
+  reviews: {
+    url: "",
+  },
   contact: {
     email: "hello@baclab.co.uk",
     // Leave "" to omit the phone from JSON-LD.
@@ -46,6 +63,19 @@ export const brand = {
     legalName: "",
     companyNumber: "",
     registeredAddress: "",
+    /**
+     * The same address, structured, for Organization `address` in the
+     * structured data. Renders only when `streetAddress` is set; keep it in
+     * step with `registeredAddress` above.
+     */
+    postalAddress: {
+      streetAddress: "",
+      addressLocality: "",
+      postalCode: "",
+      addressCountry: "GB",
+    },
+    /** Year trading began, "YYYY". Organization `foundingDate`; empty omits it. */
+    foundingDate: "",
     vatNumber: "",
     // ICO data-protection register entry, shown on /privacy. Leave "" if the
     // fee exemption applies — the row is then omitted rather than qualified.

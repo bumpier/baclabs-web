@@ -519,6 +519,26 @@
   .prose-legal strong {
     @apply font-semibold text-ink;
   }
+  /* Guide prose. Wider measure and larger type than the legal pages: these
+     are read, not consulted. Spacing is direct (no space-y-*) for the same
+     Tailwind v4 nesting reason noted on .prose-legal. */
+  .prose-guide {
+    @apply max-w-measure text-base leading-relaxed text-ink-soft;
+  }
+  .prose-guide p + p,
+  .prose-guide ul,
+  .prose-guide ol {
+    @apply mt-4;
+  }
+  .prose-guide ul {
+    @apply list-disc pl-5 marker:text-ink-soft/50;
+  }
+  .prose-guide li + li {
+    @apply mt-2;
+  }
+  .prose-guide strong {
+    @apply font-semibold text-ink;
+  }
   .prose-legal a {
     @apply font-medium text-brand underline decoration-brand/30 underline-offset-4
       transition-colors duration-150 hover:decoration-brand;

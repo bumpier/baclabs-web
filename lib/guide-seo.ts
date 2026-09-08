@@ -1,0 +1,106 @@
+import { brand } from "@/config/brand";
+import { canonicalOrigin } from "@/lib/site-url";
+import { GUIDE_AUTHOR } from "@/content/facts";
+import type { Guide, GuideFaq } from "@/content/guides/types";
+
+/**
+ * Structured data for the guide and reference pages. Kept apart from
+ * lib/seo.ts (breadcrumbs for the legal pages) so the two can be edited
+ * independently; both return plain objects for <JsonLd>.
+ */
+
+function site(): string {
+  return canonicalOrigin();
+}
+
+function organization(): Record<string, unknown> {
+  return {
+    "@type": "Organization",
+    name: brand.company.legalName || brand.name,
+    url: site(),
+    logo: `${site()}/logo.svg`,
+  };
+}
+
+/** FAQPage. Only pass questions whose answers are visible on the same page. */
+export function faqPageSchema(items: readonly GuideFaq[]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+}
+
+/** Article for one guide. The abstract is the quick answer, verbatim. */
+export function guideArticleSchema(guide: Guide): Record<string, unknown> {
+  const url = `${site()}/guides/${guide.slug}`;
+  const author =
+    GUIDE_AUTHOR.type === "Organization" ? organization() : { "@type": "Person", name: brand.name };
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${url}#article`,
+    headline: guide.title,
+    description: guide.description,
+    abstract: guide.quickAnswer,
+    url,
+    mainEntityOfPage: url,
+    inLanguage: "en-GB",
+    dateModified: guide.updated,
+    datePublished: guide.updated,
+    author,
+    publisher: organization(),
+    about: {
+      "@type": "ChemicalSubstance",
+      name: "Bacteriostatic water",
+      alternateName: ["Bac water", "Bacteriostatic mixing water"],
+    },
+  };
+}
+
+/** Home → Guides → this guide. */
+export function guideBreadcrumbSchema(guide: Guide): Record<string, unknown> {
+  const s = site();
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: brand.name, item: s },
+      { "@type": "ListItem", position: 2, name: "Guides", item: `${s}/guides` },
+      { "@type": "ListItem", position: 3, name: guide.title, item: `${s}/guides/${guide.slug}` },
+    ],
+  };
+}
+
+/** Home → this page, for the reference pages that sit beside the guides. */
+export function pageBreadcrumbSchema(name: string, path: string): Record<string, unknown> {
+  const s = site();
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: brand.name, item: s },
+      { "@type": "ListItem", position: 2, name, item: `${s}${path}` },
+    ],
+  };
+}
+
+/** The list of guides, for /guides. */
+export function guideIndexSchema(guides: readonly Guide[]): Record<string, unknown> {
+  const s = site();
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Bacteriostatic water guides",
+    itemListElement: guides.map((g, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: g.title,
+      url: `${s}/guides/${g.slug}`,
+    })),
+  };
+}

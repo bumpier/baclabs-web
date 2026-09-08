@@ -1,7 +1,8 @@
 import {
   BUNDLES,
-  PRICE_MATCH_BADGE,
+  LOWEST_PRICE_BADGE,
   PRODUCT,
+  freeDeliveryBadge,
   SALE,
   referenceUnitPriceMinor,
   saleLabel,
@@ -40,13 +41,21 @@ const SPEC_CHIPS = [
   "Sealed multi-dose vial",
 ];
 
-/** Things that are true today. Dispatch is absent until it is confirmed. */
+/**
+ * Things that are true today. Dispatch is absent until it is confirmed.
+ *
+ * The price and delivery lines are read from config rather than typed, and
+ * the price claim links to the guarantee that substantiates it — see
+ * LOWEST_PRICE_BADGE in config/funnel.ts for why that link is not optional.
+ * `filter` drops either one the moment config stops making the claim.
+ */
 const TRUST: { label: string; href?: string }[] = [
+  { label: LOWEST_PRICE_BADGE, href: "#guarantee" },
+  { label: freeDeliveryBadge() },
   { label: "Secure checkout by Stripe" },
   { label: "Sealed, tamper-evident vial" },
   { label: "Sold as a laboratory and research diluent" },
-  { label: PRICE_MATCH_BADGE, href: "#guarantee" },
-];
+].filter((t) => t.label);
 
 export function Hero() {
   const single = bundleById("single") ?? BUNDLES[0];
@@ -68,13 +77,22 @@ export function Hero() {
               id="hero-heading"
               className="animate-rise stagger-1 text-4xl sm:text-5xl lg:text-6xl"
             >
-              Bacteriostatic water, sealed at ten millilitres.
+              {/* The keyword first: this is the line Google rewrites titles
+                  from, and every ranking page on this query leads with the
+                  product and the size. The former headline is now the
+                  subhead, unchanged. */}
+              {PRODUCT.name} {VIAL_ML}ml, UK stock
             </h1>
 
-            <p className="animate-rise stagger-3 measure mt-6 text-lg text-ink-soft">
+            <p className="animate-rise stagger-3 mt-4 font-display text-2xl font-medium text-ink-soft sm:text-3xl">
+              Sealed at ten millilitres.
+            </p>
+
+            <p className="animate-rise stagger-3 measure mt-5 text-lg text-ink-soft">
               Sterile water with 0.9% benzyl alcohol as a bacteriostatic preservative. A sealed
               multi-dose vial &mdash; <span className="tabular">{drawsPerVial(1)}</span> draws at
-              1ml, or <span className="tabular">{drawsPerVial(2)}</span> at 2ml.
+              1ml, or <span className="tabular">{drawsPerVial(2)}</span> at 2ml. Also sold as bac
+              water or mixing water.
             </p>
 
             {/* Price, stated plainly before any button asks for a decision. */}

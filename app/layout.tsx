@@ -5,6 +5,7 @@ import { canonicalOrigin } from "@/lib/site-url";
 import { brandCssVariables } from "@/lib/theme";
 import { bodyFont, displayFont } from "@/app/fonts";
 import { Analytics } from "@/components/Analytics";
+import { JsonLd } from "@/components/JsonLd";
 import "./globals.css";
 
 const SITE = canonicalOrigin();
@@ -54,6 +55,11 @@ export const metadata: Metadata = {
     // twitter:image likewise comes from app/opengraph-image.tsx.
   },
   robots: { index: true, follow: true },
+  // Search Console ownership token. Renders nothing until the env var is
+  // set, so an unverified deployment ships no empty tag.
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
 };
 
 /**
@@ -72,9 +78,24 @@ export const viewport: Viewport = {
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": `${SITE}/#organization`,
   name: brand.company.legalName || brand.name,
-  alternateName: brand.company.legalName ? brand.name : undefined,
+  // Every spelling the brand goes by, plus the trading name when the legal
+  // name differs from it. Deduplicated so a repeated entry never ships.
+  alternateName: Array.from(
+    new Set([...(brand.company.legalName ? [brand.name] : []), ...brand.alternateNames])
+  ),
   url: SITE,
+  ...(brand.company.foundingDate ? { foundingDate: brand.company.foundingDate } : {}),
+  ...(brand.company.postalAddress.streetAddress
+    ? {
+        address: {
+          "@type": "PostalAddress",
+          ...brand.company.postalAddress,
+        },
+      }
+    : {}),
+  ...(brand.sameAs.length > 0 ? { sameAs: brand.sameAs } : {}),
   logo: `${SITE}/logo.svg`,
   // Omit contactPoint entirely rather than publish a placeholder. The previous
   // build shipped "+971 XX XXX XXXX" into structured data.
@@ -99,10 +120,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       style={brandCssVariables() as React.CSSProperties}
     >
       <body className="font-sans">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-        />
+        <JsonLd data={organizationSchema} />
         {children}
         <Analytics />
       </body>

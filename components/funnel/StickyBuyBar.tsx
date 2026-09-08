@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatMinor, PRICE_MATCH_BADGE, VIAL_ML } from "@/config/funnel";
+import {
+  formatMinor,
+  formatMinorShort,
+  freeDeliveryBadge,
+  PRICE_MATCH_BADGE,
+  remainingForFreeDeliveryMinor,
+  shipsFree,
+  VIAL_ML,
+} from "@/config/funnel";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
 
@@ -44,6 +52,18 @@ export function StickyBuyBar() {
   const shown = heroCtaPassed && !buyBlockVisible;
   const totalVials = bundle.vials * quantity;
 
+  // The same two functions the purchase block and the Stripe session call, so
+  // this bar can never promise free delivery on a basket that will be charged
+  // for it. `remainingForFreeDeliveryMinor` returns 0 both when the order
+  // already ships free and when no threshold applies, which is why the free
+  // case is tested first and the plain badge is the fallback.
+  const toFreeDelivery = remainingForFreeDeliveryMinor(totalMinor);
+  const deliveryLine = shipsFree(totalMinor)
+    ? "Free UK delivery"
+    : toFreeDelivery > 0
+      ? `${formatMinorShort(toFreeDelivery)} to free delivery`
+      : freeDeliveryBadge();
+
   return (
     <div
       className="sheet-bottom no-print fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface px-4 py-3 shadow-bar lg:hidden"
@@ -62,9 +82,25 @@ export function StickyBuyBar() {
           <p className="tabular text-lg font-semibold leading-tight text-ink">
             {formatMinor(totalMinor)}
           </p>
-          <a href="#guarantee" className="truncate text-[11px] text-ink-soft underline decoration-line underline-offset-2">
-            {PRICE_MATCH_BADGE}
-          </a>
+          {/* Third line, carrying two claims. Kept to ONE line deliberately:
+              the page reserves a fixed strip of space for this bar, so a
+              fourth line would sit over the footer links rather than above
+              them. The delivery half is the live one — it counts down to the
+              threshold as the basket grows. */}
+          <p className="flex min-w-0 items-center gap-1.5 text-[11px] text-ink-soft">
+            {deliveryLine ? (
+              <>
+                <span className="truncate font-medium text-ink">{deliveryLine}</span>
+                <span aria-hidden="true">&middot;</span>
+              </>
+            ) : null}
+            <a
+              href="#guarantee"
+              className="truncate underline decoration-line underline-offset-2"
+            >
+              {PRICE_MATCH_BADGE}
+            </a>
+          </p>
         </div>
         <a
           href="#buy"
