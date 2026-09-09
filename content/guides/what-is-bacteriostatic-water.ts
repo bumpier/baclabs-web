@@ -6,7 +6,7 @@ export const whatIsBacteriostaticWater: Guide = {
   title: "What is bacteriostatic water?",
   metaTitle: "What is bacteriostatic water? Meaning and how it differs",
   description:
-    "Bacteriostatic water is sterile water with a bacteriostatic preservative. What the preservative does, what a multi-dose vial is, and how it differs from sterile water and saline.",
+    "Sterile water with a bacteriostatic preservative. What the preservative does, what a multi-dose vial is, and how it differs from sterile water.",
   quickAnswer:
     "Bacteriostatic water is sterile, purified water containing a bacteriostatic preservative. The preservative inhibits bacterial growth inside the vial after the stopper is first punctured, which is what allows one vial to be drawn from repeatedly. It is sold as a diluent for reconstituting or diluting substances for laboratory and research purposes.",
   updated: "2026-09-08",

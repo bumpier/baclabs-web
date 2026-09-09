@@ -5,7 +5,7 @@ export const howLongDoesItLast: Guide = {
   slug: "how-long-does-bacteriostatic-water-last",
   title: "How long does bacteriostatic water last?",
   metaTitle: "How Long Does Bacteriostatic Water Last? 28 Days Opened",
-  description: `Opened bacteriostatic water lasts ${FACTS.openedLimit}; sealed, it lasts until the printed expiry. Why the two limits differ and when to discard a vial.`,
+  description: `Opened bacteriostatic water lasts ${FACTS.openedLimit}. Sealed, it keeps to the printed expiry. Why the limits differ and when to discard.`,
   quickAnswer: `An opened vial of bacteriostatic water lasts ${FACTS.openedLimit}. That is the in-use limit and it does not reset. An unopened vial lasts until the expiry date printed on its label, typically around two years from manufacture. Discard a vial early if it turns cloudy, changes colour or shows particles, whatever the date says.`,
   updated: "2026-09-08",
   sections: [

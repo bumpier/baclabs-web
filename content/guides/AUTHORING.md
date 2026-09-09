@@ -29,6 +29,18 @@ quick-answer box, the FAQ accordion, the buy card and the related links. Authors
 8. Paragraphs are plain strings. `**bold**` is the only markup. No links inside copy;
    the renderer adds the product link and related guides.
 
+## Checking a guide
+
+Run `npm run check:guides` before committing. It validates every guide in
+`index.ts` against the hard rules above: banned framing, the preservative
+name, price superlatives, em dashes, the length limits, section and FAQ
+counts, and that both `related` slugs exist. It exits non-zero on a
+violation, so a guide that breaks a rule cannot ship by accident.
+
+Two phrases are allowed past the framing check because they are the product's
+own vocabulary: **multi-dose** (used in `config/funnel.ts`) and **for
+injection** (only as part of the US pharmacopoeial product name, third person).
+
 ## Slugs
 
 - what-is-bacteriostatic-water
@@ -39,6 +51,11 @@ quick-answer box, the FAQ accordion, the buy card and the related links. Authors
 - bacteriostatic-water-vial-sizes
 - how-many-draws-from-a-vial
 - is-bacteriostatic-water-a-medicine-uk
+- bacteriostatic-water-vs-saline
+- what-multi-dose-means
+- how-to-read-a-vial-label
+- vial-handling-and-contamination
+- diluent-volume-and-concentration
 
 ## Reference facts (safe to state)
 
