@@ -36,10 +36,20 @@ ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_SALE_PREVIEW
 ARG NEXT_PUBLIC_META_PIXEL_ID
 ARG NEXT_PUBLIC_GA4_ID
+ARG NEXT_PUBLIC_CONTACT_EMAIL
+# Not NEXT_PUBLIC_, but still build-time: the home page is a static prerender,
+# so app/layout.tsx reads this while `next build` runs and bakes the
+# <meta name="google-site-verification"> tag into the HTML. Passing it only
+# through env_file set it at RUNTIME, after the tag had already been rendered
+# without it — the variable appeared correct on the server and the tag was
+# never in the page. Search Console verification therefore needs a REBUILD.
+ARG GOOGLE_SITE_VERIFICATION
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_SALE_PREVIEW=$NEXT_PUBLIC_SALE_PREVIEW \
     NEXT_PUBLIC_META_PIXEL_ID=$NEXT_PUBLIC_META_PIXEL_ID \
-    NEXT_PUBLIC_GA4_ID=$NEXT_PUBLIC_GA4_ID
+    NEXT_PUBLIC_GA4_ID=$NEXT_PUBLIC_GA4_ID \
+    NEXT_PUBLIC_CONTACT_EMAIL=$NEXT_PUBLIC_CONTACT_EMAIL \
+    GOOGLE_SITE_VERIFICATION=$GOOGLE_SITE_VERIFICATION
 
 # prisma/ before npm ci: the postinstall hook runs `prisma generate`, which
 # needs the schema on disk already.

@@ -16,6 +16,16 @@ export const LEGAL_LINKS = [
 ] as const;
 
 /**
+ * Commercial pages that are not the product page itself. Read by the sitemap
+ * and llms.txt alongside LEARN_LINKS, so adding a page here publishes it in
+ * the navigation, the sitemap and the machine-readable index at once.
+ */
+export const SHOP_LINKS = [
+  { href: "/bulk-bacteriostatic-water", label: "Bulk & wholesale" },
+  { href: "/quality-and-documentation", label: "Quality & documentation" },
+] as const;
+
+/**
  * The guide hub and its reference pages. Read by the sitemap and llms.txt as
  * well as rendered here, so a page cannot be listed in one and not the other.
  */
@@ -37,7 +47,7 @@ export function Footer() {
         <div className="grid gap-10 lg:grid-cols-12">
           {/* Identity and the product line, so the footer restates what is
               sold rather than being purely navigational. */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-4">
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={brand.logo} alt="" width={30} height={30} className="h-[30px] w-[30px]" />
@@ -50,10 +60,26 @@ export function Footer() {
             </p>
             <p className="mt-5">
               <a href="/#buy" className="btn-onDark">
-                Buy now &mdash; {formatMinor(PRODUCT.unitPriceMinor)}
+                Choose your pack &mdash; from {formatMinor(PRODUCT.unitPriceMinor)}
               </a>
             </p>
           </div>
+
+          <nav aria-label="Buying" className="lg:col-span-2">
+            <h2 className="text-sm font-semibold text-white">Buying</h2>
+            <ul className="mt-4 space-y-2.5">
+              {SHOP_LINKS.map((l) => (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    className="text-sm text-white/65 underline decoration-white/25 underline-offset-4 transition-colors duration-150 hover:text-white hover:decoration-white/60"
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
           <nav aria-label="Guides and reference" className="lg:col-span-2">
             <h2 className="text-sm font-semibold text-white">Learn</h2>
@@ -87,7 +113,7 @@ export function Footer() {
             </ul>
           </nav>
 
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-2">
             <h2 className="text-sm font-semibold text-white">Support</h2>
             {hasEmail ? (
               <p className="mt-4 text-sm">

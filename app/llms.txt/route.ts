@@ -9,7 +9,7 @@ import {
   formatMinorShort,
   perVialMinor,
 } from "@/config/funnel";
-import { LEARN_LINKS, LEGAL_LINKS } from "@/components/Footer";
+import { LEARN_LINKS, LEGAL_LINKS, SHOP_LINKS } from "@/components/Footer";
 import { GUIDES } from "@/content/guides";
 import { FACTS } from "@/content/facts";
 
@@ -29,6 +29,10 @@ import { FACTS } from "@/content/facts";
 export const dynamic = "force-static";
 
 const PAGE_NOTES: Record<string, string> = {
+  "/bulk-bacteriostatic-water":
+    "bulk and wholesale pack prices, per-vial costs, order limits and delivery",
+  "/quality-and-documentation":
+    "the specification, what a certificate of analysis records and what each test shows",
   "/guides": "index of the guides below and the reference pages",
   "/faq": "the full FAQ: product, storage, ordering, delivery, bulk, returns",
   "/calculator": "dilution calculator: concentration from mass and diluent volume",
@@ -70,6 +74,7 @@ export function GET(): Response {
   ).join("\n");
 
   const pages = ["- / — the product, pricing and ordering"]
+    .concat(SHOP_LINKS.map((l) => `- ${l.href} — ${PAGE_NOTES[l.href] ?? l.label.toLowerCase()}`))
     .concat(LEARN_LINKS.map((l) => `- ${l.href} — ${PAGE_NOTES[l.href] ?? l.label.toLowerCase()}`))
     .concat(LEGAL_LINKS.map((l) => `- ${l.href} — ${PAGE_NOTES[l.href] ?? l.label.toLowerCase()}`))
     .join("\n");

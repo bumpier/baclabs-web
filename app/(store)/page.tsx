@@ -347,6 +347,20 @@ export default function FunnelPage() {
                   <TechnicalData />
                 </div>
               </details>
+
+              {/* The two commercial pages that sit beside the product page.
+                  Placed under the specification because that is where the
+                  two questions they answer — "what is the evidence" and
+                  "what does it cost at volume" — actually get asked. */}
+              <p className="mt-5 text-sm text-ink-soft">
+                <Link href="/quality-and-documentation" className="link">
+                  Quality and documentation
+                </Link>{" "}
+                &middot;{" "}
+                <Link href="/bulk-bacteriostatic-water" className="link">
+                  Bulk and wholesale pricing
+                </Link>
+              </p>
             </div>
 
             {/* ── The purchase block ── */}
@@ -479,8 +493,11 @@ export default function FunnelPage() {
               address is collected by Stripe at checkout.
             </p>
             <div className="mx-auto mt-8 max-w-xs">
+              {/* The paragraph above already states "from £5.99 a vial", so
+                  the button only has to say what it does. Same reason as the
+                  hero CTA: #buy opens a selector, it does not buy. */}
               <a href="#buy" className="btn-cta">
-                Buy now &mdash; {PRICE}
+                Choose your pack
               </a>
             </div>
             {/* The same claims as the hero, restated where the decision is

@@ -79,7 +79,11 @@ export const BUNDLES: readonly Bundle[] = [
   { id: "single", vials: 1, priceMinor: 599, label: "", sku: "baclab-10ml-x1" },
   { id: "five", vials: 5, priceMinor: 2199, label: "Most popular", sku: "baclab-10ml-x5" },
   { id: "seven", vials: 7, priceMinor: 2589, label: "", sku: "baclab-10ml-x7" },
-  { id: "eight", vials: 8, priceMinor: 2949, label: "Best value", sku: "baclab-10ml-x8" },
+  // NOT "Best value": at 8 vials this is £3.69 a vial, dearer per vial than
+  // the 10, 20, 50 and 100 packs below it. The best-value claim is derived
+  // from the price ladder now — see `bestPerVialBundleId()` — so it cannot
+  // contradict the figures printed beside it again.
+  { id: "eight", vials: 8, priceMinor: 2949, label: "", sku: "baclab-10ml-x8" },
   { id: "ten", vials: 10, priceMinor: 3499, label: "Stock up", sku: "baclab-10ml-x10" },
   { id: "twenty", vials: 20, priceMinor: 6499, label: "", sku: "baclab-10ml-x20" },
   { id: "fifty", vials: 50, priceMinor: 14999, label: "", sku: "baclab-10ml-x50" },
@@ -212,6 +216,35 @@ export function referenceUnitPriceMinor(): number {
 /** "30% off" — derived, so the badge can never contradict the figures. */
 export function saleLabel(): string {
   return `${SALE.percentOff}% off`;
+}
+
+/**
+ * The tier that genuinely costs least per vial. DERIVED, never typed: the
+ * "Best value" badge used to be a literal on the 8-vial pack while four
+ * larger packs undercut it, which is exactly the kind of claim the CPUTR and
+ * the DMCC Act put the burden of proof on the seller for. Re-price any tier
+ * and the badge follows the arithmetic instead of contradicting it.
+ *
+ * Ties resolve to the SMALLER pack — the more conservative place to put a
+ * value claim, because it is the one a buyer reaches first.
+ */
+export function bestPerVialBundleId(): BundleId {
+  return BUNDLES.reduce((best, b) =>
+    perVialMinor(b) < perVialMinor(best) ? b : best
+  ).id;
+}
+
+/**
+ * Every badge a tier should show, in render order. The derived value badge
+ * comes first because it is the one making a claim; the editorial label
+ * ("Most popular", "Wholesale") follows as a signpost. Empty entries drop
+ * out, so a tier with neither renders no badge at all.
+ */
+export function bundleBadges(b: Bundle): string[] {
+  const badges: string[] = [];
+  if (b.id === bestPerVialBundleId()) badges.push("Best value per vial");
+  if (b.label) badges.push(b.label);
+  return badges;
 }
 
 /** Best genuine bundle saving against the single-vial price, as a percent. */
@@ -362,7 +395,14 @@ export const WHY_BUY: readonly { title: string; body: string }[] = [];
  */
 export const GUARANTEE: { title: string; body: string } = {
   title: "The UK's lowest price — guaranteed",
-  body: `Found this exact product cheaper, in stock, from another UK-based seller? Email us the listing${brand.contact.email ? ` at ${brand.contact.email}` : ""} and we'll match the price.`,
+  // The instruction is route-aware. With no address configured this used to
+  // read "Email us the listing and we'll match the price" — telling the
+  // reader to use a channel the site does not publish, on the one claim that
+  // substantiates LOWEST_PRICE_BADGE. The undertaking survives without the
+  // channel; the instruction does not, so only the instruction drops.
+  body: brand.contact.email
+    ? `Found this exact product cheaper, in stock, from another UK-based seller? Email us the listing at ${brand.contact.email} and we'll match the price.`
+    : `Found this exact product cheaper, in stock, from another UK-based seller? We'll match the price.`,
 };
 
 /**

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   BUNDLES,
   DELIVERY,
+  bundleBadges,
   deliveryMinorFor,
   remainingForFreeDeliveryMinor,
   shipsFree,
@@ -168,14 +169,15 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
                     <span className="text-base font-semibold text-ink">
                       <span className="tabular">{b.vials}</span> {b.vials === 1 ? "vial" : "vials"}
                     </span>
-                    {b.label ? (
+                    {bundleBadges(b).map((badge) => (
                       <Badge
+                        key={badge}
                         variant="outline"
                         className="border-brand/25 bg-brand-tint text-brand-deep"
                       >
-                        {b.label}
+                        {badge}
                       </Badge>
-                    ) : null}
+                    ))}
                   </span>
                   {/* Per-vial price only. The saving is what the falling
                       per-vial figure already says, and the sale reference
@@ -340,6 +342,20 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
               className="underline decoration-line underline-offset-4 hover:text-ink"
             >
               Ask for a wholesale quote
+            </Link>
+          </p>
+        ) : null}
+
+        {/* Shown to everyone below the largest tier: the pack economics have
+            their own page, and a buyer comparing tiers here is exactly who it
+            was written for. */}
+        {bundle.vials !== MAX_TIER_VIALS ? (
+          <p className="mt-2 text-center text-xs text-ink-soft">
+            <Link
+              href="/bulk-bacteriostatic-water"
+              className="underline decoration-line underline-offset-4 hover:text-ink"
+            >
+              Bulk and wholesale pricing
             </Link>
           </p>
         ) : null}

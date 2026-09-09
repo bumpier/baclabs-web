@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { LEARN_LINKS, LEGAL_LINKS } from "@/components/Footer";
+import { LEARN_LINKS, LEGAL_LINKS, SHOP_LINKS } from "@/components/Footer";
 import { GUIDES } from "@/content/guides";
 import { canonicalOrigin } from "@/lib/site-url";
 
@@ -29,6 +29,13 @@ import { canonicalOrigin } from "@/lib/site-url";
 const GUIDES_HUB_UPDATED = GUIDES.map((g) => g.updated).sort().at(-1);
 
 const TOP_LEVEL: MetadataRoute.Sitemap = [
+  // The commercial pages beside the product page. Higher priority than the
+  // guides: these are buying-intent destinations, not reference reading.
+  ...SHOP_LINKS.map((l) => ({
+    url: l.href,
+    changeFrequency: "monthly" as const,
+    priority: 0.8,
+  })),
   // The hub pages, from the footer's list so the two cannot disagree.
   ...LEARN_LINKS.map((l) => ({
     url: l.href,

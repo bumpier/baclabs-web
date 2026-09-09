@@ -41,6 +41,24 @@ export default function ContactPage() {
         wholesale enquiries.
       </p>
 
+      {/* The page used to say "get in touch" three times while brand.contact
+          .email was empty, so it told visitors to do something the site gave
+          them no way to do — and the footer pointed here for the details.
+          Nothing below now instructs contact unless there is a route to make
+          it with. Set NEXT_PUBLIC_CONTACT_EMAIL and every one of them comes
+          back on. */}
+      {!hasEmail ? (
+        <p className="measure mt-4 rounded-panel border border-line bg-neutral px-5 py-4 text-base text-ink">
+          We are not published as reachable by email at the moment. Order
+          questions are handled from the confirmation email for that order,
+          and the{" "}
+          <Link href="/returns" className="link">
+            returns and refunds page
+          </Link>{" "}
+          sets out how to cancel or return without needing to reach us first.
+        </p>
+      ) : null}
+
       <dl className="mt-10 divide-y divide-line border-y border-line">
         {hasEmail ? (
           <div className="grid gap-1 py-5 sm:grid-cols-[10rem_1fr] sm:gap-4">
@@ -106,8 +124,8 @@ export default function ContactPage() {
           <Link href="/safety-data-sheet" className="link">
             safety data sheet
           </Link>
-          . If yours is not there, get in touch. We can answer questions about the product as sold, a
-          laboratory and research diluent; we cannot advise on any other use.
+          .{hasEmail ? " If yours is not there, get in touch." : ""} We can answer questions about
+          the product as sold, a laboratory and research diluent; we cannot advise on any other use.
         </p>
       </section>
 
@@ -117,9 +135,22 @@ export default function ContactPage() {
         </h2>
         <p className="measure mt-3 text-base text-ink-soft">
           The order form takes up to <span className="tabular">{MAX_ORDER_VIALS}</span> vials in one
-          order. For more than that, for a standing order, or for an institutional purchase order,
-          get in touch with the quantity you need, the delivery postcode and whether it is a
-          one-off or recurring, and we will reply with a quote.
+          order.{" "}
+          {hasEmail ? (
+            <>
+              For more than that, for a standing order, or for an institutional purchase order, get
+              in touch with the quantity you need, the delivery postcode and whether it is a
+              one-off or recurring, and we will reply with a quote.
+            </>
+          ) : (
+            <>
+              Pack prices, per-vial costs and the order limits are set out in full on the{" "}
+              <Link href="/bulk-bacteriostatic-water" className="link">
+                bulk and wholesale page
+              </Link>
+              .
+            </>
+          )}
         </p>
         {wholesaleHref ? (
           <p className="mt-4">

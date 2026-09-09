@@ -53,7 +53,22 @@ export const brand = {
   contact: {
     // Leave "" to omit the address everywhere: contact page, footer, order
     // confirmation, FAQ answers, JSON-LD contactPoint and the email footer.
-    email: "",
+    //
+    // THE ONE EXCEPTION to "colour and identity are literals here": this
+    // reads an env var first, because it is the fact that unblocks the most
+    // surfaces and the operator can set it on the server without a code
+    // change. It is NEXT_PUBLIC_ because config/funnel.ts imports this file
+    // for GUARANTEE.body and the purchase block is a client component, so a
+    // server-only variable would resolve differently on the two sides and
+    // desynchronise the guarantee text between the HTML and the hydrated
+    // page. Being NEXT_PUBLIC_ also makes it BUILD-time: set it and rebuild,
+    // a restart will not pick it up.
+    //
+    // BEFORE SETTING IT: baclab.co.uk publishes no MX record, so no mailbox
+    // exists on the domain yet. An address here that cannot receive mail is
+    // worse than none — it turns the price-match guarantee into a promise
+    // with a dead letterbox. Set up mail routing first.
+    email: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "",
     // Leave "" to omit the phone from JSON-LD.
     phone: "",
   },
