@@ -14,12 +14,25 @@ import { publishedPosts } from "@/lib/articles";
 // one cheap SQLite read, on a box serving a single low-traffic storefront.
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = pageMetadata({
-  title: "Blog",
-  description:
-    "Notes and updates from BacLab on bacteriostatic water, laboratory diluents, storage and handling.",
-  path: "/blog",
-});
+// `/blog` is linked from every page (Footer.tsx) and listed in llms.txt from
+// day one, but renders "Nothing published yet." until the first post is
+// published. A thin, empty page that is indexable and linked site-wide is a
+// bad signal on an SEO-sensitive storefront, so it is kept out of the index
+// only while it is genuinely empty - `generateMetadata` re-checks on every
+// request (the page is already force-dynamic), so publishing the first post
+// makes it indexable again with no further change needed. app/sitemap.ts
+// excludes /blog for the same reason while it has nothing published.
+export async function generateMetadata(): Promise<Metadata> {
+  const base = pageMetadata({
+    title: "Blog",
+    description:
+      "Notes and updates from BacLab on bacteriostatic water, laboratory diluents, storage and handling.",
+    path: "/blog",
+  });
+  const posts = await publishedPosts();
+  if (posts.length === 0) return { ...base, robots: { index: false, follow: true } };
+  return base;
+}
 
 export default async function BlogIndexPage() {
   const posts = await publishedPosts();
