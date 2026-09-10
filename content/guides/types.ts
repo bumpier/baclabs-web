@@ -13,7 +13,12 @@ export interface GuideTable {
 export interface GuideSection {
   /** Rendered as an H2. Phrase it as the sub-question it answers. */
   heading: string;
-  /** Plain paragraphs. No markup; a `**bold**` run is the one exception. */
+  /**
+   * Plain paragraphs. Two markup allowances and nothing else: a `**bold**`
+   * run, and a `[label](/path)` link to another page on this site. Links are
+   * internal-only - anything that is not a root-relative path renders as its
+   * literal source text rather than becoming a link.
+   */
   paragraphs: string[];
   /** Optional bullet list, rendered after the paragraphs. */
   list?: string[];

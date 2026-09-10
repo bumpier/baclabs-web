@@ -28,8 +28,18 @@ quick-answer box, the FAQ accordion, the buy card and the related links. Authors
    compares things; 4–6 `faq` entries answered in one to three sentences; exactly two `related`
    slugs from the list below; `updated: "2026-09-08"`.
 7. `metaTitle` ≤ 60 characters, contains "bacteriostatic water"; `description` ≤ 155 characters.
-8. Paragraphs are plain strings. `**bold**` is the only markup. No links inside copy;
-   the renderer adds the product link and related guides.
+8. Paragraphs are plain strings with two markup allowances: `**bold**` and
+   `[label](/path)`. **Bold the phrase a reader is scanning for**, not label words -
+   one or two runs per section, never a whole sentence. **Link to the product page
+   from inside the copy** at the first natural mention, and to a sibling guide where
+   one genuinely answers the tangent: the renderer still adds the buy card and the
+   related guides, but a link a reader meets mid-sentence is the one they follow.
+   Two or three in-content links per guide is plenty; more reads as spam and dilutes
+   each one. Links are internal-only - a root-relative path such as `/#buy` or
+   `/guides/how-to-store-bacteriostatic-water`. Anything else renders as literal
+   text rather than a link, by design. Vary the anchor wording between guides;
+   repeating one exact phrase across all thirteen is a pattern search engines
+   discount.
 
 ## Checking a guide
 

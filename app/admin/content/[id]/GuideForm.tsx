@@ -252,7 +252,7 @@ export function GuideForm({
               <textarea
                 className={`${field} mt-2`}
                 rows={6}
-                placeholder="Paragraphs. One blank line between them. **bold** is the only markup."
+                placeholder="Paragraphs. One blank line between them. Use **bold** for a key phrase and [label](/path) to link another page on this site."
                 value={s.paragraphs.join("\n\n")}
                 onChange={(e) =>
                   patchSection(i, {
