@@ -21,7 +21,9 @@ quick-answer box, the FAQ accordion, the buy card and the related links. Authors
 4. **No named competitors criticised.** You may say what a category of seller does
    (pharmacies, marketplaces, peptide shops) but never name a company negatively.
 5. **UK English**, plain sentences, no em dashes, no exclamation marks, no emoji.
-6. **Structure**: `quickAnswer` 40–60 words that answers the title directly; 5–7 `sections`
+6. **Structure**: `quickAnswer` 40–60 words that answers the title directly (40–60 is the house
+   preference; `checkGuideStructure` in `lib/content-rules.ts` enforces the wider 40–75, so
+   nothing already published becomes unpublishable - aim for 60 and under); 5–7 `sections`
    whose headings are the sub-questions a reader would search; a `table` in any section that
    compares things; 4–6 `faq` entries answered in one to three sentences; exactly two `related`
    slugs from the list below; `updated: "2026-09-08"`.

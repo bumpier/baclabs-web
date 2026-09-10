@@ -36,8 +36,11 @@ export interface Guide {
   /** Meta description. Under ~155 characters. */
   description: string;
   /**
-   * The direct answer, 40–60 words, rendered first and marked up as the
-   * article's abstract. This is the paragraph an answer engine lifts.
+   * The direct answer, rendered first and marked up as the article's
+   * abstract. This is the paragraph an answer engine lifts. Aim for 40–60
+   * words (the house preference); `checkGuideStructure` in
+   * `lib/content-rules.ts` enforces the wider 40–75 so already-published
+   * guides cannot be tightened into a violation.
    */
   quickAnswer: string;
   /** ISO date, YYYY-MM-DD. Bump when the wording changes. */
