@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { LEARN_LINKS, LEGAL_LINKS, SHOP_LINKS } from "@/components/Footer";
 import { publishedGuides, publishedPosts } from "@/lib/articles";
 import { canonicalOrigin } from "@/lib/site-url";
+import { isBlogMigrated, isMigratedPath } from "@/lib/blog-migration";
 
 /**
  * The funnel, its legal pages, and every published guide and post.
@@ -76,6 +77,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
+  // Once the blog and guides move, this sitemap must stop advertising them:
+  // a sitemap full of URLs that 301 elsewhere is a weak signal, and the
+  // destination publishes its own. One filter at the end catches every source
+  // of those paths, including the hub entries that come from LEARN_LINKS.
+  const live = isBlogMigrated() ? paths.filter((e) => !isMigratedPath(String(e.url))) : paths;
+
   const home: MetadataRoute.Sitemap = [{ url: site, changeFrequency: "weekly", priority: 1 }];
 
   const legal: MetadataRoute.Sitemap = LEGAL_LINKS.map((l) => ({
@@ -85,5 +92,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: l.href === "/contact" || l.href === "/returns" ? 0.4 : 0.3,
   }));
 
-  return [...home, ...paths.map((e) => ({ ...e, url: `${site}${e.url}` })), ...legal];
+  return [...home, ...live.map((e) => ({ ...e, url: `${site}${e.url}` })), ...legal];
 }

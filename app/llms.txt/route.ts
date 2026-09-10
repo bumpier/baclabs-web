@@ -11,6 +11,7 @@ import {
 } from "@/config/funnel";
 import { LEARN_LINKS, LEGAL_LINKS, SHOP_LINKS } from "@/components/Footer";
 import { publishedGuides, publishedPosts } from "@/lib/articles";
+import { isBlogMigrated, isMigratedPath } from "@/lib/blog-migration";
 import { FACTS } from "@/content/facts";
 
 /**
@@ -73,7 +74,13 @@ function deliveryLine(): string {
 }
 
 export async function GET(): Promise<Response> {
-  const [allGuides, allPosts] = await Promise.all([publishedGuides(), publishedPosts()]);
+  // Nothing that has moved is described here any more - the WordPress site
+  // publishes its own llms.txt for those pages, and listing them twice would
+  // point answer engines at a URL this site only redirects away from.
+  const moved = isBlogMigrated();
+  const [allGuides, allPosts] = moved
+    ? [[], []]
+    : await Promise.all([publishedGuides(), publishedPosts()]);
   const unit = formatMinor(PRODUCT.unitPriceMinor);
   const tiers = BUNDLES.map(
     (b) =>
@@ -82,7 +89,11 @@ export async function GET(): Promise<Response> {
 
   const pages = ["- / — the product, pricing and ordering"]
     .concat(SHOP_LINKS.map((l) => `- ${l.href} — ${PAGE_NOTES[l.href] ?? l.label.toLowerCase()}`))
-    .concat(LEARN_LINKS.map((l) => `- ${l.href} — ${PAGE_NOTES[l.href] ?? l.label.toLowerCase()}`))
+    .concat(
+      LEARN_LINKS.filter((l) => !moved || !isMigratedPath(l.href)).map(
+        (l) => `- ${l.href} — ${PAGE_NOTES[l.href] ?? l.label.toLowerCase()}`
+      )
+    )
     .concat(LEGAL_LINKS.map((l) => `- ${l.href} — ${PAGE_NOTES[l.href] ?? l.label.toLowerCase()}`))
     .join("\n");
 
