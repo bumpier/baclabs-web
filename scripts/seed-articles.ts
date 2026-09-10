@@ -51,14 +51,6 @@ async function main() {
       // modified is exactly the fake lastmod signal app/sitemap.ts refuses to
       // emit.
       updated: g.updated,
-      // Not new Date(): we do not know each guide's true first-publication
-      // date, and stamping "now" made datePublished later than dateModified
-      // in the emitted Article schema - an article published after it was
-      // last edited. `updated` is the best available approximation and
-      // guarantees datePublished <= dateModified. Set on both the create and
-      // update path so re-running this script self-corrects any row already
-      // seeded with the old, wrong "now" value.
-      publishedAt: new Date(g.updated),
       quickAnswer: g.quickAnswer,
       sections: JSON.stringify(g.sections),
       faq: JSON.stringify(g.faq),
@@ -67,13 +59,31 @@ async function main() {
       sortOrder: i,
     };
 
+    // publishedAt is handled outside `data` because it must NEVER move
+    // forward. We do not know each guide's true first-publication date;
+    // `updated` is the best available approximation and it guarantees
+    // datePublished <= dateModified in the emitted Article schema.
+    //
+    // On update we take the EARLIER of the stored date and that
+    // approximation. Preserving the stored one keeps a guide's age signal
+    // when its wording is revised and `updated` moves forward - re-stamping
+    // thirteen ranking pages as brand new would throw that away. Taking the
+    // approximation when it is earlier still repairs a row seeded by an
+    // older version of this script, which stamped "now" and so claimed a
+    // publication date later than the guide's own updated date.
+    const approxPublished = new Date(g.updated);
+
     const existing = await prisma.article.findUnique({ where: { slug: g.slug } });
     if (existing) {
-      await prisma.article.update({ where: { slug: g.slug }, data });
+      const publishedAt =
+        existing.publishedAt && existing.publishedAt < approxPublished
+          ? existing.publishedAt
+          : approxPublished;
+      await prisma.article.update({ where: { slug: g.slug }, data: { ...data, publishedAt } });
       updated++;
     } else {
       await prisma.article.create({
-        data: { ...data, slug: g.slug },
+        data: { ...data, slug: g.slug, publishedAt: approxPublished },
       });
       created++;
     }
