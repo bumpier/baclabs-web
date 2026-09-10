@@ -38,7 +38,7 @@ async function getAdminTokenRole(token: string | undefined): Promise<"ADMIN" | "
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  // ── The blog and guides have moved to their own domain (see
+  // ── The blog has moved to its own domain (see
   // lib/blog-migration.ts). 301, not 307: these are permanent moves and a
   // permanent status is what transfers ranking signals to the new URL. The
   // path and query are preserved, so /guides/how-to-store-... lands on the
@@ -86,9 +86,10 @@ export async function middleware(req: NextRequest) {
 }
 
 // Scoped as tightly as possible: the funnel is a static prerender and running
-// middleware on it would make every visit dynamic. /guides and /blog are added
-// only because they are already force-dynamic (they read the database), so
-// matching them costs nothing that was not already being paid.
+// middleware on it would make every visit dynamic. /blog is added only because
+// it is already force-dynamic (it reads the database), so matching it costs
+// nothing that was not already being paid. /guides is NOT matched - the guides
+// stay on this domain.
 export const config = {
-  matcher: ["/admin/:path*", "/guides/:path*", "/blog/:path*"],
+  matcher: ["/admin/:path*", "/blog/:path*"],
 };
