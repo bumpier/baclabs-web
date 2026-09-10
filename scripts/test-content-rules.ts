@@ -16,6 +16,7 @@ import {
 import type { Guide } from "@/content/guides/types";
 import type { Post } from "@/content/posts/types";
 import { GUIDES } from "@/content/guides";
+import { toGuide, toPost } from "@/lib/articles";
 
 let failures = 0;
 
@@ -181,6 +182,47 @@ for (const g of GUIDES) {
   const v = [...checkCompliance(guideProse(g)), ...checkGuideStructure(g, shippedSlugs)];
   check(`shipped guide ${g.slug} passes`, v.length === 0, v.map((x) => x.why).join("; "));
 }
+
+// ── Mappers: a row becomes a render contract ────────────────────────────
+const guideRow = {
+  id: "a1",
+  type: "GUIDE",
+  slug: "row-guide",
+  status: "PUBLISHED",
+  title: "Row guide",
+  metaTitle: "Bacteriostatic water row guide",
+  description: "From a row.",
+  updated: "2026-09-10",
+  quickAnswer: "Short answer.",
+  sections: JSON.stringify([{ heading: "H", paragraphs: ["P"] }]),
+  faq: JSON.stringify([{ q: "Q", a: "A" }]),
+  related: JSON.stringify(["a", "b"]),
+  markdown: "",
+  excerpt: "",
+  sortOrder: 0,
+  authorId: null,
+  publishedAt: new Date(),
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const mappedGuide = toGuide(guideRow as never);
+check("toGuide parses sections", mappedGuide.sections[0]?.heading === "H");
+check("toGuide parses faq", mappedGuide.faq[0]?.q === "Q");
+check("toGuide parses related", mappedGuide.related.length === 2);
+check("toGuide keeps updated as a string", mappedGuide.updated === "2026-09-10");
+
+const mappedPost = toPost({ ...guideRow, type: "POST", markdown: "# Hi", excerpt: "E" } as never);
+check("toPost carries markdown", mappedPost.markdown === "# Hi");
+check("toPost carries excerpt", mappedPost.excerpt === "E");
+
+let threw = false;
+try {
+  toGuide({ ...guideRow, sections: "{not json" } as never);
+} catch {
+  threw = true;
+}
+check("toGuide throws on corrupt JSON rather than rendering an empty guide", threw);
 
 if (failures) {
   console.error(`\n${failures} test failure(s).`);
