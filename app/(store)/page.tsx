@@ -41,6 +41,7 @@ import {
   returnPolicySchema,
   shippingDetailsFor,
 } from "@/lib/product-schema";
+import { contentHref } from "@/lib/blog-migration";
 
 // Nothing on this page depends on the request, so it prerenders. Keep it
 // that way: adding per-request data here also makes middleware run on every
@@ -252,14 +253,14 @@ export default function FunnelPage() {
               </p>
               <p className="mt-5 text-sm text-ink-soft">
                 <Link
-                  href="/guides/what-is-bacteriostatic-water"
+                  href={contentHref("/guides/what-is-bacteriostatic-water")}
                   className="link"
                 >
                   Read the full guide
                 </Link>
                 {" · "}
                 <Link
-                  href="/guides/bacteriostatic-water-vs-sterile-water"
+                  href={contentHref("/guides/bacteriostatic-water-vs-sterile-water")}
                   className="link"
                 >
                   How it compares with sterile water and saline

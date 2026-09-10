@@ -11,6 +11,7 @@ import { BuyCard, DataTable } from "@/components/guides/GuideArticle";
 import { faqPageSchema, pageBreadcrumbSchema } from "@/lib/guide-seo";
 import { FACTS } from "@/content/facts";
 import type { GuideFaq } from "@/content/guides/types";
+import { contentHref } from "@/lib/blog-migration";
 
 export const dynamic = "force-static";
 
@@ -81,7 +82,7 @@ export default function CalculatorPage() {
       <JsonLd data={faqPageSchema(FAQ)} />
 
       <nav aria-label="Breadcrumb" className="text-sm text-ink-soft">
-        <Link href="/guides" className="link">
+        <Link href={contentHref("/guides")} className="link">
           Guides
         </Link>
       </nav>

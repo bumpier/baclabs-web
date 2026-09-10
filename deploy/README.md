@@ -108,6 +108,12 @@ cat > /srv/baclab/.env.local <<'EOF'
 NEXT_PUBLIC_SITE_URL=https://YOUR_DOMAIN
 NEXT_PUBLIC_SALE_PREVIEW=false
 
+# The guides and blog live on the WordPress subdomain, not here. RUNTIME:
+# this one takes effect on `docker compose restart`, no rebuild. Setting it
+# 301s /guides and /blog there and drops them from sitemap.xml and llms.txt.
+# Leave it UNSET until that site actually serves those paths.
+BLOG_ORIGIN=https://blog.baclab.co.uk
+
 # Host port for the container. Only needed if 3001 is already in use;
 # deploy/nginx/baclab.conf must name the same port.
 # BACLAB_HOST_PORT=3001

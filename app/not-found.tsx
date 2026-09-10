@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { LEARN_LINKS } from "@/components/Footer";
+import { contentHref } from "@/lib/blog-migration";
 import { PRODUCT, formatMinor } from "@/config/funnel";
 
 /**
@@ -29,7 +30,7 @@ export default function NotFound() {
       <a href="#main" className="skip-link">
         Skip to content
       </a>
-      <Header />
+      <Header guidesHref={contentHref("/guides")} />
       <main id="main" className="flex-1">
         <div className="mx-auto w-full max-w-3xl px-5 py-16 sm:px-8 sm:py-24">
           <p className="text-sm font-semibold uppercase tracking-wide text-ink-soft">404</p>
@@ -55,7 +56,7 @@ export default function NotFound() {
               </li>
               {LEARN_LINKS.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="link">
+                  <Link href={contentHref(l.href)} className="link">
                     {l.label}
                   </Link>
                 </li>

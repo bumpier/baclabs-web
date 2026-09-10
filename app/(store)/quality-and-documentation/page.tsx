@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { pageBreadcrumbSchema } from "@/lib/guide-seo";
 import { pageMetadata } from "@/lib/seo";
 import { BuyCard } from "@/components/guides/GuideArticle";
+import { contentHref } from "@/lib/blog-migration";
 
 export const dynamic = "force-static";
 
@@ -201,11 +202,11 @@ export default function QualityPage() {
           product page
         </Link>
         , and{" "}
-        <Link href="/guides/how-to-store-bacteriostatic-water" className="link">
+        <Link href={contentHref("/guides/how-to-store-bacteriostatic-water")} className="link">
           how to store it
         </Link>{" "}
         and{" "}
-        <Link href="/guides/how-long-does-bacteriostatic-water-last" className="link">
+        <Link href={contentHref("/guides/how-long-does-bacteriostatic-water-last")} className="link">
           how long a vial lasts
         </Link>{" "}
         work through what those two figures mean in practice.

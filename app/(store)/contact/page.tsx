@@ -4,6 +4,7 @@ import { brand } from "@/config/brand";
 import { BUNDLES, MAX_QUANTITY, PRODUCT } from "@/config/funnel";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
+import { contentHref } from "@/lib/blog-migration";
 
 export const metadata: Metadata = pageMetadata({
   title: "Contact",
@@ -113,7 +114,7 @@ export default function ContactPage() {
           Most product questions are already answered: what {PRODUCT.name.toLowerCase()} is, how
           it differs from sterile water, how long a vial lasts once opened and how to store it are
           covered in the{" "}
-          <Link href="/guides" className="link">
+          <Link href={contentHref("/guides")} className="link">
             guides
           </Link>
           , the{" "}

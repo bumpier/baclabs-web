@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { contentHref } from "@/lib/blog-migration";
 
 /**
  * Bound how long any cache may hold a storefront page. Fully static pages
@@ -20,7 +21,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
       <a href="#main" className="skip-link">
         Skip to content
       </a>
-      <Header />
+      <Header guidesHref={contentHref("/guides")} />
       <main id="main" className="flex-1">
         {children}
       </main>

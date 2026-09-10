@@ -10,6 +10,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { PrintButton } from "@/components/PrintButton";
 import { BuyCard } from "@/components/guides/GuideArticle";
 import { pageBreadcrumbSchema } from "@/lib/guide-seo";
+import { contentHref } from "@/lib/blog-migration";
 
 export const dynamic = "force-static";
 
@@ -61,7 +62,7 @@ export default function SafetyDataSheetPage() {
       <JsonLd data={articleSchema} />
 
       <nav aria-label="Breadcrumb" className="no-print text-sm text-ink-soft">
-        <Link href="/guides" className="link">
+        <Link href={contentHref("/guides")} className="link">
           Guides
         </Link>
       </nav>

@@ -6,7 +6,16 @@ import { brand } from "@/config/brand";
 import { PRODUCT, formatMinor } from "@/config/funnel";
 import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
 
-/** Section links. Anchors resolve on the storefront home page only. */
+/**
+ * Section links. Anchors resolve on the storefront home page only.
+ *
+ * `/guides` is the one entry that can leave this site. Once the guides and
+ * blog move (lib/blog-migration.ts) it becomes an absolute URL on the new
+ * domain, which is why it arrives as a prop rather than being written here:
+ * this is a client component, and BLOG_ORIGIN is a RUNTIME server variable
+ * with no NEXT_PUBLIC_ prefix, so it does not exist in the client bundle.
+ * Resolving it here would silently always give the local path.
+ */
 const NAV = [
   { href: "/#product", label: "Product" },
   { href: "/guides", label: "Guides" },
@@ -34,8 +43,11 @@ const NAV = [
  * Neither reveal changes layout: both boxes are always reserved, so nothing
  * shifts and nothing blocks a click mid-transition.
  */
-export function Header() {
+export function Header({ guidesHref }: { guidesHref: string }) {
   const revealed = useHeroCtaPassed();
+  // Required, not defaulted: a forgotten prop would quietly send every
+  // visitor through a 301 instead of straight to the guides.
+  const nav = NAV.map((n) => (n.href === "/guides" ? { ...n, href: guidesHref } : n));
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -82,7 +94,7 @@ export function Header() {
 
         <nav aria-label="Sections" className="hidden lg:block">
           <ul className="flex items-center gap-8">
-            {NAV.map((n) => (
+            {nav.map((n) => (
               <li key={n.href}>
                 <Link
                   href={n.href}
@@ -139,7 +151,7 @@ export function Header() {
         <div className="overflow-hidden">
           <nav aria-label="Sections" className="border-b border-line bg-paper shadow-panel">
             <ul className="shell-wide divide-y divide-line">
-              {NAV.map((n) => (
+              {nav.map((n) => (
                 <li key={n.href}>
                   <Link
                     href={n.href}
