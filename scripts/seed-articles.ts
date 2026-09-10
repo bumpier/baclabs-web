@@ -28,6 +28,14 @@ async function main() {
       // modified is exactly the fake lastmod signal app/sitemap.ts refuses to
       // emit.
       updated: g.updated,
+      // Not new Date(): we do not know each guide's true first-publication
+      // date, and stamping "now" made datePublished later than dateModified
+      // in the emitted Article schema - an article published after it was
+      // last edited. `updated` is the best available approximation and
+      // guarantees datePublished <= dateModified. Set on both the create and
+      // update path so re-running this script self-corrects any row already
+      // seeded with the old, wrong "now" value.
+      publishedAt: new Date(g.updated),
       quickAnswer: g.quickAnswer,
       sections: JSON.stringify(g.sections),
       faq: JSON.stringify(g.faq),
@@ -42,7 +50,7 @@ async function main() {
       updated++;
     } else {
       await prisma.article.create({
-        data: { ...data, slug: g.slug, publishedAt: new Date() },
+        data: { ...data, slug: g.slug },
       });
       created++;
     }
