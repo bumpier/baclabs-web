@@ -51,10 +51,16 @@ export function GuideForm({
   // $ACTION_REF fields). Wrapping them in a local function to tag which one
   // fired breaks that serialisation, so "which action last completed" is
   // tracked separately below instead.
-  const [saveState, save] = useActionState(saveArticleAction, EMPTY_FORM_STATE);
-  const [pubState, publish] = useActionState(publishArticleAction, EMPTY_FORM_STATE);
-  const [unpubState, unpublish] = useActionState(unpublishArticleAction, EMPTY_FORM_STATE);
-  const [delState, deleteArticle] = useActionState(deleteArticleAction, EMPTY_FORM_STATE);
+  const [saveState, save, saveIsPending] = useActionState(saveArticleAction, EMPTY_FORM_STATE);
+  const [pubState, publish, pubIsPending] = useActionState(publishArticleAction, EMPTY_FORM_STATE);
+  const [unpubState, unpublish, unpubIsPending] = useActionState(
+    unpublishArticleAction,
+    EMPTY_FORM_STATE
+  );
+  const [delState, deleteArticle, delIsPending] = useActionState(
+    deleteArticleAction,
+    EMPTY_FORM_STATE
+  );
 
   // Each useActionState hook above replaces its state with a fresh object
   // (even {} !== {}) the moment its action resolves, so watching for that
@@ -91,6 +97,15 @@ export function GuideForm({
     setSections((prev) => prev.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   }
 
+  // lastAction is set from useEffect, which never runs without JavaScript.
+  // A no-JS submit is a fresh mount of this whole form (progressive
+  // enhancement re-renders the page from the server response), so
+  // lastAction is null on every such render regardless of which action
+  // just ran - falling through to the plain ?? chain in that case is what
+  // still surfaces the result. With JS, once any action has completed,
+  // lastAction is non-null and this fallback is never reached; before that,
+  // all four states are still the same EMPTY_FORM_STATE object, so the
+  // chain yields nothing either way.
   const message =
     lastAction === "save"
       ? saveState.error
@@ -100,7 +115,7 @@ export function GuideForm({
           ? unpubState.error
           : lastAction === "delete"
             ? delState.error
-            : undefined;
+            : saveState.error ?? pubState.error ?? unpubState.error ?? delState.error;
   const success =
     lastAction === "save"
       ? saveState.success
@@ -108,7 +123,7 @@ export function GuideForm({
         ? pubState.success
         : lastAction === "unpublish"
           ? unpubState.success
-          : undefined;
+          : saveState.success ?? pubState.success ?? unpubState.success;
 
   return (
     <div className="grid gap-6">
@@ -352,7 +367,11 @@ export function GuideForm({
         </div>
 
         <div>
-          <button type="submit" className="rounded-md border border-line px-4 py-2 text-sm font-medium text-ink">
+          <button
+            type="submit"
+            disabled={saveIsPending}
+            className="rounded-md border border-line px-4 py-2 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          >
             Save draft
           </button>
         </div>
@@ -366,7 +385,7 @@ export function GuideForm({
           <input type="hidden" name="id" value={id} />
           <button
             type="submit"
-            disabled={!canPublish}
+            disabled={!canPublish || pubIsPending}
             className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isLive ? "Republish" : "Publish"}
@@ -375,7 +394,11 @@ export function GuideForm({
         {isLive ? (
           <form action={unpublish}>
             <input type="hidden" name="id" value={id} />
-            <button type="submit" className="rounded-md border border-line px-4 py-2 text-sm text-ink">
+            <button
+              type="submit"
+              disabled={unpubIsPending}
+              className="rounded-md border border-line px-4 py-2 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-40"
+            >
               Unpublish
             </button>
           </form>
@@ -385,12 +408,13 @@ export function GuideForm({
             <input type="hidden" name="id" value={id} />
             <button
               type="submit"
+              disabled={delIsPending}
               onClick={(e) => {
                 if (!window.confirm("Delete this draft? This cannot be undone.")) {
                   e.preventDefault();
                 }
               }}
-              className="rounded-md border border-line px-4 py-2 text-sm text-red-700"
+              className="rounded-md border border-line px-4 py-2 text-sm text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Delete draft
             </button>
