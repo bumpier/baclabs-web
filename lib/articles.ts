@@ -1,10 +1,13 @@
 /**
  * The boundary between Article rows and the rest of the site.
  *
- * Nothing outside this file imports the Article type or queries the table.
- * Everything downstream consumes Guide and Post, which is why
- * components/guides/GuideArticle.tsx and lib/guide-seo.ts did not change when
- * guides moved into the database.
+ * On the PUBLIC side, nothing else imports the Article type or queries the
+ * table: every storefront page consumes Guide and Post via the functions
+ * below, which is why components/guides/GuideArticle.tsx and lib/guide-seo.ts
+ * did not change when guides moved into the database. The admin side is not
+ * bound by that: app/admin/content/actions.ts and other admin files import
+ * Article and query prisma.article directly, since the editor works with the
+ * row itself, not the rendered shape.
  */
 import type { Article } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -33,6 +36,24 @@ function parseJson<T>(raw: string, slug: string, field: string): T {
   }
 }
 
+/**
+ * The `published` date to expose, clamped so it can never read later than
+ * `updated` in the emitted schema.org dates. `publishArticleAction` stamps
+ * `publishedAt` with `new Date()` at the moment someone clicks Publish and
+ * never touches `updated`; an admin can draft an article, edit it over
+ * several days, and publish without bumping Updated, which would otherwise
+ * emit datePublished after dateModified - an article published after it was
+ * last edited. `updated` is author-controlled and must not be silently
+ * rewritten on publish, so the fix lives here instead: take whichever of the
+ * two dates is earlier. Both are seeded to agree by scripts/seed-articles.ts,
+ * so this is a no-op for the 13 guides and only bites admin-created rows.
+ */
+function clampPublished(publishedAt: Date | null, updated: string): string | undefined {
+  if (!publishedAt) return undefined;
+  const publishedDate = publishedAt.toISOString().slice(0, 10);
+  return publishedDate < updated ? publishedDate : updated;
+}
+
 export function toGuide(row: Article): Guide {
   return {
     slug: row.slug,
@@ -41,7 +62,7 @@ export function toGuide(row: Article): Guide {
     description: row.description,
     quickAnswer: row.quickAnswer,
     updated: row.updated,
-    published: row.publishedAt ? row.publishedAt.toISOString().slice(0, 10) : undefined,
+    published: clampPublished(row.publishedAt, row.updated),
     sections: parseJson<GuideSection[]>(row.sections, row.slug, "sections"),
     faq: parseJson<GuideFaq[]>(row.faq, row.slug, "faq"),
     related: parseJson<string[]>(row.related, row.slug, "related"),
@@ -57,7 +78,7 @@ export function toPost(row: Article): Post {
     excerpt: row.excerpt,
     markdown: row.markdown,
     updated: row.updated,
-    published: row.publishedAt ? row.publishedAt.toISOString().slice(0, 10) : undefined,
+    published: clampPublished(row.publishedAt, row.updated),
   };
 }
 
