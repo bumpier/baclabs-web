@@ -33,6 +33,7 @@ function Counter({ n, max, unit = "characters" }: { n: number; max: number; unit
 export function GuideForm({
   id,
   guide,
+  sortOrder,
   slugLocked,
   isLive,
   canPublish,
@@ -40,6 +41,7 @@ export function GuideForm({
 }: {
   id: string;
   guide: Guide;
+  sortOrder: number;
   slugLocked: boolean;
   isLive: boolean;
   canPublish: boolean;
@@ -127,6 +129,19 @@ export function GuideForm({
 
   return (
     <div className="grid gap-6">
+      {/* Sections, FAQ and related guides live in React state mirrored into
+          the hidden inputs below, and the visible fields for them further
+          down are unnamed - without JavaScript they still look editable, but
+          a submit posts the values the page loaded with, not what was
+          typed. Browsers render <noscript> only when scripting is off, so
+          this never shows for the JavaScript case this form assumes. */}
+      <noscript>
+        <p className="rounded-panel border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          JavaScript is off in this browser. The sections, FAQ and related-guide fields below
+          need it, and will not save until it is turned back on.
+        </p>
+      </noscript>
+
       <form action={save} className="grid gap-5">
         <input type="hidden" name="id" value={id} />
         <input type="hidden" name="sections" value={JSON.stringify(sections)} />
@@ -364,6 +379,22 @@ export function GuideForm({
           <label className={label} htmlFor="updated">Updated</label>
           <input className={field} id="updated" name="updated" defaultValue={guide.updated} />
           <p className={hint}>YYYY-MM-DD. Bump it when the wording changes.</p>
+        </div>
+
+        <div>
+          <label className={label} htmlFor="sortOrder">Position in the guides index</label>
+          <input
+            className={field}
+            id="sortOrder"
+            name="sortOrder"
+            type="number"
+            step="1"
+            defaultValue={sortOrder}
+          />
+          <p className={hint}>
+            Where this guide appears on /guides relative to the others. Lower numbers come
+            first.
+          </p>
         </div>
 
         <div>

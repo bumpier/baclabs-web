@@ -103,11 +103,14 @@ export function PostForm({
     <div className="grid gap-6">
       <form action={save} className="grid gap-4">
         <input type="hidden" name="id" value={id} />
-        {/* Guide-only fields the shared action still expects. */}
+        {/* Guide-only fields the shared action still expects. sortOrder only
+            governs the /guides index; posts are always listed by publish
+            date, so 0 (the column default) is fine to resubmit every save. */}
         <input type="hidden" name="quickAnswer" value="" />
         <input type="hidden" name="sections" value="[]" />
         <input type="hidden" name="faq" value="[]" />
         <input type="hidden" name="related" value="[]" />
+        <input type="hidden" name="sortOrder" value="0" />
 
         <div>
           <label className={label} htmlFor="title">Title</label>

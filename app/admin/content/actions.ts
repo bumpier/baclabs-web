@@ -39,6 +39,7 @@ const saveSchema = z.object({
   related: z.array(z.string()),
   markdown: z.string(),
   excerpt: z.string(),
+  sortOrder: z.coerce.number().int(),
 });
 
 // An absent or empty field is treated as malformed, not as "[]". Both
@@ -127,6 +128,7 @@ export async function saveArticleAction(
     related,
     markdown: formData.get("markdown") ?? "",
     excerpt: formData.get("excerpt") ?? "",
+    sortOrder: formData.get("sortOrder") ?? "0",
   });
 
   if (!parsed.success)
@@ -160,6 +162,7 @@ export async function saveArticleAction(
     related: JSON.stringify(input.related),
     markdown: input.markdown,
     excerpt: input.excerpt,
+    sortOrder: input.sortOrder,
   };
 
   // A published article is a live, indexed page. Draft saves must always

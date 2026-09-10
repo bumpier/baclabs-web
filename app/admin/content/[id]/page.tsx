@@ -65,6 +65,7 @@ export default async function EditArticlePage({
           <GuideForm
             id={row.id}
             guide={toGuide(row)}
+            sortOrder={row.sortOrder}
             slugLocked={row.publishedAt !== null}
             isLive={isLive}
             canPublish={violations.length === 0}
