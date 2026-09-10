@@ -31,6 +31,7 @@ export const SHOP_LINKS = [
  */
 export const LEARN_LINKS = [
   { href: "/guides", label: "Guides" },
+  { href: "/blog", label: "Blog" },
   { href: "/faq", label: "All questions" },
   { href: "/calculator", label: "Dilution calculator" },
   { href: "/safety-data-sheet", label: "Safety data sheet" },

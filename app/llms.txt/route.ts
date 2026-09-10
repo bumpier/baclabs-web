@@ -36,6 +36,7 @@ const PAGE_NOTES: Record<string, string> = {
   "/quality-and-documentation":
     "the specification, what a certificate of analysis records and what each test shows",
   "/guides": "index of the guides below and the reference pages",
+  "/blog": "notes and updates",
   "/faq": "the full FAQ: product, storage, ordering, delivery, bulk, returns",
   "/calculator": "dilution calculator: concentration from mass and diluent volume",
   "/safety-data-sheet": "sixteen-section safety data sheet",

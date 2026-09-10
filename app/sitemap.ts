@@ -39,12 +39,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     // Hub pages, from the footer's list so the two cannot disagree. /blog is
     // filtered out here because it is emitted explicitly below, gated on
-    // posts.length - LEARN_LINKS will carry /blog once Task 7 lands it, and
-    // without this filter it would appear twice in sitemap.xml. The cast is
-    // because LEARN_LINKS has no /blog member yet, so TS sees the literal
-    // comparison as having no overlap - it becomes a normal string compare
-    // the moment Task 7 adds /blog to the array.
-    ...LEARN_LINKS.filter((l) => (l.href as string) !== "/blog").map((l) => ({
+    // posts.length - without this filter it would appear twice in
+    // sitemap.xml.
+    ...LEARN_LINKS.filter((l) => l.href !== "/blog").map((l) => ({
       url: l.href,
       ...(l.href === "/guides" && guidesHubUpdated ? { lastModified: guidesHubUpdated } : {}),
       changeFrequency: "monthly" as const,
