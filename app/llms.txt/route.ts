@@ -74,15 +74,14 @@ function deliveryLine(): string {
 }
 
 export async function GET(): Promise<Response> {
-  // The guides stay on this domain and are always described here. Only the
-  // blog moves: once it has, the WordPress site publishes its own llms.txt
-  // for those posts, and listing them here too would point answer engines at
-  // a URL this site only redirects away from.
+  // Both the guides and the blog move together, so once migrated neither is
+  // described here: the WordPress site publishes its own llms.txt for them,
+  // and listing them twice would point answer engines at URLs this site only
+  // redirects away from.
   const moved = isBlogMigrated();
-  const [allGuides, allPosts] = await Promise.all([
-    publishedGuides(),
-    moved ? Promise.resolve([]) : publishedPosts(),
-  ]);
+  const [allGuides, allPosts] = moved
+    ? [[], []]
+    : await Promise.all([publishedGuides(), publishedPosts()]);
   const unit = formatMinor(PRODUCT.unitPriceMinor);
   const tiers = BUNDLES.map(
     (b) =>

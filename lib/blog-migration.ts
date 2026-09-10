@@ -1,8 +1,5 @@
 /**
- * The BLOG moves to a WordPress site on its own domain. The guides do NOT:
- * they stay here, on the main domain, where the publish-time copy rules and
- * their accumulated ranking authority already live. Only /blog and its posts
- * hand over.
+ * The blog AND the guides move to a WordPress site on their own domain.
  *
  * The switch is a RUNTIME environment variable, not a build-time constant, so
  * the code can ship before WordPress is live and be turned on with a restart
@@ -28,17 +25,17 @@ export function isBlogMigrated(): boolean {
 }
 
 /**
- * Paths this site hands over once migrated: the blog hub and its posts, and
- * nothing else. Kept here so the redirect, the sitemap, llms.txt and every
- * internal link cannot disagree about what has moved.
- *
- * /guides is deliberately absent. Moving thirteen pages that already rank to
- * a subdomain risks their authority for no operational gain, and the rules
- * that stop non-compliant copy reaching a published page are enforced here,
- * not in WordPress.
+ * Paths this site hands over once migrated: both hubs and everything beneath
+ * them. Kept here so the redirect, the sitemap, llms.txt and every internal
+ * link cannot disagree about what has moved.
  */
 export function isMigratedPath(pathname: string): boolean {
-  return pathname === "/blog" || pathname.startsWith("/blog/");
+  return (
+    pathname === "/guides" ||
+    pathname.startsWith("/guides/") ||
+    pathname === "/blog" ||
+    pathname.startsWith("/blog/")
+  );
 }
 
 /**
