@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import type { Article } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getAdminSession, requireAdminRole } from "@/lib/adminAuth";
 import { articleViolations } from "@/lib/articles";
@@ -48,9 +49,13 @@ const saveSchema = z.object({
   excerpt: z.string(),
 });
 
+// An absent or empty field is treated as malformed, not as "[]". Both
+// editors always post a JSON string ("[]" for a genuinely empty list), so a
+// missing value can only mean a client bug - never legitimate intent. Letting
+// it through as [] would silently truncate the field it stands for.
 function json(formData: FormData, field: string): unknown {
   const raw = formData.get(field);
-  if (typeof raw !== "string" || raw === "") return [];
+  if (typeof raw !== "string" || raw === "") return null;
   try {
     return JSON.parse(raw);
   } catch {
@@ -77,22 +82,30 @@ export async function createArticleAction(type: "GUIDE" | "POST"): Promise<void>
   const session = await getAdminSession();
 
   // A unique placeholder slug: the row must exist before the editor can load,
-  // and two people can start a draft in the same second.
-  const slug = `untitled-${Date.now().toString(36)}`;
+  // and two people can start a draft in the same second. Date.now() alone is
+  // only probabilistically unique against the DB's @unique constraint, so a
+  // random suffix backs it up.
+  const slug = `untitled-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const today = new Date().toISOString().slice(0, 10);
 
-  const row = await prisma.article.create({
-    data: {
-      type,
-      status: "DRAFT",
-      slug,
-      title: "Untitled",
-      metaTitle: type === "GUIDE" ? "Bacteriostatic water " : "",
-      description: "",
-      updated: today,
-      authorId: session?.adminUserId ?? null,
-    },
-  });
+  let row;
+  try {
+    row = await prisma.article.create({
+      data: {
+        type,
+        status: "DRAFT",
+        slug,
+        title: "Untitled",
+        metaTitle: type === "GUIDE" ? "Bacteriostatic water " : "",
+        description: "",
+        updated: today,
+        authorId: session?.adminUserId ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("[internal] creating article failed", err);
+    throw new Error("Could not create the article. Please try again.");
+  }
 
   redirect(`/admin/content/${row.id}`);
 }
@@ -143,22 +156,46 @@ export async function saveArticleAction(
     if (clash) return { error: "Another article already uses that address." };
   }
 
+  const data = {
+    slug,
+    title: input.title,
+    metaTitle: input.metaTitle,
+    description: input.description,
+    updated: input.updated,
+    quickAnswer: input.quickAnswer,
+    sections: JSON.stringify(input.sections),
+    faq: JSON.stringify(input.faq),
+    related: JSON.stringify(input.related),
+    markdown: input.markdown,
+    excerpt: input.excerpt,
+  };
+
+  // A published article is a live, indexed page. Draft saves must always
+  // work so nobody loses work in progress, but an edit to a PUBLISHED row
+  // that would break the site's own rules must never reach it - the rules
+  // only ever covering an article's first publish was exactly the hole this
+  // file exists to close. Build the row the edit would produce and re-run
+  // every rule against that candidate before writing anything, exactly as
+  // publishArticleAction does. No auto-unpublish, no partial rule tier: a
+  // violation refuses the whole save.
+  if (existing.status === "PUBLISHED") {
+    const candidate: Article = { ...existing, ...data };
+    const violations = await articleViolations(candidate);
+    if (violations.length > 0) {
+      return {
+        error: `This article is live, and that change would break the rules: ${
+          violations.length
+        } issue${violations.length === 1 ? "" : "s"}. ${violations
+          .map((v) => v.why)
+          .join("; ")}. Unpublish it first if you need to make a change like this.`,
+      };
+    }
+  }
+
   try {
     await prisma.article.update({
       where: { id: input.id },
-      data: {
-        slug,
-        title: input.title,
-        metaTitle: input.metaTitle,
-        description: input.description,
-        updated: input.updated,
-        quickAnswer: input.quickAnswer,
-        sections: JSON.stringify(input.sections),
-        faq: JSON.stringify(input.faq),
-        related: JSON.stringify(input.related),
-        markdown: input.markdown,
-        excerpt: input.excerpt,
-      },
+      data,
     });
   } catch (err) {
     console.error("[internal] saving article failed", err);
@@ -198,10 +235,15 @@ export async function publishArticleAction(
     };
   }
 
-  await prisma.article.update({
-    where: { id },
-    data: { status: "PUBLISHED", publishedAt: row.publishedAt ?? new Date() },
-  });
+  try {
+    await prisma.article.update({
+      where: { id },
+      data: { status: "PUBLISHED", publishedAt: row.publishedAt ?? new Date() },
+    });
+  } catch (err) {
+    console.error("[internal] publishing article failed", err);
+    return { error: "Could not publish. Please try again." };
+  }
 
   revalidateFor(row.type, row.slug);
   revalidatePath(`/admin/content/${id}`);
@@ -223,7 +265,12 @@ export async function unpublishArticleAction(
 
   // publishedAt is deliberately kept: it is what locks the slug, and
   // unpublishing must not reopen a URL that has already been indexed.
-  await prisma.article.update({ where: { id }, data: { status: "DRAFT" } });
+  try {
+    await prisma.article.update({ where: { id }, data: { status: "DRAFT" } });
+  } catch (err) {
+    console.error("[internal] unpublishing article failed", err);
+    return { error: "Could not unpublish. Please try again." };
+  }
 
   revalidateFor(row.type, row.slug);
   revalidatePath(`/admin/content/${id}`);
@@ -245,7 +292,13 @@ export async function deleteArticleAction(
   if (row.status === "PUBLISHED")
     return { error: "Unpublish it first, so you cannot delete a live page by accident." };
 
-  await prisma.article.delete({ where: { id } });
+  try {
+    await prisma.article.delete({ where: { id } });
+  } catch (err) {
+    console.error("[internal] deleting article failed", err);
+    return { error: "Could not delete. Please try again." };
+  }
+
   revalidateFor(row.type, row.slug);
   redirect("/admin/content");
 }
