@@ -6,7 +6,13 @@ import { JsonLd } from "@/components/JsonLd";
 import { guideIndexSchema, pageBreadcrumbSchema } from "@/lib/guide-seo";
 import { BuyCard } from "@/components/guides/GuideArticle";
 
-export const revalidate = 3600;
+// Reads the database for the guide list. There is no content database
+// during `docker build` (Dockerfile:65 builds against a placeholder file)
+// — the real SQLite file only arrives at runtime, via the bind-mounted
+// volume — so this route cannot be prerendered at build time.
+// `dynamic = "force-dynamic"` makes it render on every request instead:
+// one cheap SQLite read, on a box serving a single low-traffic storefront.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Bacteriostatic water guides",

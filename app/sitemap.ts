@@ -6,9 +6,14 @@ import { canonicalOrigin } from "@/lib/site-url";
 /**
  * The funnel, its legal pages, and every published guide and post.
  *
- * This now reads the database, because guides are published from /admin
- * rather than compiled in. It therefore cannot be static: `revalidate`
- * rebuilds it hourly, and publishing revalidates /sitemap.xml explicitly.
+ * This reads the database, because guides are published from /admin rather
+ * than compiled in. There is no content database during `docker build`
+ * (Dockerfile:65 builds against a placeholder file) — the real SQLite file
+ * only arrives at runtime, via the bind-mounted volume — so this route
+ * cannot be prerendered at build time. `dynamic = "force-dynamic"` makes it
+ * render on every request instead: one cheap SQLite read, on a box serving
+ * a single low-traffic storefront that Cloudflare passes straight through
+ * to origin anyway (measured `cf-cache-status: DYNAMIC`).
  *
  * The legal pages come from the footer's LEGAL_LINKS so the sitemap cannot
  * list a page the site no longer links to, or miss one it does. Every URL
@@ -19,7 +24,7 @@ import { canonicalOrigin } from "@/lib/site-url";
  * `updated`. It is never `new Date()`: a lastmod that re-stamps at every
  * build is one Google learns to ignore, which is worse than omitting it.
  */
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const site = canonicalOrigin();

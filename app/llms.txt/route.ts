@@ -25,10 +25,13 @@ import { FACTS } from "@/content/facts";
  * as config/brand.ts and /disclaimer.
  */
 
-// Reads the database for guides and posts, so it cannot be prerendered at
-// build time - see Dockerfile:65. Revalidated hourly, and explicitly when
-// anything is published.
-export const revalidate = 3600;
+// Reads the database for guides and posts. There is no content database
+// during `docker build` (Dockerfile:65 builds against a placeholder file)
+// — the real SQLite file only arrives at runtime, via the bind-mounted
+// volume — so this route cannot be prerendered at build time.
+// `dynamic = "force-dynamic"` makes it render on every request instead:
+// one cheap SQLite read, on a box serving a single low-traffic storefront.
+export const dynamic = "force-dynamic";
 
 const PAGE_NOTES: Record<string, string> = {
   "/bulk-bacteriostatic-water":
