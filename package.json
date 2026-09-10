@@ -12,7 +12,8 @@
     "db:seed": "prisma db seed",
     "db:seed:articles": "tsx scripts/seed-articles.ts",
     "check:guides": "tsx scripts/check-guides.ts",
-    "test:rules": "tsx scripts/test-content-rules.ts"
+    "test:rules": "tsx scripts/test-content-rules.ts",
+    "export:articles": "tsx scripts/export-articles.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
