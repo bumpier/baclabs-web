@@ -44,32 +44,64 @@ const MAP: Record<EventName, { ga4: string; meta: string; metaStandard: boolean 
   purchase: { ga4: "purchase", meta: "Purchase", metaStandard: true },
 };
 
+/**
+ * Run `fn` once the provider's global exists.
+ *
+ * Both bootstraps mount with strategy="afterInteractive", i.e. AFTER
+ * hydration, so an effect that fires on first paint — the Purchase tracker on
+ * the confirmation page — can run a few milliseconds before window.fbq or
+ * window.gtag is defined. A bare `window.fbq?.()` at that moment silently
+ * drops the event, and because the tracker guards against double-firing it
+ * is never retried: the conversion is lost for good. (Measured in a headless
+ * run: tracker at 416ms, fbq defined at 421ms.)
+ *
+ * Once the global exists the vendor's own stub queues calls until the full
+ * script arrives, so waiting for the global is all that is needed. Give up
+ * after 10s — that is a pixel that is not configured or has been blocked.
+ */
+function whenDefined(
+  key: "fbq" | "gtag",
+  fn: () => void,
+  deadline: number = Date.now() + 10_000
+): void {
+  if (typeof window[key] === "function") {
+    fn();
+    return;
+  }
+  if (Date.now() > deadline) return;
+  setTimeout(() => whenDefined(key, fn, deadline), 100);
+}
+
 export function trackEvent(name: EventName, params: EventParams = {}): void {
   if (typeof window === "undefined") return;
   const spec = MAP[name];
 
-  try {
-    window.gtag?.("event", spec.ga4, {
-      currency: params.currency,
-      value: params.value,
-      transaction_id: params.transactionId,
-      items: params.items,
-    });
-  } catch {
-    // Analytics must never break a purchase.
-  }
+  whenDefined("gtag", () => {
+    try {
+      window.gtag?.("event", spec.ga4, {
+        currency: params.currency,
+        value: params.value,
+        transaction_id: params.transactionId,
+        items: params.items,
+      });
+    } catch {
+      // Analytics must never break a purchase.
+    }
+  });
 
-  try {
-    window.fbq?.(spec.metaStandard ? "track" : "trackCustom", spec.meta, {
-      currency: params.currency,
-      value: params.value,
-      content_type: "product",
-      content_ids: params.bundleId ? [params.bundleId] : undefined,
-      num_items: params.quantity,
-    });
-  } catch {
-    // As above.
-  }
+  whenDefined("fbq", () => {
+    try {
+      window.fbq?.(spec.metaStandard ? "track" : "trackCustom", spec.meta, {
+        currency: params.currency,
+        value: params.value,
+        content_type: "product",
+        content_ids: params.bundleId ? [params.bundleId] : undefined,
+        num_items: params.quantity,
+      });
+    } catch {
+      // As above.
+    }
+  });
 }
 
 /** Re-fire a page view. The App Router soft-navigates, which pixels miss. */
