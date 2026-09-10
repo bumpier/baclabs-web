@@ -14,6 +14,20 @@ function site(): string {
   return canonicalOrigin();
 }
 
+/**
+ * Strips the two markup allowances from a string bound for structured data.
+ *
+ * Guide copy may carry `**bold**` and `[label](/path)`, which components
+ * render through RichText. Schema values are consumed raw by search engines,
+ * so the same string must reach them as plain prose - an `abstract` with
+ * literal asterisks in it is the paragraph an answer engine would quote.
+ * Stripping here means authors never have to remember which fields are safe
+ * to emphasise.
+ */
+export function plainText(text: string): string {
+  return text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\[([^\]\n]+)\]\([^)\s]+\)/g, "$1");
+}
+
 function organization(): Record<string, unknown> {
   return {
     "@type": "Organization",
@@ -31,7 +45,7 @@ export function faqPageSchema(items: readonly GuideFaq[]): Record<string, unknow
     mainEntity: items.map((f) => ({
       "@type": "Question",
       name: f.q,
-      acceptedAnswer: { "@type": "Answer", text: f.a },
+      acceptedAnswer: { "@type": "Answer", text: plainText(f.a) },
     })),
   };
 }
@@ -46,8 +60,8 @@ export function guideArticleSchema(guide: Guide): Record<string, unknown> {
     "@type": "Article",
     "@id": `${url}#article`,
     headline: guide.title,
-    description: guide.description,
-    abstract: guide.quickAnswer,
+    description: plainText(guide.description),
+    abstract: plainText(guide.quickAnswer),
     url,
     mainEntityOfPage: url,
     inLanguage: "en-GB",
