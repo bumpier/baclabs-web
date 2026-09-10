@@ -11,14 +11,6 @@ import type { FormState } from "@/lib/form-state";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-export function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
-}
-
 const tableSchema = z.object({
   caption: z.string(),
   columns: z.array(z.string()),
