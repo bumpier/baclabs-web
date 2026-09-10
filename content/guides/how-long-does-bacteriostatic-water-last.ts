@@ -7,12 +7,12 @@ export const howLongDoesItLast: Guide = {
   metaTitle: "How Long Does Bacteriostatic Water Last? 28 Days Opened",
   description: `Opened bacteriostatic water lasts ${FACTS.openedLimit}. Sealed, it keeps to the printed expiry. Why the limits differ and when to discard.`,
   quickAnswer: `An opened vial of bacteriostatic water lasts ${FACTS.openedLimit}. That is the in-use limit and it does not reset. An unopened vial lasts until the expiry date printed on its label, typically around two years from manufacture. Discard a vial early if it turns cloudy, changes colour or shows particles, whatever the date says.`,
-  updated: "2026-09-08",
+  updated: "2026-09-10",
   sections: [
     {
       heading: "How long does bacteriostatic water last once opened?",
       paragraphs: [
-        `Once the rubber stopper has been punctured, a vial of bacteriostatic water is good for **${FACTS.openedLimit}**. After ${FACTS.openedLimitDays} days the vial should be discarded, even if most of the ${FACTS.vialMl} ml is still inside and the liquid looks perfectly clear.`,
+        `Once the rubber stopper has been punctured, [a vial of bacteriostatic water](/#buy) is good for **${FACTS.openedLimit}**. After ${FACTS.openedLimitDays} days the vial should be discarded, even if most of the ${FACTS.vialMl} ml is still inside and the liquid looks perfectly clear.`,
         `The ${FACTS.openedLimitDays}-day figure is not arbitrary. It is the standard in-use period for a multi-dose vial, meaning a vial that is designed to be punctured and drawn from more than once rather than emptied in a single go. Every puncture carries a small chance of introducing microorganisms from the air, the stopper surface or the syringe. The preservative is there to inhibit the growth of anything that gets in.`,
         `The key word is inhibit. Preservative efficacy is tested by deliberately challenging the solution with microorganisms and checking that their numbers are held down over a defined window. The label limit reflects that window. It is validated to hold growth off for ${FACTS.openedLimitDays} days of repeated access, not indefinitely, and the further past that window a vial goes, the less confidence there is in what the preservative is still doing.`,
       ],
@@ -20,7 +20,7 @@ export const howLongDoesItLast: Guide = {
     {
       heading: "Does unopened bacteriostatic water expire?",
       paragraphs: [
-        "Yes. A sealed vial carries an expiry date printed on the label or the crimp cap, and that date is the unopened shelf life. For bacteriostatic water it is typically around two years from the date of manufacture, though the exact figure depends on the manufacturer's stability testing and the label always governs.",
+        "Yes. A sealed vial carries an expiry date printed on the label or the crimp cap, and that date is the unopened shelf life. For bacteriostatic water it is typically around two years from the date of manufacture, though the exact figure depends on the manufacturer's stability testing and **the label always governs**.",
         "The expiry date assumes the vial has been stored as the label directs, which for most products means at controlled room temperature, protected from light, and not frozen. A vial that has been left in a hot vehicle or a freezer has not been stored under the conditions the expiry was tested against, and the printed date no longer says much about it.",
         "Until the stopper is punctured, the contents are sealed from the outside world. The expiry is about the slow change of the solution and its container over time, not about contamination. That is why the sealed limit is measured in years and the opened limit in days.",
       ],
@@ -36,7 +36,7 @@ export const howLongDoesItLast: Guide = {
     {
       heading: "Which limit applies to my vial?",
       paragraphs: [
-        "Work through the vial's condition in this order: check the appearance first, then whether it has been punctured, then the relevant date. Appearance overrides everything else.",
+        "Work through the vial's condition in this order: check the appearance first, then whether it has been punctured, then [the relevant date](/guides/how-to-read-a-vial-label). Appearance overrides everything else.",
       ],
       table: {
         caption: "What applies to a vial of bacteriostatic water in each situation",
@@ -87,7 +87,7 @@ export const howLongDoesItLast: Guide = {
       list: [
         "Date the vial the moment the cap is flipped off, before the first draw.",
         `Write the discard date alongside it: first puncture plus ${FACTS.openedLimitDays} days.`,
-        "Keep opened vials separate from sealed stock so an undated vial stands out.",
+        "[Keep opened vials separate from sealed stock](/guides/vial-handling-and-contamination) so an undated vial stands out.",
         "If an opened vial turns up with no date on it, treat it as expired.",
       ],
     },
@@ -95,7 +95,7 @@ export const howLongDoesItLast: Guide = {
       heading: "What are the signs a vial should be discarded?",
       paragraphs: [
         `Bacteriostatic water should look like a ${FACTS.appearance.toLowerCase()}, and it should keep looking that way for the whole of its life. Any departure from that is a reason to discard, whatever the date says.`,
-        "The in-use limit exists precisely because contamination is not always visible. A vial can be past the point of trusting the preservative and still look perfectly clear, which is why the date is checked as well as the appearance, not instead of it.",
+        "The in-use limit exists precisely because **contamination is not always visible**. A vial can be past the point of trusting the preservative and still look perfectly clear, which is why the date is checked as well as the appearance, not instead of it.",
       ],
       list: [
         "Cloudiness, haze or a visible film on the surface of the liquid.",

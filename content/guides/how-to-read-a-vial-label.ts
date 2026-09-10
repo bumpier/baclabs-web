@@ -7,7 +7,7 @@ export const howToReadAVialLabel: Guide = {
   metaTitle: "How to read a bacteriostatic water vial label",
   description: `Every field on a bacteriostatic water label and what it governs: batch number, expiry, fill volume, storage and the in-use limit.`,
   quickAnswer: `A vial label carries the solution name, the fill volume, a batch or lot number, an expiry date, a storage instruction and usually the in-use limit once opened. The batch number and expiry belong to that vial alone. Where the label and a general figure disagree, the label governs.`,
-  updated: "2026-09-09",
+  updated: "2026-09-10",
   sections: [
     {
       heading: "What is printed on a bacteriostatic water vial?",
@@ -31,7 +31,7 @@ export const howToReadAVialLabel: Guide = {
     {
       heading: "What does the batch or lot number do?",
       paragraphs: [
-        `The batch number identifies the production run the vial came from. It is the field that connects a physical vial to the paperwork behind it, and without it a certificate of analysis or a specification is describing nothing you can check.`,
+        `The batch number identifies the production run the vial came from. It is the field that connects a physical vial to the paperwork behind it, and without it [a certificate of analysis or a specification](/quality-and-documentation) is describing nothing you can check.`,
         `When a supplier publishes documentation, the useful question is whether the batch on the document matches the batch on the vial. A document with no batch identifier, or one that does not match, tells you about some other production run. It may still be accurate, but it is not evidence about the vial in front of you.`,
         `**Record the batch number before the label is discarded.** Once the vial is gone the link to the documentation is gone with it, and a query weeks later has nothing to reference.`,
       ],
@@ -40,14 +40,14 @@ export const howToReadAVialLabel: Guide = {
       heading: "What does the expiry date mean?",
       paragraphs: [
         `The expiry applies to the unopened vial stored as the label directs. It is set from the batch's own production date and stability data, which is why it is batch-specific and why it cannot be inferred from a general figure about how long the product lasts.`,
-        `Expiry and the in-use limit are two separate clocks and both apply. An unopened vial within its expiry is usable. Once entered, the in-use limit starts and runs independently, so a vial can reach the end of its in-use period long before its printed expiry, and a vial opened close to its expiry is governed by whichever date comes first.`,
+        `Expiry and the in-use limit are two separate clocks and both apply. An unopened vial within its expiry is usable. Once entered, the in-use limit starts and runs independently, so a vial can reach the end of its in-use period long before its printed expiry, and **a vial opened close to its expiry is governed by whichever date comes first**.`,
         `A date printed as a month and year means the end of that month unless the label says otherwise.`,
       ],
     },
     {
       heading: "What does the storage line tell you?",
       paragraphs: [
-        `The storage instruction is the condition the stated shelf life assumes. It is not a recommendation to be improved on. A vial kept warmer than the label allows may still look unchanged and still be outside the conditions its expiry was set under.`,
+        `The storage instruction is **the condition the stated shelf life assumes**. It is not a recommendation to be improved on. A vial kept warmer than the label allows may still look unchanged and still be outside the conditions its expiry was set under.`,
         `Labels differ between suppliers and between markets, so the instruction on the vial is the one to follow rather than a figure remembered from a different product. Where a range is printed, the whole range is acceptable and there is no benefit in aiming for one end of it.`,
         `Storage conditions before first entry and handling after it are separate questions. The storage line covers the first; the in-use limit covers the second.`,
       ],
@@ -55,7 +55,7 @@ export const howToReadAVialLabel: Guide = {
     {
       heading: "What is the in-use limit and where does it appear?",
       paragraphs: [
-        `The in-use limit is how long a vial may be used after the stopper has first been punctured. For a preserved multi-dose vial it is conventionally ${FACTS.openedLimit}, and it starts at the first entry, not at the first use of the contents.`,
+        `The in-use limit is how long a vial may be used after the stopper has first been punctured. For [a preserved multi-dose vial](/#buy) it is conventionally ${FACTS.openedLimit}, and it starts at the first entry, not at the first use of the contents.`,
         `It is often printed on the label, sometimes on the carton, and sometimes only in the accompanying documentation. If it does not appear on the vial itself, write the date of first entry on the label so the clock is visible to whoever picks the vial up next.`,
         `The limit runs on the calendar. It is not extended by refrigeration, by the vial still being nearly full, or by the contents looking unchanged.`,
       ],
@@ -63,7 +63,7 @@ export const howToReadAVialLabel: Guide = {
     {
       heading: "What is not on the label, and where does it live?",
       paragraphs: [
-        `A vial label carries handling information, not a full specification. Properties such as appearance criteria, pH where it is specified, and the hazard classification of the mixture sit in the safety data sheet and the supplier's specification rather than on the glass.`,
+        `A vial label carries handling information, not a full specification. Properties such as appearance criteria, pH where it is specified, and the hazard classification of the mixture sit in [the safety data sheet](/safety-data-sheet) and the supplier's specification rather than on the glass.`,
         `For this product the appearance criterion is ${FACTS.appearance.toLowerCase()}, and the mixture is ${FACTS.hazardClassification.toLowerCase()}. Neither of those changes between batches, which is why they are published once rather than reprinted on every vial.`,
         `If a field you need is not on the label and not in the published documentation, that is a question for the supplier rather than something to infer from a comparable product.`,
       ],

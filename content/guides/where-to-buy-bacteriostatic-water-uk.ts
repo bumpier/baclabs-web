@@ -8,7 +8,7 @@ export const whereToBuyUk: Guide = {
   description:
     "UK pharmacies do not stock bacteriostatic water. Where it is sold, what a listing must show, typical prices per 10 ml vial and how BacLab supplies it.",
   quickAnswer: `UK high-street pharmacies do not generally stock bacteriostatic water, and there is no UK-licensed over-the-counter version to ask for. It is sold online as a laboratory diluent by lab-supply shops, marketplace sellers and specialist single-product sellers such as BacLab. Look for a stated bacteriostatic preservative on the label, a sealed vial, a printed expiry and UK dispatch.`,
-  updated: "2026-09-08",
+  updated: "2026-09-10",
   sections: [
     {
       heading: "Can you buy bacteriostatic water at a UK pharmacy?",
@@ -69,7 +69,7 @@ export const whereToBuyUk: Guide = {
         `**A bacteriostatic preservative stated on the label.** If the label says sterile water only, the vial has no preservative and is single-use once opened.`,
         "**A sealed, tamper-evident vial**: a crimped aluminium collar over the stopper and a flip-off cap, so it is obvious whether the vial has been entered.",
         `**The fill volume** printed on the label, normally ${FACTS.vialMl} ml in the UK, so you know what you are paying per millilitre.`,
-        "**A batch or lot number** on the vial. This is how a seller traces a batch if there is ever a problem, and its absence is a warning sign.",
+        "**A batch or lot number** on the vial. This is how a seller [traces a batch](/quality-and-documentation) if there is ever a problem, and its absence is a warning sign.",
         "**An expiry date** printed on the vial, not just quoted in the listing. Unopened, the printed expiry governs; a typical unopened shelf life is around two years.",
         "**UK dispatch**, stated plainly. Vials posted from outside the UK can take weeks, may attract import charges, and are harder to return.",
         "**A returns policy for sealed goods**. Under UK distance-selling rules an unopened, still-sealed vial can normally be returned; an opened one cannot. A seller should say which is which.",
@@ -92,7 +92,7 @@ export const whereToBuyUk: Guide = {
     {
       heading: "Why does buying bacteriostatic water in packs cost less per vial?",
       paragraphs: [
-        "Almost every seller charges less per vial as the pack size rises, and the reason is not a marketing trick. A large share of the cost of a single vial is fixed: the outer box, the padding, the postage, the payment fee and the time to pack it are much the same whether the parcel holds one vial or twenty. Spread across a bigger pack, those fixed costs shrink to pennies per vial, and the per-vial price falls with them.",
+        "Almost every seller charges less per vial as the pack size rises, and the reason is not a marketing trick. A large share of the cost of a single vial is fixed: the outer box, the padding, the postage, the payment fee and the time to pack it are much the same whether the parcel holds one vial or twenty. Spread across a bigger pack, those fixed costs shrink to pennies per vial, and **the per-vial price falls with them**.",
         `A pack of small sealed vials also suits the way the product is used. Each vial is only opened when it is needed, and the ${FACTS.openedLimit} in-use limit applies to that vial alone, so the rest of the pack stays sealed and keeps to the printed expiry. Ten sealed 10 ml vials give you the same volume as a single large vial without the clock starting on all of it at once.`,
         "The practical rule is to compare per-vial prices at the pack size you will actually use, including delivery, rather than headline single-vial prices. A free-delivery threshold can make a mid-sized pack better value than it first looks.",
       ],
@@ -100,9 +100,9 @@ export const whereToBuyUk: Guide = {
     {
       heading: "How does BacLab supply bacteriostatic water in the UK?",
       paragraphs: [
-        `BacLab sells one product and nothing else: bacteriostatic water, sterile water with a bacteriostatic preservative, in a sealed ${FACTS.vialMl} ml vial with a crimped tamper-evident collar and flip-off cap. The label carries the composition, the fill volume, the batch number and the expiry.`,
-        "Vials are sold in packs from 1 to 100, with the per-vial price falling as the pack size rises, and delivery is to UK addresses only. Orders at or above the free-delivery threshold shown on the product page ship free; smaller orders carry a flat delivery charge shown before you pay. Dispatch times are stated at checkout.",
-        "Because each vial is sealed for hygiene reasons, the returns policy follows the UK sealed-goods rule: an unopened vial with its seal intact can be returned under your 14-day right to cancel, and anything that arrives damaged is replaced or refunded. The full policy is published on the returns page.",
+        `BacLab sells one product and nothing else: bacteriostatic water, sterile water with a bacteriostatic preservative, in [a sealed ${FACTS.vialMl} ml vial with a crimped tamper-evident collar and flip-off cap](/#buy). The label carries the composition, the fill volume, the batch number and the expiry.`,
+        "[Vials are sold in packs from 1 to 100](/bulk-bacteriostatic-water), with the per-vial price falling as the pack size rises, and delivery is to UK addresses only. Orders at or above the free-delivery threshold shown on the product page ship free; smaller orders carry a flat delivery charge shown before you pay. Dispatch times are stated at checkout.",
+        "Because each vial is sealed for hygiene reasons, the returns policy follows the UK sealed-goods rule: an unopened vial with its seal intact can be returned under your **14-day right to cancel**, and anything that arrives damaged is replaced or refunded. The full policy is published on the returns page.",
       ],
     },
   ],

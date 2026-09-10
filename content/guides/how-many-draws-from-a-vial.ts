@@ -21,12 +21,12 @@ export const howManyDrawsFromAVial: Guide = {
   metaTitle: `How many draws from a ${FACTS.vialMl} ml bacteriostatic water vial`,
   description: `A ${FACTS.vialMl} ml vial gives ${drawsAt1ml} draws of 1 ml or ${drawsAtHalfMl} of 0.5 ml, but the ${FACTS.openedLimitDays}-day in-use limit and syringe dead volume set the real count. How to plan vials for a run.`,
   quickAnswer: `A ${FACTS.vialMl} ml vial gives ${drawsAt1ml} draws of 1 ml or ${drawsAtHalfMl} draws of 0.5 ml, less a little lost in the syringe hub. The in-use limit of ${FACTS.openedLimit} is the other ceiling: whatever is left on day ${FACTS.openedLimitDays} is discarded, so a vial can run out of time before it runs out of water.`,
-  updated: "2026-09-08",
+  updated: "2026-09-10",
   sections: [
     {
       heading: `How many draws does a ${FACTS.vialMl} ml vial give?`,
       paragraphs: [
-        `The first answer is division. A vial holds a nominal ${FACTS.vialMl} ml, so the number of draws is ${FACTS.vialMl} divided by the volume withdrawn each time. Draw 1 ml and you get ${drawsAt1ml} draws. Draw 2 ml and you get ${drawsAt2ml}. Draw 0.5 ml and you get ${drawsAtHalfMl}. The liquid is the same sterile water with a bacteriostatic preservative from the first draw to the last.`,
+        `The first answer is division. [A vial holds a nominal ${FACTS.vialMl} ml](/#buy), so the number of draws is ${FACTS.vialMl} divided by the volume withdrawn each time. Draw 1 ml and you get ${drawsAt1ml} draws. Draw 2 ml and you get ${drawsAt2ml}. Draw 0.5 ml and you get ${drawsAtHalfMl}. The liquid is the same sterile water with a bacteriostatic preservative from the first draw to the last.`,
         `Two things push the real count below the paper figure. The in-use limit of ${FACTS.openedLimit} stops the clock whether or not the vial is empty, and a small volume never reaches the receiving vessel because it stays in the syringe hub, the needle and the bottom of the vial. The table gives the arithmetic; the sections below make the adjustments.`,
       ],
       table: {
@@ -46,7 +46,7 @@ export const howManyDrawsFromAVial: Guide = {
       paragraphs: [
         `Once the stopper has been punctured, the vial is discarded ${FACTS.openedLimit}. That limit runs on the calendar, not on the volume. A vial drawn from once a week gives ${weeksInLimit} draws in ${FACTS.openedLimitDays} days. At 1 ml a draw that is ${weeksInLimit} ml used and ${FACTS.vialMl - weeksInLimit} ml discarded; at 0.5 ml it is ${weeksInLimit / 2} ml used and ${FACTS.vialMl - weeksInLimit / 2} ml discarded.`,
         `So the question is not only how many draws a vial holds, but how many you will make before day ${FACTS.openedLimitDays}. For daily work at 0.5 ml or more, the volume runs out first and the table holds. For weekly or twice-weekly work, the date runs out first, and draws per vial is set by frequency rather than by size.`,
-        `The two ceilings meet where days to empty equals ${FACTS.openedLimitDays}. Faster than that is volume-limited; slower is time-limited, and the leftover is the price of keeping to the label.`,
+        `The two ceilings meet where days to empty equals ${FACTS.openedLimitDays}. **Faster than that is volume-limited; slower is time-limited**, and the leftover is the price of keeping to the label.`,
       ],
     },
     {
@@ -66,7 +66,7 @@ export const howManyDrawsFromAVial: Guide = {
         "Fewer, larger draws are therefore kinder to the vial than many tiny ones, where the procedure allows. If a session needs 0.5 ml at four points, a single 2 ml draw into a clean intermediate vessel is one puncture rather than four. That is a workflow choice, and only sensible when the transfer is prompt.",
       ],
       list: [
-        "New sterile needle for every entry, discarded after use.",
+        "[New sterile needle for every entry](/guides/vial-handling-and-contamination), discarded after use.",
         "Stopper swabbed with alcohol and allowed to dry before the needle goes in.",
         "Entry at a slight angle, bevel up, at a fresh point on the stopper.",
         "The date of first puncture written on the vial before the first draw.",
@@ -79,7 +79,7 @@ export const howManyDrawsFromAVial: Guide = {
         `Two calculations, and the answer is the larger. By volume: total millilitres across the run, divided by the roughly ${usableMl} ml usable per vial. By time: days of work divided by ${FACTS.openedLimitDays}, rounded up, because every ${FACTS.openedLimitDays}-day window in which any draw is made needs its own vial.`,
         `Take a ${runWeeks}-week run drawing 2 ml once a week. By volume that is ${runWeeks * 2} ml, or ${Math.ceil((runWeeks * 2) / usableMl)} vials. By time it is ${windowsInRun} windows of ${weeksInLimit} weeks, so ${windowsInRun} vials. The two agree.`,
         `Now take the same ${runWeeks}-week run drawing 0.5 ml once a week. By volume that is ${runWeeks * 0.5} ml, which one vial holds comfortably. By time it is still ${windowsInRun} windows, so still ${windowsInRun} vials, and most of each will be discarded. That is where buying by volume goes wrong: the run needs ${windowsInRun} sealed vials opened one at a time, not one vial nursed past its limit.`,
-        `This is why a laboratory ordering for a run counts vials rather than millilitres, and why packs are sold by the vial, from 1 to 100. A pack of ${windowsInRun} covers the ${runWeeks}-week example; a larger pack covers a longer run or parallel work, each vial staying sealed until it is opened. A spare on the shelf is cheap insurance against a short last draw or a vial discarded early.`,
+        `This is why a laboratory ordering for a run counts vials rather than millilitres, and why [packs are sold by the vial, from 1 to 100](/bulk-bacteriostatic-water). A pack of ${windowsInRun} covers the ${runWeeks}-week example; a larger pack covers a longer run or parallel work, each vial staying sealed until it is opened. A spare on the shelf is cheap insurance against a short last draw or a vial discarded early.`,
       ],
       list: [
         `Vials by volume: total ml needed, divided by ${usableMl} ml, rounded up.`,
@@ -91,7 +91,7 @@ export const howManyDrawsFromAVial: Guide = {
       heading: "When does a 3 ml or 30 ml vial make more sense?",
       paragraphs: [
         "A 3 ml vial suits work that needs a millilitre or two in total and then stops: three draws of 1 ml and it is empty well inside the in-use window with nothing thrown away. The trade is that the glass, stopper and crimp cost the same as on a bigger vial, and a run of any length means opening a new vial every few days.",
-        `A 30 ml vial suits the opposite case: large, frequent draws that would empty a ${FACTS.vialMl} ml vial in two or three days, so one vial replaces several. At 5 ml a draw, a ${FACTS.vialMl} ml vial gives ${drawsAt5ml} draws and a 30 ml vial gives six. The condition is unchanged: all 30 ml has to be used within ${FACTS.openedLimit}, or the leftover is discarded and the size advantage disappears.`,
+        `A 30 ml vial suits the opposite case: large, frequent draws that would empty a ${FACTS.vialMl} ml vial in two or three days, so one vial replaces several. At 5 ml a draw, a ${FACTS.vialMl} ml vial gives ${drawsAt5ml} draws and a 30 ml vial gives six. The condition is unchanged: all 30 ml has to be used within ${FACTS.openedLimit}, or the leftover is discarded and **the size advantage disappears**.`,
         `Between those cases sits most laboratory work, with draws of 0.5 ml to 2 ml made daily or a few times a week. There the ${FACTS.vialMl} ml vial fits the ${FACTS.openedLimitDays}-day limit with the least left over, which is why it is the common UK laboratory size and the one BacLab sells.`,
       ],
     },

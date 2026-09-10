@@ -7,14 +7,14 @@ export const bacteriostaticWaterVsSaline: Guide = {
   metaTitle: "Bacteriostatic water vs saline: the difference",
   description: `Bacteriostatic water is preserved water; saline is 0.9% sodium chloride, usually unpreserved. What each contains and how long each lasts once opened.`,
   quickAnswer: `Bacteriostatic water is purified water with a bacteriostatic preservative and nothing else dissolved in it. Saline is 0.9% sodium chloride in water, an isotonic salt solution, and is usually supplied without preservative. The practical difference is that one contains salt and the other does not, and that preserved vials can be re-entered while unpreserved ones cannot.`,
-  updated: "2026-09-09",
+  updated: "2026-09-10",
   sections: [
     {
       heading: "What is the difference between bacteriostatic water and saline?",
       paragraphs: [
         `Two differences, and they are independent of each other. The first is what is dissolved in the water. Bacteriostatic water contains a bacteriostatic preservative and no salt. Saline contains 0.9 per cent sodium chloride by weight and, in its ordinary form, no preservative. A solution can be one, the other, both or neither.`,
-        `The second is what happens after the stopper is punctured. A preservative inhibits bacterial growth inside the vial, which is what allows a vial to be entered more than once and makes it multi-dose. An unpreserved vial has nothing working against organisms carried in on a needle, so it is treated as single-use and the remainder is discarded.`,
-        `Both are clear, colourless liquids and both look identical in the vial. The label is the only way to tell them apart, which is why the fields on it matter more than the appearance of the contents.`,
+        `The second is what happens after the stopper is punctured. A preservative inhibits bacterial growth inside the vial, which is what allows a vial to be entered more than once and makes it [multi-dose](/guides/what-multi-dose-means). An unpreserved vial has nothing working against organisms carried in on a needle, so it is treated as single-use and the remainder is discarded.`,
+        `Both are clear, colourless liquids and both look identical in the vial. **The label is the only way to tell them apart**, which is why the fields on it matter more than the appearance of the contents.`,
       ],
       table: {
         caption: "Bacteriostatic water, sterile water and saline compared",
@@ -55,7 +55,7 @@ export const bacteriostaticWaterVsSaline: Guide = {
       heading: "How long does each last once opened?",
       paragraphs: [
         `A preserved vial carries an in-use limit that starts at the first puncture. For bacteriostatic water that limit is ${FACTS.openedLimit}, and it runs on the calendar regardless of how much liquid is left. Whatever remains on day ${FACTS.openedLimitDays} is discarded.`,
-        "An unpreserved vial, whether sterile water or ordinary saline, has no in-use period at all. It is drawn from once and the remainder goes. Keeping an opened unpreserved vial for a second session is the most common way an otherwise careful workflow introduces contamination.",
+        "An unpreserved vial, whether sterile water or ordinary saline, has no in-use period at all. It is drawn from once and the remainder goes. Keeping an opened unpreserved vial for a second session is **the most common way an otherwise careful workflow introduces contamination**.",
         "Unopened, both keep until the expiry printed on the vial. That date is batch-specific and belongs to the vial in front of you, so it is read from the label rather than assumed from a general figure.",
       ],
     },
@@ -63,7 +63,7 @@ export const bacteriostaticWaterVsSaline: Guide = {
       heading: "Which should a laboratory keep in stock?",
       paragraphs: [
         `It depends on whether the work needs the salt. If the materials being dissolved are sensitive to ionic strength, or their documentation specifies a sodium chloride diluent, saline is the right stock item. If they are not, plain bacteriostatic water is the more flexible one, because it adds nothing and can be re-entered across a working period rather than being opened and discarded each time.`,
-        `Many laboratories keep both for that reason, using the preserved water as the general-purpose diluent and reaching for saline only where a protocol calls for it. Where a single item has to cover general work, a ${FACTS.vialMl} ml preserved vial covers more ground per unit bought, because the ${FACTS.openedLimitDays}-day window lets one vial serve a run of work instead of one session.`,
+        `Many laboratories keep both for that reason, using the preserved water as the general-purpose diluent and reaching for saline only where a protocol calls for it. Where a single item has to cover general work, [a ${FACTS.vialMl} ml preserved vial](/#buy) covers more ground per unit bought, because the ${FACTS.openedLimitDays}-day window lets one vial serve a run of work instead of one session.`,
       ],
     },
   ],

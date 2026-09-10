@@ -7,12 +7,12 @@ export const vialHandlingAndContamination: Guide = {
   metaTitle: "Bacteriostatic water vial handling and contamination",
   description: `Keeping a multi-dose vial clean between entries: disinfecting the stopper, a fresh needle each time, and the signs a vial should be discarded.`,
   quickAnswer: `Disinfect the stopper before every entry, use a fresh needle each time, never return liquid to the vial, and store it as the label directs between uses. The preservative inhibits growth from a small challenge introduced under clean conditions. It does not clean up after poor handling.`,
-  updated: "2026-09-09",
+  updated: "2026-09-10",
   sections: [
     {
       heading: "How does a vial become contaminated?",
       paragraphs: [
-        `Almost always through the stopper. The contents arrive sterile and sealed, so anything that gets in comes through the one route that is opened deliberately, carried on a needle passing through the outer face of the elastomer.`,
+        `Almost always through the stopper. [The contents arrive sterile and sealed](/#buy), so anything that gets in comes through the one route that is opened deliberately, carried on a needle passing through the outer face of the elastomer.`,
         `That face is not sterile. It has been under a flip cap, which keeps dust off but is not a sterile barrier, and once the cap is removed the surface is exposed to the air and to whatever the vial rests on. Organisms sitting on it are pushed into the liquid by the next needle through.`,
         `The second route is the liquid itself. Anything drawn out and then pushed back in returns with whatever it has touched, which is why a syringe that has been anywhere else never goes back into the vial.`,
       ],
@@ -28,7 +28,7 @@ export const vialHandlingAndContamination: Guide = {
     {
       heading: "How many needles does one vial need?",
       paragraphs: [
-        `One per entry. A needle that has been through the stopper once has been in the liquid and out through the elastomer, and its point is no longer in the condition it was supplied in.`,
+        `One per entry. A needle that has been through the stopper once has been in the liquid and out through the elastomer, and **its point is no longer in the condition it was supplied in**.`,
         `Reusing a needle across entries carries whatever it picked up back into the vial, and it dulls the point, which matters more than it sounds. A blunt needle cores the stopper rather than parting it, pushing small fragments of elastomer into the liquid and leaving a hole that no longer reseals.`,
         `Coring is visible if you look for it. Fragments settle as small dark specks in the vial, and a vial showing them has both a particle problem and a stopper that has stopped doing its job.`,
       ],
@@ -38,13 +38,13 @@ export const vialHandlingAndContamination: Guide = {
       paragraphs: [
         `Liquid that has left it. Once the contents of a syringe have been outside the vial they have been in contact with the syringe barrel, the air, and whatever the transfer touched. Returning them puts all of that into a vial that other entries will draw from later.`,
         `A needle that has been used elsewhere is the same problem with a shorter path. Enter the vial from a clean needle and nothing else, every time.`,
-        `Where a draw turns out to be more than needed, the surplus is discarded rather than returned. The volume lost is smaller than the cost of compromising the rest of the vial.`,
+        `Where a draw turns out to be more than needed, **the surplus is discarded rather than returned**. The volume lost is smaller than the cost of compromising the rest of the vial.`,
       ],
     },
     {
       heading: "How should the vial be stored between entries?",
       paragraphs: [
-        "As the storage line on the label directs. Storage conditions are part of what the stated shelf life assumes, and a vial kept outside them is outside the terms of its own label whether or not it looks any different.",
+        "As [the storage line on the label](/guides/how-to-read-a-vial-label) directs. Storage conditions are part of what the stated shelf life assumes, and a vial kept outside them is outside the terms of its own label whether or not it looks any different.",
         `Replace the flip cap if it is the sort that refits, or cover the stopper, and keep the vial upright. The cap is a dust cover rather than a seal, but keeping debris off the face of the stopper means less to disinfect through at the next entry.`,
         `Write the date of first entry on the label at the time you make it. The in-use limit of ${FACTS.openedLimit} is only enforceable if the start date is visible, and a vial with no date is one nobody can vouch for.`,
       ],
@@ -59,7 +59,7 @@ export const vialHandlingAndContamination: Guide = {
       list: [
         "Cloudy, discoloured or containing visible particles",
         "Past the expiry printed on the label",
-        `Past ${FACTS.openedLimit}`,
+        `[Past ${FACTS.openedLimit}](/guides/how-long-does-bacteriostatic-water-last)`,
         "Stopper cored, damaged or no longer resealing",
         "Crimp lifted, seal broken or the vial cracked",
         "Label missing or illegible, so the batch and dates cannot be read",
