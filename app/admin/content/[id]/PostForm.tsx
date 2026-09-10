@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import type { Post } from "@/content/posts/types";
 import { EMPTY_FORM_STATE } from "@/lib/form-state";
 import {
@@ -9,6 +9,14 @@ import {
   saveArticleAction,
   unpublishArticleAction,
 } from "@/app/admin/content/actions";
+
+// Which of the four independent action states is the one to show. Each
+// useActionState hook below keeps its own result until ITS form is
+// resubmitted, so without this a stale success from one action can render
+// next to a genuine error from another (or vice versa). Tagging the action
+// that most recently completed, and showing only that one's message, is
+// what keeps the panel honest.
+type ActionTag = "save" | "publish" | "unpublish" | "delete";
 
 const field = "w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink";
 const label = "block text-sm font-medium text-ink";
@@ -27,13 +35,54 @@ export function PostForm({
   isLive: boolean;
   canPublish: boolean;
 }) {
+  // The actions below are passed to useActionState UNWRAPPED - each stays a
+  // direct reference to its "use server" export, which is what lets React
+  // serialise these forms for progressive enhancement (the hidden
+  // $ACTION_REF fields). Wrapping them in a local function to tag which one
+  // fired breaks that serialisation, so "which action last completed" is
+  // tracked separately below instead.
   const [saveState, save] = useActionState(saveArticleAction, EMPTY_FORM_STATE);
   const [pubState, publish] = useActionState(publishArticleAction, EMPTY_FORM_STATE);
   const [unpubState, unpublish] = useActionState(unpublishArticleAction, EMPTY_FORM_STATE);
   const [delState, deleteArticle] = useActionState(deleteArticleAction, EMPTY_FORM_STATE);
 
-  const message = saveState.error ?? pubState.error ?? unpubState.error ?? delState.error;
-  const success = saveState.success ?? pubState.success ?? unpubState.success;
+  // Each useActionState hook above replaces its state with a fresh object
+  // (even {} !== {}) the moment its action resolves, so watching for that
+  // reference change - rather than wrapping the actions - tells us which
+  // action most recently completed, without touching the action references
+  // themselves.
+  const [lastAction, setLastAction] = useState<ActionTag | null>(null);
+  useEffect(() => {
+    if (saveState !== EMPTY_FORM_STATE) setLastAction("save");
+  }, [saveState]);
+  useEffect(() => {
+    if (pubState !== EMPTY_FORM_STATE) setLastAction("publish");
+  }, [pubState]);
+  useEffect(() => {
+    if (unpubState !== EMPTY_FORM_STATE) setLastAction("unpublish");
+  }, [unpubState]);
+  useEffect(() => {
+    if (delState !== EMPTY_FORM_STATE) setLastAction("delete");
+  }, [delState]);
+
+  const message =
+    lastAction === "save"
+      ? saveState.error
+      : lastAction === "publish"
+        ? pubState.error
+        : lastAction === "unpublish"
+          ? unpubState.error
+          : lastAction === "delete"
+            ? delState.error
+            : undefined;
+  const success =
+    lastAction === "save"
+      ? saveState.success
+      : lastAction === "publish"
+        ? pubState.success
+        : lastAction === "unpublish"
+          ? unpubState.success
+          : undefined;
 
   return (
     <div className="grid gap-6">
@@ -139,6 +188,11 @@ export function PostForm({
             <input type="hidden" name="id" value={id} />
             <button
               type="submit"
+              onClick={(e) => {
+                if (!window.confirm("Delete this draft? This cannot be undone.")) {
+                  e.preventDefault();
+                }
+              }}
               className="rounded-md border border-line px-4 py-2 text-sm text-red-700"
             >
               Delete draft

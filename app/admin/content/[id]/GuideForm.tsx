@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import type { Guide, GuideSection } from "@/content/guides/types";
 import { EMPTY_FORM_STATE } from "@/lib/form-state";
 import {
@@ -13,6 +13,14 @@ import {
 const field = "w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink";
 const label = "block text-sm font-medium text-ink";
 const hint = "mt-1 text-xs text-ink-soft";
+
+// Which of the four independent action states is the one to show. Each
+// useActionState hook below keeps its own result until ITS form is
+// resubmitted, so without this a stale success from one action can render
+// next to a genuine error from another (or vice versa). Tagging the action
+// that most recently completed, and showing only that one's message, is
+// what keeps the panel honest.
+type ActionTag = "save" | "publish" | "unpublish" | "delete";
 
 function Counter({ n, max, unit = "characters" }: { n: number; max: number; unit?: string }) {
   return (
@@ -37,10 +45,35 @@ export function GuideForm({
   canPublish: boolean;
   relatedOptions: string[];
 }) {
+  // The actions below are passed to useActionState UNWRAPPED - each stays a
+  // direct reference to its "use server" export, which is what lets React
+  // serialise these forms for progressive enhancement (the hidden
+  // $ACTION_REF fields). Wrapping them in a local function to tag which one
+  // fired breaks that serialisation, so "which action last completed" is
+  // tracked separately below instead.
   const [saveState, save] = useActionState(saveArticleAction, EMPTY_FORM_STATE);
   const [pubState, publish] = useActionState(publishArticleAction, EMPTY_FORM_STATE);
   const [unpubState, unpublish] = useActionState(unpublishArticleAction, EMPTY_FORM_STATE);
   const [delState, deleteArticle] = useActionState(deleteArticleAction, EMPTY_FORM_STATE);
+
+  // Each useActionState hook above replaces its state with a fresh object
+  // (even {} !== {}) the moment its action resolves, so watching for that
+  // reference change - rather than wrapping the actions - tells us which
+  // action most recently completed, without touching the action references
+  // themselves.
+  const [lastAction, setLastAction] = useState<ActionTag | null>(null);
+  useEffect(() => {
+    if (saveState !== EMPTY_FORM_STATE) setLastAction("save");
+  }, [saveState]);
+  useEffect(() => {
+    if (pubState !== EMPTY_FORM_STATE) setLastAction("publish");
+  }, [pubState]);
+  useEffect(() => {
+    if (unpubState !== EMPTY_FORM_STATE) setLastAction("unpublish");
+  }, [unpubState]);
+  useEffect(() => {
+    if (delState !== EMPTY_FORM_STATE) setLastAction("delete");
+  }, [delState]);
 
   const [metaTitle, setMetaTitle] = useState(guide.metaTitle);
   const [description, setDescription] = useState(guide.description);
@@ -58,8 +91,24 @@ export function GuideForm({
     setSections((prev) => prev.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   }
 
-  const message = saveState.error ?? pubState.error ?? unpubState.error ?? delState.error;
-  const success = saveState.success ?? pubState.success ?? unpubState.success;
+  const message =
+    lastAction === "save"
+      ? saveState.error
+      : lastAction === "publish"
+        ? pubState.error
+        : lastAction === "unpublish"
+          ? unpubState.error
+          : lastAction === "delete"
+            ? delState.error
+            : undefined;
+  const success =
+    lastAction === "save"
+      ? saveState.success
+      : lastAction === "publish"
+        ? pubState.success
+        : lastAction === "unpublish"
+          ? unpubState.success
+          : undefined;
 
   return (
     <div className="grid gap-6">
@@ -260,22 +309,40 @@ export function GuideForm({
 
         <fieldset className="grid gap-3 border-t border-line pt-4">
           <legend className="text-sm font-semibold text-ink">Related guides (exactly 2)</legend>
-          {[0, 1].map((i) => (
-            <select
-              key={i}
-              className={field}
-              value={related[i] ?? ""}
-              onChange={(e) =>
-                setRelated((prev) => prev.map((r, j) => (j === i ? e.target.value : r)))
-              }
-            >
-              <option value="">Choose a guide</option>
-              {relatedOptions.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          ))}
-          <p className={hint}>Only published guides appear here.</p>
+          {[0, 1].map((i) => {
+            const own = related[i] ?? "";
+            const sibling = related[1 - i] ?? "";
+            // Own value is never hidden from its own list, even when it
+            // matches the sibling's pick (legacy data from before this rule
+            // existed) - only the OTHER select's options are narrowed, so a
+            // genuine duplicate stays visible and fixable rather than
+            // disappearing from its own dropdown.
+            const options = relatedOptions.filter((s) => s !== sibling || s === own);
+            // A slug saved here that is no longer published shows as a
+            // blank-looking select with no indication of which one is
+            // wrong. Render it explicitly, labelled, so the author can see
+            // and replace it rather than guess.
+            const stale = own !== "" && !relatedOptions.includes(own);
+            return (
+              <select
+                key={i}
+                className={field}
+                value={own}
+                onChange={(e) =>
+                  setRelated((prev) => prev.map((r, j) => (j === i ? e.target.value : r)))
+                }
+              >
+                <option value="">Choose a guide</option>
+                {stale ? <option value={own}>{own} (no longer published)</option> : null}
+                {options.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            );
+          })}
+          <p className={hint}>
+            Only published guides appear here. The two must be different.
+          </p>
         </fieldset>
 
         <div className="border-t border-line pt-4">
@@ -318,6 +385,11 @@ export function GuideForm({
             <input type="hidden" name="id" value={id} />
             <button
               type="submit"
+              onClick={(e) => {
+                if (!window.confirm("Delete this draft? This cannot be undone.")) {
+                  e.preventDefault();
+                }
+              }}
               className="rounded-md border border-line px-4 py-2 text-sm text-red-700"
             >
               Delete draft
