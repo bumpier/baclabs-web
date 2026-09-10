@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
-import { GUIDES } from "@/content/guides";
+import { publishedGuides } from "@/lib/articles";
 import { JsonLd } from "@/components/JsonLd";
 import { guideIndexSchema, pageBreadcrumbSchema } from "@/lib/guide-seo";
 import { BuyCard } from "@/components/guides/GuideArticle";
 
-export const dynamic = "force-static";
+export const revalidate = 3600;
 
 export const metadata: Metadata = pageMetadata({
   title: "Bacteriostatic water guides",
@@ -33,11 +33,12 @@ const TOOLS = [
   },
 ] as const;
 
-export default function GuidesIndexPage() {
+export default async function GuidesIndexPage() {
+  const guides = await publishedGuides();
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-16 sm:px-8 sm:py-24">
       <JsonLd data={pageBreadcrumbSchema("Guides", "/guides")} />
-      <JsonLd data={guideIndexSchema(GUIDES)} />
+      <JsonLd data={guideIndexSchema(guides)} />
       <h1 className="text-3xl sm:text-4xl">Bacteriostatic water guides</h1>
       <p className="measure mt-3 text-base text-ink-soft">
         One product, explained properly. Each guide opens with the direct answer and then works
@@ -45,7 +46,7 @@ export default function GuidesIndexPage() {
       </p>
 
       <ul className="mt-10 grid gap-4">
-        {GUIDES.map((g) => (
+        {guides.map((g) => (
           <li key={g.slug}>
             <Link
               href={`/guides/${g.slug}`}
