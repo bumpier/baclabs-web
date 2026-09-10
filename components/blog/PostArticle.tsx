@@ -14,10 +14,14 @@ import { pageBreadcrumbSchema } from "@/lib/guide-seo";
  * HTML unless rehype-raw is added, and it must not be. `allowedElements` is a
  * second, explicit boundary on top of that.
  */
+// No table entries: react-markdown parses plain CommonMark, which has no
+// pipe-table syntax, and remark-gfm is deliberately not installed, so
+// "table"/"thead"/"tbody"/"tr"/"th"/"td" could never be produced anyway.
+// Listing them would make this allow-list dishonest about what it permits.
 const ALLOWED = [
   "h2", "h3", "h4", "p", "ul", "ol", "li",
   "strong", "em", "blockquote", "code", "pre",
-  "table", "thead", "tbody", "tr", "th", "td", "hr", "br",
+  "a", "hr", "br",
 ];
 
 export function PostArticle({ post }: { post: Post }) {
