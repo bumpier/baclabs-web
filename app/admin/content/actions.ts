@@ -39,7 +39,14 @@ const saveSchema = z.object({
   related: z.array(z.string()),
   markdown: z.string(),
   excerpt: z.string(),
-  sortOrder: z.coerce.number().int(),
+  // z.coerce.number() turns "" and "   " into 0, so an editor who cleared this
+  // field would silently move the guide to the front of the index instead of
+  // seeing an error. Reject a blank value before coercion reaches it.
+  sortOrder: z
+    .string()
+    .trim()
+    .min(1, "Position in the guides index is required")
+    .pipe(z.coerce.number().int("Position must be a whole number")),
 });
 
 // An absent or empty field is treated as malformed, not as "[]". Both

@@ -389,6 +389,7 @@ export function GuideForm({
             name="sortOrder"
             type="number"
             step="1"
+            required
             defaultValue={sortOrder}
           />
           <p className={hint}>
