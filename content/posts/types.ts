@@ -19,10 +19,10 @@ export interface Post {
   /** ISO date, YYYY-MM-DD. */
   updated: string;
   /**
-   * ISO date, YYYY-MM-DD, of first publication. Optional: the TypeScript
-   * guide modules predate it, and a draft has not been published at all.
-   * Schema falls back to `updated` when it is absent, rather than claiming
-   * a publication date the site cannot substantiate.
+   * ISO date, YYYY-MM-DD, of first publication. Optional: a draft has no
+   * publication date to give it. Schema falls back to `updated` when it is
+   * absent, rather than claiming a publication date the site cannot
+   * substantiate.
    */
   published?: string;
 }

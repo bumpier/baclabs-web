@@ -7,7 +7,9 @@
  * in the publish path where they cannot be forgotten.
  *
  * Pure by design: no Prisma import, no DB access, no `server-only`. It is
- * called from a tsx script, a server action and a client component alike.
+ * called from a tsx script and a server action alike; ViolationsPanel.tsx, a
+ * client component, imports only the `Violation` type from here, not the
+ * check functions.
  */
 import type { Guide } from "@/content/guides/types";
 import type { Post } from "@/content/posts/types";
