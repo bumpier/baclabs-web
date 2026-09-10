@@ -10,7 +10,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "check:guides": "tsx scripts/check-guides.ts"
+    "check:guides": "tsx scripts/check-guides.ts",
+    "test:rules": "tsx scripts/test-content-rules.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
