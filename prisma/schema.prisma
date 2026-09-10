@@ -102,3 +102,52 @@ model Setting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+// One piece of operator-written content: a structured guide or a markdown
+// blog post, discriminated by `type`.
+//
+// Guides were TypeScript modules under content/guides/ until they moved here,
+// so that an operator can edit them without a redeploy. Those modules remain
+// in git as the re-seedable baseline (scripts/seed-articles.ts) and as the
+// written statement of the rules (content/guides/AUTHORING.md), but they no
+// longer render anything.
+//
+// JSON columns follow the convention set by Product.images: TEXT holding
+// JSON, parsed in lib/articles.ts, which is the only file that reads this
+// table. `sections` and `markdown` are separate rather than one `body` column
+// so each type reads exactly one field and neither guesses at the other's
+// shape.
+model Article {
+  id     String @id @default(cuid())
+  type   String // GUIDE | POST
+  slug   String @unique // immutable once published: it is the URL
+  status String @default("DRAFT") // DRAFT | PUBLISHED
+
+  title       String
+  metaTitle   String @map("meta_title")
+  description String
+
+  // The date shown on the page and emitted as schema.org dateModified. A
+  // string, not a DateTime, because that is what Guide.updated is and what
+  // lib/guide-seo.ts expects. `publishedAt` is the real timestamp.
+  updated String
+
+  quickAnswer String @default("") @map("quick_answer") // GUIDE only
+  sections    String @default("[]") // JSON GuideSection[] — GUIDE only
+  faq         String @default("[]") // JSON GuideFaq[] — GUIDE only
+  related     String @default("[]") // JSON string[] of slugs — GUIDE only
+  markdown    String @default("") // POST only
+  excerpt     String @default("") // POST only, the listing blurb
+
+  // The guides index is in a deliberate teaching order, not alphabetical and
+  // not by date. Seeded from the position in content/guides/index.ts so the
+  // live page keeps the order it has today.
+  sortOrder Int @default(0) @map("sort_order")
+
+  authorId    String?   @map("author_id") // AdminUser.id; stored now, rendered later
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([type, status])
+}

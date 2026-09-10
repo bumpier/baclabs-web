@@ -12,6 +12,7 @@ const ALL_NAV = [
   { href: "/admin", label: "Overview", adminOnly: true },
   { href: "/admin/orders", label: "Orders", adminOnly: false },
   { href: "/admin/products", label: "Products", adminOnly: true },
+  { href: "/admin/content", label: "Content", adminOnly: true },
   { href: "/admin/affiliates", label: "Affiliates", adminOnly: true },
   { href: "/admin/subusers", label: "Team", adminOnly: true },
   { href: "/admin/settings", label: "Settings", adminOnly: true },

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { brand } from "@/config/brand";
+import { contentHref } from "@/lib/blog-migration";
 import { PRODUCT, formatMinor } from "@/config/funnel";
 
 /**
@@ -31,6 +32,7 @@ export const SHOP_LINKS = [
  */
 export const LEARN_LINKS = [
   { href: "/guides", label: "Guides" },
+  { href: "/blog", label: "Blog" },
   { href: "/faq", label: "All questions" },
   { href: "/calculator", label: "Dilution calculator" },
   { href: "/safety-data-sheet", label: "Safety data sheet" },
@@ -87,7 +89,7 @@ export function Footer() {
               {LEARN_LINKS.map((l) => (
                 <li key={l.href}>
                   <Link
-                    href={l.href}
+                    href={contentHref(l.href)}
                     className="text-sm text-white/65 underline decoration-white/25 underline-offset-4 transition-colors duration-150 hover:text-white hover:decoration-white/60"
                   >
                     {l.label}

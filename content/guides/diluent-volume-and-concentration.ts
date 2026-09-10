@@ -16,14 +16,14 @@ export const diluentVolumeAndConcentration: Guide = {
   metaTitle: "Bacteriostatic water: volume and concentration",
   description: `How the volume of diluent added sets the concentration of the solution, the units it is expressed in, and how to work back from a target.`,
   quickAnswer: `Concentration is the mass of solute divided by the volume of diluent it is made up in. Add less diluent and the solution is more concentrated; add more and it is less. The mass in the container does not change, only the volume it is distributed through, so the arithmetic is one division.`,
-  updated: "2026-09-09",
+  updated: "2026-09-10",
   sections: [
     {
       heading: "How does diluent volume set concentration?",
       paragraphs: [
         `Concentration is mass divided by volume. A container holding a known mass of solid material has that mass whatever happens next. Adding diluent distributes it through a volume, and the concentration of the result is the mass divided by that volume.`,
         `Nothing about the diluent changes the mass. Bacteriostatic water is a carrier with no activity of its own, so it contributes volume and nothing else. That is what makes the arithmetic a single division rather than something requiring a correction factor.`,
-        `The consequence is that the volume added is the only decision being made. Half the diluent gives twice the concentration in half the volume, and the total quantity of material available is identical either way.`,
+        `The consequence is that the volume added is the only decision being made. Half the diluent gives twice the concentration in half the volume, and **the total quantity of material available is identical either way**.`,
       ],
       table: {
         caption: "A 10 mg solute made up in different volumes of diluent",
@@ -51,9 +51,9 @@ export const diluentVolumeAndConcentration: Guide = {
     {
       heading: "How do you work backwards from a target concentration?",
       paragraphs: [
-        `Divide the mass by the concentration you want, and the answer is the volume of diluent to add. Twenty milligrams at a target of four milligrams per millilitre needs five millilitres. The same division, rearranged.`,
+        `Divide the mass by the concentration you want, and the answer is [the volume of diluent to add](/calculator). Twenty milligrams at a target of four milligrams per millilitre needs five millilitres. The same division, rearranged.`,
         `Sense-check the answer against the container before adding anything. A calculated volume larger than the container will hold is a sign the target concentration is wrong for the quantity of material, not a reason to fill to the brim and hope.`,
-        `Check it against the vial too. A ${vial} ml vial of diluent supports ${preparationsPerVial} preparations at two millilitres each, so a target that needs large volumes per preparation changes how many vials the work requires.`,
+        `Check it against the vial too. [A ${vial} ml vial of diluent](/#buy) supports ${preparationsPerVial} preparations at two millilitres each, so a target that needs large volumes per preparation changes how many vials the work requires.`,
       ],
     },
     {
@@ -68,7 +68,7 @@ export const diluentVolumeAndConcentration: Guide = {
       heading: "Where does the error usually come from?",
       paragraphs: [
         `Measuring the diluent, not the arithmetic. A syringe read at the wrong point on the scale, or read past the plunger tip rather than at it, puts a percentage error into every calculation downstream of it that no amount of careful division recovers.`,
-        `The second source is dead volume. Liquid held in the syringe hub and the needle bore is drawn up but never transferred, so slightly less diluent reaches the container than the scale suggested. It is a few hundredths of a millilitre per transfer, which matters at small volumes and disappears at large ones.`,
+        `The second source is dead volume. Liquid held in the syringe hub and the needle bore is drawn up but never transferred, so slightly less diluent reaches the container than the scale suggested. It is a few hundredths of a millilitre per transfer, which **matters at small volumes and disappears at large ones**.`,
         `The third is unit confusion, almost always the thousand between milligrams and micrograms. Writing the units at every step, rather than carrying bare numbers, is what catches it.`,
       ],
     },
@@ -76,7 +76,7 @@ export const diluentVolumeAndConcentration: Guide = {
       heading: "How much diluent does a run of work need?",
       paragraphs: [
         `Multiply the volume per preparation by the number of preparations, then check the answer against the in-use limit rather than against the vial size alone. A ${vial} ml vial covers ${preparationsPerVial} preparations at two millilitres, but only those made within ${FACTS.openedLimit}.`,
-        `Work spread over a longer period is limited by the calendar rather than the volume. A vial entered once a week reaches day ${FACTS.openedLimitDays} with most of its contents unused, so the number of vials needed follows the schedule, not the total volume.`,
+        `Work spread over a longer period is limited by the calendar rather than the volume. A vial entered once a week reaches day ${FACTS.openedLimitDays} with most of its contents unused, so [the number of vials needed follows the schedule](/guides/how-many-draws-from-a-vial), not the total volume.`,
         `Planning both together is the point. The volume tells you how many preparations a vial can supply; the in-use limit tells you how many of those you will actually reach before the vial has to be discarded.`,
       ],
     },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SignJWT, jwtVerify } from "jose";
 import { originFromHeaders } from "@/lib/site-url";
+import { blogOrigin, isMigratedPath } from "@/lib/blog-migration";
 
 // Server-side gatekeeper for /admin/*.
 //
@@ -35,7 +36,18 @@ async function getAdminTokenRole(token: string | undefined): Promise<"ADMIN" | "
 }
 
 export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
+
+  // ── The blog and guides have moved to their own domain (see
+  // lib/blog-migration.ts). 301, not 307: these are permanent moves and a
+  // permanent status is what transfers ranking signals to the new URL. The
+  // path and query are preserved, so /guides/how-to-store-... lands on the
+  // same slug at the destination rather than on its home page - a redirect
+  // to the wrong page is treated as a soft 404 and passes nothing on.
+  const movedTo = blogOrigin();
+  if (movedTo && isMigratedPath(pathname)) {
+    return NextResponse.redirect(new URL(`${pathname}${search}`, movedTo), 301);
+  }
 
   // ── Admin protection (everything under /admin except the login page)
   if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
@@ -73,9 +85,10 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Only /admin needs middleware now. Scoping the matcher this tightly keeps it
-// off every storefront request, which matters because the funnel is a static
-// prerender — running middleware on it would make every visit dynamic.
+// Scoped as tightly as possible: the funnel is a static prerender and running
+// middleware on it would make every visit dynamic. /guides and /blog are added
+// only because they are already force-dynamic (they read the database), so
+// matching them costs nothing that was not already being paid.
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/guides/:path*", "/blog/:path*"],
 };

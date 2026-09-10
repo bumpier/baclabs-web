@@ -8,21 +8,21 @@ export const isBacteriostaticWaterAMedicineUk: Guide = {
   description:
     "No UK-licensed bacteriostatic water exists. How the Human Medicines Regulations, GB CLP, COSHH and consumer law apply to it as a laboratory reagent.",
   quickAnswer: `No. No bacteriostatic water product holds a UK marketing authorisation, so it is not a licensed medicine and UK pharmacies do not generally stock it. In the UK it is sold as a laboratory reagent and diluent, sterile water with a bacteriostatic preservative, not assessed by the MHRA and regulated as a chemical mixture and a consumer product instead.`,
-  updated: "2026-09-08",
+  updated: "2026-09-10",
   sections: [
     {
       heading: "Is bacteriostatic water a licensed medicine in the UK?",
       paragraphs: [
         "No. A medicine can only be sold in the UK if a specific product holds a marketing authorisation, the licence the MHRA grants after assessing quality, safety and efficacy. No bacteriostatic water product holds one. There is no UK-licensed bacteriostatic water, over the counter or otherwise, and nothing for a pharmacy to order from its wholesaler, which is why UK pharmacies do not generally stock it.",
         "The familiar medicine categories do not apply either. Prescription-only, pharmacy and general-sale are classifications attached to a licensed product when the licence is granted. With no licence there is no classification, so bacteriostatic water in the UK is not a prescription item, a pharmacy item or an over-the-counter item. It sits outside that system altogether.",
-        `What is sold in the UK is a different thing in law, even though the liquid has the same composition: sterile water with a bacteriostatic preservative. Laboratory-supply and research-chemical sellers supply it as a **laboratory reagent and diluent**. It has not been assessed by the MHRA, holds no marketing authorisation, and is not presented or sold for any medical purpose. This guide describes that position and is not legal advice.`,
+        `What is sold in the UK is a different thing in law, even though the liquid has the same composition: [sterile water with a bacteriostatic preservative](/#buy). Laboratory-supply and research-chemical sellers supply it as a **laboratory reagent and diluent**. It has not been assessed by the MHRA, holds no marketing authorisation, and is not presented or sold for any medical purpose. This guide describes that position and is not legal advice.`,
       ],
     },
     {
       heading: "What makes something a medicinal product under the Human Medicines Regulations 2012?",
       paragraphs: [
         "The Human Medicines Regulations 2012 define a medicinal product in two limbs, usually called presentation and function. The presentation limb asks how a product is offered: any substance presented as having properties for treating or preventing disease falls within it. The function limb asks what the substance does: whether it exerts a pharmacological, immunological or metabolic action, or is used for medical diagnosis. A product that meets either limb needs a marketing authorisation before it can be placed on the market.",
-        "Bacteriostatic water sold as a reagent meets neither. It has no pharmacological, immunological or metabolic action of its own; it is a diluent, and the preservative is there to protect the contents of the vial after the stopper is first punctured. A reagent sold as a diluent is not presented as treating or preventing anything. The presentation limb is the one that matters most to sellers, because presentation is created by words, and a product's legal status can change without the contents of the vial changing at all.",
+        "Bacteriostatic water sold as a reagent meets neither. It has no pharmacological, immunological or metabolic action of its own; it is a diluent, and the preservative is there to protect the contents of the vial after the stopper is first punctured. **A reagent sold as a diluent is not presented as treating or preventing anything.** The presentation limb is the one that matters most to sellers, because presentation is created by words, and a product's legal status can change without the contents of the vial changing at all.",
         "That is why a compliant seller makes no therapeutic claim about the product and never describes it in connection with a medical purpose. If a listing, label, email or advertisement presented bacteriostatic water as having medicinal properties, the presentation limb would be met and the seller would be placing an unlicensed medicinal product on the market, an offence enforced by the MHRA. Where a product's status is genuinely unclear, the MHRA's borderline classification team decides.",
       ],
     },
@@ -50,7 +50,7 @@ export const isBacteriostaticWaterAMedicineUk: Guide = {
       heading: "Is bacteriostatic water a medical device in the UK?",
       paragraphs: [
         "No. A medical device under the Medical Devices Regulations 2002 is an instrument, apparatus, material or article that its manufacturer intends for a medical purpose and that works principally by physical rather than pharmacological means. A device placed on the market in Great Britain carries a UKCA mark, or a CE mark while transitional recognition lasts.",
-        "Bacteriostatic water sold as a reagent has no intended medical purpose assigned by its manufacturer, so it never enters the device framework. It carries no UKCA or CE mark, is not registered with the MHRA as a device, and is not a food, a food supplement or a cosmetic either. It is a chemical mixture, and that is the framework that governs it.",
+        "Bacteriostatic water sold as a reagent has no intended medical purpose assigned by its manufacturer, so it never enters the device framework. It carries no UKCA or CE mark, is not registered with the MHRA as a device, and is not a food, a food supplement or a cosmetic either. **It is a chemical mixture**, and that is the framework that governs it.",
       ],
     },
     {
@@ -60,7 +60,7 @@ export const isBacteriostaticWaterAMedicineUk: Guide = {
       ],
       list: [
         `**Chemical classification and labelling.** The GB CLP Regulation requires every mixture placed on the market to be assessed against its hazard criteria. The preservative is present below the concentration limits at which a mixture inherits the classification of its components, so the diluent is not classified. The outcome is recorded as: ${FACTS.hazardClassification}. No pictogram, signal word or hazard statement is required on the label.`,
-        `**The safety data sheet.** UK REACH requires a safety data sheet for hazardous mixtures. Because this one is not classified, the law does not oblige a supplier to issue one, but a compliant seller publishes one anyway in the standard sixteen-section format. It lists the composition, the classification, first-aid and spillage measures, storage and disposal.`,
+        `**The safety data sheet.** UK REACH requires a safety data sheet for hazardous mixtures. Because this one is not classified, the law does not oblige a supplier to issue one, but a compliant seller [publishes one anyway](/safety-data-sheet) in the standard sixteen-section format. It lists the composition, the classification, first-aid and spillage measures, storage and disposal.`,
         "**Workplace handling.** Where the product is handled at work, the Control of Substances Hazardous to Health Regulations 2002 require the employer to assess the risk from every substance in use, classified or not, and decide what controls are needed. For an unclassified aqueous diluent the assessment is short, but it is still the employer's to make.",
         "**Consumer and trading law.** A seller supplying the public must describe the product accurately and must not mislead about what it is or does. The Consumer Rights Act 2015 requires goods to match their description and be of satisfactory quality; the rules on unfair commercial practices prohibit misleading actions and omissions; and the Consumer Contracts Regulations 2013 govern distance selling, including the right to cancel. The UK advertising codes separately prohibit medicinal claims for any product that is not a licensed medicine.",
       ],

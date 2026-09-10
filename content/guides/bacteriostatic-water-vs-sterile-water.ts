@@ -8,7 +8,7 @@ export const bacteriostaticVsSterileWater: Guide = {
   description:
     "The one real difference between bacteriostatic water, sterile water and saline, with a comparison table and when each is the right laboratory diluent.",
   quickAnswer: `Bacteriostatic water is sterile water with a bacteriostatic preservative added, so an opened vial can be used repeatedly for up to ${FACTS.openedLimit}. Plain sterile water has no preservative and is single-use once opened. Saline is 0.9% sodium chloride in sterile water, isotonic, and also unpreserved unless labelled bacteriostatic.`,
-  updated: "2026-09-08",
+  updated: "2026-09-10",
   sections: [
     {
       heading: "What are bacteriostatic water, sterile water and saline?",
@@ -23,8 +23,8 @@ export const bacteriostaticVsSterileWater: Guide = {
       heading: "What is the difference between bacteriostatic water and sterile water?",
       paragraphs: [
         `There is only one real difference: bacteriostatic water contains a bacteriostatic preservative and sterile water does not. Everything else that people list, such as purity, clarity, pH or sterility at the point of sealing, is the same for both. The water is the same water.`,
-        `That one ingredient changes how the vial can be used. Once a stopper has been punctured, air and anything on the needle or in the room can enter the vial. In plain sterile water any bacteria introduced can multiply freely, so the vial is single-use and the remainder is discarded. In bacteriostatic water the preservative inhibits bacterial growth, so the same vial can be entered repeatedly for up to ${FACTS.openedLimit}, the in-use limit printed on the label.`,
-        "It is worth being precise about what the preservative does. It is bacteriostatic, not bactericidal: it slows and stops bacteria from multiplying, it does not sterilise, and it does not rescue a vial that has been contaminated or handled carelessly. Cloudiness, colour, particles or a vial past its in-use limit are all reasons to discard it regardless of the preservative.",
+        `That one ingredient changes how the vial can be used. Once a stopper has been punctured, air and anything on the needle or in the room can enter the vial. In plain sterile water any bacteria introduced can multiply freely, so the vial is single-use and the remainder is discarded. In bacteriostatic water the preservative inhibits bacterial growth, so the same vial can be entered repeatedly for up to ${FACTS.openedLimit}, [the in-use limit printed on the label](/guides/how-to-read-a-vial-label).`,
+        "It is worth being precise about what the preservative does. It is **bacteriostatic, not bactericidal**: it slows and stops bacteria from multiplying, it does not sterilise, and it does not rescue a vial that has been contaminated or handled carelessly. Cloudiness, colour, particles or a vial past its in-use limit are all reasons to discard it regardless of the preservative.",
         "The table below sets the three liquids side by side on the points that actually differ in practice.",
       ],
       table: {
@@ -65,7 +65,7 @@ export const bacteriostaticVsSterileWater: Guide = {
         "In a laboratory, often yes, and sometimes it is the better choice. The question to ask is whether the vial will be opened once or many times, and whether the preservative would get in the way of the work.",
         "Plain sterile water is the appropriate diluent when the whole vial or ampoule will be used in a single session. There is no need to preserve what is left because nothing is left. Many laboratories keep sterile water in small single-use ampoules for exactly this reason: open, use, discard, and the question of an in-use limit never arises.",
         "Sterile water is also the right choice where the preservative would interfere with the method. It can distort UV spectrophotometry readings of a sample dissolved in it, it is generally kept out of cell culture, and it can appear as an extra peak in chromatography or mass spectrometry. In any of these cases an unpreserved solvent is the cleaner option.",
-        "The reverse substitution is where problems start. If a protocol calls for a preserved diluent because the same vial will be drawn from repeatedly over days or weeks, plain sterile water is not a like-for-like replacement. The first puncture ends its shelf life, and any later draw from that vial is a draw from an unpreserved, potentially contaminated liquid.",
+        "The reverse substitution is where problems start. If a protocol calls for a preserved diluent because the same vial will be drawn from repeatedly over days or weeks, plain sterile water **is not a like-for-like replacement**. The first puncture ends its shelf life, and any later draw from that vial is a draw from an unpreserved, potentially contaminated liquid.",
       ],
       list: [
         "Whole vial used in one session: sterile water is appropriate.",
@@ -86,8 +86,8 @@ export const bacteriostaticVsSterileWater: Guide = {
       heading: "What is bacteriostatic saline?",
       paragraphs: [
         `Bacteriostatic saline is 0.9% sodium chloride in sterile water with a bacteriostatic preservative added. It combines the isotonicity of saline with the multi-use in-use period of bacteriostatic water, and it is packaged in the same kind of stoppered multi-use vial.`,
-        "It is a distinct product and must be labelled as such. A vial of saline that does not say bacteriostatic on the label contains no preservative and is single-use. Equally, bacteriostatic saline is not bacteriostatic water: the salt is still there, and a protocol that specifies a salt-free diluent cannot use it.",
-        "Bacteriostatic saline is less commonly stocked in the UK than bacteriostatic water and is not the product described on this site. BacLab supplies bacteriostatic water only.",
+        "It is a distinct product and must be labelled as such. A vial of saline that does not say bacteriostatic on the label contains no preservative and is single-use. Equally, **bacteriostatic saline is not bacteriostatic water**: the salt is still there, and a protocol that specifies a salt-free diluent cannot use it.",
+        "Bacteriostatic saline is less commonly stocked in the UK than bacteriostatic water and is not the product described on this site. [BacLab supplies bacteriostatic water only](/#buy).",
       ],
     },
     {

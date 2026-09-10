@@ -2,6 +2,7 @@ import { brand } from "@/config/brand";
 import { canonicalOrigin } from "@/lib/site-url";
 import { GUIDE_AUTHOR } from "@/content/facts";
 import type { Guide, GuideFaq } from "@/content/guides/types";
+import type { Post } from "@/content/posts/types";
 
 /**
  * Structured data for the guide and reference pages. Kept apart from
@@ -11,6 +12,20 @@ import type { Guide, GuideFaq } from "@/content/guides/types";
 
 function site(): string {
   return canonicalOrigin();
+}
+
+/**
+ * Strips the two markup allowances from a string bound for structured data.
+ *
+ * Guide copy may carry `**bold**` and `[label](/path)`, which components
+ * render through RichText. Schema values are consumed raw by search engines,
+ * so the same string must reach them as plain prose - an `abstract` with
+ * literal asterisks in it is the paragraph an answer engine would quote.
+ * Stripping here means authors never have to remember which fields are safe
+ * to emphasise.
+ */
+export function plainText(text: string): string {
+  return text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\[([^\]\n]+)\]\([^)\s]+\)/g, "$1");
 }
 
 function organization(): Record<string, unknown> {
@@ -30,7 +45,7 @@ export function faqPageSchema(items: readonly GuideFaq[]): Record<string, unknow
     mainEntity: items.map((f) => ({
       "@type": "Question",
       name: f.q,
-      acceptedAnswer: { "@type": "Answer", text: f.a },
+      acceptedAnswer: { "@type": "Answer", text: plainText(f.a) },
     })),
   };
 }
@@ -45,13 +60,14 @@ export function guideArticleSchema(guide: Guide): Record<string, unknown> {
     "@type": "Article",
     "@id": `${url}#article`,
     headline: guide.title,
-    description: guide.description,
-    abstract: guide.quickAnswer,
+    description: plainText(guide.description),
+    abstract: plainText(guide.quickAnswer),
     url,
     mainEntityOfPage: url,
     inLanguage: "en-GB",
     dateModified: guide.updated,
-    datePublished: guide.updated,
+    datePublished: guide.published ?? guide.updated,
+    image: `${site()}/opengraph-image`,
     author,
     publisher: organization(),
     about: {
@@ -101,6 +117,56 @@ export function guideIndexSchema(guides: readonly Guide[]): Record<string, unkno
       position: i + 1,
       name: g.title,
       url: `${s}/guides/${g.slug}`,
+    })),
+  };
+}
+
+/**
+ * BlogPosting for one post. A post has no quick answer and no FAQ, so unlike
+ * a guide it carries no `abstract` and no FAQPage beside it - but it must
+ * still declare itself an article, which it previously did not.
+ */
+export function blogPostingSchema(post: Post): Record<string, unknown> {
+  const url = `${site()}/blog/${post.slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "@id": `${url}#post`,
+    headline: post.title,
+    description: post.description,
+    url,
+    mainEntityOfPage: url,
+    inLanguage: "en-GB",
+    // Falls back to `updated` only when a draft is being previewed; a
+    // published post always has a real, distinct first-publication date.
+    datePublished: post.published ?? post.updated,
+    dateModified: post.updated,
+    image: `${site()}/opengraph-image`,
+    author: organization(),
+    publisher: organization(),
+    isPartOf: { "@type": "Blog", "@id": `${site()}/blog#blog`, name: `${brand.name} blog` },
+  };
+}
+
+/** The blog itself, for /blog. */
+export function blogIndexSchema(posts: readonly Post[]): Record<string, unknown> {
+  const s = site();
+  return {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "@id": `${s}/blog#blog`,
+    name: `${brand.name} blog`,
+    url: `${s}/blog`,
+    inLanguage: "en-GB",
+    publisher: organization(),
+    blogPost: posts.map((p) => ({
+      "@type": "BlogPosting",
+      "@id": `${s}/blog/${p.slug}#post`,
+      headline: p.title,
+      description: p.description,
+      url: `${s}/blog/${p.slug}`,
+      datePublished: p.published ?? p.updated,
+      dateModified: p.updated,
     })),
   };
 }

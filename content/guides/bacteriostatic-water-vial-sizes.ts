@@ -15,7 +15,7 @@ export const vialSizes: Guide = {
   description:
     "UK bacteriostatic water comes in 3, 10, 20 and 30 ml vials. How many draws each gives, why the 28-day in-use limit matters and where 30 ml imports fit.",
   quickAnswer: `UK sellers offer bacteriostatic water in 3, 10, 20 and 30 ml vials. An opened vial is discarded ${FACTS.openedLimitDays} days after first puncture, so the right size is the one you will finish within that window. For laboratory work drawing 0.5 ml to 2 ml at a time, a ${FACTS.vialMl} ml vial fits the limit with little left over.`,
-  updated: "2026-09-08",
+  updated: "2026-09-10",
   sections: [
     {
       heading: "Which bacteriostatic water vial sizes are sold in the UK?",
@@ -59,7 +59,7 @@ export const vialSizes: Guide = {
       paragraphs: [
         `On price per millilitre, a larger vial usually looks better. That comparison ignores the label. Once the stopper has been punctured, the in-use limit is ${FACTS.openedLimit}, whatever the size of the vial. After that the contents are discarded, including whatever is still inside.`,
         `The arithmetic is unforgiving for low-volume work. A 30 ml vial opened and drawn from at 1 ml a week gives ${weeksInLimit} draws in ${FACTS.openedLimitDays} days. That is ${weeksInLimit} ml used and ${30 - weeksInLimit} ml discarded, so most of the vial, and most of the money, goes in the bin. A ${FACTS.vialMl} ml vial used at the same rate also leaves some behind, but far less of it, and the vial cost less in the first place.`,
-        `The useful measure is not price per millilitre on the shelf but price per millilitre actually used. For anyone drawing a few millilitres a month, the ${FACTS.vialMl} ml vial usually comes out ahead on that measure, and it does so without any special handling.`,
+        `The useful measure is not price per millilitre on the shelf but **price per millilitre actually used**. For anyone drawing a few millilitres a month, the ${FACTS.vialMl} ml vial usually comes out ahead on that measure, and it does so without any special handling.`,
         "A 3 ml vial has the opposite problem. At 1 ml a draw it is empty after three draws, well inside the in-use window, so nothing is thrown away, but you are opening a new vial every few days and paying for new glass, a new stopper and a new crimp each time.",
       ],
     },
@@ -88,7 +88,7 @@ export const vialSizes: Guide = {
     {
       heading: "What is Hospira or Pfizer bacteriostatic water, and is it sold in the UK?",
       paragraphs: [
-        "Hospira, now part of Pfizer, manufactures a 30 ml vial labelled Bacteriostatic Water for Injection, USP. That is a United States pharmacopoeial product name: the vial is made to the USP monograph for the US market. It is not a UK-licensed product and UK pharmacies do not generally stock it. Some UK resellers import it and list it at a higher price than a UK-supplied vial, which reflects the import route as much as the larger volume.",
+        "Hospira, now part of Pfizer, manufactures a 30 ml vial labelled Bacteriostatic Water for Injection, USP. That is a United States pharmacopoeial product name: the vial is made to the USP monograph for the US market. **It is not a UK-licensed product** and UK pharmacies do not generally stock it. Some UK resellers import it and list it at a higher price than a UK-supplied vial, which reflects the import route as much as the larger volume.",
         `Its stated composition is the same as the standard laboratory diluent: sterile water with a bacteriostatic preservative. A UK-supplied ${FACTS.vialMl} ml laboratory diluent with the same stated composition is the usual alternative. That is a statement about composition only, not a comparison of quality, and each product stands on its own label and documentation.`,
         "Searches for Hospira or Pfizer bacteriostatic water in the UK mostly lead to imported 30 ml listings, and sometimes to marketplace listings whose origin is harder to establish. Whichever you look at, check that the seller is identifiable, that the label in the photograph matches the description, and that the expiry date is printed and current.",
       ],
@@ -96,8 +96,8 @@ export const vialSizes: Guide = {
     {
       heading: `Why does BacLab sell only ${FACTS.vialMl} ml vials?`,
       paragraphs: [
-        `BacLab sells one product: a sealed ${FACTS.vialMl} ml vial, in packs from 1 to 100. There is no 3 ml, 20 ml or 30 ml option, and that is a deliberate choice rather than a gap in the range.`,
-        `The ${FACTS.vialMl} ml size fits the ${FACTS.openedLimitDays}-day in-use limit for the draw volumes laboratories typically use. Buyers who need more volume buy a bigger pack and pay less per vial through pack pricing, rather than paying for a bigger vial. Ten sealed ${FACTS.vialMl} ml vials hold more than three 30 ml vials, but each one is opened only when it is needed, so the in-use clock runs on one vial at a time and the rest stay sealed under their printed expiry.`,
+        `BacLab sells one product: [a sealed ${FACTS.vialMl} ml vial, in packs from 1 to 100](/#buy). There is no 3 ml, 20 ml or 30 ml option, and that is a deliberate choice rather than a gap in the range.`,
+        `The ${FACTS.vialMl} ml size fits the ${FACTS.openedLimitDays}-day in-use limit for the draw volumes laboratories typically use. Buyers who need more volume [buy a bigger pack](/bulk-bacteriostatic-water) and pay less per vial through pack pricing, rather than paying for a bigger vial. Ten sealed ${FACTS.vialMl} ml vials hold more than three 30 ml vials, but each one is opened only when it is needed, so the in-use clock runs on one vial at a time and **the rest stay sealed** under their printed expiry.`,
         "One size also means one label, one safety data sheet, one set of storage instructions and one price list. That is simpler to keep accurate, and simpler for a buyer comparing packs than a range of sizes with different fills and closures.",
       ],
     },
@@ -111,7 +111,7 @@ export const vialSizes: Guide = {
         "**Nominal volume** in ml, with a fill level that looks right for it.",
         "**Expiry date** for the unopened vial. Unopened, the printed expiry governs; a typical shelf life is around two years, but the label decides.",
         `**In-use limit** after first puncture, normally ${FACTS.openedLimit}.`,
-        "**Batch or lot number**, so the vial can be traced and matched to a certificate or safety data sheet.",
+        "**Batch or lot number**, so the vial can be traced and matched to [a certificate](/quality-and-documentation) or safety data sheet.",
         "**Seal and closure**: an intact aluminium crimp and flip cap over a stopper that has not been punctured.",
         `**Appearance**: ${FACTS.appearance.toLowerCase()}. Cloudy, discoloured or particulate contents are discarded regardless of the date.`,
         "**Storage instructions**: room temperature away from light unless the label says otherwise. Once opened, many laboratories refrigerate at 2–8 °C.",

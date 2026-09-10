@@ -8,7 +8,7 @@ export const howToStore: Guide = {
   description:
     "Where to keep bacteriostatic water before and after opening, whether it needs refrigerating, why not to freeze it, and the signs to discard a vial.",
   quickAnswer: `Store unopened bacteriostatic water upright at room temperature, away from direct light, and follow the label. Once the stopper has been punctured, many laboratories refrigerate the vial at 2–8 °C, but the in-use limit of ${FACTS.openedLimit} applies either way. Do not freeze it. Discard any vial that is cloudy, discoloured or past its limit.`,
-  updated: "2026-09-08",
+  updated: "2026-09-10",
   sections: [
     {
       heading: "How should unopened bacteriostatic water be stored?",
@@ -29,7 +29,7 @@ export const howToStore: Guide = {
       heading: "Does bacteriostatic water need to be refrigerated once opened?",
       paragraphs: [
         `Once the stopper has been punctured the vial is in use, and the preservative is doing the job it is there for: inhibiting the growth of bacteria that may have been introduced through the stopper. The preservative does not sterilise, so the question of where to keep the vial is really a question of how much help to give it.`,
-        "Many laboratories refrigerate opened vials at 2–8 °C. Cooling slows the metabolism of any organism that got through the stopper, so it is a sensible second line of defence behind the preservative. It is not a requirement in the same way that the in-use limit is a requirement. A vial kept at room temperature, away from light, with the stopper swabbed before each draw, is still within specification for the full in-use period.",
+        "Many laboratories refrigerate opened vials at 2–8 °C. Cooling slows the metabolism of any organism that got through the stopper, so it is a sensible second line of defence behind the preservative. It is not a requirement in the same way that the in-use limit is a requirement. A vial kept at room temperature, away from light, with the stopper swabbed before each draw, **is still within specification for the full in-use period**.",
         `What refrigeration does not do is extend that period. The in-use limit of ${FACTS.openedLimit} is a conventional limit written on the label, and it applies regardless of temperature. A refrigerated vial opened on the first of the month is discarded on the same day as a room-temperature vial opened on the first of the month.`,
         "Whichever you choose, choose it once. Moving a vial between a fridge and a bench several times a day produces condensation on the outside of the glass and on the stopper, and repeated warming and cooling gives the preservative nothing extra while giving the seal more work to do.",
       ],
@@ -40,7 +40,7 @@ export const howToStore: Guide = {
         "Freezing is not recommended, and there are three separate reasons.",
         "The first is the glass. Water expands by about nine per cent when it freezes. A vial is filled with a small headspace, and the ice may or may not have room to expand into it. Even where the glass survives, the stress can produce a hairline crack that is invisible until the vial is handled.",
         "The second is the seal. The rubber stopper is held in compression by the aluminium collar, and that compression is what keeps the contents closed. Rubber stiffens and shrinks in the cold, the ice pushes against it from below, and on thawing the stopper may no longer sit as it did. A vial whose seal has been disturbed is no longer a sealed vial, whatever it looks like.",
-        `The third is that there is nothing to gain. The diluent is sterile water with a bacteriostatic preservative. Freezing does not preserve it further, does not reset the in-use limit and does not extend the printed expiry. A frozen and thawed vial can also show a faint haze that was not there before. If a vial has been frozen, whether in transit or in a laboratory freezer, treat it as compromised and discard it.`,
+        `The third is that **there is nothing to gain**. The diluent is sterile water with a bacteriostatic preservative. Freezing does not preserve it further, does not reset the in-use limit and does not extend the printed expiry. A frozen and thawed vial can also show a faint haze that was not there before. If a vial has been frozen, whether in transit or in a laboratory freezer, treat it as compromised and discard it.`,
       ],
     },
     {
@@ -83,7 +83,7 @@ export const howToStore: Guide = {
       list: [
         "Swab the stopper with an alcohol wipe and let it dry before every puncture, including the first one after the flip cap is removed. The cap keeps the stopper clean in transit; it does not keep it sterile.",
         "If the vial has been refrigerated, let it stand until it reaches room temperature before puncturing. A cold stopper in warm air collects condensation, and water on the outside of the stopper is carried through on the point of the needle.",
-        "Use a fresh sterile needle for each draw and never leave a needle sitting in the stopper. An open channel into the vial defeats the seal entirely, and the preservative is not designed to cope with a continuous route in.",
+        "[Use a fresh sterile needle for each draw](/guides/vial-handling-and-contamination) and never leave a needle sitting in the stopper. An open channel into the vial defeats the seal entirely, and the preservative is not designed to cope with a continuous route in.",
         "Puncture the stopper at its centre, where the rubber is thickest and designed to reseal, rather than at the edge near the collar.",
         "Write the date of first puncture on the vial or its carton as soon as the stopper is broken. The in-use limit is counted from that day, and a vial with no date on it cannot be shown to be within it.",
         "Keep the vial upright between uses so the liquid does not sit against the stopper, and return it to its carton or the fridge promptly after each draw.",
@@ -107,8 +107,8 @@ export const howToStore: Guide = {
     {
       heading: "How are BacLab's vials supplied?",
       paragraphs: [
-        `BacLab supplies one product: a ${FACTS.vialMl} ml glass vial of bacteriostatic water, sold as a laboratory and research diluent. Each vial is sealed with a rubber stopper under a crimped aluminium collar and a flip-off cap, so the stopper is protected until the moment you remove the cap and any interference with the seal is visible before you open it.`,
-        "Vials are packed upright in protective packaging and dispatched by tracked courier, so they travel at ambient temperature for a short period, which is well within the conditions an unopened vial tolerates. On arrival, check the cap is intact, the collar is tight and the liquid is clear, then store the vials as described above until they are needed. Packs run from a single vial to one hundred, so you can hold a working stock without keeping more open vials than you will use within the in-use limit.",
+        `BacLab supplies one product: [a ${FACTS.vialMl} ml glass vial of bacteriostatic water](/#buy), sold as a laboratory and research diluent. Each vial is sealed with a rubber stopper under a crimped aluminium collar and a flip-off cap, so the stopper is protected until the moment you remove the cap and any interference with the seal is visible before you open it.`,
+        "Vials are packed upright in protective packaging and dispatched by tracked courier, so they travel at ambient temperature for a short period, which is well within the conditions an unopened vial tolerates. On arrival, check the cap is intact, the collar is tight and the liquid is clear, then store the vials as described above until they are needed. [Packs run from a single vial to one hundred](/bulk-bacteriostatic-water), so you can hold a working stock without keeping more open vials than you will use within the in-use limit.",
       ],
     },
   ],

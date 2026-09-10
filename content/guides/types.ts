@@ -13,7 +13,12 @@ export interface GuideTable {
 export interface GuideSection {
   /** Rendered as an H2. Phrase it as the sub-question it answers. */
   heading: string;
-  /** Plain paragraphs. No markup; a `**bold**` run is the one exception. */
+  /**
+   * Plain paragraphs. Two markup allowances and nothing else: a `**bold**`
+   * run, and a `[label](/path)` link to another page on this site. Links are
+   * internal-only - anything that is not a root-relative path renders as its
+   * literal source text rather than becoming a link.
+   */
   paragraphs: string[];
   /** Optional bullet list, rendered after the paragraphs. */
   list?: string[];
@@ -36,12 +41,22 @@ export interface Guide {
   /** Meta description. Under ~155 characters. */
   description: string;
   /**
-   * The direct answer, 40–60 words, rendered first and marked up as the
-   * article's abstract. This is the paragraph an answer engine lifts.
+   * The direct answer, rendered first and marked up as the article's
+   * abstract. This is the paragraph an answer engine lifts. Aim for 40–60
+   * words (the house preference); `checkGuideStructure` in
+   * `lib/content-rules.ts` enforces the wider 40–75 so already-published
+   * guides cannot be tightened into a violation.
    */
   quickAnswer: string;
   /** ISO date, YYYY-MM-DD. Bump when the wording changes. */
   updated: string;
+  /**
+   * ISO date, YYYY-MM-DD, of first publication. Optional: the TypeScript
+   * guide modules predate it, and a draft has not been published at all.
+   * Schema falls back to `updated` when it is absent, rather than claiming
+   * a publication date the site cannot substantiate.
+   */
+  published?: string;
   sections: GuideSection[];
   faq: GuideFaq[];
   /** Slugs of two sibling guides to link at the end. */
