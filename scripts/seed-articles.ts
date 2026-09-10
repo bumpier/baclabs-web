@@ -12,8 +12,31 @@
  */
 import { GUIDES } from "@/content/guides";
 import { prisma } from "@/lib/db";
+import { checkCompliance, checkGuideStructure, guideProse } from "@/lib/content-rules";
+
+const SLUGS = new Set(GUIDES.map((g) => g.slug));
 
 async function main() {
+  // Gate every write on the same rules the admin publish button enforces.
+  // This script writes status: "PUBLISHED" directly - it is the one place
+  // that skips the admin path entirely and the documented disaster-recovery
+  // route, so nothing here may depend on someone remembering to run
+  // `check:guides` first. Checked for every guide BEFORE the first write: a
+  // partially-seeded table (some guides live, some missing) is worse than an
+  // unseeded one, so any violation aborts the whole run.
+  let failures = 0;
+  for (const g of GUIDES) {
+    const violations = [...checkCompliance(guideProse(g)), ...checkGuideStructure(g, SLUGS)];
+    for (const v of violations) {
+      console.error(`  ✗ ${g.slug}: ${JSON.stringify(v.match)} — ${v.why}`);
+      failures++;
+    }
+  }
+  if (failures) {
+    console.error(`\n${failures} violation(s) across ${GUIDES.length} guides. Nothing was written.`);
+    process.exit(1);
+  }
+
   let created = 0;
   let updated = 0;
 
