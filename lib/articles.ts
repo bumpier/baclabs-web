@@ -41,6 +41,7 @@ export function toGuide(row: Article): Guide {
     description: row.description,
     quickAnswer: row.quickAnswer,
     updated: row.updated,
+    published: row.publishedAt ? row.publishedAt.toISOString().slice(0, 10) : undefined,
     sections: parseJson<GuideSection[]>(row.sections, row.slug, "sections"),
     faq: parseJson<GuideFaq[]>(row.faq, row.slug, "faq"),
     related: parseJson<string[]>(row.related, row.slug, "related"),
@@ -56,6 +57,7 @@ export function toPost(row: Article): Post {
     excerpt: row.excerpt,
     markdown: row.markdown,
     updated: row.updated,
+    published: row.publishedAt ? row.publishedAt.toISOString().slice(0, 10) : undefined,
   };
 }
 

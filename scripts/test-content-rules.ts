@@ -216,6 +216,13 @@ const mappedPost = toPost({ ...guideRow, type: "POST", markdown: "# Hi", excerpt
 check("toPost carries markdown", mappedPost.markdown === "# Hi");
 check("toPost carries excerpt", mappedPost.excerpt === "E");
 
+check("toGuide maps publishedAt to a YYYY-MM-DD published date", /^\d{4}-\d{2}-\d{2}$/.test(mappedGuide.published ?? ""));
+check("toPost maps publishedAt to a YYYY-MM-DD published date", /^\d{4}-\d{2}-\d{2}$/.test(mappedPost.published ?? ""));
+check(
+  "a row with no publishedAt yields undefined, not a bogus date",
+  toGuide({ ...guideRow, publishedAt: null } as never).published === undefined
+);
+
 let threw = false;
 try {
   toGuide({ ...guideRow, sections: "{not json" } as never);

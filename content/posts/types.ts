@@ -18,4 +18,11 @@ export interface Post {
   markdown: string;
   /** ISO date, YYYY-MM-DD. */
   updated: string;
+  /**
+   * ISO date, YYYY-MM-DD, of first publication. Optional: the TypeScript
+   * guide modules predate it, and a draft has not been published at all.
+   * Schema falls back to `updated` when it is absent, rather than claiming
+   * a publication date the site cannot substantiate.
+   */
+  published?: string;
 }

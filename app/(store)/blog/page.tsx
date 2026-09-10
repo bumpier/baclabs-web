@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
-import { pageBreadcrumbSchema } from "@/lib/guide-seo";
+import { blogIndexSchema, pageBreadcrumbSchema } from "@/lib/guide-seo";
 import { BuyCard } from "@/components/guides/GuideArticle";
 import { publishedPosts } from "@/lib/articles";
 
@@ -21,6 +21,7 @@ export default async function BlogIndexPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-16 sm:px-8 sm:py-24">
       <JsonLd data={pageBreadcrumbSchema("Blog", "/blog")} />
+      <JsonLd data={blogIndexSchema(posts)} />
       <h1 className="text-3xl sm:text-4xl">Blog</h1>
       <p className="measure mt-3 text-base text-ink-soft">
         Notes and updates. For the reference material, see the{" "}
