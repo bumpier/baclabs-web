@@ -101,6 +101,21 @@ const nextConfig = {
             },
           ]
         : []),
+      // The 7- and 8-vial tiers were retired on 11 Sept 2026 (see the note in
+      // config/funnel.ts) and their pack pages went with them. Each goes to
+      // the nearest surviving size rather than to /products, so anyone who
+      // followed an old link lands on a pack they can actually buy: 7 down to
+      // the 5, 8 up to the 10.
+      {
+        source: "/products/bacteriostatic-water-10ml-7-vials",
+        destination: "/products/bacteriostatic-water-10ml-5-vials",
+        permanent: true,
+      },
+      {
+        source: "/products/bacteriostatic-water-10ml-8-vials",
+        destination: "/products/bacteriostatic-water-10ml-10-vials",
+        permanent: true,
+      },
       { source: "/cart", destination: "/#buy", permanent: true },
       { source: "/auth/:path*", destination: "/", permanent: true },
       { source: "/dashboard", destination: "/", permanent: true },

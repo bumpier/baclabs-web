@@ -12,9 +12,9 @@ import { cheapestPerVialBundle, formatPerMl, laddered } from "@/lib/pack-metrics
 /**
  * Every tier on one table, each row linking to its own pack page.
  *
- * This is the component that makes eight separate pages behave like one
- * product rather than eight orphans: every pack page carries it, so all eight
- * URLs are one click from each other and from the index. It is also the
+ * This is the component that makes the separate pages behave like one
+ * product rather than a set of orphans: every pack page carries it, so all
+ * of the URLs are one click from each other and from the index. It is also the
  * honesty device the copy depends on — the 8-vial page promises in prose that
  * a larger pack is cheaper per vial, and this table is where that is proved.
  *

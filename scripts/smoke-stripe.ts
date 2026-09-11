@@ -18,8 +18,6 @@
 process.env.STRIPE_ENABLED = "true";
 process.env.STRIPE_PRICE_SINGLE = "price_smoke_single";
 process.env.STRIPE_PRICE_FIVE = "price_smoke_five";
-process.env.STRIPE_PRICE_SEVEN = "price_smoke_seven";
-process.env.STRIPE_PRICE_EIGHT = "price_smoke_eight";
 process.env.STRIPE_PRICE_TEN = "price_smoke_ten";
 process.env.STRIPE_PRICE_TWENTY = "price_smoke_twenty";
 process.env.STRIPE_PRICE_FIFTY = "price_smoke_fifty";

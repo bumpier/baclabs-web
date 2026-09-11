@@ -5,42 +5,61 @@ import Link from "next/link";
 import {
   BUNDLES,
   DELIVERY,
-  bundleBadges,
-  deliveryMinorFor,
-  remainingForFreeDeliveryMinor,
-  shipsFree,
   LOW_STOCK_THRESHOLD,
   MAX_QUANTITY,
   MIN_QUANTITY,
   PRODUCT,
   STOCK_LEVEL,
   VAT,
+  bestPerVialBundleId,
+  deliveryMinorFor,
   formatMinor,
   perVialMinor,
   referencePriceMinor,
+  remainingForFreeDeliveryMinor,
   saleLabel,
   saleVisible,
+  savingPercent,
+  shipsFree,
   type BundleId,
 } from "@/config/funnel";
 import { trackEvent } from "@/lib/analytics";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
-import { Badge } from "@/components/ui/badge";
-
-/** The largest tier, and the most vials one order can hold: that tier at the maximum quantity. */
-const MAX_TIER_VIALS = Math.max(...BUNDLES.map((b) => b.vials));
-const MAX_ORDER_VIALS = MAX_TIER_VIALS * MAX_QUANTITY;
 
 /**
- * The purchase block: tier selector, quantity, live total, and the one button
- * that actually charges.
+ * The home page's purchase block: pick a vial amount, then pay.
  *
- * Radios are real <input type="radio"> elements inside <label>s, visually
- * hidden but present — so arrow keys move between tiers, the group announces
- * itself, and the whole row is a hit target. A div with onClick would have
- * looked identical and been unusable by keyboard.
+ * REPLACES the stacked radio rows this page used to carry. Those rows were a
+ * list you had to read top to bottom — one line per tier giving vials,
+ * per-vial price and total, several hundred pixels of panel before the
+ * button. The amounts are
+ * the thing being chosen, so they are now a GRID OF THE AMOUNTS THEMSELVES:
+ * one tap target per tier, the vial count set in the largest type, and
+ * the whole ladder visible in one glance without scrolling.
+ *
+ * Still real <input type="radio"> elements inside <label>s, visually hidden
+ * but present — arrow keys move between amounts, the group announces itself,
+ * and the whole tile is a hit target. A div with onClick would look identical
+ * and be unusable by keyboard.
+ *
+ * THE VIAL COUNT IS NEVER IMPLICIT. The tiles are per-pack, but an order can
+ * be several packs, so the summary always states the real total in vials
+ * rather than leaving the reader to multiply.
  */
-export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
+/**
+ * Columns in the amount grid, chosen so the tiles TILE — no half-empty last
+ * row. Four tiers fill a row of four; six fill two rows of three. Retiring
+ * the 7- and 8-vial packs took the ladder from eight to six, which at four
+ * columns left two dead cells staring out of the panel, so the count is
+ * derived rather than fixed.
+ *
+ * Written as whole class names because Tailwind scans source text: a
+ * `grid-cols-${n}` template would never be built into the stylesheet.
+ */
+const TILE_COLUMNS = BUNDLES.length % 4 === 0 ? "grid-cols-4" : "grid-cols-3";
+
+export function VialChooser({ cryptoEnabled }: { cryptoEnabled: boolean }) {
   const { bundle, quantity, totalMinor, select, setQuantity } = useFunnel();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +95,7 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
         setPending(false);
         return;
       }
-      // Leave `pending` set: the page is navigating away, and clearing it
+      // Left pending on purpose: the page is navigating away, and clearing it
       // would flash the idle label during the redirect.
       window.location.href = data.paymentUrl;
     } catch {
@@ -85,15 +104,12 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
     }
   }
 
-  // Same function the Stripe session calls, so the delivery shown here and
-  // the delivery charged cannot disagree. Threshold is against the amount
-  // actually charged (post-sale), not the pre-sale reference price.
+  // The same functions the Stripe session calls, so what is shown here and
+  // what is charged cannot drift apart. The threshold is tested against the
+  // amount actually charged, never the pre-sale reference figure.
   const deliveryMinor = deliveryMinorFor(totalMinor);
   const deliveryFree = shipsFree(totalMinor);
   const deliveryKnown = DELIVERY.mode !== "unknown";
-  // Pence still to add before this basket ships free. 0 once it does, and 0
-  // when no threshold exists — so the nudge renders on a positive number
-  // alone. It reads the same figure Stripe is handed, never a second copy.
   const toFreeDelivery = remainingForFreeDeliveryMinor(totalMinor);
 
   const sale = saleVisible();
@@ -101,96 +117,78 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
   const lowStock = STOCK_LEVEL !== null && STOCK_LEVEL <= LOW_STOCK_THRESHOLD;
   const outOfStock = STOCK_LEVEL !== null && STOCK_LEVEL <= 0;
   const totalVials = bundle.vials * quantity;
+  const bestId = bestPerVialBundleId();
+  const saving = savingPercent(bundle);
 
   return (
     <div className="panel overflow-hidden">
       <fieldset className="border-0 p-0">
-        {/* One heading labels both the fieldset and the radio group: the
-            legend is the accessible name, so no second, hidden label. */}
-        <legend className="w-full border-b border-line px-5 py-5 sm:px-6">
+        {/* One heading labels the fieldset and the radio group: the legend is
+            the accessible name, so there is no second, hidden label. */}
+        <legend className="w-full border-b border-line px-5 py-4 sm:px-6">
           <span id={groupId} className="font-display text-xl font-bold text-ink">
-            Choose your quantity
+            How many vials?
           </span>
         </legend>
 
-        <div role="radiogroup" aria-labelledby={groupId}>
+        <div
+          role="radiogroup"
+          aria-labelledby={groupId}
+          className={`grid ${TILE_COLUMNS} gap-px bg-line`}
+        >
           {BUNDLES.map((b) => {
             const selected = b.id === bundle.id;
+            const best = b.id === bestId;
             return (
               <label
                 key={b.id}
                 className={[
-                  "relative flex cursor-pointer items-center gap-4 border-b border-line py-4 pl-6 pr-5 sm:pl-7 sm:pr-6",
-                  "transition-colors duration-150",
-                  selected ? "bg-cta-tint" : "bg-surface",
+                  "relative flex cursor-pointer flex-col items-center justify-center gap-0.5",
+                  "px-1 py-4 text-center transition-colors duration-150",
+                  selected ? "bg-cta-tint" : "bg-surface hover:bg-brand-tint/40",
                 ].join(" ")}
                 style={{ transitionTimingFunction: "var(--ease-out)" }}
               >
-                {/* A 3px amber edge on the selected row. Absolutely
-                    positioned so selecting never reflows the list. */}
+                {/* A 3px amber edge on the selected tile. Absolutely
+                    positioned so selecting never reflows the grid. */}
                 <span
                   aria-hidden="true"
                   className={[
-                    "absolute inset-y-0 left-0 w-[3px] transition-colors duration-150",
+                    "absolute inset-x-0 top-0 h-[3px] transition-colors duration-150",
                     selected ? "bg-cta" : "bg-transparent",
                   ].join(" ")}
                 />
                 <input
                   type="radio"
-                  name="bundle"
+                  name="vials"
                   value={b.id}
                   checked={selected}
                   onChange={() => select(b.id as BundleId)}
                   className="peer sr-only"
                 />
-                {/* The dot is the only thing that moves on selection: a
-                    150ms colour and scale change, no layout shift. */}
+                {/* The amount, in the largest type in the panel — it is the
+                    thing being chosen. The focus ring lives here because the
+                    real input is visually hidden. */}
                 <span
-                  aria-hidden="true"
                   className={[
-                    "grid h-5 w-5 shrink-0 place-items-center rounded-full border-2",
-                    "transition-colors duration-150",
-                    selected ? "border-cta" : "border-line-strong",
-                    "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand",
+                    "tabular font-display text-2xl font-bold leading-none",
+                    selected ? "text-ink" : "text-ink-soft",
+                    "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-brand",
                   ].join(" ")}
-                  style={{ transitionTimingFunction: "var(--ease-out)" }}
                 >
-                  <span
-                    className="h-2.5 w-2.5 rounded-full bg-cta transition-transform duration-150"
-                    style={{
-                      transitionTimingFunction: "var(--ease-out)",
-                      transform: selected ? "scale(1)" : "scale(0)",
-                    }}
-                  />
+                  {b.vials}
                 </span>
-
-                <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="text-base font-semibold text-ink">
-                      <span className="tabular">{b.vials}</span> {b.vials === 1 ? "vial" : "vials"}
-                    </span>
-                    {bundleBadges(b).map((badge) => (
-                      <Badge
-                        key={badge}
-                        variant="outline"
-                        className="border-brand/25 bg-brand-tint text-brand-deep"
-                      >
-                        {badge}
-                      </Badge>
-                    ))}
+                <span className="text-[11px] leading-tight text-ink-soft">
+                  {b.vials === 1 ? "vial" : "vials"}
+                </span>
+                <span className="tabular mt-1 text-[11px] leading-tight text-ink-soft">
+                  {formatMinor(perVialMinor(b))}/ea
+                </span>
+                {best ? (
+                  <span className="mt-0.5 text-[10px] font-semibold leading-tight text-brand-deep">
+                    Best value
                   </span>
-                  {/* Per-vial price only. The saving is what the falling
-                      per-vial figure already says, and the sale reference
-                      price is shown once, in the summary, rather than struck
-                      through on every row. */}
-                  <span className="mt-0.5 block text-sm text-ink-soft">
-                    <span className="tabular">{formatMinor(perVialMinor(b))}</span> per vial
-                  </span>
-                </span>
-
-                <span className="tabular shrink-0 text-lg font-semibold text-ink">
-                  {formatMinor(b.priceMinor)}
-                </span>
+                ) : null}
               </label>
             );
           })}
@@ -198,10 +196,30 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
       </fieldset>
 
       <div className="px-5 py-5 sm:px-6">
-        {/* Quantity */}
-        <div className="flex items-center justify-between gap-4">
+        {/* What has been chosen, said in full, before any arithmetic. */}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <p className="text-base font-semibold text-ink">
+            <span className="tabular">{bundle.vials}</span>{" "}
+            {bundle.vials === 1 ? "vial" : "vials"} &middot;{" "}
+            <span className="tabular">{formatMinor(bundle.priceMinor)}</span>
+          </p>
+          <p className="tabular text-sm text-ink-soft">
+            {formatMinor(perVialMinor(bundle))} per vial
+            {saving > 0 ? ` · saves ${saving}%` : ""}
+          </p>
+        </div>
+
+        {/* Quantity, expressed in the unit the customer is choosing in. The
+            label carries the live vial total so the number of VIALS is never
+            something the reader has to work out from a multiplication. */}
+        <div className="mt-5 flex items-center justify-between gap-4 border-t border-line pt-5">
           <label htmlFor="qty" className="text-sm font-medium text-ink">
-            How many {bundle.vials === 1 ? "vials" : "packs"}?
+            {bundle.vials === 1 ? "How many vials?" : "How many packs?"}
+            {bundle.vials > 1 ? (
+              <span className="mt-0.5 block text-xs font-normal text-ink-soft">
+                = <span className="tabular">{totalVials}</span> vials in total
+              </span>
+            ) : null}
           </label>
           <div className="flex items-center gap-1">
             <button
@@ -211,7 +229,7 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
               className="btn-quiet !min-h-[44px] !w-11 !px-0 text-lg disabled:opacity-40"
               aria-label="Decrease quantity"
             >
-              −
+              &minus;
             </button>
             <input
               id="qty"
@@ -235,8 +253,8 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
           </div>
         </div>
 
-        {/* Total. aria-live so a screen-reader user hears the figure change
-            when they adjust the tier or the quantity. */}
+        {/* aria-live so a screen-reader user hears the figure change when the
+            amount or the quantity moves. */}
         <dl className="mt-5 space-y-2 border-t border-line pt-5 text-sm" aria-live="polite">
           <div className="flex justify-between gap-4">
             <dt className="text-ink-soft">
@@ -251,7 +269,7 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
             <div className="flex justify-between gap-4">
               <dt className="text-ink-soft">{saleLabel()}</dt>
               <dd className="tabular font-medium text-cta-deep">
-                −{formatMinor(referenceTotal - totalMinor)}
+                &minus;{formatMinor(referenceTotal - totalMinor)}
               </dd>
             </div>
           ) : null}
@@ -278,16 +296,11 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
           </div>
         </dl>
 
-        {/* VAT treatment, stated before the customer reaches Stripe. Renders
-            only when config supplies it. */}
         {VAT.statement ? <p className="mt-2 text-xs text-ink-soft">{VAT.statement}</p> : null}
 
-        {/* Free-delivery status, and the one nudge on this page.
-            It states a shortfall against a threshold that is really applied at
-            checkout — it is not a countdown, a fake deadline or an invented
-            scarcity signal, and it disappears the moment the basket qualifies.
-            `aria-live="polite"` because it changes as the tier or quantity
-            changes, and a screen-reader user should hear that it has. */}
+        {/* A real shortfall against a threshold that is really applied at
+            checkout — not a countdown, not invented scarcity. It disappears
+            the moment the basket qualifies. */}
         <p aria-live="polite" className="mt-3">
           {toFreeDelivery > 0 ? (
             <span className="alert-note block">
@@ -299,12 +312,11 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
               This order qualifies for <span className="font-semibold">free UK delivery</span>.
             </span>
           ) : (
-            // No threshold in play — fall back to the plain policy line.
             <span className="block text-xs text-ink-soft">{DELIVERY.note}</span>
           )}
         </p>
 
-        {/* Real stock signal only — renders nothing while STOCK_LEVEL is null. */}
+        {/* Renders nothing while STOCK_LEVEL is null. */}
         {lowStock ? (
           <p className="mt-3 text-sm font-medium text-ink">
             <span className="tabular">{STOCK_LEVEL}</span> vials currently in stock.
@@ -331,34 +343,17 @@ export function PurchaseBlock({ cryptoEnabled }: { cryptoEnabled: boolean }) {
           You will be taken to Stripe to pay. Delivery address is collected there.
         </p>
 
-        {/* The path past the largest order this form can take. Shown only
-            once the largest tier is selected — that is the one buyer it is
-            for, and everyone else gets a shorter panel. */}
-        {bundle.vials === MAX_TIER_VIALS ? (
-          <p className="mt-2 text-center text-xs text-ink-soft">
-            Need more than <span className="tabular">{MAX_ORDER_VIALS}</span> vials?{" "}
-            <Link
-              href="/contact#wholesale"
-              className="underline decoration-line underline-offset-4 hover:text-ink"
-            >
-              Ask for a wholesale quote
-            </Link>
-          </p>
-        ) : null}
-
-        {/* Shown to everyone below the largest tier: the pack economics have
-            their own page, and a buyer comparing tiers here is exactly who it
-            was written for. */}
-        {bundle.vials !== MAX_TIER_VIALS ? (
-          <p className="mt-2 text-center text-xs text-ink-soft">
-            <Link
-              href="/bulk-bacteriostatic-water"
-              className="underline decoration-line underline-offset-4 hover:text-ink"
-            >
-              Bulk and wholesale pricing
-            </Link>
-          </p>
-        ) : null}
+        {/* The detail pages. Linked from inside the purchase panel because
+            this is exactly where "what does 20 vials actually get me?" gets
+            asked — and it is the link that keeps those pages crawled. */}
+        <p className="mt-2 text-center text-xs text-ink-soft">
+          <Link
+            href="/products"
+            className="underline decoration-line underline-offset-4 hover:text-ink"
+          >
+            Compare pack sizes in detail
+          </Link>
+        </p>
 
         {cryptoEnabled ? (
           <p className="mt-3 text-center text-xs">

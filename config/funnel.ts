@@ -61,7 +61,7 @@ export const PRODUCT = {
 // ── Bundle tiers ──────────────────────────────────────────────────
 // `quantity` on the checkout route means "how many of THIS bundle", not
 // how many vials. Buying 2 × five = 10 vials.
-export type BundleId = "single" | "five" | "seven" | "eight" | "ten" | "twenty" | "fifty" | "hundred";
+export type BundleId = "single" | "five" | "ten" | "twenty" | "fifty" | "hundred";
 
 export interface Bundle {
   id: BundleId;
@@ -78,12 +78,13 @@ export interface Bundle {
 export const BUNDLES: readonly Bundle[] = [
   { id: "single", vials: 1, priceMinor: 599, label: "", sku: "baclab-10ml-x1" },
   { id: "five", vials: 5, priceMinor: 2199, label: "Most popular", sku: "baclab-10ml-x5" },
-  { id: "seven", vials: 7, priceMinor: 2589, label: "", sku: "baclab-10ml-x7" },
-  // NOT "Best value": at 8 vials this is £3.69 a vial, dearer per vial than
-  // the 10, 20, 50 and 100 packs below it. The best-value claim is derived
-  // from the price ladder now — see `bestPerVialBundleId()` — so it cannot
-  // contradict the figures printed beside it again.
-  { id: "eight", vials: 8, priceMinor: 2949, label: "", sku: "baclab-10ml-x8" },
+  // The 7- and 8-vial tiers were retired on 11 Sept 2026. The 8-pack worked
+  // out at £3.69 a vial — DEARER than the 10, 20, 50 and 100 packs beneath
+  // it — so the ladder had a kink in it that every comparison table on the
+  // site had to explain away. Six tiers now descend cleanly. Their Stripe
+  // Prices (STRIPE_PRICE_SEVEN / _EIGHT) are no longer read and can be
+  // archived in Stripe; the SKUs baclab-10ml-x7 and -x8 survive only in
+  // historical order rows, which is exactly where they should stay.
   { id: "ten", vials: 10, priceMinor: 3499, label: "Stock up", sku: "baclab-10ml-x10" },
   { id: "twenty", vials: 20, priceMinor: 6499, label: "", sku: "baclab-10ml-x20" },
   { id: "fifty", vials: 50, priceMinor: 14999, label: "", sku: "baclab-10ml-x50" },
@@ -258,8 +259,6 @@ export function bestSavingPercent(): number {
 const PRICE_ENV: Record<BundleId, string> = {
   single: "STRIPE_PRICE_SINGLE",
   five: "STRIPE_PRICE_FIVE",
-  seven: "STRIPE_PRICE_SEVEN",
-  eight: "STRIPE_PRICE_EIGHT",
   ten: "STRIPE_PRICE_TEN",
   twenty: "STRIPE_PRICE_TWENTY",
   fifty: "STRIPE_PRICE_FIFTY",

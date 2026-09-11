@@ -31,9 +31,9 @@ export const dynamic = "force-static";
  *
  * NO `Product` ENTITY. Each pack page under /products now carries the Product
  * JSON-LD for its own SKU, with a single Offer, at its own canonical URL —
- * the home page no longer holds the eight-offer blob it used to. Emitting a
- * Product here would put a ninth entity in front of the eight that each have
- * a page of their own. This page carries BreadcrumbList only.
+ * the home page no longer holds the multi-offer blob it used to. Emitting a
+ * Product here would put one more entity in front of the tiers that each
+ * have a page of their own. This page carries BreadcrumbList only.
  *
  * Every figure below is DERIVED from config/funnel.ts. Nothing on this page
  * may be typed by hand — re-pricing a tier has to move this page with it.

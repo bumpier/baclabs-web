@@ -25,14 +25,14 @@ export const dynamic = "force-static";
 /**
  * The pack-size hub.
  *
- * It is the parent of the eight pack pages and the page that gives them a
- * shared home: every pack page links up to it, it links down to all eight,
- * and it carries the ItemList that tells a crawler these eight URLs are one
- * set rather than eight strays.
+ * It is the parent of the pack pages and the page that gives them a shared
+ * home: every pack page links up to it, it links down to all of them, and it
+ * carries the ItemList that tells a crawler those URLs are one set rather
+ * than a handful of strays.
  *
  * NO Product ENTITY HERE. Each pack page owns the Product for its own SKU.
  * A ninth Product on the hub would be a ninth entity for a product that has
- * eight, and would compete with the pages it exists to introduce.
+ * one each, and would compete with the pages it exists to introduce.
  *
  * Every figure is derived from config/funnel.ts.
  */
@@ -54,7 +54,7 @@ export default function ProductsIndexPage() {
   const site = canonicalOrigin();
 
   /**
-   * ItemList of the eight pack pages, in ladder order.
+   * ItemList of the pack pages, in ladder order.
    *
    * `url` only, not embedded Product objects: each pack page already carries
    * its own Product, and repeating them here would give every SKU two
@@ -139,8 +139,8 @@ export default function ProductsIndexPage() {
       </section>
 
       {/* The cards. Each is the entry point to one pack page, and each carries
-          that page's own audience line so the grid reads as eight different
-          answers rather than eight prices. */}
+          that page's own audience line so the grid reads as a set of
+          different answers rather than a column of prices. */}
       <section className="section pt-0" aria-labelledby="choose-heading">
         <h2 id="choose-heading" className="text-3xl sm:text-4xl">
           Choose a pack

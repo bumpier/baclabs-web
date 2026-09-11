@@ -38,7 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogHubUpdated = posts.map((p) => p.updated).sort().at(-1);
 
   const paths: MetadataRoute.Sitemap = [
-    // The pack pages — the eight URLs that actually sell something, and the
+    // The pack pages — the URLs that actually sell something, and the
     // highest-priority pages on the site after the home page. Listed ahead of
     // everything else because that is what they are worth.
     //
@@ -51,7 +51,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.9,
     })),
-    // The hub the eight sit under.
+    // The hub they sit under.
     {
       url: "/products",
       lastModified: PRICES_UPDATED,

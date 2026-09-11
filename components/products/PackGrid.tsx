@@ -12,7 +12,7 @@ import { cheapestPerVialBundle } from "@/lib/pack-metrics";
  * happens by following a link to the page that sells it.
  *
  * `audience` comes from the registry and differs per pack, so the grid reads
- * as eight different answers rather than eight prices.
+ * as a set of different answers rather than a row of prices.
  */
 export function PackGrid({
   heading,

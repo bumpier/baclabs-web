@@ -20,7 +20,7 @@ import { PACK_PAGES, packByBundleId, packPath } from "@/config/products";
  *
  * Rendered from config rather than kept as a static file in public/: the
  * static version last said £7.50 a vial and listed five bundles, while the
- * page it described had eight tiers from £5.99. Nothing here can now disagree
+ * page it described had a different ladder from £5.99. Nothing here can now disagree
  * with the storefront, because it has no facts of its own.
  *
  * Nothing in this file may state or imply a therapeutic use — the same rule

@@ -46,7 +46,7 @@ import {
 /**
  * One indexable page per bundle tier.
  *
- * WHY THESE ARE NOT DUPLICATES. Eight URLs describing one vial is a
+ * WHY THESE ARE NOT DUPLICATES. Several URLs describing one vial is a
  * duplicate-content problem unless each page answers a different search and
  * says something the others do not. Three things keep them apart:
  *
@@ -57,13 +57,13 @@ import {
  *     stock-up pages open on the price ladder; the wholesale pages open on
  *     unit economics; the starter page opens on what one vial gives you.
  *  3. Each emits ONE Offer, its own SKU, at its own canonical URL — rather
- *     than eight pages each claiming all eight offers.
+ *     than every page claiming every offer.
  *
- * The home page no longer carries the eight-offer Product entity, so there is
+ * The home page no longer carries the multi-offer Product entity, so there is
  * exactly one canonical page per purchasable SKU on the site.
  *
  * Static: the registry is a compile-time constant and nothing here reads the
- * request, so all eight prerender.
+ * request, so they all prerender.
  */
 export const dynamic = "force-static";
 
@@ -101,7 +101,7 @@ export default async function PackPage({ params }: { params: Promise<{ slug: str
   /**
    * ONE Product, ONE Offer — this pack's SKU at this pack's URL.
    *
-   * The eight tiers are eight purchasable SKUs of one product, and each now
+   * The tiers are each a purchasable SKU of one product, and each now
    * has a page of its own, so each page describes its own SKU. That is what
    * lets a merchant listing for "100 vials" point at the 100-vial page rather
    * than at a funnel where the reader has to find the tier themselves.
@@ -138,8 +138,8 @@ export default async function PackPage({ params }: { params: Promise<{ slug: str
       hasMerchantReturnPolicy: returnPolicySchema(),
     },
     // No aggregateRating or review: the reviews this site holds are about the
-    // product, not about one pack size, and attaching them to eight SKUs
-    // would multiply one set of reviews across eight entities.
+    // product, not about one pack size, and attaching them to every SKU
+    // would multiply one set of reviews across every entity.
   };
 
   // Home → Pack sizes → this pack. Three levels, so pageMetadata's two-level

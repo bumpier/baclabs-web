@@ -21,7 +21,7 @@ import { FACTS } from "@/content/facts";
 /**
  * The figures a pack page prints, derived from one bundle.
  *
- * This file exists so that eight pages cannot disagree about arithmetic. A
+ * This file exists so that the pack pages cannot disagree about arithmetic. A
  * pack page renders `metricsFor(bundle)` and nothing else: there is no route
  * by which a page can state a per-vial price that the ladder table on the
  * next page contradicts.
@@ -120,8 +120,8 @@ export function cheaperPerVialThan(bundle: Bundle): Bundle[] {
  * The SMALLEST pack that costs less per vial than this one, or null if none
  * does.
  *
- * Deliberately not "the cheapest pack per vial". For the 8-vial tier the
- * absolute cheapest is the 100-vial case, and answering "you want eight
+ * Deliberately not "the cheapest pack per vial". For the 5-vial tier the
+ * absolute cheapest is the 100-vial case, and answering "you want five
  * vials, buy a hundred" is not advice — it is an upsell wearing advice's
  * clothes. The nearest tier that genuinely beats this one on unit price is
  * the recommendation a buyer can actually act on.

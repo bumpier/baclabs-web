@@ -361,7 +361,7 @@ export function RelatedPacks({ pack }: { pack: PackPage }) {
  *
  * Rendered as a visible definition list and deliberately WITHOUT FAQPage
  * structured data. The home page already carries the site's one FAQPage
- * entity; eight more, one per pack, would be eight competing FAQ entities for
+ * entity; one more per pack would be a set of competing FAQ entities for
  * a shop with one FAQ. The value here is the visible, unique wording — which
  * is also what stops two adjacent pack sizes reading as the same document.
  */

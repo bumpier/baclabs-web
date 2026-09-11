@@ -110,8 +110,8 @@ export function Header({ guidesHref }: { guidesHref: string }) {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/products"
+          <a
+            href="/#buy"
             className="btn-cta reveal-cta hidden !min-h-[44px] !w-auto !px-5 !text-sm sm:inline-flex"
             data-shown={revealed ? "true" : "false"}
             // Hidden from assistive tech and from tab order until it is actually
@@ -119,8 +119,8 @@ export function Header({ guidesHref }: { guidesHref: string }) {
             aria-hidden={!revealed}
             tabIndex={revealed ? undefined : -1}
           >
-            Shop packs — from {formatMinor(PRODUCT.unitPriceMinor)}
-          </Link>
+            Buy now — from {formatMinor(PRODUCT.unitPriceMinor)}
+          </a>
 
           <button
             ref={toggleRef}
@@ -167,14 +167,14 @@ export function Header({ guidesHref }: { guidesHref: string }) {
               ))}
             </ul>
             <div className="shell-wide py-4">
-              <Link
-                href="/products"
+              <a
+                href="/#buy"
                 onClick={() => close(false)}
                 tabIndex={open ? undefined : -1}
                 className="btn-cta sm:max-w-xs"
               >
-                Shop packs &mdash; from {formatMinor(PRODUCT.unitPriceMinor)}
-              </Link>
+                Buy now &mdash; from {formatMinor(PRODUCT.unitPriceMinor)}
+              </a>
             </div>
           </nav>
         </div>

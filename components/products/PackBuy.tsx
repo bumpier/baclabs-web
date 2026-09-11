@@ -27,14 +27,13 @@ import { PaymentMarks } from "@/components/funnel/PaymentMarks";
 /**
  * The purchase panel on a pack page.
  *
- * DELIBERATELY NOT components/funnel/PurchaseBlock. That block's whole top
- * half is a radio list of all eight tiers, which is right for a single funnel
- * page and wrong here twice over: a /products page that offers all eight
- * tiers inside it is eight pages selling the same eight things, which is the
- * duplication these pages exist to avoid; and the tier choice on this site is
- * now a NAVIGATION choice between pages, not a form control. Choosing a
- * different quantity means following a link, which is also what gives the
- * eight pages a reason to link to one another.
+ * DELIBERATELY NOT components/funnel/VialChooser, which is the home page's
+ * block. That one offers every amount in a grid, which is right for the
+ * page a visitor lands on and wrong here: a /products page that offers every
+ * other tier inside it is every page selling the same things, which is
+ * the duplication these pages exist to avoid. On a pack page the tier is the
+ * SUBJECT, so choosing a different one means following a link — which is also
+ * what gives the pack pages a reason to link to one another.
  *
  * So this panel sells exactly one tier. Quantity is a multiple of THIS pack.
  */

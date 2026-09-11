@@ -2,14 +2,14 @@
 // PACK PAGES — one indexable page per bundle tier.
 //
 // The storefront used to be a single funnel: one URL carrying one Product
-// entity with eight Offers inside it. That gave Google one page to rank for
-// eight genuinely different queries — "bacteriostatic water 10ml" and
+// entity with every bundle Offer inside it. That gave Google one page to rank
+// for a set of genuinely different queries — "bacteriostatic water 10ml" and
 // "bacteriostatic water 100 vials wholesale" are not the same search, and a
 // single page cannot be the best answer to both.
 //
 // Each tier now has its own URL under /products. THE RULE THAT MAKES THIS
 // WORK, AND THE ONLY ONE THAT MATTERS: a pack page must earn its own
-// existence. Eight pages describing the same vial in the same words are
+// existence. Several pages describing the same vial in the same words are
 // duplicates whatever their URLs say, and Google will pick one and drop the
 // rest. So every entry below carries:
 //
@@ -21,7 +21,7 @@
 //
 // NOTHING NUMERIC IS TYPED HERE. Every price, per-vial figure, saving and
 // draw count is derived from config/funnel.ts at render time, so re-pricing a
-// tier moves all eight pages with it. If you find yourself typing a £ sign in
+// tier moves every pack page with it. If you find yourself typing a £ sign in
 // this file, the figure belongs in funnel.ts instead.
 //
 // House rules apply as everywhere else: no therapeutic or medical framing,
@@ -33,8 +33,8 @@
 import { BUNDLES, PRODUCT, VIAL_ML, type Bundle, type BundleId } from "@/config/funnel";
 
 /**
- * How a pack page is laid out. Four shapes, not eight, because four is how
- * many genuinely different buying situations there are — but the shapes
+ * How a pack page is laid out. Four shapes, fewer than there are tiers,
+ * because four is how many genuinely different buying situations there are — but the shapes
  * differ in which sections exist and in what order, not merely in a heading.
  *
  *  · starter   — one vial. Leads on what a single vial actually gives you and
@@ -113,7 +113,7 @@ export interface PackPage {
   /**
    * The other packs this page links to, in order. A pack page that points at
    * the cheaper-per-vial alternative is more useful than one that does not,
-   * and the internal links are what let eight pages share authority rather
+   * and the internal links are what let the pack pages share authority rather
    * than split it.
    */
   related: readonly BundleId[];
@@ -218,83 +218,7 @@ export const PACK_PAGES: readonly PackPage[] = [
       },
     ],
     variant: "standard",
-    related: ["single", "seven", "ten"],
-  },
-  {
-    bundleId: "seven",
-    slug: "bacteriostatic-water-10ml-7-vials",
-    h1: `Bacteriostatic water, 7 × ${PRODUCT.size}`,
-    metaTitle: `Bacteriostatic water 7 pack — 7 × ${PRODUCT.size}`,
-    metaDescription: `Seven sealed ${PRODUCT.size}s of bacteriostatic water. A step up from the 5-pack without moving to a 10-pack, for laboratory and research use, with UK delivery.`,
-    query: "bacteriostatic water 7 vials / 7 pack",
-    shortLabel: "7 vials",
-    lede: `Seven sealed ${PRODUCT.size}s. This is the in-between pack — for when five is not quite enough and ten is more than you want sitting on a shelf.`,
-    audience:
-      "Work that has outgrown the 5-pack but has not settled into a predictable enough rate to justify buying ten.",
-    angles: [
-      {
-        heading: "The in-between quantity",
-        body: "Most price ladders jump straight from five to ten and make you choose between under-buying and over-buying. This tier exists so you do not have to.",
-      },
-      {
-        heading: "Check the 10-pack before you order",
-        body: "Worth two seconds of your time: compare the per-vial figures below. On some price ladders the next tier up is cheaper per vial, and where that is true we would rather you knew than not.",
-      },
-    ],
-    faqs: [
-      {
-        q: "Why does a 7-vial pack exist?",
-        a: "Because most price ladders jump from five to ten and force a choice between under-buying and over-buying. This tier is the middle step.",
-      },
-      {
-        q: "Should I buy 7 vials or 10?",
-        a: "Compare the per-vial column in the table on this page. If the larger pack is cheaper per vial and you will use the extra vials inside their in-use window, it is the better buy — and this page says so rather than leaving you to work it out.",
-      },
-      {
-        q: "What does the 7-pack work out at per vial?",
-        a: "{perVial} a vial, for {totalMl}ml in total across {vials} sealed vials.",
-      },
-    ],
-    variant: "standard",
-    related: ["five", "eight", "ten"],
-  },
-  {
-    bundleId: "eight",
-    slug: "bacteriostatic-water-10ml-8-vials",
-    h1: `Bacteriostatic water, 8 × ${PRODUCT.size}`,
-    metaTitle: `Bacteriostatic water 8 pack — 8 × ${PRODUCT.size}`,
-    metaDescription: `Eight sealed ${PRODUCT.size}s of bacteriostatic water. Compare the per-vial price against the 10-pack before ordering. For laboratory and research use.`,
-    query: "bacteriostatic water 8 vials / 8 pack",
-    shortLabel: "8 vials",
-    lede: `Eight sealed ${PRODUCT.size}s. Listed for completeness, and with a caveat we would rather state than bury: on the current price ladder this is not the best value per vial, and the comparison below shows exactly which tier is.`,
-    audience:
-      "Anyone who needs precisely eight vials. If the number is flexible, read the comparison first.",
-    angles: [
-      {
-        heading: "This is not the cheapest tier per vial",
-        body: "The larger packs cost less per vial than this one. That is a fact about the price ladder, so it is printed on the page rather than left for you to work out from a grid of numbers.",
-      },
-      {
-        heading: "When eight is still the right order",
-        body: "When eight is the number you actually need. Buying ten to save a few pence per vial is not a saving if two of them expire unopened — the in-use window applies from first puncture, not from delivery.",
-      },
-    ],
-    faqs: [
-      {
-        q: "Is the 8-pack the best value?",
-        a: "No. Larger packs cost less per vial than this one, and the comparison on this page names the nearest of them. We would rather print that than let you find it afterwards.",
-      },
-      {
-        q: "Then why list an 8-vial pack at all?",
-        a: "Because eight is sometimes simply the number needed. Buying ten to save pennies per vial is not a saving if the extra vials are never opened.",
-      },
-      {
-        q: "What does the 8-pack cost per vial?",
-        a: "{perVial} a vial — {price} for {vials} vials, {totalMl}ml in total.",
-      },
-    ],
-    variant: "standard",
-    related: ["seven", "ten", "twenty"],
+    related: ["single", "ten", "twenty"],
   },
   {
     bundleId: "ten",
@@ -341,7 +265,7 @@ export const PACK_PAGES: readonly PackPage[] = [
       },
     ],
     variant: "stockUp",
-    related: ["five", "eight", "twenty"],
+    related: ["five", "twenty", "fifty"],
   },
   {
     bundleId: "twenty",
