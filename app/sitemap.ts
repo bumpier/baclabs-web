@@ -38,25 +38,37 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogHubUpdated = posts.map((p) => p.updated).sort().at(-1);
 
   const paths: MetadataRoute.Sitemap = [
-    // The pack pages — the URLs that actually sell something, and the
-    // highest-priority pages on the site after the home page. Listed ahead of
-    // everything else because that is what they are worth.
+    // The pack pages. One per bundle tier, each the landing page for a search
+    // the home page cannot win on its own — "bacteriostatic water 100 vials
+    // wholesale" is not the query "/" is trying to rank for. They sit just
+    // below the home page, which is the brand term AND where most visitors
+    // actually buy.
+    //
+    // Retired tiers drop out of here for free: this reads PACK_PAGES, so a
+    // pack removed from the registry stops being advertised in the same edit
+    // that removes it. That matters — the 7- and 8-vial URLs now 301, and a
+    // sitemap full of redirecting URLs is a weak signal.
     //
     // `lastModified` is PRICES_UPDATED, the date the figures these pages print
     // genuinely changed. Never a build timestamp: a lastmod that re-stamps on
-    // every deploy is one Google learns to ignore.
+    // every deploy is one Google learns to ignore — and for the same reason
+    // `changeFrequency` is monthly rather than weekly. Prices move a few times
+    // a year, and claiming weekly against a months-old lastmod is exactly the
+    // contradiction that teaches a crawler to disregard both.
     ...PACK_PAGES.map((pk) => ({
       url: packPath(pk),
       lastModified: PRICES_UPDATED,
-      changeFrequency: "weekly" as const,
+      changeFrequency: "monthly" as const,
       priority: 0.9,
     })),
-    // The hub they sit under.
+    // The hub they sit under. A rung below its own children: it exists to
+    // introduce them and to be the thing they all link up to, not to be the
+    // page that ranks.
     {
       url: "/products",
       lastModified: PRICES_UPDATED,
-      changeFrequency: "weekly" as const,
-      priority: 0.9,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
     },
     // Commercial pages beside the product pages. Higher priority than the
     // guides: these are buying-intent destinations, not reference reading.
