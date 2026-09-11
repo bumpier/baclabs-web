@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -82,6 +83,9 @@ export default async function AdminOrderDetailPage({
               </form>
             ))}
             <PrintButton />
+            <Link href={`/admin/orders/${order.id}/label`} className="btn-secondary">
+              Print postage label
+            </Link>
           </div>
         </div>
 

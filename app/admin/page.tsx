@@ -40,7 +40,7 @@ export default async function AdminOverviewPage() {
         createdAt: { gte: thirtyDaysAgo },
         status: { in: ["paid", "packed", "shipped", "delivered"] },
       },
-      select: { createdAt: true, subtotalUsd: true },
+      select: { createdAt: true, totalAmount: true },
     }),
     prisma.order.groupBy({ by: ["status"], _count: { id: true } }),
     prisma.order.findMany({
@@ -52,15 +52,15 @@ export default async function AdminOverviewPage() {
 
   const allOrdersAgg = await prisma.order.aggregate({
     where: { status: { in: ["paid", "packed", "shipped", "delivered"] } },
-    _sum: { subtotalUsd: true },
+    _sum: { totalAmount: true },
   });
-  const revenueDecimal = allOrdersAgg._sum?.subtotalUsd ?? new Prisma.Decimal(0);
+  const revenueDecimal = allOrdersAgg._sum?.totalAmount ?? new Prisma.Decimal(0);
 
   const cards = [
     { label: "Awaiting fulfilment", value: String(paidOrders), href: "/admin/orders?status=paid", highlight: paidOrders > 0 },
     { label: "Shipped", value: String(shippedOrders), href: "/admin/orders?status=shipped" },
     { label: "Pending payment", value: String(pendingOrders), href: "/admin/orders?status=pending" },
-    { label: "Revenue (USD)", value: formatPrice(revenueDecimal.toString(), "USD"), href: "/admin/orders" },
+    { label: "Revenue (GBP)", value: formatPrice(revenueDecimal.toString(), "GBP"), href: "/admin/orders" },
     { label: "Active products", value: String(productCount), href: "/admin/products" },
   ];
 
@@ -68,7 +68,7 @@ export default async function AdminOverviewPage() {
   const revenueByDate: Record<string, number> = {};
   for (const o of revenueOrders) {
     const key = o.createdAt.toISOString().split("T")[0]!;
-    revenueByDate[key] = (revenueByDate[key] ?? 0) + Number(o.subtotalUsd);
+    revenueByDate[key] = (revenueByDate[key] ?? 0) + Number(o.totalAmount);
   }
   const dailyRevenue: DailyRevenue[] = [];
   for (let i = 29; i >= 0; i--) {
@@ -104,8 +104,8 @@ export default async function AdminOverviewPage() {
     value: g._count.id,
   }));
 
-  const totalRevenueUsd = Math.round(
-    revenueOrders.reduce((sum: number, o: { subtotalUsd: unknown }) => sum + Number(o.subtotalUsd), 0)
+  const totalRevenueGbp = Math.round(
+    revenueOrders.reduce((sum: number, o: { totalAmount: unknown }) => sum + Number(o.totalAmount), 0)
   );
 
   const totalOrders = allStatusGroups.reduce(
@@ -154,7 +154,7 @@ export default async function AdminOverviewPage() {
             statusCounts={statusCounts}
             topProducts={topProducts}
             paymentMethods={paymentMethods}
-            totalRevenueUsd={totalRevenueUsd}
+            totalRevenueGbp={totalRevenueGbp}
             totalOrders={totalOrders}
           />
         </div>

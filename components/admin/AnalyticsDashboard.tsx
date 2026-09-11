@@ -52,7 +52,7 @@ interface Props {
   statusCounts: StatusCount[];
   topProducts: ProductCount[];
   paymentMethods: PaymentMethod[];
-  totalRevenueUsd: number;
+  totalRevenueGbp: number;
   totalOrders: number;
 }
 
@@ -61,7 +61,7 @@ export default function AnalyticsDashboard({
   statusCounts,
   topProducts,
   paymentMethods,
-  totalRevenueUsd,
+  totalRevenueGbp,
   totalOrders,
 }: Props) {
   const paidCount = statusCounts.find((s) => s.status === "paid")?.count ?? 0;
@@ -76,7 +76,7 @@ export default function AnalyticsDashboard({
             Total Revenue
           </p>
           <p className="mt-2 font-display text-3xl font-medium text-brand-deep">
-            $ {totalRevenueUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+            £ {totalRevenueGbp.toLocaleString("en-GB", { maximumFractionDigits: 0 })}
           </p>
         </div>
         <div className="card p-5">
@@ -106,7 +106,7 @@ export default function AnalyticsDashboard({
         {/* Revenue chart — 2 cols */}
         <div className="card p-6 lg:col-span-2">
           <h2 className="font-display text-lg font-medium text-brand-deep">
-            Revenue — last 30 days (USD)
+            Revenue — last 30 days (GBP)
           </h2>
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -121,7 +121,7 @@ export default function AnalyticsDashboard({
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip
-                  formatter={(v: unknown) => [`$${Number(v).toFixed(0)}`, "Revenue"]}
+                  formatter={(v: unknown) => [`£${Number(v).toFixed(0)}`, "Revenue"]}
                 />
                 <Area
                   type="monotone"
