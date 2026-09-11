@@ -6,6 +6,7 @@ import {
   formatMinorShort,
   freeDeliveryBadge,
   PRICE_MATCH_BADGE,
+  PRODUCT,
   remainingForFreeDeliveryMinor,
   shipsFree,
   VIAL_ML,
@@ -32,7 +33,18 @@ import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
  * Its travel lives in `.sheet-bottom` rather than an inline transform, so the
  * reduced-motion block can remove the slide while keeping the fade.
  */
-export function StickyBuyBar() {
+/**
+ * TWO MODES, because there are now two kinds of page under this bar.
+ *
+ *  · "basket"  — a pack page. A real pack is selected and a real quantity is
+ *                set, so the bar states the actual total and says "Buy now".
+ *  · "browse"  — the home page. Nothing is selected there any more: the
+ *                purchase form moved to the pack pages and #buy is a chooser.
+ *                Stating "5 vials, £21.99" on a page with no selector would
+ *                present a basket the visitor never picked, so this mode
+ *                shows the entry price and sends them to choose.
+ */
+export function StickyBuyBar({ mode = "basket" }: { mode?: "basket" | "browse" }) {
   const { bundle, quantity, totalMinor } = useFunnel();
   const heroCtaPassed = useHeroCtaPassed();
   const [buyBlockVisible, setBuyBlockVisible] = useState(false);
@@ -51,6 +63,7 @@ export function StickyBuyBar() {
 
   const shown = heroCtaPassed && !buyBlockVisible;
   const totalVials = bundle.vials * quantity;
+  const browsing = mode === "browse";
 
   // The same two functions the purchase block and the Stripe session call, so
   // this bar can never promise free delivery on a basket that will be charged
@@ -58,11 +71,16 @@ export function StickyBuyBar() {
   // already ships free and when no threshold applies, which is why the free
   // case is tested first and the plain badge is the fallback.
   const toFreeDelivery = remainingForFreeDeliveryMinor(totalMinor);
-  const deliveryLine = shipsFree(totalMinor)
-    ? "Free UK delivery"
-    : toFreeDelivery > 0
-      ? `${formatMinorShort(toFreeDelivery)} to free delivery`
-      : freeDeliveryBadge();
+  // In browse mode there is no basket to measure against a threshold, so the
+  // countdown would be counting down from a figure nobody chose. The plain
+  // policy badge is the honest line there.
+  const deliveryLine = browsing
+    ? freeDeliveryBadge()
+    : shipsFree(totalMinor)
+      ? "Free UK delivery"
+      : toFreeDelivery > 0
+        ? `${formatMinorShort(toFreeDelivery)} to free delivery`
+        : freeDeliveryBadge();
 
   return (
     <div
@@ -76,11 +94,24 @@ export function StickyBuyBar() {
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs text-ink-soft">
-            <span className="tabular">{totalVials}</span> ×{" "}
-            {totalVials === 1 ? "vial" : "vials"}, {VIAL_ML}ml
+            {browsing ? (
+              <>{PRODUCT.name}, {PRODUCT.size}</>
+            ) : (
+              <>
+                <span className="tabular">{totalVials}</span> ×{" "}
+                {totalVials === 1 ? "vial" : "vials"}, {VIAL_ML}ml
+              </>
+            )}
           </p>
           <p className="tabular text-lg font-semibold leading-tight text-ink">
-            {formatMinor(totalMinor)}
+            {browsing ? (
+              <>
+                From {formatMinor(PRODUCT.unitPriceMinor)}
+                <span className="text-sm font-normal text-ink-soft"> a vial</span>
+              </>
+            ) : (
+              formatMinor(totalMinor)
+            )}
           </p>
           {/* Third line, carrying two claims. Kept to ONE line deliberately:
               the page reserves a fixed strip of space for this bar, so a
@@ -107,7 +138,7 @@ export function StickyBuyBar() {
           className="btn-cta !min-h-[48px] !w-auto shrink-0 !px-6"
           tabIndex={shown ? undefined : -1}
         >
-          Buy now
+          {browsing ? "Choose pack" : "Buy now"}
         </a>
       </div>
     </div>

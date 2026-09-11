@@ -22,6 +22,9 @@ export const LEGAL_LINKS = [
  * the navigation, the sitemap and the machine-readable index at once.
  */
 export const SHOP_LINKS = [
+  // The pack-size hub. First because it is the parent of the eight pack
+  // pages, which are the only pages on the site that take money.
+  { href: "/products", label: "Pack sizes & prices" },
   { href: "/bulk-bacteriostatic-water", label: "Bulk & wholesale" },
   { href: "/quality-and-documentation", label: "Quality & documentation" },
 ] as const;

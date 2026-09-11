@@ -17,7 +17,9 @@ import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
  * Resolving it here would silently always give the local path.
  */
 const NAV = [
-  { href: "/#product", label: "Product" },
+  // A real page now, not a same-page anchor: the pack pages under
+  // /products are where the product actually lives.
+  { href: "/products", label: "Pack sizes" },
   { href: "/guides", label: "Guides" },
   { href: "/faq", label: "Questions" },
   { href: "/contact", label: "Contact" },
@@ -108,8 +110,8 @@ export function Header({ guidesHref }: { guidesHref: string }) {
         </nav>
 
         <div className="flex items-center gap-2">
-          <a
-            href="/#buy"
+          <Link
+            href="/products"
             className="btn-cta reveal-cta hidden !min-h-[44px] !w-auto !px-5 !text-sm sm:inline-flex"
             data-shown={revealed ? "true" : "false"}
             // Hidden from assistive tech and from tab order until it is actually
@@ -117,8 +119,8 @@ export function Header({ guidesHref }: { guidesHref: string }) {
             aria-hidden={!revealed}
             tabIndex={revealed ? undefined : -1}
           >
-            Buy now — {formatMinor(PRODUCT.unitPriceMinor)}
-          </a>
+            Shop packs — from {formatMinor(PRODUCT.unitPriceMinor)}
+          </Link>
 
           <button
             ref={toggleRef}
@@ -165,14 +167,14 @@ export function Header({ guidesHref }: { guidesHref: string }) {
               ))}
             </ul>
             <div className="shell-wide py-4">
-              <a
-                href="/#buy"
+              <Link
+                href="/products"
                 onClick={() => close(false)}
                 tabIndex={open ? undefined : -1}
                 className="btn-cta sm:max-w-xs"
               >
-                Buy now &mdash; {formatMinor(PRODUCT.unitPriceMinor)}
-              </a>
+                Shop packs &mdash; from {formatMinor(PRODUCT.unitPriceMinor)}
+              </Link>
             </div>
           </nav>
         </div>

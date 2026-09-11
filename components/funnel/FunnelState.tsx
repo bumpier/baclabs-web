@@ -39,8 +39,21 @@ interface FunnelState {
 
 const Ctx = createContext<FunnelState | null>(null);
 
-export function FunnelStateProvider({ children }: { children: ReactNode }) {
-  const [bundleId, setBundleId] = useState<BundleId>(DEFAULT_BUNDLE_ID);
+/**
+ * `initialBundleId` is which tier the page opens on. The home page omits it
+ * and gets DEFAULT_BUNDLE_ID as before; a pack page under /products passes
+ * its own tier, because a page whose whole subject is the 100-vial pack must
+ * not open with the 5-vial pack selected — the `view_item` event below would
+ * report the wrong tier, and so would the buy bar.
+ */
+export function FunnelStateProvider({
+  children,
+  initialBundleId = DEFAULT_BUNDLE_ID,
+}: {
+  children: ReactNode;
+  initialBundleId?: BundleId;
+}) {
+  const [bundleId, setBundleId] = useState<BundleId>(initialBundleId);
   const [quantity, setQuantityState] = useState(1);
 
   const bundle = bundleById(bundleId) ?? BUNDLES[0];

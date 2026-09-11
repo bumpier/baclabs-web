@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 import { LEARN_LINKS, LEGAL_LINKS, SHOP_LINKS } from "@/components/Footer";
+import { PACK_PAGES, packPath } from "@/config/products";
+import { PRICES_UPDATED } from "@/config/funnel";
 import { publishedGuides, publishedPosts } from "@/lib/articles";
 import { canonicalOrigin } from "@/lib/site-url";
 import { isBlogMigrated, isMigratedPath } from "@/lib/blog-migration";
@@ -36,9 +38,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogHubUpdated = posts.map((p) => p.updated).sort().at(-1);
 
   const paths: MetadataRoute.Sitemap = [
-    // Commercial pages beside the product page. Higher priority than the
+    // The pack pages — the eight URLs that actually sell something, and the
+    // highest-priority pages on the site after the home page. Listed ahead of
+    // everything else because that is what they are worth.
+    //
+    // `lastModified` is PRICES_UPDATED, the date the figures these pages print
+    // genuinely changed. Never a build timestamp: a lastmod that re-stamps on
+    // every deploy is one Google learns to ignore.
+    ...PACK_PAGES.map((pk) => ({
+      url: packPath(pk),
+      lastModified: PRICES_UPDATED,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    })),
+    // The hub the eight sit under.
+    {
+      url: "/products",
+      lastModified: PRICES_UPDATED,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    },
+    // Commercial pages beside the product pages. Higher priority than the
     // guides: these are buying-intent destinations, not reference reading.
-    ...SHOP_LINKS.map((l) => ({
+    //
+    // /products is filtered out because it is emitted explicitly above, with
+    // its own lastModified and a higher priority. Without this filter it
+    // appears twice in sitemap.xml — the same trap /blog falls into below.
+    ...SHOP_LINKS.filter((l) => l.href !== "/products").map((l) => ({
       url: l.href,
       changeFrequency: "monthly" as const,
       priority: 0.8,

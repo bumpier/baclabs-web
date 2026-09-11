@@ -75,10 +75,16 @@ const nextConfig = {
       { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ];
   },
-  // The multi-product catalogue and the affiliate area are gone. These paths
-  // never went live on this domain, but the redirects are free and stop any
-  // stray link 404ing. Legal page URLs are deliberately NOT redirected —
-  // /privacy keeps the address it has always had.
+  // The affiliate area is gone. These paths never went live on this domain,
+  // but the redirects are free and stop any stray link 404ing. Legal page
+  // URLs are deliberately NOT redirected — /privacy keeps the address it has
+  // always had.
+  //
+  // /products AND /products/:slug USED TO REDIRECT HERE, from when the
+  // multi-product catalogue was removed and the site became a single funnel.
+  // They are now the pack pages (config/products.ts) and must NOT be
+  // redirected: a 308 to "/" made every one of them unreachable and
+  // unindexable, which is the precise opposite of why they exist.
   async redirects() {
     return [
       // www → apex. The canonical tag already points every www page at the
@@ -95,8 +101,6 @@ const nextConfig = {
             },
           ]
         : []),
-      { source: "/products", destination: "/", permanent: true },
-      { source: "/products/:slug", destination: "/", permanent: true },
       { source: "/cart", destination: "/#buy", permanent: true },
       { source: "/auth/:path*", destination: "/", permanent: true },
       { source: "/dashboard", destination: "/", permanent: true },

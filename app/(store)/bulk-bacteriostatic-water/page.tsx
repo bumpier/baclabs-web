@@ -29,10 +29,11 @@ export const dynamic = "force-static";
  * lead with a single vial at £5.99, and a procurement buyer arriving on that
  * headline has to scroll past the whole funnel to reach the pack economics.
  *
- * NO SECOND `Product` ENTITY. The home page is the one product page and
- * carries the Product JSON-LD with all eight offers; emitting a second
- * Product here would give one product two competing entities on two URLs.
- * This page carries BreadcrumbList only and links to /#buy for the offers.
+ * NO `Product` ENTITY. Each pack page under /products now carries the Product
+ * JSON-LD for its own SKU, with a single Offer, at its own canonical URL —
+ * the home page no longer holds the eight-offer blob it used to. Emitting a
+ * Product here would put a ninth entity in front of the eight that each have
+ * a page of their own. This page carries BreadcrumbList only.
  *
  * Every figure below is DERIVED from config/funnel.ts. Nothing on this page
  * may be typed by hand — re-pricing a tier has to move this page with it.

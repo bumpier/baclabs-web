@@ -13,6 +13,7 @@ import { LEARN_LINKS, LEGAL_LINKS, SHOP_LINKS } from "@/components/Footer";
 import { publishedGuides, publishedPosts } from "@/lib/articles";
 import { isBlogMigrated, isMigratedPath } from "@/lib/blog-migration";
 import { FACTS } from "@/content/facts";
+import { PACK_PAGES, packByBundleId, packPath } from "@/config/products";
 
 /**
  * /llms.txt — the plain-text summary AI crawlers read (robots.ts admits them).
@@ -35,6 +36,8 @@ import { FACTS } from "@/content/facts";
 export const dynamic = "force-dynamic";
 
 const PAGE_NOTES: Record<string, string> = {
+  "/products":
+    "every pack size with its own page, per-vial and per-millilitre pricing",
   "/bulk-bacteriostatic-water":
     "bulk and wholesale pack prices, per-vial costs, order limits and delivery",
   "/quality-and-documentation":
@@ -83,10 +86,11 @@ export async function GET(): Promise<Response> {
     ? [[], []]
     : await Promise.all([publishedGuides(), publishedPosts()]);
   const unit = formatMinor(PRODUCT.unitPriceMinor);
-  const tiers = BUNDLES.map(
-    (b) =>
-      `- ${b.vials} ${b.vials === 1 ? "vial" : "vials"} — ${formatMinor(b.priceMinor)} (${formatMinor(perVialMinor(b))} per vial)`
-  ).join("\n");
+  const tiers = BUNDLES.map((b) => {
+    const pk = packByBundleId(b.id);
+    const where = pk ? ` — ${packPath(pk)}` : "";
+    return `- ${b.vials} ${b.vials === 1 ? "vial" : "vials"} — ${formatMinor(b.priceMinor)} (${formatMinor(perVialMinor(b))} per vial)${where}`;
+  }).join("\n");
 
   const pages = ["- / — the product, pricing and ordering"]
     .concat(SHOP_LINKS.map((l) => `- ${l.href} — ${PAGE_NOTES[l.href] ?? l.label.toLowerCase()}`))
@@ -130,6 +134,9 @@ Prices are in GBP and are the same for every customer.
 ${tiers}
 
 Up to ${MAX_QUANTITY} of any bundle may be bought in one order.
+
+Each pack size has its own page, listed above. ${PACK_PAGES.length} in total,
+indexed under /products.
 
 ## Payment and delivery
 

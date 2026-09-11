@@ -12,6 +12,7 @@
     "db:seed": "prisma db seed",
     "db:seed:articles": "tsx scripts/seed-articles.ts",
     "check:guides": "tsx scripts/check-guides.ts",
+    "check:packs": "tsx scripts/check-packs.ts",
     "test:rules": "tsx scripts/test-content-rules.ts",
     "export:articles": "tsx scripts/export-articles.ts",
     "export:wxr": "tsx scripts/export-wxr.ts"

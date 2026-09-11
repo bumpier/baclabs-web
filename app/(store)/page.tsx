@@ -6,14 +6,11 @@ import {
   SALE,
   saleLabel,
   saleVisible,
-  BUNDLES,
   DELIVERY,
   LOWEST_PRICE_BADGE,
   PRICE_MATCH_BADGE,
   PRICES_UPDATED,
   PRODUCT,
-  PRODUCT_IMAGES,
-  STOCK_LEVEL,
   WHY_BUY,
   drawsPerVial,
   formatMinor,
@@ -21,26 +18,18 @@ import {
 } from "@/config/funnel";
 import { FAQ_PUBLISHABLE } from "@/config/faq";
 import { FACTS } from "@/content/facts";
-import { REVIEWS, HAS_REVIEWS, averageRating } from "@/lib/reviews";
 import { canonicalOrigin } from "@/lib/site-url";
-import { getPaymentConfig } from "@/lib/payments/config";
 import { JsonLd } from "@/components/JsonLd";
 import { FunnelStateProvider } from "@/components/funnel/FunnelState";
 import { Hero } from "@/components/funnel/Hero";
 import { TrustBar } from "@/components/funnel/TrustBar";
-import { PurchaseBlock } from "@/components/funnel/PurchaseBlock";
+import { PackGrid } from "@/components/products/PackGrid";
 import { StickyBuyBar } from "@/components/funnel/StickyBuyBar";
 import { Faq } from "@/components/funnel/Faq";
 import { Reviews } from "@/components/funnel/Reviews";
 import { ComparisonTable } from "@/components/funnel/ComparisonTable";
 import { TechnicalData } from "@/components/funnel/TechnicalData";
-import {
-  priceValidUntil,
-  productAlternateNames,
-  productPropertiesSchema,
-  returnPolicySchema,
-  shippingDetailsFor,
-} from "@/lib/product-schema";
+import { PACK_PAGES } from "@/config/products";
 import { contentHref } from "@/lib/blog-migration";
 
 // Nothing on this page depends on the request, so it prerenders. Keep it
@@ -56,76 +45,17 @@ export const metadata: Metadata = {
 };
 
 export default function FunnelPage() {
-  const methods = getPaymentConfig().methods;
-  const cryptoEnabled = methods.some((m) => m !== "card");
-
-  const productSchema = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: `${PRODUCT.name} ${PRODUCT.size}`,
-    description: `${PRODUCT.composition} ${PRODUCT.use}`,
-    sku: "baclab-10ml",
-    url: SITE,
-    // Google will not show a Product rich result without an image. Taken from
-    // the same list the hero renders, so the photo in search is the photo on
-    // the page. Omitted, not faked, while there is no photograph.
-    ...(PRODUCT_IMAGES.length > 0
-      ? { image: PRODUCT_IMAGES.map((i) => `${SITE}${i.src}`) }
-      : {}),
-    brand: { "@type": "Brand", name: brand.name },
-    // The names people search by. Visible on the page ("also sold as…").
-    alternateName: productAlternateNames(),
-    // The technical-data rows, as PropertyValue.
-    additionalProperty: productPropertiesSchema(),
-    // Every bundle is a real, purchasable offer. Each carries its own shipping
-    // rate (free at or over the threshold, charged below it) and the returns
-    // policy, which is what the "delivery · returns" line under a result
-    // reads from.
-    offers: BUNDLES.map((b) => ({
-      "@type": "Offer",
-      name: `${b.vials} × ${PRODUCT.size}`,
-      // The same SKU Stripe and the packing slip use, so a machine reader
-      // can tell the eight offers apart without parsing `name`.
-      sku: b.sku,
-      // The charged price only. The sale's struck-through reference figure
-      // is presentation and never reaches structured data.
-      price: (b.priceMinor / 100).toFixed(2),
-      priceCurrency: "GBP",
-      priceValidUntil: priceValidUntil(),
-      url: `${SITE}/#buy`,
-      itemCondition: "https://schema.org/NewCondition",
-      availability:
-        STOCK_LEVEL === null || STOCK_LEVEL > 0
-          ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
-      ...(shippingDetailsFor(b.priceMinor)
-        ? { shippingDetails: shippingDetailsFor(b.priceMinor) }
-        : {}),
-      hasMerchantReturnPolicy: returnPolicySchema(),
-    })),
-    // AggregateRating and Review are emitted ONLY when real reviews exist.
-    ...(HAS_REVIEWS
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: averageRating(),
-            reviewCount: REVIEWS.length,
-          },
-          review: REVIEWS.map((r) => ({
-            "@type": "Review",
-            author: { "@type": "Person", name: r.author },
-            datePublished: r.datePublished,
-            name: r.title,
-            reviewBody: r.body,
-            reviewRating: {
-              "@type": "Rating",
-              ratingValue: r.rating,
-              bestRating: 5,
-            },
-          })),
-        }
-      : {}),
-  };
+  // NO Product ENTITY ON THIS PAGE.
+  //
+  // It used to carry one Product with all eight bundle Offers inside it,
+  // because this page was the only place any of them could be bought. Each
+  // tier now has its own page under /products, and each of those carries the
+  // Product for its own SKU at its own canonical URL. Re-emitting them here
+  // would give every SKU two entities on two URLs and put this page into
+  // competition with the eight pages it exists to introduce.
+  //
+  // What stays is the FAQPage and the WebPage below: both describe THIS page,
+  // and neither is a duplicate of anything under /products.
 
   // Only fully-answered questions are published — see config/faq.ts.
   const faqSchema = {
@@ -169,7 +99,6 @@ export default function FunnelPage() {
 
   return (
     <>
-      <JsonLd data={productSchema} />
       <JsonLd data={faqSchema} />
       <JsonLd data={webPageSchema} />
 
@@ -364,21 +293,72 @@ export default function FunnelPage() {
               </p>
             </div>
 
-            {/* ── The purchase block ── */}
+            {/* ── Where the price used to be ──
+                The purchase block moved to the pack pages. What sits here is
+                the shortest possible bridge to them: the headline price and
+                one link. The full chooser is the section below, at #buy. */}
             <div className="lg:col-span-5">
-              <div className="lg:sticky lg:top-24">
-                <h3 id="buy-heading" className="sr-only">
-                  Buy {PRODUCT.name}
-                </h3>
-                <div id="buy" className="scroll-mt-24">
-                  <PurchaseBlock cryptoEnabled={cryptoEnabled} />
+              <div className="panel lg:sticky lg:top-24">
+                <div className="p-6">
+                  <h3 className="font-display text-xl font-bold text-ink">
+                    From <span className="tabular">{PRICE}</span> a vial
+                  </h3>
+                  <p className="mt-3 text-base text-ink-soft">
+                    Sold in <span className="tabular">{PACK_PAGES.length}</span>{" "}
+                    pack sizes, from a single vial up to a wholesale case. Each
+                    has its own page, with its own pricing.
+                  </p>
+                  <div className="mt-6">
+                    <a href="#buy" className="btn-cta">
+                      Choose your pack
+                    </a>
+                  </div>
+                  <p className="mt-4 text-sm text-ink-soft">
+                    <Link href="/products" className="link">
+                      Compare all pack sizes
+                    </Link>
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ══ 3. INFORMATION ════════════════════════════════════════
+        {/* ══ 2b. THE CHOOSER ═══════════════════════════════════════
+          #buy is where every "buy now" link on the site points — the header,
+          the sticky bar, the footer, the guides, the 404 page and Stripe's
+          own cancel_url. It used to be the purchase form. It is now the pack
+          chooser, which is a truer description of what those links always
+          did: the old block opened a selector, it did not buy.
+
+          Keeping the id means none of those links had to change, and each
+          still lands on the step it promised. */}
+      <section
+        id="buy"
+        className="section scroll-mt-24 pt-0"
+        aria-labelledby="buy-heading"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
+          <h2 id="buy-heading" className="text-3xl sm:text-4xl">
+            Choose your pack size
+          </h2>
+          <p className="text-sm text-ink-soft">
+            <Link href="/products" className="link">
+              Compare every size
+            </Link>
+          </p>
+        </div>
+        <p className="measure mt-4 text-lg text-ink-soft">
+          The same sealed {PRODUCT.size} in every pack. Only the quantity and
+          the price per vial change &mdash; the larger the pack, the lower the
+          unit price.
+        </p>
+        <div className="mt-8">
+          <PackGrid />
+        </div>
+      </section>
+
+      {/* ══ 3. INFORMATION ════════════════════════════════════════
             The dark band. One big-number moment, on the fact that
             actually distinguishes this product from sterile water. */}
         <section className="bg-abyss" aria-labelledby="preservative-heading">
@@ -531,7 +511,7 @@ export default function FunnelPage() {
             Bumped from h-24: StickyBuyBar now has a third text line
             (the price-match badge). */}
         <div aria-hidden="true" className="h-28 lg:hidden" />
-        <StickyBuyBar />
+        <StickyBuyBar mode="browse" />
       </FunnelStateProvider>
     </>
   );
