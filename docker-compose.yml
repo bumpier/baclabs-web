@@ -30,6 +30,9 @@ services:
         # Build-time too — the verification meta tag is baked into the static
         # home page, so changing it requires a rebuild, not a restart.
         GOOGLE_SITE_VERIFICATION: ${GOOGLE_SITE_VERIFICATION:-}
+        # Build-time as well as runtime: prerendered footers resolve the blog
+        # and guides links from it during `next build`.
+        BLOG_ORIGIN: ${BLOG_ORIGIN:-}
     image: baclab-storefront
     container_name: baclab
     restart: unless-stopped

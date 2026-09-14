@@ -44,12 +44,18 @@ ARG NEXT_PUBLIC_CONTACT_EMAIL
 # without it — the variable appeared correct on the server and the tag was
 # never in the page. Search Console verification therefore needs a REBUILD.
 ARG GOOGLE_SITE_VERIFICATION
+# Same trap: every prerendered page's footer resolves the Blog and Guides links
+# from this while `next build` runs. Unset here, they bake in as local /blog
+# and /guides - ISR pages only correct themselves after revalidating, and the
+# static 404 page never does.
+ARG BLOG_ORIGIN
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_SALE_PREVIEW=$NEXT_PUBLIC_SALE_PREVIEW \
     NEXT_PUBLIC_META_PIXEL_ID=$NEXT_PUBLIC_META_PIXEL_ID \
     NEXT_PUBLIC_GA4_ID=$NEXT_PUBLIC_GA4_ID \
     NEXT_PUBLIC_CONTACT_EMAIL=$NEXT_PUBLIC_CONTACT_EMAIL \
-    GOOGLE_SITE_VERIFICATION=$GOOGLE_SITE_VERIFICATION
+    GOOGLE_SITE_VERIFICATION=$GOOGLE_SITE_VERIFICATION \
+    BLOG_ORIGIN=$BLOG_ORIGIN
 
 # prisma/ before npm ci: the postinstall hook runs `prisma generate`, which
 # needs the schema on disk already.
