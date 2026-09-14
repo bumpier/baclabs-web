@@ -5,6 +5,7 @@ import { LegalPage } from "@/components/LegalPage";
 import { brand } from "@/config/brand";
 import { RECORD_RETENTION_YEARS, isSet, legalName, supportEmail } from "@/lib/legal";
 import { getMetaPixelStatus } from "@/lib/settings";
+import { CookieSettingsButton } from "@/components/consent/CookieSettingsButton";
 
 export const metadata: Metadata = pageMetadata({
   title: "Privacy policy",
@@ -29,9 +30,9 @@ export const metadata: Metadata = pageMetadata({
  *    claiming "we run no tracking" minutes after a pixel went live.
  *  - GA4 still loads only when NEXT_PUBLIC_GA4_ID is set at BUILD time
  *    (components/Analytics.tsx).
- *    No consent banner exists, so those must stay unset until one is built —
- *    the analytics clause below says exactly that. /admin/settings repeats
- *    that warning at the point of switching the pixel on.
+ *  - Neither loads until the visitor accepts on the cookie banner
+ *    (components/consent/CookieBanner.tsx). The consent decision itself is
+ *    localStorage, not a cookie. "Cookie settings" reopens the banner.
  *  - Repurchase nudges (app/api/cron/nudges) are marketing, sent under the
  *    PECR soft opt-in with a working unsubscribe (app/api/email/unsubscribe).
  *
@@ -238,31 +239,45 @@ export default async function PrivacyPage() {
           body: (
             <>
               <p>
-                <strong>This site sets no cookies on a shopping visitor&rsquo;s browser.</strong> Your
+                <strong>Unless you accept cookies, this site sets no cookies on a shopping visitor&rsquo;s browser.</strong> Your
                 basket is held in your own browser&rsquo;s local storage, on your device, and is
                 never transmitted to us until you check out. Clearing your browser data clears it.
                 The only cookie this site sets is a session cookie for staff signing into the admin
                 area, which is strictly necessary and set only after a successful staff login.
               </p>
-              {/* ⚠ This build loads analytics, and no consent mechanism exists.
-                  PECR requires consent BEFORE a non-essential cookie is set, so
-                  the clause below describes what runs but does not cure that:
-                  build a consent banner, or clear the pixel in /admin/settings
-                  and unset NEXT_PUBLIC_GA4_ID and rebuild. Customer-facing wording must
-                  never carry a note to ourselves, which is why this is a code
-                  comment and not a marker on the page. */}
+              {/* PECR requires consent BEFORE a non-essential cookie is set.
+                  components/Analytics.tsx renders no tag until the visitor
+                  accepts on the banner, so this clause must keep promising
+                  exactly that and no more. */}
               {ANALYTICS_ENABLED ? (
-                <p>
-                  This build also loads {ANALYTICS_PROVIDER_LIST}, which{" "}
-                  {ANALYTICS_PROVIDERS.length > 1 ? "measure" : "measures"} how the site is used.{" "}
-                  {ANALYTICS_PROVIDERS.length > 1 ? "They set their" : "It sets its"} own
-                  cookies and identifiers on your device and{" "}
-                  {ANALYTICS_PROVIDERS.length > 1 ? "process" : "processes"} data about your visit
-                  under {ANALYTICS_PROVIDERS.length > 1 ? "their" : "its"} own privacy notice. You
-                  can block {ANALYTICS_PROVIDERS.length > 1 ? "them" : "it"} with your
-                  browser&rsquo;s cookie controls or a content blocker, and clearing your browser
-                  data removes what has already been set.
-                </p>
+                <>
+                  <p>
+                    With your consent, we also use {ANALYTICS_PROVIDER_LIST}, which{" "}
+                    {ANALYTICS_PROVIDERS.length > 1 ? "measure" : "measures"} how the site is used
+                    and how our adverts perform.{" "}
+                    {ANALYTICS_PROVIDERS.length > 1 ? "They set their" : "It sets its"} own
+                    cookies and identifiers on your device and{" "}
+                    {ANALYTICS_PROVIDERS.length > 1 ? "process" : "processes"} data about your
+                    visit under {ANALYTICS_PROVIDERS.length > 1 ? "their" : "its"} own privacy
+                    notice.
+                  </p>
+                  <p>
+                    <strong>
+                      None of {ANALYTICS_PROVIDERS.length > 1 ? "these loads" : "this loads"} until
+                      you click Accept on our cookie banner.
+                    </strong>{" "}
+                    If you click Reject, or make no choice, nothing is loaded and no tracking cookie
+                    is set. The banner remembers your choice in your browser&rsquo;s local storage,
+                    which is not a cookie and is never sent to us.
+                  </p>
+                  <p>
+                    You can change your mind at any time using{" "}
+                    <CookieSettingsButton className="link">Cookie settings</CookieSettingsButton>,
+                    which also sits at the foot of every page. Withdrawing consent stops the
+                    tracking and clears the cookies these services left on this site&rsquo;s
+                    domain. It does not affect anything collected while consent was in place.
+                  </p>
+                </>
               ) : (
                 <p>
                   We run no analytics, advertising or tracking scripts on this site. There is no

@@ -68,16 +68,20 @@ export default async function AdminSettingsPage() {
         <MetaPixelForm pixelId={status.source === "database" ? status.pixelId! : ""} />
       </div>
 
-      {/* ── Consent warning ────────────────────────────────────── */}
-      <div className="card mt-8 border-warn-line bg-warn-tint p-6">
+      {/* ── Consent ────────────────────────────────────────────── */}
+      <div className="card mt-8 p-6">
         <h2 className="font-display text-lg font-medium text-brand-deep">
-          Before you switch this on
+          Visitors are asked first
         </h2>
-        <p className="mt-2 text-sm text-ink">
-          The pixel sets Meta&rsquo;s own cookies on every visitor&rsquo;s device. This site has no
-          cookie consent banner, and UK PECR requires consent <em>before</em> a non-essential cookie
-          is set. The privacy policy updates itself to disclose the pixel as soon as you save one,
-          but disclosure is not consent &mdash; a banner still needs building.
+        <p className="mt-2 text-sm text-ink-soft">
+          The pixel sets Meta&rsquo;s own cookies, and UK PECR requires consent <em>before</em> a
+          non-essential cookie is set. So as soon as you save a pixel, the storefront shows a cookie
+          banner, and the pixel loads only for visitors who click Accept. Visitors who reject, or
+          never choose, send Meta nothing. The privacy policy updates itself to match.
+        </p>
+        <p className="mt-2 text-sm text-ink-soft">
+          Expect Events Manager to show fewer events than the site has visits. That gap is the
+          visitors who said no.
         </p>
       </div>
 
@@ -105,7 +109,8 @@ export default async function AdminSettingsPage() {
         </ol>
         <p className="mt-4 text-sm text-ink-soft">
           To verify, open the storefront with Meta&rsquo;s Pixel Helper extension, or watch Test
-          events in Events Manager. Ad blockers block the pixel, so check in a clean browser.
+          events in Events Manager. Click Accept on the cookie banner first, because nothing loads
+          until you do. Ad blockers block the pixel, so check in a clean browser.
         </p>
       </div>
 
@@ -114,8 +119,8 @@ export default async function AdminSettingsPage() {
         <div className="p-6 pb-3">
           <h2 className="font-display text-lg font-medium text-brand-deep">What gets sent</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            These fire automatically once a pixel is set. Purchase carries the order value, currency
-            and order ID.
+            These fire automatically once a pixel is set, for visitors who have accepted cookies.
+            Purchase carries the order value, currency and order ID.
           </p>
         </div>
         <table className="w-full text-sm">

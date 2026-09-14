@@ -4,8 +4,8 @@ import Script from "next/script";
 import { Suspense, useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { trackPageView } from "@/lib/analytics";
-
-const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
+import { mayLoadTrackers } from "@/lib/consent";
+import { GA4_ID, useConsent } from "@/components/consent/consent-store";
 
 /**
  * Mounts whichever analytics providers are configured, and re-fires a page
@@ -14,21 +14,30 @@ const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
  *
  * The two providers are configured differently, on purpose:
  *
- *  - META PIXEL — runtime. The tag below always renders, and /api/pixel
- *    returns either the bootstrap or an empty file depending on what is set
- *    in /admin/settings. An operator can therefore add a pixel without a
+ *  - META PIXEL — runtime. Once the visitor consents the tag below renders,
+ *    and /api/pixel returns either the bootstrap or an empty file depending
+ *    on what is set in /admin/settings. An operator can therefore add a pixel without a
  *    rebuild, and it survives redeploys. See app/api/pixel/route.ts for why
  *    it is a route rather than an inline snippet.
  *  - GA4 — still NEXT_PUBLIC_GA4_ID, inlined at BUILD time. Setting it later
  *    and only restarting the server will not take effect; you must rebuild.
  *    Move it to lib/settings.ts the same way if that ever becomes a chore.
+ *
+ * CONSENT GATE. Both set their own cookies, so NEITHER tag renders until the
+ * visitor accepts on the cookie banner (components/consent/CookieBanner.tsx).
+ * Undecided is treated as a refusal. When a visitor accepts mid-visit the
+ * tags mount there and then, and the bootstraps fire the PageView for the
+ * page they are on. Events fired before that are dropped, which is correct:
+ * they happened without consent.
  */
 export function Analytics() {
+  const consented = mayLoadTrackers(useConsent());
+
   return (
     <>
-      <Script id="meta-pixel" src="/api/pixel" strategy="afterInteractive" />
+      {consented ? <Script id="meta-pixel" src="/api/pixel" strategy="afterInteractive" /> : null}
 
-      {GA4_ID ? (
+      {consented && GA4_ID ? (
         <>
           <Script
             src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`}

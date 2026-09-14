@@ -5,6 +5,7 @@ import { canonicalOrigin } from "@/lib/site-url";
 import { brandCssVariables } from "@/lib/theme";
 import { bodyFont, displayFont } from "@/app/fonts";
 import { Analytics } from "@/components/Analytics";
+import { CookieBanner } from "@/components/consent/CookieBanner";
 import { JsonLd } from "@/components/JsonLd";
 import "./globals.css";
 
@@ -123,6 +124,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={organizationSchema} />
         {children}
         <Analytics />
+        <CookieBanner />
       </body>
     </html>
   );

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { brand } from "@/config/brand";
 import { contentHref } from "@/lib/blog-migration";
 import { PRODUCT, formatMinor } from "@/config/funnel";
+import { CookieSettingsButton } from "@/components/consent/CookieSettingsButton";
 
 /**
  * Legal and support links. These URLs are stable — do not rename them; the
@@ -115,6 +116,11 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              {/* Renders nothing unless a tracker is configured. */}
+              <CookieSettingsButton
+                asListItem
+                className="text-left text-sm text-white/65 underline decoration-white/25 underline-offset-4 transition-colors duration-150 hover:text-white hover:decoration-white/60"
+              />
             </ul>
           </nav>
 
