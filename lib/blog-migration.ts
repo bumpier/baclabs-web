@@ -49,9 +49,13 @@ export function isMigratedPath(pathname: string): boolean {
  *
  * Paths that are not moving (/faq, /calculator) come back untouched, so this
  * is safe to apply to a whole link list.
+ *
+ * The blog hub is the exception to "same path on the new domain": WordPress
+ * lists posts on its home page, so /blog points at that section instead.
  */
 export function contentHref(path: string): string {
   const origin = blogOrigin();
-  if (origin && isMigratedPath(path)) return `${origin}${path}`;
-  return path;
+  if (!origin || !isMigratedPath(path)) return path;
+  if (path === "/blog") return `${origin}/#latest`;
+  return `${origin}${path}`;
 }
