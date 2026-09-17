@@ -1,5 +1,6 @@
 import { brand } from "@/config/brand";
 import { TrustBox } from "@/components/funnel/TrustBox";
+import { TrustpilotLogoLink } from "@/components/funnel/TrustpilotLogoLink";
 
 /**
  * The home page's Trustpilot block. Until brand.trustpilot.showRating is
@@ -24,7 +25,8 @@ export function TrustpilotReviews() {
           ? "Every review is published by Trustpilot, not by us."
           : "Tell other buyers how it went, good or bad. Reviews are posted on Trustpilot, not edited by us."}
       </p>
-      <div className="mt-6 max-w-md">
+      <TrustpilotLogoLink className="mt-5" />
+      <div className="mt-4 max-w-md">
         {showRating ? (
           <TrustBox template="mini" height="150px" />
         ) : (
