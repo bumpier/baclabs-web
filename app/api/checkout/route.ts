@@ -11,6 +11,7 @@ import {
 } from "@/lib/crypto-gateway";
 import { createBundleCheckout, assertPriceMatchesConfig } from "@/lib/payments/stripe";
 import { getPaymentConfig, providerForMethod } from "@/lib/payments/config";
+import { attributionFor } from "@/lib/meta-capi-event";
 import { priceIn } from "@/lib/fx";
 import { fetchFxRates } from "@/lib/fx-rates";
 import {
@@ -140,6 +141,16 @@ export async function POST(req: Request) {
         subtotalUsd,
         paymentMethod: input.method,
         paymentProvider: provider,
+        // Read now: the payment webhook comes from the provider's servers and
+        // never sees the customer's IP, browser or Meta cookies. Kept only
+        // with consent — see lib/meta-capi-event.ts.
+        ...attributionFor(input.trackingConsent === true, {
+          cookie: req.headers.get("cookie"),
+          userAgent: req.headers.get("user-agent"),
+          // Cloudflare's header first: the client can prepend its own
+          // X-Forwarded-For entries, but not this.
+          ip: req.headers.get("cf-connecting-ip") ?? clientIp(req),
+        }),
       },
     });
 

@@ -11,6 +11,12 @@ const bundleOrderFields = {
   tierId: bundleIdEnum,
   /** Number of BUNDLES, not vials. 2 × starter = 6 vials. */
   quantity: z.number().int().min(MIN_QUANTITY).max(MAX_QUANTITY),
+  /**
+   * Whether the visitor had accepted tracking on the cookie banner. Decides
+   * whether the purchase is reported to Meta from the server
+   * (lib/meta-capi.ts). Absent means no.
+   */
+  trackingConsent: z.boolean().optional(),
 };
 
 /**

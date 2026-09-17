@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   CONSENT_STORAGE_KEY,
   isTrackingCookieName,
+  mayLoadTrackers,
   parseConsent,
   serializeConsent,
   type ConsentChoice,
@@ -38,6 +39,14 @@ function readChoice(): ConsentChoice | null {
     // trackers, which is the safe side to fail on.
     return null;
   }
+}
+
+/**
+ * Consent at this moment, outside React. Checkout sends it with the order so
+ * the server knows whether it may report the purchase to Meta.
+ */
+export function hasTrackingConsent(): boolean {
+  return mayLoadTrackers(readChoice());
 }
 
 /** The visitor's decision. Null on the server and before they have answered. */

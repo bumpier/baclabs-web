@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { brand } from "@/config/brand";
 import { formatMinor } from "@/config/funnel";
+import { paidMinor, purchaseContents, purchaseEventId } from "@/lib/meta-capi-event";
 import { PurchaseTracker } from "./PurchaseTracker";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,9 @@ export default async function OrderConfirmationPage({
     (Boolean(sp.session_id) || sp.paid === "stripe");
 
   const hasEmail = Boolean(brand.contact.email);
+  // Meta's content ids and item count, built by the same helper as the
+  // server-side Purchase so the two reports agree.
+  const contents = purchaseContents(order.items);
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-14 sm:px-8 sm:py-20">
@@ -61,7 +65,10 @@ export default async function OrderConfirmationPage({
       {paid ? (
         <PurchaseTracker
           orderId={order.id}
-          valueMinor={toMinor(order.totalAmount.toString())}
+          eventId={purchaseEventId(order.id)}
+          valueMinor={paidMinor(order)}
+          contentIds={contents.map((c) => c.id)}
+          numItems={contents.reduce((sum, c) => sum + c.quantity, 0)}
           items={items.map((i) => ({
             item_id: i.bundleName ?? "baclab-10ml",
             item_name: i.name,

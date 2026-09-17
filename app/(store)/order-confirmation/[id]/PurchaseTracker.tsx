@@ -16,11 +16,19 @@ import { trackEvent } from "@/lib/analytics";
  */
 export function PurchaseTracker({
   orderId,
+  eventId,
   valueMinor,
+  contentIds,
+  numItems,
   items,
 }: {
   orderId: string;
+  /** Shared with the server-side Purchase, so Meta counts the order once. */
+  eventId: string;
+  /** What the customer was charged, delivery and discounts included. */
   valueMinor: number;
+  contentIds: string[];
+  numItems: number;
   items: { item_id: string; item_name: string; price: number; quantity: number }[];
 }) {
   const fired = useRef(false);
@@ -43,8 +51,11 @@ export function PurchaseTracker({
       value: valueMinor / 100,
       transactionId: orderId,
       items,
+      eventId,
+      contentIds,
+      quantity: numItems,
     });
-  }, [orderId, valueMinor, items]);
+  }, [orderId, eventId, valueMinor, contentIds, numItems, items]);
 
   return null;
 }

@@ -143,6 +143,8 @@ export async function POST(req: Request) {
         paymentRef,
         provider: "stripe",
         deliveryMinor: session.total_details?.amount_shipping ?? 0,
+        // What the card was charged, delivery and promotion codes included.
+        ...(typeof session.amount_total === "number" ? { amountPaidMinor: session.amount_total } : {}),
       });
 
       // The customer confirmation and the owner alert are sent from

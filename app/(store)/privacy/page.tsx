@@ -55,6 +55,11 @@ export default async function PrivacyPage() {
 
   const ANALYTICS_ENABLED = ANALYTICS_PROVIDERS.length > 0;
 
+  /** Purchases also reported to Meta from the server (lib/meta-capi.ts). */
+  const META_SERVER_EVENTS = Boolean(
+    metaPixel.pixelId && process.env.META_CAPI_ACCESS_TOKEN?.trim()
+  );
+
   /** "A and B", or just "A" — read into a sentence, so no Oxford list. */
   const ANALYTICS_PROVIDER_LIST = ANALYTICS_PROVIDERS.join(" and ");
 
@@ -136,6 +141,15 @@ export default async function PrivacyPage() {
                   used (for example &ldquo;card&rdquo;). <strong>We never receive, see or store your
                   card number, expiry date or security code.</strong>
                 </dd>
+                {META_SERVER_EVENTS ? (
+                  <>
+                    <dt>Advertising measurement data &mdash; only if you accept cookies</dt>
+                    <dd>
+                      Your IP address, browser details and Meta cookie identifiers, recorded when
+                      you check out so we can report the purchase to Meta. See clause 6.
+                    </dd>
+                  </>
+                ) : null}
                 <dt>Correspondence</dt>
                 <dd>Messages you send us, and our replies.</dd>
                 <dt>Email delivery records</dt>
@@ -270,6 +284,21 @@ export default async function PrivacyPage() {
                     is set. The banner remembers your choice in your browser&rsquo;s local storage,
                     which is not a cookie and is never sent to us.
                   </p>
+                  {META_SERVER_EVENTS ? (
+                    <p>
+                      If you have accepted cookies and then place an order, our server also tells
+                      Meta about the purchase directly, so it is counted even if you close the page
+                      before it finishes loading. We send the order value and what you bought and,
+                      so Meta can match the purchase to an advert you saw, your email address, phone
+                      number, name, town, postcode and country in hashed form, together with your IP
+                      address, browser details and the Meta cookie identifiers already on your
+                      device.{" "}
+                      <strong>
+                        If you rejected cookies or made no choice, we send Meta nothing about your
+                        order.
+                      </strong>
+                    </p>
+                  ) : null}
                   <p>
                     You can change your mind at any time using{" "}
                     <CookieSettingsButton className="link">Cookie settings</CookieSettingsButton>,
@@ -317,6 +346,13 @@ export default async function PrivacyPage() {
                   <strong>Our hosting provider</strong> &mdash; which stores the site and its
                   database on our behalf.
                 </li>
+                {META_SERVER_EVENTS ? (
+                  <li>
+                    <strong>Meta</strong> &mdash; only if you accepted cookies: confirmation of your
+                    purchase, to measure our adverts, under Meta&rsquo;s Business Tools Terms. See
+                    clause 6.
+                  </li>
+                ) : null}
                 <li>
                   <strong>Professional advisers and authorities</strong> &mdash; our accountant, and
                   any regulator, court or law enforcement body where we are legally required to

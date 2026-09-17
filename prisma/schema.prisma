@@ -54,6 +54,21 @@ model Order {
   paymentProvider String? // "stripe" | the crypto gateway provider id
   paymentMethod   String // card | btc | eth | usdt | xmr
   notes           String?
+
+  // What the customer was actually charged, in pence: delivery included,
+  // promotion codes applied. Set when payment confirms; totalAmount is goods
+  // only. Reported to Meta as the Purchase value (lib/meta-capi-event.ts).
+  amountPaidMinor Int?
+
+  // Meta attribution, captured at checkout because the payment webhook comes
+  // from the provider's servers, not the customer's browser. Filled ONLY when
+  // the visitor had accepted tracking on the cookie banner.
+  trackingConsent Boolean @default(false)
+  clientIp        String?
+  clientUserAgent String?
+  fbp             String?
+  fbc             String?
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

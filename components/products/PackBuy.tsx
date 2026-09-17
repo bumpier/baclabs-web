@@ -21,6 +21,7 @@ import {
   type Bundle,
 } from "@/config/funnel";
 import { trackEvent } from "@/lib/analytics";
+import { hasTrackingConsent } from "@/components/consent/consent-store";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
 
@@ -75,7 +76,12 @@ export function PackBuy({
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tierId: bundle.id, quantity, method: "card" }),
+        body: JSON.stringify({
+          tierId: bundle.id,
+          quantity,
+          method: "card",
+          trackingConsent: hasTrackingConsent(),
+        }),
       });
       const data = (await res.json()) as { paymentUrl?: string; error?: string };
       if (!res.ok || !data.paymentUrl) {

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { sendOrderConfirmationEmail, sendNewOrderAlert } from "@/lib/customer-email";
 import type { PaymentProvider } from "@/lib/payments/config";
+import { sendMetaPurchase } from "@/lib/meta-capi";
 
 // Single post-payment code path shared by every provider's webhook.
 // Idempotent: only the pending → paid transition does work; retries are no-ops.
@@ -15,6 +16,9 @@ export async function fulfillPaidOrder(
      * emails. Omit when unknown (e.g. crypto orders never charge delivery
      * through Stripe). */
     deliveryMinor?: number;
+    /** The amount actually charged, in pence, when the provider reports it.
+     * Omitted, it is the goods total plus deliveryMinor. */
+    amountPaidMinor?: number;
   }
 ): Promise<{ alreadyPaid: boolean }> {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
@@ -30,6 +34,9 @@ export async function fulfillPaidOrder(
         status: "paid",
         paymentRef: opts.paymentRef ?? order.paymentRef,
         paymentProvider: opts.provider,
+        amountPaidMinor:
+          opts.amountPaidMinor ??
+          Math.round(Number(order.totalAmount) * 100) + (opts.deliveryMinor ?? 0),
         ...(opts.notes !== undefined ? { notes: opts.notes } : {}),
       },
     });
@@ -59,6 +66,9 @@ export async function fulfillPaidOrder(
     const emailOpts = { deliveryMinor: opts.deliveryMinor ?? 0 };
     void sendOrderConfirmationEmail(paidOrder, emailOpts); // to the customer
     void sendNewOrderAlert(paidOrder, emailOpts); // to the shop owner (ORDER_NOTIFY_EMAIL)
+    // Server-side Purchase for Meta, only if the customer consented. Never
+    // throws; still counted if the customer never reaches the confirmation page.
+    void sendMetaPurchase(paidOrder);
   }
   return { alreadyPaid: false };
 }

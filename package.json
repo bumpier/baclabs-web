@@ -16,7 +16,8 @@
     "test:rules": "tsx scripts/test-content-rules.ts",
     "export:articles": "tsx scripts/export-articles.ts",
     "export:wxr": "tsx scripts/export-wxr.ts",
-    "test:consent": "tsx scripts/test-consent.ts"
+    "test:consent": "tsx scripts/test-consent.ts",
+    "test:meta": "tsx scripts/test-meta-capi.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

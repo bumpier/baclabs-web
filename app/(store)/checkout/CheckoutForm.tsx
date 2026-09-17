@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { PRODUCT, bundleById, formatMinor, totalMinor, type BundleId } from "@/config/funnel";
+import { hasTrackingConsent } from "@/components/consent/consent-store";
 
 type Coin = "btc" | "eth" | "usdt" | "xmr";
 
@@ -63,6 +64,7 @@ export function CheckoutForm({
           city: form.get("city"),
           postalCode: form.get("postalCode"),
           country: form.get("country"),
+          trackingConsent: hasTrackingConsent(),
         }),
       });
       const data = (await res.json()) as { paymentUrl?: string; error?: string };

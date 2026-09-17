@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Order" ADD COLUMN "amountPaidMinor" INTEGER;
+ALTER TABLE "Order" ADD COLUMN "trackingConsent" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Order" ADD COLUMN "clientIp" TEXT;
+ALTER TABLE "Order" ADD COLUMN "clientUserAgent" TEXT;
+ALTER TABLE "Order" ADD COLUMN "fbp" TEXT;
+ALTER TABLE "Order" ADD COLUMN "fbc" TEXT;

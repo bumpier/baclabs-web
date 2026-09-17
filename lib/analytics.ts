@@ -30,6 +30,14 @@ export interface EventParams {
   quantity?: number;
   transactionId?: string;
   items?: { item_id: string; item_name: string; price: number; quantity: number }[];
+  /**
+   * Meta's deduplication key. A Purchase also goes to Meta from the server
+   * (lib/meta-capi.ts); the two count once only when this matches its
+   * event_id.
+   */
+  eventId?: string;
+  /** Meta content ids. Defaults to [bundleId]. */
+  contentIds?: string[];
 }
 
 type EventName = "view_item" | "select_bundle" | "begin_checkout" | "purchase";
@@ -91,13 +99,19 @@ export function trackEvent(name: EventName, params: EventParams = {}): void {
 
   whenDefined("fbq", () => {
     try {
-      window.fbq?.(spec.metaStandard ? "track" : "trackCustom", spec.meta, {
+      const data = {
         currency: params.currency,
         value: params.value,
         content_type: "product",
-        content_ids: params.bundleId ? [params.bundleId] : undefined,
+        content_ids: params.contentIds ?? (params.bundleId ? [params.bundleId] : undefined),
         num_items: params.quantity,
-      });
+      };
+      const method = spec.metaStandard ? "track" : "trackCustom";
+      if (params.eventId) {
+        window.fbq?.(method, spec.meta, data, { eventID: params.eventId });
+      } else {
+        window.fbq?.(method, spec.meta, data);
+      }
     } catch {
       // As above.
     }
