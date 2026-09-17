@@ -42,13 +42,27 @@ export const brand = {
    * Public profiles for Organization `sameAs` (Trustpilot, Google Business
    * Profile, Companies House…). Empty list emits nothing.
    */
-  sameAs: [] as string[],
+  sameAs: ["https://uk.trustpilot.com/review/baclab.co.uk"] as string[],
   /**
    * Where a review request sends the customer. Empty means the request email
    * asks them to reply by email instead, and nothing links out.
    */
   reviews: {
-    url: "",
+    url: "https://uk.trustpilot.com/evaluate/baclab.co.uk",
+  },
+  /**
+   * Trustpilot. The TrustBox widgets read businessUnitId; the invitation BCC
+   * address is a runtime secret (TRUSTPILOT_BCC_EMAIL), not config.
+   *
+   * showRating stays false until the profile holds enough real reviews to be
+   * worth displaying. While false, only the Review Collector renders (a
+   * "Review us" button with no score), so a 0-review TrustScore never shows.
+   * Flip it to true and the footer and home page switch to rating widgets.
+   */
+  trustpilot: {
+    businessUnitId: "6aabc9e983f88c4cc3520262",
+    profileUrl: "https://uk.trustpilot.com/review/baclab.co.uk",
+    showRating: false,
   },
   contact: {
     // Leave "" to omit the address everywhere: contact page, footer, order

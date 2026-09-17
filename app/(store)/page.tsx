@@ -33,6 +33,7 @@ import { PackGrid } from "@/components/products/PackGrid";
 import { StickyBuyBar } from "@/components/funnel/StickyBuyBar";
 import { Faq } from "@/components/funnel/Faq";
 import { Reviews } from "@/components/funnel/Reviews";
+import { TrustpilotReviews } from "@/components/funnel/TrustpilotReviews";
 import { ComparisonTable } from "@/components/funnel/ComparisonTable";
 import { TechnicalData } from "@/components/funnel/TechnicalData";
 import { PACK_PAGES } from "@/config/products";
@@ -510,6 +511,7 @@ export default function FunnelPage() {
 
         {/* ── Reviews — renders nothing until reviews.json is filled ── */}
         <Reviews />
+        <TrustpilotReviews />
 
         {/* ══ 4. FAQ ════════════════════════════════════════════════ */}
         <section className="section" aria-labelledby="faq-heading">

@@ -339,6 +339,13 @@ export default async function PrivacyPage() {
                   <strong>Resend</strong> &mdash; sending order and reminder emails.
                 </li>
                 <li>
+                  <strong>Trustpilot</strong> &mdash; your name, email address and order reference,
+                  so Trustpilot can invite you to review your order. It sends one invitation, which
+                  you can ignore, and does not receive what you bought or your address. If you have
+                  unsubscribed from our emails we do not pass your details on. Trustpilot&rsquo;s
+                  review widgets on this site load from Trustpilot&rsquo;s servers.
+                </li>
+                <li>
                   <strong>Our delivery carrier</strong> &mdash; your name and delivery address, so
                   the parcel can reach you.
                 </li>

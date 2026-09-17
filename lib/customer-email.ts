@@ -50,7 +50,8 @@ async function logAndSend(
   order: Order,
   type: EmailType,
   subject: string,
-  html: string
+  html: string,
+  opts?: { bcc?: string }
 ): Promise<boolean> {
   try {
     await prisma.emailLog.create({
@@ -62,7 +63,7 @@ async function logAndSend(
     return false;
   }
   try {
-    await send(order.customerEmail, subject, html);
+    await send(order.customerEmail, subject, html, opts);
     return true;
   } catch (err) {
     console.error(`[email] send failed for order ${order.id} type ${type}`, err);
@@ -133,6 +134,54 @@ function shippingAddressLine(order: Order): string {
   }
 }
 
+// ── Trustpilot review invitations ────────────────────────────────────────
+// Trustpilot's Automatic Feedback Service: BCC the account's unique invite
+// address on the order confirmation, and Trustpilot emails the customer a
+// review invitation after the delay set in Trustpilot Business (Invitations →
+// Automatic Feedback Service). Set that delay long enough for the parcel to
+// arrive — this email goes out the moment payment lands.
+
+/** The AFS address, or null when invitations are switched off. Runtime env. */
+export function trustpilotBcc(): string | null {
+  const v = process.env.TRUSTPILOT_BCC_EMAIL?.trim();
+  return v && v.endsWith("@invite.trustpilot.com") ? v : null;
+}
+
+/**
+ * Structured data Trustpilot reads from the BCC'd copy, so the invitation
+ * goes to the right name and address with the order as its reference rather
+ * than whatever Trustpilot guesses from the headers. Mail clients strip
+ * <script> tags, so the customer never sees it. `<` is escaped so a customer
+ * name cannot close the tag.
+ */
+function trustpilotSnippet(order: Order): string {
+  const json = JSON.stringify({
+    recipientName: order.customerName,
+    recipientEmail: order.customerEmail,
+    referenceId: order.id,
+  }).replace(/</g, "\\u003c");
+  return `<script type="application/json+trustpilot">${json}</script>`;
+}
+
+/**
+ * Invite only customers who have not unsubscribed from our emails. Someone
+ * who asked us to stop should not hear from a third party on our behalf.
+ */
+async function trustpilotBccFor(order: Order): Promise<string | null> {
+  const bcc = trustpilotBcc();
+  if (!bcc || !order.customerEmail) return null;
+  try {
+    const optedOut = await prisma.emailOptOut.findUnique({
+      where: { email: order.customerEmail.toLowerCase() },
+    });
+    return optedOut ? null : bcc;
+  } catch (err) {
+    // Unknown opt-out state: fail towards not inviting.
+    console.error(`[email] trustpilot opt-out check failed for order ${order.id}`, err);
+    return null;
+  }
+}
+
 export async function sendOrderConfirmationEmail(
   order: Order,
   opts?: { deliveryMinor?: number }
@@ -147,6 +196,7 @@ export async function sendOrderConfirmationEmail(
   });
   const deliveryMinor = opts?.deliveryMinor ?? 0;
   const grandTotal = parseFloat(order.totalAmount.toString()) + deliveryMinor / 100;
+  const bcc = await trustpilotBccFor(order);
 
   await logAndSend(
     order,
@@ -162,9 +212,11 @@ export async function sendOrderConfirmationEmail(
           ? `<p style="margin:20px 0 0;font-size:13px;color:${LITERAL.inkSoft}"><strong style="color:${LITERAL.ink}">Shipping to</strong><br>${shippingAddressLine(order)}</p>`
           : ""
       }
-      <p style="margin:28px 0 0">${ctaButton(orderUrl, "View your order")}</p>`,
+      <p style="margin:28px 0 0">${ctaButton(orderUrl, "View your order")}</p>
+      ${bcc ? trustpilotSnippet(order) : ""}`,
       { preheader: `Order ${order.id} confirmed — total ${formatPrice(grandTotal, currency)}` }
-    )
+    ),
+    bcc ? { bcc } : undefined
   );
 }
 

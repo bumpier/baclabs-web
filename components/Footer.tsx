@@ -3,6 +3,7 @@ import { brand } from "@/config/brand";
 import { contentHref } from "@/lib/blog-migration";
 import { PRODUCT, formatMinor } from "@/config/funnel";
 import { CookieSettingsButton } from "@/components/consent/CookieSettingsButton";
+import { TrustBox } from "@/components/funnel/TrustBox";
 
 /**
  * Legal and support links. These URLs are stable — do not rename them; the
@@ -148,6 +149,22 @@ export function Footer() {
               </p>
             )}
             <p className="mt-4 text-sm text-white/50">Payments processed securely by Stripe.</p>
+            {/* Score widget only once there are reviews worth showing; until
+                then a plain link, so a 0.0 TrustScore never renders. */}
+            {brand.trustpilot.showRating ? (
+              <TrustBox template="microCombo" height="20px" theme="dark" className="mt-3" />
+            ) : (
+              <p className="mt-2 text-sm">
+                <a
+                  href={brand.trustpilot.profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/65 underline decoration-white/25 underline-offset-4 transition-colors duration-150 hover:text-white"
+                >
+                  Review us on Trustpilot
+                </a>
+              </p>
+            )}
             {trust.qualityLine ? (
               <p className="mt-2 text-sm">
                 <Link

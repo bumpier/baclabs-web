@@ -26,12 +26,19 @@ export function emailEnabled(): boolean {
   return Boolean(process.env.RESEND_API_KEY);
 }
 
-export async function send(to: string, subject: string, html: string) {
+export async function send(
+  to: string,
+  subject: string,
+  html: string,
+  opts?: { bcc?: string }
+) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     if (process.env.NODE_ENV !== "production") {
       // Dev: surface the email body so flows are testable without a mail provider.
-      console.log(`[dev email] to=${to} subject="${subject}"\n${html}`);
+      console.log(
+        `[dev email] to=${to}${opts?.bcc ? ` bcc=${opts.bcc}` : ""} subject="${subject}"\n${html}`
+      );
     }
     // Blank in production → email intentionally disabled → stay silent.
     return;
@@ -52,6 +59,7 @@ export async function send(to: string, subject: string, html: string) {
       to,
       subject,
       html,
+      ...(opts?.bcc ? { bcc: opts.bcc } : {}),
     });
     if (error) {
       console.error("[email] Resend send failed", JSON.stringify(error));

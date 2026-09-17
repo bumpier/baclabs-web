@@ -9,6 +9,8 @@
 const META = ["https://connect.facebook.net", "https://www.facebook.com"];
 const GA = ["https://www.googletagmanager.com", "https://www.google-analytics.com"];
 const ANALYTICS = [...META, ...GA].join(" ");
+// Trustpilot TrustBox: the bootstrap script, then an iframe per widget.
+const TRUSTPILOT = "https://widget.trustpilot.com";
 
 const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
@@ -23,8 +25,9 @@ const securityHeaders = [
       // unsafe-eval is required in dev because webpack uses eval() for source maps.
       `script-src 'self' 'unsafe-inline'${
         process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""
-      } ${ANALYTICS}`,
+      } ${ANALYTICS} ${TRUSTPILOT}`,
       "style-src 'self' 'unsafe-inline'",
+      `frame-src ${TRUSTPILOT}`,
       // next/font self-hosts, so no external font host is needed.
       "font-src 'self'",
       `img-src 'self' data: blob: ${ANALYTICS}`,

@@ -1,7 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { sendRepurchaseNudgeEmail, sendReviewRequestEmail } from "@/lib/customer-email";
+import {
+  sendRepurchaseNudgeEmail,
+  sendReviewRequestEmail,
+  trustpilotBcc,
+} from "@/lib/customer-email";
 
 export const dynamic = "force-dynamic";
 
@@ -124,6 +128,11 @@ async function runNudges() {
  * so — that is the clock the delay runs from.
  */
 async function runReviewRequests() {
+  // With Trustpilot invitations on, Trustpilot asks every customer itself
+  // (BCC on the confirmation email). A second request from us would be a
+  // duplicate ask, so this job stands down.
+  if (trustpilotBcc()) return { scanned: 0, sent: 0, skipped: 0, handledBy: "trustpilot" };
+
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
   const orders = await prisma.order.findMany({
