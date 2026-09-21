@@ -10,7 +10,6 @@ import {
   STOCK_LEVEL,
   formatMinor,
   saleVisible,
-  saleLabel,
 } from "@/config/funnel";
 import { PACK_PAGES, bundleForPack, packBySlug, packPath, type PackPage } from "@/config/products";
 import { metricsFor, packLabel, type PackMetrics } from "@/lib/pack-metrics";
@@ -27,6 +26,7 @@ import {
 } from "@/lib/product-schema";
 import { JsonLd } from "@/components/JsonLd";
 import { FunnelStateProvider } from "@/components/funnel/FunnelState";
+import { SaleTag } from "@/components/funnel/SaleTag";
 import { VialImage } from "@/components/funnel/VialImage";
 import { StickyBuyBar } from "@/components/funnel/StickyBuyBar";
 import { PackBuy } from "@/components/products/PackBuy";
@@ -213,7 +213,11 @@ function PackHero({
         <div className="min-w-0 lg:col-span-7">
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-deep">
             {pack.shortLabel}
-            {sale ? <span className="ml-2 text-cta-deep">{saleLabel()}</span> : null}
+            {sale ? (
+              <span className="ml-2 inline-block align-middle">
+                <SaleTag />
+              </span>
+            ) : null}
           </p>
           <h1 id="pack-heading" className="mt-3 text-4xl sm:text-5xl">
             {pack.h1}

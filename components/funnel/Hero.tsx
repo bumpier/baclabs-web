@@ -3,9 +3,9 @@ import {
   LOWEST_PRICE_BADGE,
   PRODUCT,
   freeDeliveryBadge,
-  SALE,
   referenceUnitPriceMinor,
-  saleLabel,
+  saleSaveLabel,
+  saleUnitSavingMinor,
   saleVisible,
   VIAL_ML,
   bundleById,
@@ -13,6 +13,7 @@ import {
   formatMinor,
   perMlMinor,
 } from "@/config/funnel";
+import { SaleTag } from "@/components/funnel/SaleTag";
 import { VialImage } from "@/components/funnel/VialImage";
 import { FACTS } from "@/content/facts";
 import { HERO_CTA_ID } from "@/lib/use-hero-cta-passed";
@@ -100,12 +101,10 @@ export function Hero() {
               <p className="font-display text-3xl font-bold text-ink">{PRICE}</p>
               {sale ? (
                 <p className="flex items-baseline gap-2">
-                  <span className="tabular text-base text-ink-soft line-through">
+                  <span className="tabular text-lg text-ink-soft line-through">
                     {formatMinor(referenceUnitPriceMinor())}
                   </span>
-                  <span className="rounded-control bg-cta-tint px-2 py-0.5 text-sm font-semibold text-cta-deep">
-                    {saleLabel()}
-                  </span>
+                  <SaleTag label={saleSaveLabel()} size="md" />
                 </p>
               ) : null}
               <p className="text-base text-ink-soft">
@@ -114,6 +113,13 @@ export function Hero() {
                 <span className="tabular">{cheapest.vials}</span>-pack
               </p>
             </div>
+            {/* The saving in pounds, not only as a percentage: a figure the
+                reader keeps is the one they act on. */}
+            {sale ? (
+              <p className="animate-rise stagger-3 mt-2 text-base font-semibold text-brand-deep">
+                You save <span className="tabular">{formatMinor(saleUnitSavingMinor())}</span> a vial
+              </p>
+            ) : null}
 
             <div className="animate-rise stagger-4 mt-8 flex flex-col gap-3 sm:flex-row">
               {/* "Choose your pack", not "Buy now": this scrolls to the pack

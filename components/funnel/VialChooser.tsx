@@ -15,9 +15,11 @@ import {
   deliveryMinorFor,
   formatMinor,
   perVialMinor,
+  referencePerVialMinor,
   referencePriceMinor,
   remainingForFreeDeliveryMinor,
   saleLabel,
+  saleSavingMinor,
   saleVisible,
   savingPercent,
   shipsFree,
@@ -27,6 +29,7 @@ import { trackEvent } from "@/lib/analytics";
 import { hasTrackingConsent } from "@/components/consent/consent-store";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
+import { SaleTag } from "@/components/funnel/SaleTag";
 
 /**
  * The home page's purchase block: pick a vial amount, then pay.
@@ -155,7 +158,7 @@ export function VialChooser({ cryptoEnabled }: { cryptoEnabled: boolean }) {
                 ].join(" ")}
                 style={{ transitionTimingFunction: "var(--ease-out)" }}
               >
-                {/* A 3px amber edge on the selected tile. Absolutely
+                {/* A 3px brand-blue edge on the selected tile. Absolutely
                     positioned so selecting never reflows the grid. */}
                 <span
                   aria-hidden="true"
@@ -187,7 +190,20 @@ export function VialChooser({ cryptoEnabled }: { cryptoEnabled: boolean }) {
                 <span className="text-[11px] leading-tight text-ink-soft">
                   {b.vials === 1 ? "vial" : "vials"}
                 </span>
-                <span className="tabular mt-1 text-[11px] leading-tight text-ink-soft">
+                {/* While the sale shows, the struck-through per-vial figure
+                    sits on its own line above the real one, so the tile
+                    reads top to bottom: was, now. */}
+                {sale ? (
+                  <span className="tabular mt-1 text-[11px] leading-tight text-ink-soft line-through">
+                    {formatMinor(referencePerVialMinor(b))}
+                  </span>
+                ) : null}
+                <span
+                  className={[
+                    "tabular text-[11px] leading-tight",
+                    sale ? "font-semibold text-brand-deep" : "mt-1 text-ink-soft",
+                  ].join(" ")}
+                >
                   {formatMinor(perVialMinor(b))}/ea
                 </span>
                 {best ? (
@@ -204,10 +220,13 @@ export function VialChooser({ cryptoEnabled }: { cryptoEnabled: boolean }) {
       <div className="px-5 py-5 sm:px-6">
         {/* What has been chosen, said in full, before any arithmetic. */}
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <p className="text-base font-semibold text-ink">
-            <span className="tabular">{bundle.vials}</span>{" "}
-            {bundle.vials === 1 ? "vial" : "vials"} &middot;{" "}
-            <span className="tabular">{formatMinor(bundle.priceMinor)}</span>
+          <p className="flex flex-wrap items-baseline gap-x-2 text-base font-semibold text-ink">
+            <span>
+              <span className="tabular">{bundle.vials}</span>{" "}
+              {bundle.vials === 1 ? "vial" : "vials"} &middot;{" "}
+              <span className="tabular">{formatMinor(bundle.priceMinor)}</span>
+            </span>
+            {sale ? <SaleTag /> : null}
           </p>
           <p className="tabular text-sm text-ink-soft">
             {formatMinor(perVialMinor(bundle))} per vial
@@ -274,7 +293,7 @@ export function VialChooser({ cryptoEnabled }: { cryptoEnabled: boolean }) {
           {sale ? (
             <div className="flex justify-between gap-4">
               <dt className="text-ink-soft">{saleLabel()}</dt>
-              <dd className="tabular font-medium text-cta-deep">
+              <dd className="tabular font-semibold text-brand-deep">
                 &minus;{formatMinor(referenceTotal - totalMinor)}
               </dd>
             </div>
@@ -301,6 +320,19 @@ export function VialChooser({ cryptoEnabled }: { cryptoEnabled: boolean }) {
             </dd>
           </div>
         </dl>
+
+        {/* The saving in pounds, restated under the total where the decision
+            is made. Moves with the pack and the quantity. */}
+        {sale ? (
+          <p
+            aria-live="polite"
+            className="mt-3 rounded-control bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-deep"
+          >
+            You save{" "}
+            <span className="tabular">{formatMinor(saleSavingMinor(bundle, quantity))}</span> on
+            this order
+          </p>
+        ) : null}
 
         {VAT.statement ? <p className="mt-2 text-xs text-ink-soft">{VAT.statement}</p> : null}
 

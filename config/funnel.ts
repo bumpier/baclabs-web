@@ -214,9 +214,29 @@ export function referenceUnitPriceMinor(): number {
   return Math.round(PRODUCT.unitPriceMinor / (1 - SALE.percentOff / 100));
 }
 
+/** The struck-through per-vial figure for a pack, in pence — the chooser tiles. */
+export function referencePerVialMinor(b: Bundle): number {
+  return Math.round(referencePriceMinor(b) / b.vials);
+}
+
+/** Pence the sale takes off `quantity` of this pack — the "You save" line. */
+export function saleSavingMinor(b: Bundle, quantity: number): number {
+  return (referencePriceMinor(b) - b.priceMinor) * quantity;
+}
+
+/** Pence the sale takes off one vial, for the hero. */
+export function saleUnitSavingMinor(): number {
+  return referenceUnitPriceMinor() - PRODUCT.unitPriceMinor;
+}
+
 /** "30% off" — derived, so the badge can never contradict the figures. */
 export function saleLabel(): string {
   return `${SALE.percentOff}% off`;
+}
+
+/** "Save 30%" — the same figure, for the hero pill. */
+export function saleSaveLabel(): string {
+  return `Save ${SALE.percentOff}%`;
 }
 
 /**

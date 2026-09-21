@@ -6,11 +6,14 @@ import {
   formatMinorShort,
   freeDeliveryBadge,
   PRICE_MATCH_BADGE,
+  referencePriceMinor,
   remainingForFreeDeliveryMinor,
+  saleVisible,
   shipsFree,
   VIAL_ML,
 } from "@/config/funnel";
 import { useFunnel } from "@/components/funnel/FunnelState";
+import { SaleTag } from "@/components/funnel/SaleTag";
 import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
 
 /**
@@ -51,6 +54,7 @@ export function StickyBuyBar() {
 
   const shown = heroCtaPassed && !buyBlockVisible;
   const totalVials = bundle.vials * quantity;
+  const sale = saleVisible();
 
   // The same two functions the purchase block and the Stripe session call, so
   // this bar can never promise free delivery on a basket that will be charged
@@ -79,8 +83,18 @@ export function StickyBuyBar() {
             <span className="tabular">{totalVials}</span> ×{" "}
             {totalVials === 1 ? "vial" : "vials"}, {VIAL_ML}ml
           </p>
-          <p className="tabular text-lg font-semibold leading-tight text-ink">
-            {formatMinor(totalMinor)}
+          <p className="flex min-w-0 items-baseline gap-2 whitespace-nowrap leading-tight">
+            <span className="tabular text-lg font-semibold text-ink">
+              {formatMinor(totalMinor)}
+            </span>
+            {sale ? (
+              <>
+                <span className="tabular truncate text-xs text-ink-soft line-through">
+                  {formatMinor(referencePriceMinor(bundle) * quantity)}
+                </span>
+                <SaleTag />
+              </>
+            ) : null}
           </p>
           {/* Third line, carrying two claims. Kept to ONE line deliberately:
               the page reserves a fixed strip of space for this bar, so a

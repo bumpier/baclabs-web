@@ -173,9 +173,8 @@ export default function FunnelPage() {
   };
 
   const whyBuy = WHY_BUY.filter((w) => w.title && w.body);
-  const bannerText = saleVisible()
-    ? SALE.bannerText || saleLabel()
-    : ANNOUNCEMENT;
+  const sale = saleVisible();
+  const bannerText = sale ? SALE.bannerText || saleLabel() : ANNOUNCEMENT;
 
   // The announcement bar now carries up to three lines rather than one. Each
   // is dropped when its source config goes empty, so the bar shortens to two,
@@ -199,9 +198,19 @@ export default function FunnelPage() {
           The third part is hidden below `sm`: on a narrow phone three parts
           wrap to two lines and push the hero down, and the price-match claim
           is the one already repeated in the hero, the trust bar and the buy
-          bar — so it is the one that can afford to go. */}
+          bar — so it is the one that can afford to go.
+
+          While the sale shows, the bar turns solid brand blue with the sale
+          line in bold: the first thing on the page says there is a sale. */}
       {bannerParts.length > 0 ? (
-        <div className="border-b border-line bg-brand-tint px-4 py-2 text-sm font-medium text-ink">
+        <div
+          className={[
+            "border-b px-4 text-sm font-medium",
+            sale
+              ? "border-brand bg-brand py-2.5 text-white"
+              : "border-line bg-brand-tint py-2 text-ink",
+          ].join(" ")}
+        >
           <ul className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             {bannerParts.map((part, i) => (
               <li
@@ -216,11 +225,14 @@ export default function FunnelPage() {
                 ].join(" ")}
               >
                 {i > 0 ? (
-                  <span aria-hidden="true" className="text-ink-soft">
+                  <span
+                    aria-hidden="true"
+                    className={sale ? "text-white/60" : "text-ink-soft"}
+                  >
                     &middot;
                   </span>
                 ) : null}
-                {part}
+                {sale && i === 0 ? <span className="font-bold">{part}</span> : part}
               </li>
             ))}
           </ul>

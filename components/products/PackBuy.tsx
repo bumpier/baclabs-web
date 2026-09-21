@@ -16,6 +16,7 @@ import {
   referencePriceMinor,
   remainingForFreeDeliveryMinor,
   saleLabel,
+  saleSavingMinor,
   saleVisible,
   shipsFree,
   type Bundle,
@@ -24,6 +25,7 @@ import { trackEvent } from "@/lib/analytics";
 import { hasTrackingConsent } from "@/components/consent/consent-store";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
+import { SaleTag } from "@/components/funnel/SaleTag";
 
 /**
  * The purchase panel on a pack page.
@@ -128,9 +130,12 @@ export function PackBuy({
             {formatMinor(bundle.priceMinor)}
           </span>
           {sale ? (
-            <span className="tabular text-sm line-through">
-              {formatMinor(referencePriceMinor(bundle))}
-            </span>
+            <>
+              <span className="tabular text-sm line-through">
+                {formatMinor(referencePriceMinor(bundle))}
+              </span>
+              <SaleTag />
+            </>
           ) : null}
           <span className="text-sm">
             <span className="tabular">{formatMinor(perVialMinor(bundle))}</span> per vial
@@ -188,7 +193,7 @@ export function PackBuy({
           {sale ? (
             <div className="flex justify-between gap-4">
               <dt className="text-ink-soft">{saleLabel()}</dt>
-              <dd className="tabular font-medium text-cta-deep">
+              <dd className="tabular font-semibold text-brand-deep">
                 &minus;{formatMinor(referenceTotal - totalMinor)}
               </dd>
             </div>
@@ -215,6 +220,19 @@ export function PackBuy({
             </dd>
           </div>
         </dl>
+
+        {/* The saving in pounds, restated under the total where the decision
+            is made. Same line as the home page's chooser. */}
+        {sale ? (
+          <p
+            aria-live="polite"
+            className="mt-3 rounded-control bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-deep"
+          >
+            You save{" "}
+            <span className="tabular">{formatMinor(saleSavingMinor(bundle, quantity))}</span> on
+            this order
+          </p>
+        ) : null}
 
         {VAT.statement ? <p className="mt-2 text-xs text-ink-soft">{VAT.statement}</p> : null}
 

@@ -1,7 +1,15 @@
 import Link from "next/link";
-import { formatMinor, perVialMinor, savingPercent } from "@/config/funnel";
+import {
+  formatMinor,
+  perVialMinor,
+  referencePriceMinor,
+  saleLabel,
+  saleVisible,
+  savingPercent,
+} from "@/config/funnel";
 import { PACK_PAGES, bundleForPack, packPath } from "@/config/products";
 import { cheapestPerVialBundle } from "@/lib/pack-metrics";
+import { SaleTag } from "@/components/funnel/SaleTag";
 
 /**
  * Every pack as a card, each linking to its own page.
@@ -24,6 +32,7 @@ export function PackGrid({
   columns?: 3 | 4;
 }) {
   const cheapest = cheapestPerVialBundle();
+  const sale = saleVisible();
 
   return (
     <ul
@@ -45,7 +54,11 @@ export function PackGrid({
               href={packPath(p)}
               className="flex h-full flex-col rounded-panel border border-line bg-surface p-5 transition-colors duration-150 hover:border-brand/40"
               style={{ transitionTimingFunction: "var(--ease-out)" }}
-              aria-label={`${p.shortLabel}, ${formatMinor(b.priceMinor)}`}
+              // The label replaces the card's text for screen readers, so it
+              // carries the sale too, or they would hear none of it.
+              aria-label={`${p.shortLabel}, ${formatMinor(b.priceMinor)}${
+                sale ? `, was ${formatMinor(referencePriceMinor(b))}, ${saleLabel()}` : ""
+              }`}
             >
               <p className="flex flex-wrap items-baseline gap-x-2">
                 <span className="font-display text-lg font-bold text-ink">
@@ -59,8 +72,18 @@ export function PackGrid({
                   <span className="text-xs font-semibold text-ink-soft">{b.label}</span>
                 ) : null}
               </p>
-              <p className="tabular mt-2 text-xl font-semibold text-ink">
-                {formatMinor(b.priceMinor)}
+              <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="tabular text-xl font-semibold text-ink">
+                  {formatMinor(b.priceMinor)}
+                </span>
+                {sale ? (
+                  <>
+                    <span className="tabular text-sm text-ink-soft line-through">
+                      {formatMinor(referencePriceMinor(b))}
+                    </span>
+                    <SaleTag />
+                  </>
+                ) : null}
               </p>
               <p className="tabular mt-0.5 text-sm text-ink-soft">
                 {formatMinor(perVialMinor(b))} per vial
