@@ -14,6 +14,7 @@ import {
   createAdminSession,
   createAdminUserSession,
   destroyAdminSession,
+  getAdminSession,
   requireAdmin,
   requireAdminRole,
   verifyAdminPassword,
@@ -95,7 +96,22 @@ export async function setOrderStatusAction(formData: FormData): Promise<void> {
   const id = z.string().uuid().parse(formData.get("orderId"));
   const status = orderStatusSchema.parse(formData.get("status"));
 
+  const before = await prisma.order.findUnique({ where: { id }, select: { status: true } });
   const order = await prisma.order.update({ where: { id }, data: { status } });
+
+  // Stock allocated to the order goes back on the shelf it came from — but
+  // only while it is still in the building. A shipped order's stock has
+  // left, and cancelling one must not conjure it back. A no-op for an order
+  // that was never allocated.
+  if (status === "cancelled" && (before?.status === "paid" || before?.status === "packed")) {
+    try {
+      const { releaseOrder } = await import("@/lib/inventory/store");
+      const session = await getAdminSession();
+      await releaseOrder(id, session?.adminUserId ?? "admin");
+    } catch (err) {
+      console.error(`[internal] returning stock for cancelled order ${id} failed`, err);
+    }
+  }
 
   if (status === "shipped") {
     const { sendOrderShippedEmail } = await import("@/lib/customer-email");

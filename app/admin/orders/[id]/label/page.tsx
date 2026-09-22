@@ -4,57 +4,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/adminAuth";
 import { PrintButton } from "@/components/PrintButton";
-import { LABEL_HEIGHT, LABEL_WIDTH, PostageLabel } from "@/components/PostageLabel";
+import { PostageLabel } from "@/components/PostageLabel";
+import { LABEL_HEIGHT, LABEL_PRINT_CSS, LABEL_WIDTH } from "@/lib/postageLabel";
+import { addressLines, parseAddress } from "@/lib/orderAddress";
 
 export const dynamic = "force-dynamic";
-
-interface Address {
-  line1: string;
-  line2: string | null;
-  city: string;
-  country: string;
-  postalCode: string | null;
-}
-
-/**
- * The sticker is the only thing on the sheet, so this page carries its own
- * @page rule rather than the A4 default the rest of the site prints at. The
- * rules live here — not in globals.css — so they apply only while this route
- * is mounted.
- *
- * The admin shell stretches to the viewport height; on a 1in page that would
- * spill a second, blank sticker out of the printer, hence the min-height reset.
- */
-const LABEL_PRINT_CSS = `
-@media print {
-  @page { size: ${LABEL_WIDTH} ${LABEL_HEIGHT}; margin: 0; }
-  html, body {
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #fff !important;
-  }
-  body :where(div, main) { min-height: 0 !important; }
-  /* The page wrapper's own padding would push the sticker off the stock. */
-  .label-page { margin: 0 !important; padding: 0 !important; max-width: none !important; }
-  .postage-label {
-    margin: 0 !important;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    break-inside: avoid;
-  }
-}
-`;
-
-/** Same shape the packing slip uses: street, then town with postcode, then country. */
-function addressLines(address: Address): string[] {
-  return [
-    address.line1,
-    address.line2 ?? "",
-    address.postalCode ? `${address.city}, ${address.postalCode}` : address.city,
-    address.country,
-  ].filter((line) => line.trim().length > 0);
-}
 
 export default async function AdminOrderLabelPage({
   params,
@@ -68,11 +22,7 @@ export default async function AdminOrderLabelPage({
   const order = await prisma.order.findUnique({ where: { id } });
   if (!order) notFound();
 
-  // Card orders carry no address until the Stripe webhook backfills it, so a
-  // pending card order legitimately has nothing to put on a label yet.
-  const address: Address | null = order.shippingAddress
-    ? (JSON.parse(order.shippingAddress) as Address)
-    : null;
+  const address = parseAddress(order);
   const hasAddress = !!address?.line1;
 
   return (

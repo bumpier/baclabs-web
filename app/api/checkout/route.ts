@@ -12,6 +12,8 @@ import {
 import { createBundleCheckout, assertPriceMatchesConfig } from "@/lib/payments/stripe";
 import { getPaymentConfig, providerForMethod } from "@/lib/payments/config";
 import { attributionFor } from "@/lib/meta-capi-event";
+import { getInventoryMode } from "@/lib/inventory/mode";
+import { availableToSell } from "@/lib/inventory/store";
 import { priceIn } from "@/lib/fx";
 import { fetchFxRates } from "@/lib/fx-rates";
 import {
@@ -80,7 +82,24 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    if (product.stock < totalVials) {
+    // Which stock count to sell against — see lib/inventory/mode.ts. In
+    // warehouse mode a pack is sellable as far as the shelves can make it
+    // up: its own stock if pre-packed, its components' if it is a kit.
+    if ((await getInventoryMode()) === "warehouse") {
+      const available = await availableToSell(bundle.sku);
+      if (available === null) {
+        console.error(
+          `[internal] checkout rejected — no active SKU "${bundle.sku}" in warehouse mode. Create it on /admin/inventory.`
+        );
+        return NextResponse.json(
+          { error: "This product is not available for purchase right now" },
+          { status: 400 }
+        );
+      }
+      if (available < input.quantity) {
+        return NextResponse.json({ error: "Not enough stock for that quantity" }, { status: 409 });
+      }
+    } else if (product.stock < totalVials) {
       return NextResponse.json({ error: "Not enough stock for that quantity" }, { status: 409 });
     }
 

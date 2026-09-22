@@ -19,6 +19,10 @@ import { prisma } from "@/lib/db";
 /** Setting keys. Never write a bare string at a call site. */
 export const SETTING_KEYS = {
   metaPixelId: "meta_pixel_id",
+  // "legacy" | "warehouse" — see lib/inventory/mode.ts
+  inventoryMode: "inventory_mode",
+  // Sent on every carrier label — see lib/shipping/shipments.ts
+  deliveryInstructions: "delivery_instructions",
 } as const;
 
 /**
@@ -79,7 +83,7 @@ export function parsePixelId(raw: string): string | null {
   return null;
 }
 
-async function readSetting(key: string): Promise<string | null> {
+export async function readSetting(key: string): Promise<string | null> {
   try {
     const row = await prisma.setting.findUnique({ where: { key } });
     return row?.value ?? null;

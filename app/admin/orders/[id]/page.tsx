@@ -2,28 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/adminAuth";
-import { brand, formatPrice, type Currency } from "@/config/brand";
+import { getAdminSession, requireAdmin } from "@/lib/adminAuth";
 import { setOrderStatusAction } from "@/app/admin/actions";
 import { PrintButton } from "@/components/PrintButton";
+import { PackingSlip } from "@/components/admin/PackingSlip";
+import { OrderFulfilment } from "@/components/admin/OrderFulfilment";
+import { SubmitButton } from "@/components/forms";
+import { SHOP_TIME_ZONE, formatSaleDateTime } from "@/lib/saleTime";
 
 export const dynamic = "force-dynamic";
-
-interface OrderItem {
-  name: string;
-  qty: number;
-  unitPrice: string;
-  /** Exact line total. Falls back to unitPrice × qty for orders placed before this field existed. */
-  lineTotal?: string;
-}
-
-interface Address {
-  line1: string;
-  line2: string | null;
-  city: string;
-  country: string;
-  postalCode: string | null;
-}
 
 const NEXT_ACTIONS: Record<string, { status: string; label: string }[]> = {
   pending: [{ status: "cancelled", label: "Cancel order" }],
@@ -51,13 +38,7 @@ export default async function AdminOrderDetailPage({
   });
   if (!order) notFound();
 
-  const items = JSON.parse(order.items) as OrderItem[];
-  // Card orders carry no address until the Stripe webhook backfills it, so a
-  // pending card order legitimately has an empty string here.
-  const address: Address = order.shippingAddress
-    ? (JSON.parse(order.shippingAddress) as Address)
-    : { line1: "", line2: null, city: "", country: "", postalCode: "" };
-  const currency = order.currency as Currency;
+  const session = await getAdminSession();
   const actions = NEXT_ACTIONS[order.status] ?? [];
 
   return (
@@ -74,12 +55,10 @@ export default async function AdminOrderDetailPage({
               <form key={a.status} action={setOrderStatusAction}>
                 <input type="hidden" name="orderId" value={order.id} />
                 <input type="hidden" name="status" value={a.status} />
-                <button
-                  type="submit"
-                  className={a.status === "cancelled" ? "btn-secondary" : "btn-primary"}
-                >
+                {/* Disables while pending, so a double click cannot send it twice. */}
+                <SubmitButton className={a.status === "cancelled" ? "btn-secondary" : "btn-primary"}>
                   {a.label}
-                </button>
+                </SubmitButton>
               </form>
             ))}
             <PrintButton />
@@ -88,6 +67,16 @@ export default async function AdminOrderDetailPage({
             </Link>
           </div>
         </div>
+        <p className="mt-2 text-sm text-ink-soft">
+          {order.paidAt ? (
+            <>
+              Sold <span className="font-semibold text-ink">{formatSaleDateTime(order.paidAt)}</span>{" "}
+              UK time
+            </>
+          ) : (
+            <>Not paid · checkout started {formatSaleDateTime(order.createdAt)} UK time</>
+          )}
+        </p>
 
         <dl className="card mt-6 grid gap-4 p-6 text-sm sm:grid-cols-4">
           <div>
@@ -120,6 +109,7 @@ export default async function AdminOrderDetailPage({
                   <span className="text-ink-soft">
                     → {e.recipient} ·{" "}
                     {e.sentAt.toLocaleString("en-GB", {
+                      timeZone: SHOP_TIME_ZONE,
                       day: "numeric",
                       month: "short",
                       hour: "2-digit",
@@ -131,95 +121,13 @@ export default async function AdminOrderDetailPage({
             </ul>
           )}
         </div>
+
+        <OrderFulfilment order={order} isPacker={session?.role === "PACKER"} />
       </div>
 
       {/* Packing slip — the only thing that prints */}
-      <div className="card print-area mt-8 p-10">
-        <div className="flex items-start justify-between border-b border-line pb-6">
-          <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={brand.logo} alt="" className="h-10 w-10" />
-            <div>
-              <p className="font-display text-xl font-semibold text-brand-deep">{brand.name}</p>
-              <p className="text-xs text-ink-soft">{brand.contact.email}</p>
-            </div>
-          </div>
-          <div className="text-right text-sm">
-            <p className="font-semibold">Packing slip</p>
-            <p className="mt-1 font-mono text-xs text-ink-soft">{order.id}</p>
-            <p className="text-xs text-ink-soft">
-              {order.createdAt.toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          <div>
-            <p className="label">Ship to</p>
-            <p className="text-sm font-medium">{order.customerName}</p>
-            <p className="text-sm text-ink-soft">
-              {address.line1}
-              {address.line2 ? <><br />{address.line2}</> : null}
-              <br />
-              {address.city}
-              {address.postalCode ? `, ${address.postalCode}` : ""}
-              <br />
-              {address.country}
-            </p>
-          </div>
-          <div className="sm:text-right">
-            <p className="label">Contact</p>
-            <p className="text-sm text-ink-soft">
-              {order.customerPhone}
-              <br />
-              {order.customerEmail}
-            </p>
-          </div>
-        </div>
-
-        <table className="mt-8 w-full text-sm">
-          <thead>
-            <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
-              <th className="py-2 font-semibold">Item</th>
-              <th className="py-2 text-center font-semibold">Qty</th>
-              <th className="py-2 text-right font-semibold">Unit price</th>
-              <th className="py-2 text-right font-semibold">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {items.map((item, idx) => (
-              <tr key={idx}>
-                <td className="py-3">{item.name}</td>
-                <td className="py-3 text-center">{item.qty}</td>
-                <td className="py-3 text-right">{formatPrice(item.unitPrice, currency)}</td>
-                <td className="py-3 text-right font-medium">
-                  {formatPrice(
-                    item.lineTotal ? parseFloat(item.lineTotal) : parseFloat(item.unitPrice) * item.qty,
-                    currency
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t border-line">
-              <td colSpan={3} className="py-3 text-right font-semibold">
-                Order total
-              </td>
-              <td className="py-3 text-right font-semibold text-brand-deep">
-                {formatPrice(order.totalAmount.toString(), currency)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-
-        <p className="mt-10 border-t border-line pt-6 text-center text-sm italic text-ink-soft">
-          {brand.packingSlipThankYou}
-        </p>
+      <div className="mt-8">
+        <PackingSlip order={order} />
       </div>
     </div>
   );

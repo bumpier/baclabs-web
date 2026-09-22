@@ -5,6 +5,7 @@ import { send, layout, escapeHtml, ctaButton } from "@/lib/email";
 import { canonicalOrigin } from "@/lib/site-url";
 import { LITERAL } from "@/lib/theme";
 import { brand, formatPrice, type Currency } from "@/config/brand";
+import { formatSaleDateTime, saleTime } from "@/lib/saleTime";
 
 // Customer-facing order emails. Every send is recorded in EmailLog first;
 // the @@unique([orderId, type]) constraint makes double-sends impossible.
@@ -330,7 +331,8 @@ export function buildNewOrderAlert(
   const subject = `New paid order — ${total} from ${order.customerName}`;
   const html = layout(`<p style="font-weight:bold;margin-top:0">You have a new paid order.</p>
       ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString())}
-      <p style="margin:20px 0 0"><strong>Customer:</strong> ${escapeHtml(order.customerName)}<br>
+      <p style="margin:20px 0 0"><strong>Paid:</strong> ${formatSaleDateTime(saleTime(order))} (UK time)</p>
+      <p style="margin:12px 0 0"><strong>Customer:</strong> ${escapeHtml(order.customerName)}<br>
          <strong>Email:</strong> ${escapeHtml(order.customerEmail)}<br>
          <strong>Phone:</strong> ${escapeHtml(order.customerPhone)}</p>
       <p style="margin:12px 0 0"><strong>Ship to:</strong> ${shippingAddressLine(order)}</p>

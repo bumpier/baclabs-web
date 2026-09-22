@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-
-/** Physical size of the label stock. The @page rule on the label route matches. */
-export const LABEL_WIDTH = "1.5in";
-export const LABEL_HEIGHT = "1in";
+import { LABEL_HEIGHT, LABEL_WIDTH } from "@/lib/postageLabel";
 
 const MAX_PT = 8; // what a short address prints at
 const MIN_PT = 5; // below this an address stops being reliably scannable by eye

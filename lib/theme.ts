@@ -148,3 +148,11 @@ export const CHART = [
 
 /** Chart chrome: gridlines and axes, matched to the page's hairline. */
 export const CHART_LINE = LINE;
+
+/**
+ * One hue for magnitude (the dashboard's sales-times heatmap): the brand blue
+ * mixed into white at 20/40/60/80/100%, lightest = fewest. Zero is not a step
+ * of this ramp — it is CHART_EMPTY, a grey, so "none" never reads as "a few".
+ */
+export const CHART_SEQUENTIAL = ["#CCDAFF", "#99B5FF", "#6691FF", "#336CFF", PRIMARY] as const;
+export const CHART_EMPTY = LINE;

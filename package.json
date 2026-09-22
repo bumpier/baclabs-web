@@ -18,7 +18,10 @@
     "export:wxr": "tsx scripts/export-wxr.ts",
     "test:consent": "tsx scripts/test-consent.ts",
     "test:sale": "tsx scripts/test-sale.ts",
-    "test:meta": "tsx scripts/test-meta-capi.ts"
+    "test:meta": "tsx scripts/test-meta-capi.ts",
+    "test:inventory": "tsx scripts/test-inventory.ts",
+    "test:shipping": "tsx scripts/test-shipping.ts",
+    "test:barcode": "tsx scripts/test-barcode.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

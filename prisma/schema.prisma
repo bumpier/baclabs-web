@@ -69,10 +69,18 @@ model Order {
   fbp             String?
   fbc             String?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  // When the sale happened: set in the same write that flips pending → paid
+  // (lib/payments/fulfillment.ts). createdAt is when checkout began, which for
+  // a card order can be well before the payment goes through. Null while
+  // pending, and on orders cancelled before paying.
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   emailLogs EmailLog[]
+  pickLines PickLine[]
+  shipments Shipment[]
 }
 
 model AdminUser {
@@ -165,4 +173,242 @@ model Article {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@index([type, status])
+}
+
+// ── Warehouse, SKUs and stock ─────────────────────────────────────
+//
+// The model a WMS uses, cut down to what one warehouse and a handful of
+// products need. lib/inventory/ is the only code that writes these tables.
+//
+// Units are integers throughout — grams and millimetres — so no stock or
+// postage decision ever rests on a float. SmartTrack speaks kg and cm; the
+// conversion happens once, at the edge, in lib/smarttrack/payload.ts.
+//
+// None of this touches an order until Setting "inventory_mode" is
+// "warehouse" (lib/inventory/mode.ts). Until then checkout and fulfilment
+// keep using Product.stock, so this can be set up on the live site without
+// changing what a customer can buy.
+
+// A SKU is anything with its own code: a thing on a shelf, or a pack sold as
+// one line. A SKU with components is a KIT — it holds no stock itself, and
+// selling one takes its components off the shelf (a 3-pack kit takes three
+// singles). A pack that arrives or is made up already packed is NOT a kit: it
+// is a SKU in its own right, with its own stock and its own locations.
+model Sku {
+  id          String  @id @default(cuid())
+  code        String  @unique // "BACLAB-10ML-X5". Upper case; see lib/inventory/codes.ts
+  name        String
+  description String  @default("")
+  barcode     String? @unique // the maker's EAN/UPC, if it has one
+
+  // As it goes in the post, packaging included. Zero means "not measured
+  // yet", which stops the service picker guessing.
+  weightGrams Int @default(0) @map("weight_grams")
+  lengthMm    Int @default(0) @map("length_mm")
+  widthMm     Int @default(0) @map("width_mm")
+  heightMm    Int @default(0) @map("height_mm")
+
+  // Customs data, sent with each parcel. Optional for UK-to-UK.
+  hsCode           String? @map("hs_code")
+  originCountryIso String? @map("origin_country_iso")
+
+  // A service picked by hand for this SKU. Null = work it out from the
+  // weight and size. Checked against the parcel every time, so a hand-picked
+  // service that a 3-unit order outgrows falls back to the automatic choice.
+  serviceCode String? @map("service_code")
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  components SkuComponent[]  @relation("KitComponents")
+  usedIn     SkuComponent[]  @relation("ComponentOf")
+  stock      StockLevel[]
+  movements  StockMovement[]
+  pickLines  PickLine[]
+}
+
+// One line of a kit's bill of materials: `quantity` of `component` per kit.
+// Components are always stocked SKUs; kits do not nest.
+model SkuComponent {
+  id          String @id @default(cuid())
+  kitId       String @map("kit_id")
+  kit         Sku    @relation("KitComponents", fields: [kitId], references: [id], onDelete: Cascade)
+  componentId String @map("component_id")
+  component   Sku    @relation("ComponentOf", fields: [componentId], references: [id])
+  quantity    Int
+
+  @@unique([kitId, componentId])
+}
+
+// A building stock is kept in. Its address is the SENDER on every label
+// shipped from it.
+model Warehouse {
+  id     String  @id @default(cuid())
+  code   String  @unique // "MAIN"
+  name   String
+  active Boolean @default(true)
+
+  contactName  String @default("") @map("contact_name")
+  company      String @default("")
+  addressLine1 String @default("") @map("address_line_1")
+  addressLine2 String @default("") @map("address_line_2")
+  city         String @default("")
+  postcode     String @default("")
+  countryIso   String @default("GB") @map("country_iso")
+  phone        String @default("")
+  email        String @default("")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  locations Location[]
+}
+
+// A place on the shelf: "A-01-02" (aisle, bay, shelf) or whatever scheme the
+// warehouse labels its racking with. Orders are picked from the lowest
+// `pickSequence` first, so the pick face drains before the overflow.
+model Location {
+  id           String    @id @default(cuid())
+  warehouseId  String    @map("warehouse_id")
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id])
+  code         String
+  pickSequence Int       @default(100) @map("pick_sequence")
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  stock     StockLevel[]
+  movements StockMovement[]
+  pickLines PickLine[]
+
+  @@unique([warehouseId, code])
+}
+
+// How many of a SKU are in a location right now. Never negative. Only ever
+// changed alongside a StockMovement, in the same transaction.
+model StockLevel {
+  id         String   @id @default(cuid())
+  skuId      String   @map("sku_id")
+  sku        Sku      @relation(fields: [skuId], references: [id])
+  locationId String   @map("location_id")
+  location   Location @relation(fields: [locationId], references: [id])
+  quantity   Int      @default(0)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([skuId, locationId])
+}
+
+// The ledger. Every change to a StockLevel writes one row here, so the level
+// can always be explained — and rebuilt — from its history.
+model StockMovement {
+  id         String   @id @default(cuid())
+  skuId      String   @map("sku_id")
+  sku        Sku      @relation(fields: [skuId], references: [id])
+  locationId String   @map("location_id")
+  location   Location @relation(fields: [locationId], references: [id])
+  quantity   Int // signed: +received, -sold
+  type       String // RECEIVE | ADJUST | TRANSFER | SALE | CANCEL
+  reason     String   @default("")
+  reference  String   @default("") // delivery note, PO, transfer pair, etc.
+  orderId    String?  @map("order_id")
+  actor      String   @default("") // AdminUser.id, "admin" or "system"
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([skuId, createdAt])
+  @@index([orderId])
+}
+
+// What to pick for an order and where from, written when the order is
+// allocated (on payment, in warehouse mode). A line with no location is a
+// SHORTFALL — the order needed more than was on the shelf — and is retried
+// by allocating again once stock is booked in.
+model PickLine {
+  id             String    @id @default(cuid())
+  orderId        String    @map("order_id")
+  order          Order     @relation(fields: [orderId], references: [id])
+  skuId          String    @map("sku_id")
+  sku            Sku       @relation(fields: [skuId], references: [id])
+  locationId     String?   @map("location_id")
+  location       Location? @relation(fields: [locationId], references: [id])
+  quantity       Int
+  // For the scan-to-verify station, not yet built. Stays 0 until then.
+  pickedQuantity Int       @default(0) @map("picked_quantity")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([orderId])
+}
+
+// ── Postage ───────────────────────────────────────────────────────
+
+// A postal service and the limits that decide whether a parcel fits it.
+// Mirrors SmartTrack's get-services, which is where SMARTTRACK rows come
+// from; MANUAL rows are typed in. A sync overwrites the limits but never the
+// operator's own columns (active, priority, volumetricDivisor).
+model PostalService {
+  id          String  @id @default(cuid())
+  code        String  @unique // SmartTrack service_code, e.g. "STYDL3HPA"
+  name        String
+  description String  @default("")
+  source      String  @default("MANUAL") // SMARTTRACK | MANUAL
+  carrier     String  @default("")
+  tracked     Boolean @default(true)
+
+  minWeightGrams    Int    @default(0) @map("min_weight_grams")
+  maxWeightGrams    Int    @default(0) @map("max_weight_grams") // 0 = no limit
+  maxLengthMm       Int    @default(0) @map("max_length_mm") // 0 = no limit
+  maxWidthMm        Int    @default(0) @map("max_width_mm")
+  maxHeightMm       Int    @default(0) @map("max_height_mm")
+  // e.g. "L+W+H" or "L+2W+2H", checked against sizeLimitMm. L is always the
+  // longest side. Empty = no combined limit.
+  sizeFormula       String @default("") @map("size_formula")
+  sizeLimitMm       Int    @default(0) @map("size_limit_mm")
+  // Carriers that charge on volume: chargeable weight is the greater of the
+  // actual weight and L×W×H ÷ this (5000 is usual). Null = actual weight.
+  volumetricDivisor Int?   @map("volumetric_divisor")
+
+  // JSON [{ iso: "GB", transitDays: 3 }]. Empty array = not restricted.
+  deliveryCountries String @default("[]") @map("delivery_countries")
+
+  // Operator's columns. Lower priority wins when several services fit.
+  active   Boolean   @default(true)
+  priority Int       @default(100)
+  syncedAt DateTime? @map("synced_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+}
+
+// One label bought (or being bought) for an order. PENDING is written BEFORE
+// the carrier is called, so a crash between their "created" and our database
+// write still leaves a row pointing at the label that was paid for.
+model Shipment {
+  id          String @id @default(cuid())
+  orderId     String @map("order_id")
+  order       Order  @relation(fields: [orderId], references: [id])
+  // The order_reference sent to SmartTrack. Unique across all attempts, so a
+  // voided label can be replaced without the carrier rejecting a duplicate.
+  reference   String @unique
+  environment String // "uat" | "live" — a UAT label is not valid postage
+  status      String @default("PENDING") // PENDING | CREATED | FAILED | VOIDED
+
+  serviceCode   String @map("service_code")
+  serviceName   String @default("") @map("service_name")
+  // "sku" | "auto" | "manual" — how the service was chosen, for the audit.
+  serviceChoice String @default("auto") @map("service_choice")
+
+  weightGrams Int @map("weight_grams")
+  lengthMm    Int @map("length_mm")
+  widthMm     Int @map("width_mm")
+  heightMm    Int @map("height_mm")
+
+  carrierShipmentId String? @map("carrier_shipment_id")
+  trackingNumbers   String  @default("[]") @map("tracking_numbers") // JSON string[]
+  labelPdf          String? @map("label_pdf") // base64, as returned
+  error             String?
+  actor             String  @default("")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  voidedAt  DateTime? @map("voided_at")
+
+  @@index([orderId])
 }

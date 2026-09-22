@@ -5,6 +5,9 @@ import { requireAdmin, getAdminSession } from "@/lib/adminAuth";
 import { formatPrice } from "@/config/brand";
 import { Prisma } from "@prisma/client";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
+import { PrintUnfulfilledMenu } from "@/components/admin/PrintUnfulfilledMenu";
+import { SalesActivityChart } from "@/components/admin/SalesActivity";
+import { buildSalesActivity } from "@/lib/salesActivity";
 import type {
   DailyRevenue,
   StatusCount,
@@ -30,6 +33,7 @@ export default async function AdminOverviewPage() {
     allStatusGroups,
     allPaidOrders,
     paymentGroups,
+    saleTimes,
   ] = await Promise.all([
     prisma.order.count({ where: { status: "pending" } }),
     prisma.order.count({ where: { status: "paid" } }),
@@ -48,6 +52,13 @@ export default async function AdminOverviewPage() {
       select: { items: true },
     }),
     prisma.order.groupBy({ by: ["paymentMethod"], _count: { id: true } }),
+    prisma.order.findMany({
+      where: {
+        status: { in: ["paid", "packed", "shipped", "delivered"] },
+        paidAt: { not: null },
+      },
+      select: { paidAt: true },
+    }),
   ]);
 
   const allOrdersAgg = await prisma.order.aggregate({
@@ -108,6 +119,11 @@ export default async function AdminOverviewPage() {
     revenueOrders.reduce((sum: number, o: { totalAmount: unknown }) => sum + Number(o.totalAmount), 0)
   );
 
+  const salesActivity = buildSalesActivity(
+    saleTimes.flatMap((o) => (o.paidAt ? [o.paidAt] : [])),
+    new Date()
+  );
+
   const totalOrders = allStatusGroups.reduce(
     (sum: number, s: { _count: { id: number } }) => sum + s._count.id,
     0
@@ -138,6 +154,7 @@ export default async function AdminOverviewPage() {
       </div>
 
       <div className="mt-10 flex flex-wrap gap-3">
+        <PrintUnfulfilledMenu count={paidOrders} />
         <Link href="/admin/products/new" className="btn-primary">
           Add product
         </Link>
@@ -146,8 +163,12 @@ export default async function AdminOverviewPage() {
       <div className="mt-14">
         <h2 className="font-display text-xl font-medium text-brand-deep">Analytics</h2>
         <p className="mt-1 text-sm text-ink-soft">
-          Revenue chart shows the last 30 days. All other metrics are all-time.
+          Revenue chart shows the last 30 days and the sales-times chart has its own range. All
+          other metrics are all-time.
         </p>
+        <div className="mt-6">
+          <SalesActivityChart activity={salesActivity} />
+        </div>
         <div className="mt-6">
           <AnalyticsDashboard
             dailyRevenue={dailyRevenue}

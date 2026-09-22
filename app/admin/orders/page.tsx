@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireAdmin, getAdminSession } from "@/lib/adminAuth";
 import { formatPrice, type Currency } from "@/config/brand";
 import { setOrderStatusAction } from "@/app/admin/actions";
+import { formatSaleClock, formatSaleDate, saleTime } from "@/lib/saleTime";
+import { getInventoryMode } from "@/lib/inventory/mode";
 
 export const dynamic = "force-dynamic";
 
@@ -35,18 +37,29 @@ export default async function AdminOrdersPage({
   const { status } = await searchParams;
   const filter = STATUSES.includes(status as never) ? status : "all";
 
-  const orders = await prisma.order.findMany({
-    where: filter && filter !== "all" ? { status: filter } : undefined,
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+  const [orders, inventoryMode] = await Promise.all([
+    prisma.order.findMany({
+      where: filter && filter !== "all" ? { status: filter } : undefined,
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+    getInventoryMode(),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <p className="eyebrow">Fulfilment</p>
-      <h1 className="mt-2 font-display text-3xl font-medium tracking-tight text-brand-deep">
-        Orders
-      </h1>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+        <h1 className="font-display text-3xl font-medium tracking-tight text-brand-deep">
+          Orders
+        </h1>
+        {/* Only once orders have pick lists to scan — see lib/inventory/mode.ts. */}
+        {inventoryMode === "warehouse" && (
+          <Link href="/admin/orders/scan" className="btn-secondary">
+            Scan station
+          </Link>
+        )}
+      </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
         {STATUSES.map((s) => (
@@ -85,10 +98,8 @@ export default async function AdminOrdersPage({
                 return (
                   <tr key={o.id} className="hover:bg-brand-tint/40">
                     <td className="px-5 py-3 text-ink-soft">
-                      {o.createdAt.toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                      })}
+                      {formatSaleDate(saleTime(o))}
+                      <span className="block text-xs">{formatSaleClock(saleTime(o))}</span>
                     </td>
                     <td className="px-5 py-3">
                       <span className="font-medium">{o.customerName}</span>
