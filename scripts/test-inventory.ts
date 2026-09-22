@@ -13,6 +13,7 @@ import {
   locationScanCode,
   orderScanCode,
   parseScan,
+  pickLabelPayload,
   productScanCode,
 } from "@/lib/inventory/scan";
 
@@ -143,6 +144,21 @@ check("a malformed pick label is unreadable", parseScan("ORD-XYZ") === null);
 check("a shelf parses", same(parseScan(" LOC-A-01\r"), { kind: "location", code: "A-01" }));
 check("anything else is a product, as scanned", same(parseScan("5012345678900"), { kind: "product", value: "5012345678900" }));
 check("an empty scan is unreadable", parseScan("  \n") === null);
+{
+  const payload = pickLabelPayload("3f9a1c2d-0000-4000-8000-000000000000", [
+    { locationCode: "A-01", sku: { code: "BACLAB-10ML", barcode: null }, quantity: 3 },
+    { locationCode: "Z-99", sku: { code: "BACLAB-10ML-X5", barcode: "5012345678900" }, quantity: 2 },
+  ]);
+  check(
+    "the pick label's 2D code carries the order, then shelf, item and quantity per line",
+    payload === "ORD:3F9A1C2D;SHELF:LOC-A-01,ITEM:BACLAB-10ML,QTY:3;SHELF:LOC-Z-99,ITEM:5012345678900,QTY:2",
+    payload
+  );
+  check("its shelf and item values match the shelf and product barcodes exactly", payload.includes(locationScanCode("Z-99")) && payload.includes(productScanCode({ code: "BACLAB-10ML-X5", barcode: "5012345678900" })));
+  check("it uses only characters every keyboard layout agrees on", /^[A-Z0-9:;,._-]+$/.test(payload), payload);
+  check("our scan station reads it as the pick label", same(parseScan(payload), { kind: "order", ref: "3F9A1C2D" }));
+  check("a 2D code with a bad reference is unreadable", parseScan("ORD:NOTHEX;SHELF:LOC-A") === null);
+}
 
 const pickLines = [
   { id: "a", locationCode: "A-01", skuCode: "BACLAB-10ML", skuBarcode: "5012345678900", quantity: 3, picked: 0 },

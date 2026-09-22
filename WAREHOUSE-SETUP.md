@@ -96,13 +96,15 @@ Also worth confirming with them:
 
 ## Barcodes and the scan station
 
-Every barcode is **Code 128 (1D)**, which both 1D laser and 2D imaging
-scanners read. What each one holds is a **draft until agreed with the
-fulfilment team**; it is all set in `lib/inventory/scan.ts`:
+The pick label carries a **2D (QR) code** holding the whole pick list, so
+the fulfilment team's system can check each scan without looking anything
+up. Shelf and product labels are **Code 128 (1D)**. What each one holds is a
+**draft until the fulfilment team confirms it**, and it is all set in
+`lib/inventory/scan.ts`:
 
 | Barcode | Holds | Printed on |
 |---|---|---|
-| Pick label | `ORD-` + order reference, e.g. `ORD-3F9A1C2D` | the pick label, with the carrier label |
+| Pick label (QR) | `ORD:3F9A1C2D;SHELF:LOC-A-01,ITEM:BACLAB-10ML,QTY:3;…` — the order, then shelf, item and quantity for every line | the pick label, with the carrier label |
 | Shelf | `LOC-` + location code, e.g. `LOC-A-01-02` | *Print shelf labels* (Warehouses page) |
 | Product | the maker's barcode if the SKU has one, else the SKU code | *Print product labels* (Inventory page) |
 

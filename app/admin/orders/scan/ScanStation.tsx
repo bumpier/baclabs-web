@@ -90,7 +90,9 @@ export function ScanStation() {
   const handleScan = useCallback(
     async (raw: string) => {
       const current = viewRef.current;
-      if (raw.trim().toUpperCase().startsWith(ORDER_SCAN_PREFIX)) {
+      // A pick label: its 2D code ("ORD:…") or its typed reference ("ORD-…").
+      const head = raw.trim().toUpperCase();
+      if (head.startsWith(ORDER_SCAN_PREFIX) || head.startsWith("ORD:")) {
         const r = await openPickListAction(raw);
         if (!r.ok) return show("bad", r.error);
         setOrder(r.data);

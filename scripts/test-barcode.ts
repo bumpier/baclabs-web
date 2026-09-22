@@ -9,6 +9,7 @@
  * values read back exactly.
  */
 import { CODE128_PATTERNS, code128Values, code128Widths, isEncodable } from "@/lib/barcode/code128";
+import { qrMatrix } from "@/lib/barcode/qr";
 
 let failures = 0;
 
@@ -58,6 +59,19 @@ check("a newline is not", !isEncodable("A\nB"));
     threw = true;
   }
   check("encoding an impossible string throws rather than printing garbage", threw);
+}
+
+// ── QR (the pick label's 2D code) ────────────────────────────────
+{
+  const qr = qrMatrix("ORD:3F9A1C2D;SHELF:LOC-A-01,ITEM:BACLAB-10ML,QTY:3");
+  check("a QR code is at least version 1 (21 modules)", qr.size >= 21, String(qr.size));
+  check("a QR code's size is 17 + 4 × version", (qr.size - 17) % 4 === 0, String(qr.size));
+  // Each corner but bottom-right carries a finder square: a dark 7×7 ring.
+  const finderAt = (ox: number, oy: number) =>
+    [0, 6].every((i) => [0, 1, 2, 3, 4, 5, 6].every((j) => qr.isDark(ox + i, oy + j) && qr.isDark(ox + j, oy + i)));
+  check("finder patterns in three corners", finderAt(0, 0) && finderAt(qr.size - 7, 0) && finderAt(0, qr.size - 7));
+  const long = qrMatrix(`ORD:3F9A1C2D;${Array.from({ length: 12 }, (_, i) => `SHELF:LOC-A-${i},ITEM:BACLAB-10ML-X10,QTY:${i}`).join(";")}`);
+  check("a long pick list grows the code rather than failing", long.size > qr.size, `${long.size} vs ${qr.size}`);
 }
 
 if (failures > 0) {

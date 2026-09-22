@@ -6,8 +6,8 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { AutoPrint } from "@/components/AutoPrint";
 import { PrintButton } from "@/components/PrintButton";
 import { parseAddress } from "@/lib/orderAddress";
-import { Barcode } from "@/components/admin/Barcode";
-import { orderScanCode } from "@/lib/inventory/scan";
+import { QrCode } from "@/components/admin/QrCode";
+import { orderScanCode, pickLabelPayload } from "@/lib/inventory/scan";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +17,9 @@ export const dynamic = "force-dynamic";
  * in the tray as a pair. It lists what to take and from where, in walking
  * order.
  *
- * The barcode at the foot opens the order at the scan station
- * (/admin/orders/scan). What it encodes is set in lib/inventory/scan.ts.
+ * The 2D code at the foot carries the order and every line — shelf, item
+ * and quantity — for the fulfilment team's scanners, and opens the order at
+ * our own scan station too. Its format is set in lib/inventory/scan.ts.
  */
 const PICK_PRINT_CSS = `
 @media print {
@@ -120,8 +121,21 @@ export default async function PickLabelPage({ params }: { params: Promise<{ id: 
               </p>
             )}
 
-            <div className="mt-auto flex justify-center border-t-2 border-black pt-[2mm]">
-              <Barcode value={orderScanCode(order.id)} width="80mm" height="16mm" />
+            <div className="mt-auto flex items-center justify-center gap-[4mm] border-t-2 border-black pt-[2mm]">
+              <QrCode
+                value={pickLabelPayload(
+                  order.id,
+                  picks.map((l) => ({ locationCode: l.location!.code, sku: l.sku, quantity: l.quantity }))
+                )}
+                size="34mm"
+              />
+              <div className="text-left">
+                <p className="text-[6pt] uppercase tracking-widest">Scan ref</p>
+                <p className="font-mono text-[12pt] font-bold">{orderScanCode(order.id)}</p>
+                <p className="text-[7pt]">
+                  {picks.length} line{picks.length === 1 ? "" : "s"} · {units} unit{units === 1 ? "" : "s"}
+                </p>
+              </div>
             </div>
           </div>
           <AutoPrint />
