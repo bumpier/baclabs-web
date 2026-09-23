@@ -133,7 +133,7 @@ export const howManyDrawsFromAVial: Guide = {
     },
     {
       q: "Does refrigerating the vial give you more draws?",
-      a: `No. Refrigeration at 2 to 8 °C is sensible for an opened vial, but the in-use limit is still ${FACTS.openedLimit} and the volume is still ${FACTS.vialMl} ml. Cold storage supports the limit; it does not extend it.`,
+      a: `No. An opened vial should be kept in the fridge at 2 to 8 °C, but the in-use limit is still ${FACTS.openedLimit} and the volume is still ${FACTS.vialMl} ml. Cold storage supports the limit; it does not extend it.`,
     },
   ],
   related: ["bacteriostatic-water-vial-sizes", "how-long-does-bacteriostatic-water-last"],

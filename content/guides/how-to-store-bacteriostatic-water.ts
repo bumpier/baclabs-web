@@ -7,7 +7,7 @@ export const howToStore: Guide = {
   metaTitle: "How to Store Bacteriostatic Water: Temperature and Limits",
   description:
     "Where to keep bacteriostatic water before and after opening, whether it needs refrigerating, why not to freeze it, and the signs to discard a vial.",
-  quickAnswer: `Store unopened bacteriostatic water upright at room temperature, away from direct light, and follow the label. Once the stopper has been punctured, many laboratories refrigerate the vial at 2–8 °C, but the in-use limit of ${FACTS.openedLimit} applies either way. Do not freeze it. Discard any vial that is cloudy, discoloured or past its limit.`,
+  quickAnswer: `Before opening, store bacteriostatic water upright at room temperature, away from direct light. It does not need the fridge. Once the stopper has been punctured, store the vial in the fridge at 2–8 °C and use it within ${FACTS.openedLimit}. Do not freeze it. Discard any vial that is cloudy, discoloured or past its limit.`,
   updated: "2026-09-10",
   sections: [
     {
@@ -15,10 +15,10 @@ export const howToStore: Guide = {
       paragraphs: [
         `An unopened vial is a closed system. The rubber stopper and crimped collar keep the contents sterile, and the preservative has nothing to do until the seal is broken. Storage before opening is therefore about protecting the glass, the seal and the label, not about slowing anything down.`,
         "Keep sealed vials at controlled room temperature, in the original carton or a closed drawer, away from direct sunlight and away from anything that runs hot such as a radiator, a windowsill or the top of a piece of equipment. Light and heat are the two things that shorten the printed shelf life. Neither is dramatic day to day, but a vial that sits in a sunny window for a year is not the vial the manufacturer tested.",
-        "Store vials upright so the liquid sits away from the stopper. That keeps the underside of the stopper dry, which matters later when it is punctured. If the label on your vial states a specific temperature range, the label governs; some manufacturers print a refrigerated range and some print a room-temperature range, and you should follow whichever appears on the vial in front of you.",
+        "Store vials upright so the liquid sits away from the stopper. That keeps the underside of the stopper dry, which matters later when it is punctured. **An unopened vial does not need to be refrigerated.** Room temperature is the correct place for it until the day you open it.",
       ],
       list: [
-        "Controlled room temperature unless the label states otherwise",
+        "Room temperature, not the fridge",
         "Out of direct light, ideally in the carton it arrived in",
         "Upright, with the stopper at the top",
         "Away from freezers, radiators and heat-generating equipment",
@@ -29,9 +29,9 @@ export const howToStore: Guide = {
       heading: "Does bacteriostatic water need to be refrigerated once opened?",
       paragraphs: [
         `Once the stopper has been punctured the vial is in use, and the preservative is doing the job it is there for: inhibiting the growth of bacteria that may have been introduced through the stopper. The preservative does not sterilise, so the question of where to keep the vial is really a question of how much help to give it.`,
-        "Many laboratories refrigerate opened vials at 2–8 °C. Cooling slows the metabolism of any organism that got through the stopper, so it is a sensible second line of defence behind the preservative. It is not a requirement in the same way that the in-use limit is a requirement. A vial kept at room temperature, away from light, with the stopper swabbed before each draw, **is still within specification for the full in-use period**.",
-        `What refrigeration does not do is extend that period. The in-use limit of ${FACTS.openedLimit} is a conventional limit written on the label, and it applies regardless of temperature. A refrigerated vial opened on the first of the month is discarded on the same day as a room-temperature vial opened on the first of the month.`,
-        "Whichever you choose, choose it once. Moving a vial between a fridge and a bench several times a day produces condensation on the outside of the glass and on the stopper, and repeated warming and cooling gives the preservative nothing extra while giving the seal more work to do.",
+        "Yes. **Once opened, store the vial in the fridge at 2–8 °C.** Cooling slows the metabolism of any organism that got through the stopper, so it is a second line of defence behind the preservative for the whole in-use period.",
+        `What refrigeration does not do is extend that period. The in-use limit of ${FACTS.openedLimit} runs from the day of first puncture, and a refrigerated vial opened on the first of the month is still discarded ${FACTS.openedLimitDays} days later.`,
+        "Keep it in the fridge between draws rather than on the bench. Leaving a vial out for long spells and moving it back and forth several times a day produces condensation on the outside of the glass and on the stopper, and repeated warming and cooling gives the preservative nothing extra while giving the seal more work to do.",
       ],
     },
     {
@@ -46,7 +46,7 @@ export const howToStore: Guide = {
     {
       heading: "What temperature and limit apply at each stage?",
       paragraphs: [
-        "The table below sets out the conventional storage conditions for each state a vial can be in. It is a summary of general laboratory practice; the label on the vial is the final authority and overrides anything here.",
+        "The table below sets out how to store a vial in each state it can be in.",
       ],
       table: {
         caption: "Storage conditions for bacteriostatic water by state of the vial",
@@ -54,13 +54,13 @@ export const howToStore: Guide = {
         rows: [
           [
             "Unopened, sealed",
-            "Controlled room temperature, away from direct light, or the range stated on the label",
+            "Room temperature, away from direct light. No fridge needed",
             "Printed expiry date on the vial",
           ],
           [
             "Opened, stopper punctured",
-            "Many laboratories refrigerate at 2–8 °C; room temperature away from light is also acceptable",
-            `${FACTS.openedLimit}, whichever temperature is used`,
+            "In the fridge, 2–8 °C",
+            `${FACTS.openedLimit}`,
           ],
           [
             "Frozen at any point",
@@ -82,11 +82,11 @@ export const howToStore: Guide = {
       ],
       list: [
         "Swab the stopper with an alcohol wipe and let it dry before every puncture, including the first one after the flip cap is removed. The cap keeps the stopper clean in transit; it does not keep it sterile.",
-        "If the vial has been refrigerated, let it stand until it reaches room temperature before puncturing. A cold stopper in warm air collects condensation, and water on the outside of the stopper is carried through on the point of the needle.",
+        "Take the opened vial out of the fridge a few minutes before a draw and let it lose its chill before puncturing. A cold stopper in warm air collects condensation, and water on the outside of the stopper is carried through on the point of the needle.",
         "[Use a fresh sterile needle for each draw](/guides/vial-handling-and-contamination) and never leave a needle sitting in the stopper. An open channel into the vial defeats the seal entirely, and the preservative is not designed to cope with a continuous route in.",
         "Puncture the stopper at its centre, where the rubber is thickest and designed to reseal, rather than at the edge near the collar.",
         "Write the date of first puncture on the vial or its carton as soon as the stopper is broken. The in-use limit is counted from that day, and a vial with no date on it cannot be shown to be within it.",
-        "Keep the vial upright between uses so the liquid does not sit against the stopper, and return it to its carton or the fridge promptly after each draw.",
+        "Keep the vial upright between uses so the liquid does not sit against the stopper, and return it to the fridge promptly after each draw.",
       ],
     },
     {
@@ -108,14 +108,14 @@ export const howToStore: Guide = {
       heading: "How are BacLab's vials supplied?",
       paragraphs: [
         `BacLab supplies one product: [a ${FACTS.vialMl} ml glass vial of bacteriostatic water](/#buy), sold as a laboratory and research diluent. Each vial is sealed with a rubber stopper under a crimped aluminium collar and a flip-off cap, so the stopper is protected until the moment you remove the cap and any interference with the seal is visible before you open it.`,
-        "Vials are packed upright in protective packaging and dispatched by tracked courier, so they travel at ambient temperature for a short period, which is well within the conditions an unopened vial tolerates. On arrival, check the cap is intact, the collar is tight and the liquid is clear, then store the vials as described above until they are needed. [Packs run from a single vial to one hundred](/bulk-bacteriostatic-water), so you can hold a working stock without keeping more open vials than you will use within the in-use limit.",
+        "Vials are packed upright in protective packaging and dispatched by tracked courier, so they travel at ambient temperature for a short period, which is well within the conditions an unopened vial tolerates. On arrival, check the cap is intact, the collar is tight and the liquid is clear, then store the sealed vials at room temperature until they are needed. [Packs run from a single vial to one hundred](/bulk-bacteriostatic-water), so you can hold a working stock without keeping more open vials than you will use within the in-use limit.",
       ],
     },
   ],
   faq: [
     {
       q: "Does bacteriostatic water need to be refrigerated?",
-      a: "Unopened, no: room temperature away from light is the norm unless the label says otherwise. Once the stopper has been punctured, many laboratories refrigerate at 2–8 °C as a precaution, but it is not a requirement and it does not change the in-use limit.",
+      a: "Not until it is opened. Store unopened vials at room temperature, away from light. Once the stopper has been punctured, store the vial in the fridge at 2–8 °C. Refrigeration does not change the in-use limit.",
     },
     {
       q: "Can bacteriostatic water be frozen?",
@@ -123,7 +123,7 @@ export const howToStore: Guide = {
     },
     {
       q: `Does refrigerating an opened vial extend the ${FACTS.openedLimitDays}-day limit?`,
-      a: `No. The in-use limit of ${FACTS.openedLimit} applies at any storage temperature. Refrigeration adds a margin of safety within that period; it does not lengthen it.`,
+      a: `No. The in-use limit of ${FACTS.openedLimit} applies at any storage temperature. Keeping an opened vial at 2–8 °C protects it within that period; it does not lengthen it.`,
     },
     {
       q: "Why has my bacteriostatic water gone cloudy?",
@@ -135,7 +135,7 @@ export const howToStore: Guide = {
     },
     {
       q: "What if the vials were warm when they arrived?",
-      a: "A short spell at ambient temperature in transit is within what a sealed vial tolerates, and it is not a reason to discard. Check the seal and the clarity of the liquid on arrival, then store the vials at room temperature out of direct light as normal.",
+      a: "A short spell at ambient temperature in transit is within what a sealed vial tolerates, and it is not a reason to discard. Check the seal and the clarity of the liquid on arrival, then store the sealed vials at room temperature out of direct light as normal.",
     },
   ],
   related: [

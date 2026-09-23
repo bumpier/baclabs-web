@@ -114,7 +114,7 @@ export const vialSizes: Guide = {
         "**Batch or lot number**, so the vial can be traced and matched to [a certificate](/quality-and-documentation) or safety data sheet.",
         "**Seal and closure**: an intact aluminium crimp and flip cap over a stopper that has not been punctured.",
         `**Appearance**: ${FACTS.appearance.toLowerCase()}. Cloudy, discoloured or particulate contents are discarded regardless of the date.`,
-        "**Storage instructions**: room temperature away from light unless the label says otherwise. Once opened, many laboratories refrigerate at 2–8 °C.",
+        "**Storage instructions**: room temperature away from light until opened. Once opened, in the fridge at 2–8 °C.",
       ],
     },
   ],

@@ -6,7 +6,7 @@ export const vialHandlingAndContamination: Guide = {
   title: "Handling a bacteriostatic water vial without contaminating it",
   metaTitle: "Bacteriostatic water vial handling and contamination",
   description: `Keeping a multi-dose vial clean between entries: disinfecting the stopper, a fresh needle each time, and the signs a vial should be discarded.`,
-  quickAnswer: `Disinfect the stopper before every entry, use a fresh needle each time, never return liquid to the vial, and store it as the label directs between uses. The preservative inhibits growth from a small challenge introduced under clean conditions. It does not clean up after poor handling.`,
+  quickAnswer: `Disinfect the stopper before every entry, use a fresh needle each time, never return liquid to the vial, and keep it in the fridge at 2–8 °C between uses. The preservative inhibits growth from a small challenge introduced under clean conditions. It does not clean up after poor handling.`,
   updated: "2026-09-10",
   sections: [
     {
@@ -44,7 +44,7 @@ export const vialHandlingAndContamination: Guide = {
     {
       heading: "How should the vial be stored between entries?",
       paragraphs: [
-        "As [the storage line on the label](/guides/how-to-read-a-vial-label) directs. Storage conditions are part of what the stated shelf life assumes, and a vial kept outside them is outside the terms of its own label whether or not it looks any different.",
+        "In the fridge at 2–8 °C. A sealed vial is kept at room temperature, but [once the stopper has been entered it belongs in the fridge](/guides/how-to-store-bacteriostatic-water) between draws, not on the bench.",
         `Replace the flip cap if it is the sort that refits, or cover the stopper, and keep the vial upright. The cap is a dust cover rather than a seal, but keeping debris off the face of the stopper means less to disinfect through at the next entry.`,
         `Write the date of first entry on the label at the time you make it. The in-use limit of ${FACTS.openedLimit} is only enforceable if the start date is visible, and a vial with no date is one nobody can vouch for.`,
       ],

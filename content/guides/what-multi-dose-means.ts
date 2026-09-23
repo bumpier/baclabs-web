@@ -63,7 +63,7 @@ export const whatMultiDoseMeans: Guide = {
     {
       heading: "How should a multi-dose vial be treated between entries?",
       paragraphs: [
-        `As an open container that happens to have a preservative in it. [Disinfect the stopper before every entry rather than only the first](/guides/vial-handling-and-contamination), use a fresh needle each time, and return the vial to the storage conditions the label states rather than leaving it on a bench between sessions.`,
+        `As an open container that happens to have a preservative in it. [Disinfect the stopper before every entry rather than only the first](/guides/vial-handling-and-contamination), use a fresh needle each time, and return the vial to the fridge at 2–8 °C rather than leaving it on a bench between sessions.`,
         `Write the date of first entry on the label. The in-use limit is only useful if the person picking the vial up next can see when the period started, and a vial with no date on it is a vial no one can vouch for.`,
         `Discard on appearance regardless of the date. Cloudiness, discolouration or visible particles mean the contents no longer meet the appearance criterion, and the preservative does not make a contaminated vial usable again.`,
       ],
@@ -84,7 +84,7 @@ export const whatMultiDoseMeans: Guide = {
     },
     {
       q: "Does refrigeration extend the in-use limit?",
-      a: `No. The limit runs on the calendar from first puncture. Storing the vial as the label directs is a condition of the limit applying, not a way to extend it beyond ${FACTS.openedLimitDays} days.`,
+      a: `No. The limit runs on the calendar from first puncture. Keeping the opened vial in the fridge at 2–8 °C is a condition of the limit applying, not a way to extend it beyond ${FACTS.openedLimitDays} days.`,
     },
     {
       q: "Can an unpreserved vial be treated as multi-dose?",

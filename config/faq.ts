@@ -52,7 +52,7 @@ export const FAQ: readonly FaqItem[] = [
   },
   {
     q: "How should it be stored, and what is the shelf life?",
-    a: `Store the sealed vial as stated on its label. Once it has been entered, the limit is ${PRODUCT.shelfLifeAfterOpening.toLowerCase()}.`,
+    a: `Store sealed vials at ${PRODUCT.storageUnopened}; they do not need the fridge until opened. Once opened, keep the vial at ${PRODUCT.storageOpened} and use it within ${PRODUCT.shelfLifeAfterOpening.toLowerCase()}.`,
   },
   {
     q: "How do I pay, and is it secure?",

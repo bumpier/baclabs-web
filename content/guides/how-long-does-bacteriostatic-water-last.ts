@@ -21,7 +21,7 @@ export const howLongDoesItLast: Guide = {
       heading: "Does unopened bacteriostatic water expire?",
       paragraphs: [
         "Yes. A sealed vial carries an expiry date printed on the label or the crimp cap, and that date is the unopened shelf life. For bacteriostatic water it is typically around two years from the date of manufacture, though the exact figure depends on the manufacturer's stability testing and **the label always governs**.",
-        "The expiry date assumes the vial has been stored as the label directs, which for most products means at controlled room temperature, protected from light, and not frozen. A vial that has been left in a hot vehicle or a freezer has not been stored under the conditions the expiry was tested against, and the printed date no longer says much about it.",
+        "The expiry date assumes the unopened vial has been stored properly, which means at room temperature, protected from light, and not frozen. A vial that has been left in a hot vehicle or a freezer has not been stored under the conditions the expiry was tested against, and the printed date no longer says much about it.",
         "Until the stopper is punctured, the contents are sealed from the outside world. The expiry is about the slow change of the solution and its container over time, not about contamination. That is why the sealed limit is measured in years and the opened limit in days.",
       ],
     },
@@ -45,7 +45,7 @@ export const howLongDoesItLast: Guide = {
           [
             "Unopened, before the printed expiry",
             "Printed expiry date",
-            "Fine to open. Store as the label directs until then.",
+            "Fine to open. Keep it sealed at room temperature until then.",
           ],
           [
             "Unopened, past the printed expiry",
@@ -123,7 +123,7 @@ export const howLongDoesItLast: Guide = {
     },
     {
       q: "Does refrigerating an opened vial extend the 28 days?",
-      a: `No. Refrigeration at 2 to 8 °C slows the growth of many organisms and is common practice for opened vials, but the in-use limit is still ${FACTS.openedLimit}. Cold storage supports the limit; it does not lengthen it.`,
+      a: `No. An opened vial should be kept in the fridge at 2 to 8 °C, which slows the growth of many organisms, but the in-use limit is still ${FACTS.openedLimit}. Cold storage supports the limit; it does not lengthen it.`,
     },
     {
       q: "If a vial was only punctured once, does the 28-day limit still apply?",
@@ -131,7 +131,7 @@ export const howLongDoesItLast: Guide = {
     },
     {
       q: "How long does bacteriostatic water last unopened?",
-      a: "Until the expiry date printed on the label, which is typically around two years from manufacture. Check the vial rather than assuming, and store it as the label directs so that the printed date remains meaningful.",
+      a: "Until the expiry date printed on the label, which is typically around two years from manufacture. Check the vial rather than assuming, and keep it sealed at room temperature, out of direct light, so that the printed date remains meaningful.",
     },
   ],
   related: ["how-to-store-bacteriostatic-water", "what-is-bacteriostatic-water"],

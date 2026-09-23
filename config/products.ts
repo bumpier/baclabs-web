@@ -243,7 +243,7 @@ export const PACK_PAGES: readonly PackPage[] = [
       },
       {
         heading: "Storing ten vials",
-        body: "The storage condition printed on the label applies to every vial in the pack, sealed or otherwise. Vials are unaffected by pack size — ten sealed vials keep exactly as one does.",
+        body: "Keep the sealed vials at room temperature until you need them; there is no need to fridge the whole pack. Only the vial you have opened goes in the fridge at 2–8°C. Ten sealed vials keep exactly as one does.",
       },
     ],
     faqs: [
@@ -257,7 +257,7 @@ export const PACK_PAGES: readonly PackPage[] = [
       },
       {
         q: "Do ten vials need different storage from one?",
-        a: "No. The storage condition printed on the label applies per vial and does not change with pack size. Ten sealed vials keep exactly as one does.",
+        a: "No. Sealed vials stay at room temperature and only the opened vial goes in the fridge at 2–8°C, whatever the pack size. Ten sealed vials keep exactly as one does.",
       },
       {
         q: "Will I use ten vials before they expire?",

@@ -6,13 +6,13 @@ export const howToReadAVialLabel: Guide = {
   title: "How to read a bacteriostatic water vial label",
   metaTitle: "How to read a bacteriostatic water vial label",
   description: `Every field on a bacteriostatic water label and what it governs: batch number, expiry, fill volume, storage and the in-use limit.`,
-  quickAnswer: `A vial label carries the solution name, the fill volume, a batch or lot number, an expiry date, a storage instruction and usually the in-use limit once opened. The batch number and expiry belong to that vial alone. Where the label and a general figure disagree, the label governs.`,
+  quickAnswer: `A vial label carries the solution name, the fill volume, a batch or lot number, an expiry date and usually the in-use limit once opened. Some labels also carry a storage instruction; BacLab's does not, so store unopened vials at room temperature and opened vials in the fridge at 2–8 °C. The batch number and expiry belong to that vial alone. Where the label and a general figure disagree, the label governs.`,
   updated: "2026-09-10",
   sections: [
     {
       heading: "What is printed on a bacteriostatic water vial?",
       paragraphs: [
-        `A small vial has very little room, so what survives onto the label is what governs handling. Expect six things: what the solution is, how much of it there is, which batch it came from, when it expires, how to store it, and how long it may be used once entered.`,
+        `A small vial has very little room, so what survives onto the label is what governs handling. Expect what the solution is, how much of it there is, which batch it came from, when it expires and how long it may be used once entered. Some suppliers also print how to store it.`,
         `Some of those fields describe the product in general and are the same on every vial. Others describe this vial specifically and are printed at the point of filling. Telling the two apart is most of what reading a label well amounts to, because only the second kind can answer a question about the vial in your hand.`,
       ],
       table: {
@@ -23,7 +23,7 @@ export const howToReadAVialLabel: Guide = {
           ["Fill volume", `The nominal contents, commonly ${FACTS.vialMl} ml`, "No"],
           ["Batch or lot number", "Which production run it came from", "Yes"],
           ["Expiry date", "The last date the unopened vial may be used", "Yes"],
-          ["Storage", "The conditions the stated shelf life assumes", "No"],
+          ["Storage (not on every label)", "The conditions the stated shelf life assumes", "No"],
           ["In-use limit", "How long after first entry the vial may be used", "No"],
         ],
       },
@@ -39,7 +39,7 @@ export const howToReadAVialLabel: Guide = {
     {
       heading: "What does the expiry date mean?",
       paragraphs: [
-        `The expiry applies to the unopened vial stored as the label directs. It is set from the batch's own production date and stability data, which is why it is batch-specific and why it cannot be inferred from a general figure about how long the product lasts.`,
+        `The expiry applies to the unopened vial stored properly, which for BacLab vials means sealed at room temperature and out of direct light. It is set from the batch's own production date and stability data, which is why it is batch-specific and why it cannot be inferred from a general figure about how long the product lasts.`,
         `Expiry and the in-use limit are two separate clocks and both apply. An unopened vial within its expiry is usable. Once entered, the in-use limit starts and runs independently, so a vial can reach the end of its in-use period long before its printed expiry, and **a vial opened close to its expiry is governed by whichever date comes first**.`,
         `A date printed as a month and year means the end of that month unless the label says otherwise.`,
       ],
@@ -47,9 +47,9 @@ export const howToReadAVialLabel: Guide = {
     {
       heading: "What does the storage line tell you?",
       paragraphs: [
-        `The storage instruction is **the condition the stated shelf life assumes**. It is not a recommendation to be improved on. A vial kept warmer than the label allows may still look unchanged and still be outside the conditions its expiry was set under.`,
-        `Labels differ between suppliers and between markets, so the instruction on the vial is the one to follow rather than a figure remembered from a different product. Where a range is printed, the whole range is acceptable and there is no benefit in aiming for one end of it.`,
-        `Storage conditions before first entry and handling after it are separate questions. The storage line covers the first; the in-use limit covers the second.`,
+        `Where a supplier prints one, the storage instruction is **the condition the stated shelf life assumes**. It is not a recommendation to be improved on. A vial kept warmer than that may still look unchanged and still be outside the conditions its expiry was set under.`,
+        `**BacLab's label does not carry a storage line.** Store our vials unopened at room temperature, away from direct light; they do not need the fridge. Once the stopper has been punctured, [move the vial to the fridge at 2–8 °C](/guides/how-to-store-bacteriostatic-water) and keep it there between draws.`,
+        `Storage before first entry and handling after it are separate questions. Room temperature covers the first; the fridge and the in-use limit cover the second.`,
       ],
     },
     {

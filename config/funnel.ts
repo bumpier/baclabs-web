@@ -45,10 +45,13 @@ export const PRODUCT = {
     "Sterile water with a bacteriostatic preservative, in a sealed multi-dose vial.",
   use: "A sterile diluent and solvent, used to reconstitute or dilute substances for laboratory and research purposes.",
   // Empty strings render nothing.
-  // Printed on the label ("Storage: 2–8°C"); see the vial photograph in
-  // public/. The unopened expiry is batch-specific and printed on each vial,
-  // so it is NOT stated here as a single figure.
-  storage: "2–8°C, as printed on the label",
+  // Storage is NOT printed on the label, so never write "as per the label" for
+  // it. Unopened vials keep at room temperature; opened vials go to 2–8°C.
+  // The unopened expiry is batch-specific and printed on each vial, so it is
+  // NOT stated here as a single figure.
+  storageUnopened: "room temperature",
+  storageOpened: "2–8°C",
+  storage: "Room temperature until opened, then 2–8°C once opened",
   shelfLifeUnopened: "",
   /** pH range from the supplier's specification. Empty until supplied. */
   ph: "",
@@ -566,7 +569,7 @@ export const PRODUCT_IMAGES: readonly {
 }[] = [
   {
     src: "/static-water.png",
-    alt: `A sealed ${PRODUCT.size} of ${PRODUCT.name.toLowerCase()} with a crimped aluminium collar and white flip cap, ${VIAL_ML}ml, storage 2–8°C.`,
+    alt: `A sealed ${PRODUCT.size} of ${PRODUCT.name.toLowerCase()} with a crimped aluminium collar and white flip cap, ${VIAL_ML}ml.`,
     /** Intrinsic pixel size, so the layout reserves the right box before the file loads. */
     width: 1122,
     height: 1402,

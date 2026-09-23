@@ -91,7 +91,7 @@ export const SDS_SECTIONS: SdsSection[] = [
     heading: "Handling and storage",
     rows: [
       ["Handling", "Use aseptic technique. Swab the stopper before each entry. Allow a refrigerated vial to reach room temperature before opening to avoid condensation. Do not leave a needle in the stopper. Record the date of first puncture on the vial."],
-      ["Storage", PRODUCT.storage ? `${PRODUCT.storage}. Keep upright, sealed and protected from light.` : "As printed on the label. Keep upright, sealed and protected from light."],
+      ["Storage", `${PRODUCT.storage}. Keep upright and protected from light. Do not freeze.`],
       ["In-use period", `Discard ${FACTS.openedLimitDays} days after the stopper is first punctured (${FACTS.openedLimit}). An unopened vial is governed by the printed expiry date.`],
       ["Incompatibilities", "Strong oxidising agents."],
     ],

@@ -80,8 +80,9 @@ injection** (only as part of the US pharmacopoeial product name, third person).
 - Multi-dose vials are conventionally discarded 28 days after first puncture (the in-use limit
   on the label). Unopened, the expiry printed on the vial applies; a typical unopened shelf life
   is around two years but the label governs.
-- Store unopened at room temperature away from light unless the label says otherwise; once
-  opened, many laboratories refrigerate at 2–8 °C. Discard if cloudy, discoloured, containing
+- Store unopened at room temperature away from light (no fridge needed); once opened, store
+  in the fridge at 2–8 °C. Our label does not print storage instructions, so never write
+  "as the label directs" or similar for storage. Discard if cloudy, discoloured, containing
   particles, or past the in-use limit.
 - The preservative is present below the concentration limits at which the mixture would
   inherit any classification, so the diluent is not classified as hazardous under GB CLP.

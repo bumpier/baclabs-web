@@ -92,9 +92,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
     items: [
       {
         q: "How should an unopened vial be stored?",
-        a: PRODUCT.storage
-          ? `Store it as printed on the label: ${PRODUCT.storage.replace(/, as printed on the label$/, "")}. Keep it upright, sealed and out of direct light.`
-          : "Store it as printed on the label, upright, sealed and out of direct light.",
+        a: `At ${PRODUCT.storageUnopened}. An unopened vial does not need to go in the fridge. Keep it upright, sealed and out of direct light. Once you open it, move it to the fridge at ${PRODUCT.storageOpened}.`,
       },
       {
         q: "How long does it last once opened?",
@@ -106,9 +104,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       },
       {
         q: "Does it need to be refrigerated?",
-        a: PRODUCT.storage
-          ? `Follow the label, which states ${PRODUCT.storage.replace(/, as printed on the label$/, "")}. Refrigeration does not extend the in-use limit once the vial is opened.`
-          : "Follow the label. Refrigeration does not extend the in-use limit once the vial is opened.",
+        a: `Not until it is opened. Store unopened vials at ${PRODUCT.storageUnopened}. Once the stopper has been punctured, keep the vial refrigerated at ${PRODUCT.storageOpened}. Refrigeration does not extend the in-use limit of ${FACTS.openedLimit}.`,
       },
       {
         q: "Can it be frozen?",

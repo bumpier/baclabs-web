@@ -210,7 +210,7 @@ export default function BulkPage() {
       <h2 className="mt-14 text-2xl">What you are buying</h2>
       <p className="measure mt-3 text-base text-ink-soft">
         {PRODUCT.composition} {PRODUCT.use} Each vial is {PRODUCT.size},
-        {PRODUCT.storage ? ` stored at ${PRODUCT.storage},` : ""} and usable for{" "}
+        stored at {PRODUCT.storageUnopened} until opened and at {PRODUCT.storageOpened} once opened, and usable for{" "}
         {PRODUCT.shelfLifeAfterOpening} once the stopper has been punctured. The unopened expiry is
         batch-specific and printed on each vial. The{" "}
         <Link href="/quality-and-documentation" className="link">
