@@ -27,10 +27,13 @@ const MAX_ORDER_VIALS = Math.max(...BUNDLES.map((b) => b.vials)) * MAX_QUANTITY;
  * is absent rather than guessed.
  */
 export default function ContactPage() {
-  const { contact, company } = brand;
-  const hasEmail = Boolean(contact.email);
+  const { company } = brand;
+  // Set here rather than in brand.contact.email, which also feeds the footer
+  // and home page — the address is meant to appear on this page and the terms.
+  const email = "contact@baclab.co.uk";
+  const hasEmail = Boolean(email);
   const wholesaleHref = hasEmail
-    ? `mailto:${contact.email}?subject=${encodeURIComponent("Wholesale enquiry: bacteriostatic water")}`
+    ? `mailto:${email}?subject=${encodeURIComponent("Wholesale enquiry: bacteriostatic water")}`
     : null;
 
   return (
@@ -65,8 +68,8 @@ export default function ContactPage() {
           <div className="grid gap-1 py-5 sm:grid-cols-[10rem_1fr] sm:gap-4">
             <dt className="text-sm font-medium text-ink-soft">Email</dt>
             <dd className="text-base text-ink">
-              <a href={`mailto:${contact.email}`} className="link">
-                {contact.email}
+              <a href={`mailto:${email}`} className="link">
+                {email}
               </a>
             </dd>
           </div>
