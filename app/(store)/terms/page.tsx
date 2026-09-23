@@ -4,7 +4,7 @@ import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
 import { brand } from "@/config/brand";
 import { MAX_QUANTITY, PRODUCT, VAT, formatMinor } from "@/config/funnel";
-import { COMPLAINT_ACK_DAYS, isSet, legalName, supportEmail } from "@/lib/legal";
+import { COMPLAINT_ACK_DAYS, isSet, legalName } from "@/lib/legal";
 
 export const metadata: Metadata = pageMetadata({
   title: "Terms and conditions",
@@ -22,7 +22,9 @@ export const metadata: Metadata = pageMetadata({
  */
 export default function TermsPage() {
   const { company } = brand;
-  const email = supportEmail();
+  // Set here rather than in brand.contact.email, which also feeds the footer
+  // and home page — this address is meant to appear on the terms only.
+  const email = "contact@baclab.co.uk";
 
   return (
     <LegalPage
