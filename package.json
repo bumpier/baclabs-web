@@ -21,7 +21,9 @@
     "test:meta": "tsx scripts/test-meta-capi.ts",
     "test:inventory": "tsx scripts/test-inventory.ts",
     "test:shipping": "tsx scripts/test-shipping.ts",
-    "test:barcode": "tsx scripts/test-barcode.ts"
+    "test:barcode": "tsx scripts/test-barcode.ts",
+    "preview:smarttrack": "tsx scripts/preview-smarttrack.ts",
+    "check:smarttrack": "tsx scripts/check-smarttrack.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

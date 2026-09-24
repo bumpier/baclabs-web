@@ -308,6 +308,49 @@ export async function generateLabel(input: ShipmentRequest): Promise<GenerateLab
   return call<GenerateLabelData>("generate-label", { method: "POST", body: input });
 }
 
+/**
+ * Add the shipment WITHOUT generating its label. Used by
+ * scripts/check-smarttrack.ts to see how SmartTrack reads a request; label
+ * buying uses generateLabel.
+ */
+export async function addShipment(input: ShipmentRequest): Promise<{ shipment_number: number; order_reference: string }> {
+  return call<{ shipment_number: number; order_reference: string }>("add-shipment", { method: "POST", body: input });
+}
+
+/** A shipment as SmartTrack stored it (get-shipments). Numbers are strings. */
+export interface StoredShipment {
+  order_reference: string;
+  tracking_number: string;
+  service_code: string;
+  service_name: string;
+  consignment_status: string;
+  weight: string; // kg
+  receiver_contact: string;
+  receiver_address_line1: string;
+  receiver_address_line2: string;
+  receiver_address_line3: string;
+  receiver_city: string;
+  receiver_postcode: string;
+  receiver_telephone: string;
+  sender_company: string;
+  sender_contact: string;
+  sender_address_line1: string;
+  sender_address_line2: string;
+  sender_city: string;
+  sender_postcode: string;
+  parcels: { tracking_number: string; length: string; width: string; height: string; weight: string }[];
+  [field: string]: unknown;
+}
+
+/** Read shipments back as SmartTrack holds them. */
+export async function getShipments(orderReferences: string[]): Promise<StoredShipment[]> {
+  const data = await call<StoredShipment[] | null>("get-shipments", {
+    method: "POST",
+    body: { order_reference: Object.fromEntries(orderReferences.map((r, i) => [String(i), r])) },
+  });
+  return Array.isArray(data) ? data : [];
+}
+
 /** Fetch the label of a shipment that already exists. */
 export async function getLabel(orderReference: string, labelSize: string): Promise<GetLabelData> {
   return call<GetLabelData>("get-label", {
