@@ -15,6 +15,12 @@ import { normaliseCode } from "@/lib/inventory/codes";
 /** The single vial, the thing on the shelf. Matches the Product row's slug. */
 export const VIAL_SKU_CODE = normaliseCode("baclab-10ml");
 
+/**
+ * Vials in one pack as the supplier delivers them. Stock is counted in
+ * vials; "Book in" takes a count of these packs and multiplies it out.
+ */
+export const SUPPLIER_PACK_VIALS = 10;
+
 /** Every code the storefront can sell, in ladder order. */
 export function storefrontSkuCodes(): { bundleId: string; code: string; vials: number }[] {
   return BUNDLES.map((b) => ({ bundleId: b.id, code: normaliseCode(b.sku), vials: b.vials }));

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/adminAuth";
 import { StockMovementForm } from "@/app/admin/inventory/stock/StockMovementForm";
+import { SUPPLIER_PACK_VIALS, VIAL_SKU_CODE } from "@/lib/inventory/demand";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,8 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
               .filter((l) => l.active && l.warehouse.active)
               .map((l) => ({ value: l.id, label: `${l.warehouse.code} / ${l.code}` }))}
             defaultSkuId={filtered?.id}
+            vialSkuId={skus.find((s) => s.code === VIAL_SKU_CODE)?.id}
+            supplierPackVials={SUPPLIER_PACK_VIALS}
           />
         )}
       </section>

@@ -14,6 +14,7 @@ import {
   warehouseCodeError,
 } from "@/lib/inventory/codes";
 import { setInventoryMode } from "@/lib/inventory/mode";
+import { SUPPLIER_PACK_VIALS, VIAL_SKU_CODE } from "@/lib/inventory/demand";
 import {
   adjustStock,
   allocateOrder,
@@ -293,7 +294,22 @@ export async function stockMovementAction(_prev: FormState, formData: FormData):
   try {
     const who = await actor();
     if (type === "receive") {
-      await receiveStock({ skuId, locationId, quantity, reference, actor: who });
+      // Vials arrive in the supplier's packs; the shelf is counted in vials.
+      if (formData.get("unit") === "supplierPack") {
+        const sku = await prisma.sku.findUnique({ where: { id: skuId } });
+        if (sku?.code !== VIAL_SKU_CODE) return { error: "Supplier packs can only be booked in as single vials" };
+        if (!Number.isInteger(quantity) || quantity <= 0) return { error: "Enter how many packs arrived" };
+        const packs = `${quantity} × pack of ${SUPPLIER_PACK_VIALS}`;
+        await receiveStock({
+          skuId,
+          locationId,
+          quantity: quantity * SUPPLIER_PACK_VIALS,
+          reference: (reference ? `${reference} · ${packs}` : packs).slice(0, 80),
+          actor: who,
+        });
+      } else {
+        await receiveStock({ skuId, locationId, quantity, reference, actor: who });
+      }
     } else if (type === "adjust") {
       const reason = String(formData.get("reason") ?? "");
       if (!(ADJUST_REASONS as readonly string[]).includes(reason)) return { error: "Pick a reason for the adjustment" };
