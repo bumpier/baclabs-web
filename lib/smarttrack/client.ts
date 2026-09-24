@@ -350,10 +350,22 @@ export async function createSku(input: {
   return call<unknown>("create-sku", { method: "POST", body: input });
 }
 
-/** Proves the key works and says how many services the account has. */
+/**
+ * Proves the key works and says how many services the account has.
+ * SmartTrack answers get-services on an account with nothing assigned with
+ * an error ("This service is not assigned to your account.") rather than an
+ * empty list; the key worked, so that is reported as none.
+ */
 export async function testConnection(): Promise<{ env: string; serviceCount: number }> {
   const cfg = requireConfig();
   await accessToken(cfg, true);
-  const services = await getServices();
-  return { env: cfg.env, serviceCount: services.length };
+  try {
+    const services = await getServices();
+    return { env: cfg.env, serviceCount: services.length };
+  } catch (err) {
+    if (err instanceof SmartTrackError && /not assigned/i.test(err.detail)) {
+      return { env: cfg.env, serviceCount: 0 };
+    }
+    throw err;
+  }
 }

@@ -102,6 +102,8 @@ export async function POST(req: Request) {
     await fulfillPaidOrder(orderId, {
       paymentRef: payment.paymentId ?? order.paymentRef,
       provider: GATEWAY_PROVIDER,
+      // Chosen and priced at checkout.
+      deliveryMinor: order.deliveryMinor ?? 0,
       // paymentId, txHash, currency, amount — audit trail (JSON in notes)
       notes: buildAuditNote(payment),
     });

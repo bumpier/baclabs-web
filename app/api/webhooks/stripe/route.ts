@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/db";
-import { verifyStripeEvent } from "@/lib/payments/stripe";
+import { chosenDeliveryOption, deliveryInstructionsFrom, verifyStripeEvent } from "@/lib/payments/stripe";
+import { cleanDeliveryInstructions } from "@/lib/smarttrack/payload";
 import { fulfillPaidOrder } from "@/lib/payments/fulfillment";
 
 // Stripe SDK (crypto) + Prisma (DB) — Edge can't run these.
@@ -115,10 +116,17 @@ export async function POST(req: Request) {
       const { name, address } = extractShipping(session);
       const email = session.customer_details?.email ?? "";
       const phone = session.customer_details?.phone ?? "";
+      // Which delivery the customer paid for: label buying sends it that way.
+      const deliveryMinor = session.total_details?.amount_shipping ?? 0;
+      const deliveryOption = await chosenDeliveryOption(session);
+      const deliveryInstructions = cleanDeliveryInstructions(deliveryInstructionsFrom(session));
 
       await prisma.order.update({
         where: { id: orderId },
         data: {
+          deliveryMinor,
+          ...(deliveryOption ? { deliveryOption } : {}),
+          ...(deliveryInstructions ? { deliveryInstructions } : {}),
           ...(email ? { customerEmail: email } : {}),
           ...(name ? { customerName: name } : {}),
           ...(phone ? { customerPhone: phone } : {}),
@@ -142,7 +150,7 @@ export async function POST(req: Request) {
       const { alreadyPaid } = await fulfillPaidOrder(orderId, {
         paymentRef,
         provider: "stripe",
-        deliveryMinor: session.total_details?.amount_shipping ?? 0,
+        deliveryMinor,
         // What the card was charged, delivery and promotion codes included.
         ...(typeof session.amount_total === "number" ? { amountPaidMinor: session.amount_total } : {}),
       });

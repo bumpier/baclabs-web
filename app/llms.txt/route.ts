@@ -2,6 +2,8 @@ import { brand } from "@/config/brand";
 import {
   BUNDLES,
   DELIVERY,
+  deliveryChoiceEnabled,
+  deliveryOptionsSentence,
   MAX_QUANTITY,
   PRODUCT,
   VIAL_ML,
@@ -64,6 +66,8 @@ function deliveryLine(): string {
         : "Delivery is calculated at checkout, before payment.";
     case "threshold":
       if (DELIVERY.freeFromMinor !== null) {
+        // Every option and its price, once customers can choose.
+        if (deliveryChoiceEnabled()) return deliveryOptionsSentence();
         const below =
           DELIVERY.priceMinor !== null
             ? ` Below that it is ${formatMinorShort(DELIVERY.priceMinor)}.`

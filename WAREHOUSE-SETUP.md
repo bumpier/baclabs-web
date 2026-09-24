@@ -46,15 +46,28 @@ vial counter (`Product.stock`).
 ## Switching it on
 
 1. **Shipping** — add services by hand, or connect SmartTrack (below) and
-   press *Sync services*. Set priorities.
+   press *Sync services*. Link each service to the checkout delivery option
+   it fulfils (Tracked 48, Economy, Next day), then set priorities. An order
+   is only offered the services linked to the option the customer paid for;
+   the options and their prices are `DELIVERY_OPTIONS` in
+   `config/funnel.ts`. The customer's choice is **in testing** and only
+   offered where `NEXT_PUBLIC_DELIVERY_CHOICE=on`; until then no order
+   records a choice and every service is considered, as before.
 2. **Inventory → Warehouses & locations** — add the warehouse with its full
    address, then its locations (e.g. `A-01-02`). Low pick order for the pick
    face, high for overflow; pre-packed packs in their own locations.
-3. **Inventory** — *Create the missing SKUs* makes the vial and every
-   storefront pack as kits. Weigh and measure each pack **as posted** and
-   enter it on the SKU; change any pack that is pre-packed to stocked.
-4. **Book stock in** — count what is physically on the shelves into
-   locations. The old counter is not carried over.
+3. **Inventory** — *Create the missing SKUs* makes the single vial the only
+   stocked SKU and every storefront pack (1, 5, 10, 20, 50, 100) a kit of
+   that many vials. Stock is counted **in vials**: selling a 10-pack takes 10
+   vials off the shelf, and each pack's sellable count is worked out from the
+   vials. Keep the packs as kits — they are made up from single vials at
+   packing. Weigh and measure each pack **as posted** and enter it on the SKU.
+4. **Book stock in** — the vial arrives from the supplier in packs of 10.
+   Pick the vial SKU, *Count in: Supplier packs of 10*, and enter the number
+   of packs: 100 packs books in 1,000 vials, and the ledger records
+   "100 × pack of 10". *Single vials* is there for loose counts. The pack
+   size is `SUPPLIER_PACK_VIALS` in `lib/inventory/demand.ts`. The old
+   counter is not carried over.
 5. When the checklist on the Inventory page is all *Yes*, press **Switch to
    warehouse stock**. *Switch back* is there if anything looks wrong.
 

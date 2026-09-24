@@ -8,6 +8,7 @@ import { formatWeight } from "@/lib/shipping/parcel";
 import { toServiceRule } from "@/lib/shipping/select-service";
 import { getDeliveryInstructions } from "@/lib/shipping/shipments";
 import { LIMITS } from "@/lib/smarttrack/payload";
+import { DELIVERY_OPTIONS, deliveryOptionById } from "@/config/funnel";
 import {
   saveDeliveryInstructionsAction,
   saveServiceAction,
@@ -87,6 +88,17 @@ function ServiceFields({ s }: { s?: PostalService }) {
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-3">
+        <div>
+          <label className="label" htmlFor={`${s?.id ?? "new"}-deliveryOption`}>Fulfils checkout option</label>
+          <select id={`${s?.id ?? "new"}-deliveryOption`} name="deliveryOption" defaultValue={s?.deliveryOption ?? ""} className="field">
+            <option value="">None</option>
+            {DELIVERY_OPTIONS.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label} — {o.detail}
+              </option>
+            ))}
+          </select>
+        </div>
         {num("priority", "Priority (lower is preferred)", s?.priority ?? 100)}
         {num("volumetricDivisor", "Volumetric divisor (blank = none)", s?.volumetricDivisor)}
         <div className="flex items-end pb-3">
@@ -166,7 +178,7 @@ export default async function ShippingPage() {
           className="flex flex-wrap items-end gap-4"
         >
           <div className="min-w-[16rem] flex-1">
-            <label className="label" htmlFor="deliveryInstructions">Delivery instructions on every label</label>
+            <label className="label" htmlFor="deliveryInstructions">Default delivery instructions</label>
             <input
               id="deliveryInstructions"
               name="deliveryInstructions"
@@ -176,7 +188,9 @@ export default async function ShippingPage() {
               className="field"
             />
             <p className="mt-1.5 text-xs text-ink-soft/70">
-              Sent to the carrier in SmartTrack&rsquo;s description field, up to {LIMITS.description} characters.
+              Used when the customer gives none. A customer&rsquo;s own instructions, or a change made on the order
+              page, go on that order&rsquo;s label instead. Sent to the carrier in SmartTrack&rsquo;s description field,
+              up to {LIMITS.description} characters.
             </p>
           </div>
         </ActionForm>
@@ -186,8 +200,10 @@ export default async function ShippingPage() {
       <h2 className="mt-12 font-display text-xl font-medium text-brand-deep">Postal services</h2>
       <p className="mt-1 max-w-3xl text-sm text-ink-soft">
         Every order&rsquo;s parcel is checked against these. The first that fits, by priority, is suggested —
-        unless the SKU has a service of its own that fits. A synced service&rsquo;s limits come from SmartTrack;
-        only its priority, volumetric divisor and on/off are yours to change.
+        unless the SKU has a service of its own that fits. Link each service to the checkout delivery option it
+        fulfils: an order is only offered the services linked to the option the customer paid for. A synced
+        service&rsquo;s limits come from SmartTrack; only its delivery option, priority, volumetric divisor and
+        on/off are yours to change.
       </p>
       {services.length === 0 ? (
         <p className="card mt-4 p-8 text-center text-sm text-ink-soft">No services yet.</p>
@@ -199,6 +215,11 @@ export default async function ShippingPage() {
                 <span className={`w-28 font-mono text-xs font-semibold ${s.active ? "text-brand-deep" : "text-ink-soft line-through"}`}>{s.code}</span>
                 <span className="min-w-[10rem] flex-1 font-medium">{s.name}</span>
                 <span className="text-ink-soft">{limitsSummary(s)}</span>
+                {deliveryOptionById(s.deliveryOption) && (
+                  <span className="rounded-full bg-brand px-2 py-0.5 text-xs text-white">
+                    {deliveryOptionById(s.deliveryOption)!.label}
+                  </span>
+                )}
                 <span className="rounded-full bg-brand-tint px-2 py-0.5 text-xs text-brand-deep">
                   {s.source === "SMARTTRACK" ? "SmartTrack" : "manual"}
                 </span>

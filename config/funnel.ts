@@ -327,6 +327,66 @@ export const LOW_STOCK_THRESHOLD = 10;
 export const SHIPPING_COUNTRIES = ["GB"] as const;
 
 /**
+ * The delivery options the customer chooses between at checkout — on
+ * Stripe's page for cards, on /checkout for crypto. Each one is linked to
+ * the SmartTrack services that fulfil it on the admin Shipping page, so an
+ * order that paid for next day is only ever sent next day.
+ *
+ * `priceMinor` is the charge below the free-delivery threshold.
+ * `overThreshold` is what happens once the order qualifies (shipsFree()):
+ *  - "free"          → £0
+ *  - "less-standard" → priceMinor minus the Standard option's price, so the
+ *                      customer still gets the free delivery they earned
+ *  - "hide"          → not offered: a paid option slower than a free one
+ *                      would only ever be picked by mistake
+ *
+ * The first option offered is the one preselected on Stripe's page.
+ * `detail` is shown under the label. Promise no speed here that dispatch
+ * cannot keep: next day only means next day after dispatch.
+ */
+export type DeliveryOptionId = "standard" | "economy" | "next_day";
+
+/**
+ * The customer's choice of delivery is being TESTED and is off in live.
+ * Off, checkout is exactly as it was before there was a choice: Stripe
+ * charges STRIPE_SHIPPING_RATE_ID (free over the threshold), crypto orders
+ * pay no delivery, and the storefront quotes the one price. Turn it on per
+ * environment with NEXT_PUBLIC_DELIVERY_CHOICE=on — read at build time, so
+ * rebuild after changing it.
+ */
+export function deliveryChoiceEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_DELIVERY_CHOICE === "on";
+}
+
+export interface DeliveryOption {
+  id: DeliveryOptionId;
+  label: string;
+  detail: string;
+  priceMinor: number;
+  overThreshold: "free" | "less-standard" | "hide";
+}
+
+export const DELIVERY_OPTIONS: readonly DeliveryOption[] = [
+  // £2 is today's live delivery price. Raise it here (e.g. 250) when the
+  // choice goes live, if that is the decision.
+  { id: "standard", label: "Tracked 48", detail: "Royal Mail Tracked 48", priceMinor: 200, overThreshold: "free" },
+  { id: "economy", label: "Economy", detail: "InPost", priceMinor: 150, overThreshold: "hide" },
+  {
+    id: "next_day",
+    label: "Next day",
+    detail: "Amazon Shipping, next working day after dispatch",
+    priceMinor: 499,
+    overThreshold: "less-standard",
+  },
+];
+
+export const STANDARD_DELIVERY = DELIVERY_OPTIONS.find((o) => o.id === "standard")!;
+
+export function deliveryOptionById(id: string | null | undefined): DeliveryOption | undefined {
+  return DELIVERY_OPTIONS.find((o) => o.id === id);
+}
+
+/**
  * Delivery presentation. `mode: "unknown"` shows "calculated at checkout"
  * and flags itself in LAUNCH-CHECKLIST.md.
  *  - "free"     → no delivery charge; `note` explains any threshold
@@ -349,9 +409,13 @@ export const DELIVERY: {
   transitDays: [number, number] | null;
 } = {
   mode: "threshold",
-  priceMinor: 200,
+  // The Standard option's price: the figure the storefront quotes. Set it on
+  // DELIVERY_OPTIONS above.
+  priceMinor: STANDARD_DELIVERY.priceMinor,
   freeFromMinor: 3000,
-  note: "Free UK delivery on orders of £30 or more.",
+  note: deliveryChoiceEnabled()
+    ? "Free Tracked 48 UK delivery on orders of £30 or more."
+    : "Free UK delivery on orders of £30 or more.",
   dispatchLine: "",
   /**
    * Working days from order to dispatch, and from dispatch to arrival, as
@@ -388,11 +452,68 @@ export function shipsFree(orderValueMinor: number): boolean {
   return DELIVERY.freeFromMinor !== null && orderValueMinor >= DELIVERY.freeFromMinor;
 }
 
-/** Delivery charge in pence for an order of this value. 0 when it ships free. */
+/**
+ * Standard delivery's charge in pence for an order of this value. 0 when it
+ * ships free. The figure the storefront quotes; the other options are listed
+ * beside it (deliveryOptionsFor).
+ */
 export function deliveryMinorFor(orderValueMinor: number): number {
   if (DELIVERY.mode === "unknown") return 0;
   if (shipsFree(orderValueMinor)) return 0;
   return DELIVERY.priceMinor ?? 0;
+}
+
+/**
+ * The delivery options offered for an order of this value, each at the price
+ * it will be charged, in DELIVERY_OPTIONS order. THE source for the Stripe
+ * session, the crypto checkout and the storefront alike. Empty while the
+ * choice is switched off (deliveryChoiceEnabled) or DELIVERY.mode is
+ * "unknown".
+ */
+export function deliveryOptionsFor(orderValueMinor: number): { option: DeliveryOption; priceMinor: number }[] {
+  if (!deliveryChoiceEnabled() || DELIVERY.mode === "unknown") return [];
+  const free = shipsFree(orderValueMinor);
+  const out: { option: DeliveryOption; priceMinor: number }[] = [];
+  for (const option of DELIVERY_OPTIONS) {
+    if (!free) {
+      out.push({ option, priceMinor: option.priceMinor });
+    } else if (option.overThreshold === "free") {
+      out.push({ option, priceMinor: 0 });
+    } else if (option.overThreshold === "less-standard") {
+      out.push({ option, priceMinor: Math.max(0, option.priceMinor - STANDARD_DELIVERY.priceMinor) });
+    }
+  }
+  return out;
+}
+
+/**
+ * "Economy £1.50 · Next day £4.99" — the options other than Standard, for
+ * the line under a purchase block's total. "" when there are none.
+ */
+export function otherDeliveryOptionsLine(orderValueMinor: number): string {
+  return deliveryOptionsFor(orderValueMinor)
+    .filter((o) => o.option.id !== STANDARD_DELIVERY.id)
+    .map((o) => `${o.option.label} ${o.priceMinor === 0 ? "free" : formatMinor(o.priceMinor)}`)
+    .join(" · ");
+}
+
+/**
+ * One sentence listing every option and its prices, for the FAQ and
+ * llms.txt. "" while the choice is switched off.
+ */
+export function deliveryOptionsSentence(): string {
+  if (!deliveryChoiceEnabled() || DELIVERY.mode === "unknown") return "";
+  const over = DELIVERY.freeFromMinor;
+  const parts = DELIVERY_OPTIONS.map((o) => {
+    const base = `${o.label} (${o.detail}) ${formatMinorShort(o.priceMinor)}`;
+    if (DELIVERY.mode !== "threshold" || over === null) return base;
+    if (o.overThreshold === "free") return `${base}, free over ${formatMinorShort(over)}`;
+    if (o.overThreshold === "less-standard") {
+      return `${base}, ${formatMinorShort(Math.max(0, o.priceMinor - STANDARD_DELIVERY.priceMinor))} over ${formatMinorShort(over)}`;
+    }
+    return base;
+  });
+  return `Choose your delivery at checkout: ${parts.join("; ")}.`;
 }
 
 /**

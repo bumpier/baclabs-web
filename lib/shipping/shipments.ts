@@ -166,7 +166,8 @@ export async function createShipmentLabel(input: {
     })),
     goodsTotalMinor: Math.round(Number(order.totalAmount) * 100),
     currency: order.currency,
-    deliveryInstructions: await getDeliveryInstructions(),
+    // The customer's own, else the shop's default.
+    deliveryInstructions: order.deliveryInstructions?.trim() || (await getDeliveryInstructions()),
   });
   if (!built.request) throw new ShippingError(built.problems.join(". "));
 

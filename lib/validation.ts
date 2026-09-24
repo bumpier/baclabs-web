@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BUNDLES, MAX_QUANTITY, MIN_QUANTITY } from "@/config/funnel";
+import { BUNDLES, DELIVERY_OPTIONS, MAX_QUANTITY, MIN_QUANTITY, type DeliveryOptionId } from "@/config/funnel";
 
 // Every form input and API body is validated with these schemas
 // server-side before touching the database. All .strict().
@@ -43,6 +43,13 @@ export const CryptoCheckoutSchema = z
     city: z.string().min(2).max(100).trim(),
     postalCode: z.string().min(2).max(20).trim(),
     country: z.string().length(2).toUpperCase(),
+    /**
+     * Required by the route whenever options are offered. The price is not
+     * taken from here: the route looks it up.
+     */
+    deliveryOption: z.enum(DELIVERY_OPTIONS.map((o) => o.id) as [DeliveryOptionId, ...DeliveryOptionId[]]).optional(),
+    /** For the carrier, onto the label. SmartTrack takes 30 characters. */
+    deliveryInstructions: z.string().max(30).trim().optional().or(z.literal("")),
   })
   .strict();
 

@@ -3,7 +3,16 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { PRODUCT, bundleById, formatMinor, totalMinor, type BundleId } from "@/config/funnel";
+import {
+  PRODUCT,
+  bundleById,
+  deliveryChoiceEnabled,
+  deliveryOptionsFor,
+  formatMinor,
+  totalMinor,
+  type BundleId,
+  type DeliveryOptionId,
+} from "@/config/funnel";
 import { hasTrackingConsent } from "@/components/consent/consent-store";
 
 type Coin = "btc" | "eth" | "usdt" | "xmr";
@@ -37,8 +46,12 @@ export function CheckoutForm({
   const bundle = bundleById(bundleId)!;
   const total = totalMinor(bundle, quantity);
   const totalVials = bundle.vials * quantity;
+  // The same function the server prices the order with.
+  const deliveryOptions = deliveryOptionsFor(total);
 
   const [coin, setCoin] = useState<Coin>((coins[0] as Coin) ?? "btc");
+  const [deliveryId, setDeliveryId] = useState<DeliveryOptionId | null>(deliveryOptions[0]?.option.id ?? null);
+  const delivery = deliveryOptions.find((o) => o.option.id === deliveryId) ?? null;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +77,8 @@ export function CheckoutForm({
           city: form.get("city"),
           postalCode: form.get("postalCode"),
           country: form.get("country"),
+          ...(deliveryId ? { deliveryOption: deliveryId } : {}),
+          ...(deliveryChoiceEnabled() ? { deliveryInstructions: form.get("deliveryInstructions") ?? "" } : {}),
           trackingConsent: hasTrackingConsent(),
         }),
       });
@@ -106,9 +121,15 @@ export function CheckoutForm({
           </dt>
           <dd className="tabular text-ink">{formatMinor(total)}</dd>
         </div>
+        {delivery ? (
+          <div className="flex justify-between gap-4">
+            <dt className="text-ink-soft">Delivery ({delivery.option.label})</dt>
+            <dd className="tabular text-ink">{delivery.priceMinor === 0 ? "Free" : formatMinor(delivery.priceMinor)}</dd>
+          </div>
+        ) : null}
         <div className="flex justify-between gap-4 border-t border-line pt-2 text-base font-semibold">
           <dt>Total</dt>
-          <dd className="tabular">{formatMinor(total)}</dd>
+          <dd className="tabular">{formatMinor(total + (delivery?.priceMinor ?? 0))}</dd>
         </div>
         <p className="pt-1 text-xs text-ink-soft">
           Converted to your chosen coin at the live rate on the next screen.
@@ -116,6 +137,39 @@ export function CheckoutForm({
       </dl>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-6">
+        {deliveryOptions.length > 0 ? (
+          <fieldset className="border-0 p-0">
+            <legend className="label">Delivery</legend>
+            <div className="grid gap-2">
+              {deliveryOptions.map(({ option, priceMinor }) => {
+                const selected = option.id === deliveryId;
+                return (
+                  <label
+                    key={option.id}
+                    className={`flex cursor-pointer items-center justify-between gap-3 rounded-control border px-4 py-3 transition-colors duration-150 ${
+                      selected ? "border-brand bg-brand-tint" : "border-line bg-surface"
+                    }`}
+                  >
+                    <span>
+                      <span className="block text-sm font-medium text-ink">{option.label}</span>
+                      <span className="block text-xs text-ink-soft">{option.detail}</span>
+                    </span>
+                    <span className="tabular text-sm text-ink">{priceMinor === 0 ? "Free" : formatMinor(priceMinor)}</span>
+                    <input
+                      type="radio"
+                      name="deliveryOption"
+                      value={option.id}
+                      checked={selected}
+                      onChange={() => setDeliveryId(option.id)}
+                      className="sr-only"
+                    />
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        ) : null}
+
         <fieldset className="border-0 p-0">
           <legend className="label">Pay with</legend>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -257,6 +311,21 @@ export function CheckoutForm({
             </select>
           </div>
         </div>
+
+        {deliveryChoiceEnabled() ? (
+          <div>
+            <label className="label" htmlFor="deliveryInstructions">
+              Delivery instructions <span className="font-normal text-ink-soft">(optional)</span>
+            </label>
+            <input
+              id="deliveryInstructions"
+              name="deliveryInstructions"
+              maxLength={30}
+              className="field"
+              placeholder="e.g. Leave with neighbour at 12"
+            />
+          </div>
+        ) : null}
 
         <button type="submit" disabled={submitting} className="btn-cta" aria-busy={submitting}>
           {submitting ? "Redirecting…" : "Continue to payment"}

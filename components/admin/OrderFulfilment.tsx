@@ -5,8 +5,10 @@ import { ActionForm } from "@/components/admin/ActionForm";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { planOrderShipment } from "@/lib/shipping/order-parcel";
 import { formatDimensions, formatWeight } from "@/lib/shipping/parcel";
-import { parseTrackingNumbers } from "@/lib/shipping/shipments";
+import { getDeliveryInstructions, parseTrackingNumbers } from "@/lib/shipping/shipments";
+import { LIMITS } from "@/lib/smarttrack/payload";
 import { smartTrackConfig } from "@/lib/smarttrack/config";
+import { deliveryChoiceEnabled, deliveryOptionById, formatMinor } from "@/config/funnel";
 import { allocateOrderAction } from "@/app/admin/inventory/actions";
 import { createLabelAction, reconcileShipmentAction, voidShipmentAction } from "@/app/admin/shipping/actions";
 
@@ -38,7 +40,7 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
   // warehouse, SmartTrack is connected, or this order has a pick list or label.
   if (mode === "legacy" && !cfg && pickLines.length === 0 && shipments.length === 0) return null;
 
-  const plan = await planOrderShipment(order);
+  const [plan, defaultInstructions] = await Promise.all([planOrderShipment(order), getDeliveryInstructions()]);
   const open = ["paid", "packed"].includes(order.status);
   const shortfall = pickLines.filter((l) => !l.locationId).reduce((n, l) => n + l.quantity, 0);
   const picks = pickLines
@@ -49,6 +51,7 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
     );
   const activeShipment = shipments.find((s) => s.status === "CREATED" || s.status === "PENDING");
   const suggested = plan.selection.service;
+  const paidFor = deliveryOptionById(order.deliveryOption);
 
   return (
     <div className="no-print mt-4 grid gap-4 lg:grid-cols-2">
@@ -146,6 +149,14 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
           </p>
         ) : (
           <>
+            {(paidFor || deliveryChoiceEnabled()) && (
+              <p className="mb-1 font-medium text-ink">
+                Customer chose:{" "}
+                {paidFor
+                  ? `${paidFor.label} (${order.deliveryMinor ? formatMinor(order.deliveryMinor) : "free"})`
+                  : "no delivery option recorded"}
+              </p>
+            )}
             <p className="text-ink-soft">
               Parcel: {plan.parcel.weightGrams > 0 ? formatWeight(plan.parcel.weightGrams) : "weight not set"} ·{" "}
               {formatDimensions(plan.parcel)} · to {plan.countryIso}
@@ -225,6 +236,21 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
                 confirm={cfg.env === "live" ? "Buy this label? SmartTrack charges for it." : undefined}
               >
                 <input type="hidden" name="orderId" value={order.id} />
+                <div>
+                  <label className="label" htmlFor="deliveryInstructions">Delivery instructions</label>
+                  <input
+                    id="deliveryInstructions"
+                    name="deliveryInstructions"
+                    maxLength={LIMITS.description}
+                    defaultValue={order.deliveryInstructions ?? defaultInstructions}
+                    className="field"
+                  />
+                  <p className="mt-1 text-xs text-ink-soft">
+                    {order.deliveryInstructions
+                      ? "From the customer. Change it if they have asked you to."
+                      : "The shop default. Change it if the customer has asked for something else."}
+                  </p>
+                </div>
                 <div>
                   <label className="label" htmlFor="serviceCode">Service</label>
                   <select id="serviceCode" name="serviceCode" defaultValue="" className="field">

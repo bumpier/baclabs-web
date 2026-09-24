@@ -1,5 +1,14 @@
 import Stripe from "stripe";
-import { BUNDLES, bundleById, shipsFree, type BundleId } from "@/config/funnel";
+import {
+  BUNDLES,
+  bundleById,
+  deliveryChoiceEnabled,
+  deliveryOptionById,
+  deliveryOptionsFor,
+  shipsFree,
+  type BundleId,
+  type DeliveryOptionId,
+} from "@/config/funnel";
 
 let _stripe: Stripe | null = null;
 
@@ -65,7 +74,7 @@ export interface BundleCheckoutParams {
   quantity: number;
   /**
    * Value of the whole order, in pence (bundle.priceMinor x quantity, post-
-   * sale if a sale is live). Decides free delivery via shipsFree() — passed
+   * sale if a sale is live). Decides the delivery prices — passed
    * in rather than recomputed so the route and the session agree on one
    * figure.
    */
@@ -100,6 +109,30 @@ export async function createBundleCheckout(
   const allowedCountries =
     shippingCountries as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[];
 
+  // The customer picks a delivery option on Stripe's page. The options and
+  // their prices come from deliveryOptionsFor(), the same function the
+  // purchase block calls, so the customer is never charged for delivery the
+  // page showed as free. Each rate carries its option id so the webhook can
+  // record the choice (chosenDeliveryOption).
+  //
+  // While the choice is switched off (deliveryChoiceEnabled), delivery is
+  // the one Stripe rate, charged only below the free-delivery threshold —
+  // exactly as before there was a choice.
+  let shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[];
+  if (deliveryChoiceEnabled()) {
+    shippingOptions = deliveryOptionsFor(orderValueMinor).map(({ option, priceMinor }) => ({
+      shipping_rate_data: {
+        type: "fixed_amount",
+        display_name: `${option.label} — ${option.detail}`,
+        fixed_amount: { amount: priceMinor, currency: "gbp" },
+        metadata: { deliveryOption: option.id },
+      },
+    }));
+  } else {
+    const rate = process.env.STRIPE_SHIPPING_RATE_ID;
+    shippingOptions = rate && !shipsFree(orderValueMinor) ? [{ shipping_rate: rate }] : [];
+  }
+
   const session = await getStripe().checkout.sessions.create(
     {
       mode: "payment",
@@ -119,11 +152,22 @@ export async function createBundleCheckout(
       // Stripe collects the delivery address — the funnel deliberately does
       // not ask for one before the customer has decided to buy.
       shipping_address_collection: { allowed_countries: allowedCountries },
-      // Delivery is charged ONLY when the order misses the free-delivery
-      // threshold. shipsFree() is the same function the purchase block calls,
-      // so the customer is never charged for delivery the page showed as free.
-      ...(process.env.STRIPE_SHIPPING_RATE_ID && !shipsFree(orderValueMinor)
-        ? { shipping_options: [{ shipping_rate: process.env.STRIPE_SHIPPING_RATE_ID }] }
+      // Delivery: see shippingOptions above.
+      ...(shippingOptions.length > 0 ? { shipping_options: shippingOptions } : {}),
+      // The customer's note for the carrier, onto the label. 30 characters is
+      // SmartTrack's limit for it. Tested alongside the delivery choice.
+      ...(deliveryChoiceEnabled()
+        ? {
+            custom_fields: [
+              {
+                key: DELIVERY_INSTRUCTIONS_FIELD,
+                label: { type: "custom", custom: "Delivery instructions" },
+                type: "text",
+                optional: true,
+                text: { maximum_length: 30 },
+              },
+            ],
+          }
         : {}),
 
       allow_promotion_codes: true,
@@ -149,6 +193,33 @@ export async function createBundleCheckout(
 
   if (!session.url) throw new Error("Stripe did not return a checkout URL");
   return { paymentUrl: session.url, paymentRef: session.id };
+}
+
+/** Stripe Checkout custom field carrying the customer's delivery instructions. */
+const DELIVERY_INSTRUCTIONS_FIELD = "deliveryinstructions";
+
+/** What the customer typed in the delivery instructions box, or "". */
+export function deliveryInstructionsFrom(session: Stripe.Checkout.Session): string {
+  const field = session.custom_fields?.find((f) => f.key === DELIVERY_INSTRUCTIONS_FIELD);
+  return field?.text?.value ?? "";
+}
+
+/**
+ * The delivery option the customer picked on Stripe's page, read from the
+ * metadata createBundleCheckout put on each rate. Null when the session
+ * charged no delivery, or the rate is not one of ours. Never throws: the
+ * order is paid either way, and label buying copes with an unknown choice.
+ */
+export async function chosenDeliveryOption(session: Stripe.Checkout.Session): Promise<DeliveryOptionId | null> {
+  const rate = session.shipping_cost?.shipping_rate;
+  if (!rate) return null;
+  try {
+    const resolved = typeof rate === "string" ? await getStripe().shippingRates.retrieve(rate) : rate;
+    return deliveryOptionById(resolved.metadata?.deliveryOption)?.id ?? null;
+  } catch (err) {
+    console.error(`[stripe] could not read the delivery option of session ${session.id}`, err);
+    return null;
+  }
 }
 
 /** Verify a Stripe webhook against the raw request body. Throws on mismatch. */

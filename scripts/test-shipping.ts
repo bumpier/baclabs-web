@@ -11,7 +11,8 @@ import {
   selectService,
   type ServiceRule,
 } from "@/lib/shipping/select-service";
-import { buildShipmentRequest, truncateWords, wrapLines, type LabelInput } from "@/lib/smarttrack/payload";
+import { deliveryMinorFor, deliveryOptionsFor } from "@/config/funnel";
+import { buildShipmentRequest, cleanDeliveryInstructions, truncateWords, wrapLines, type LabelInput } from "@/lib/smarttrack/payload";
 
 let failures = 0;
 
@@ -67,6 +68,7 @@ const base: ServiceRule = {
   sizeLimitMm: 0,
   volumetricDivisor: null,
   deliveryCountryIsos: [],
+  deliveryOption: "",
 };
 // Shaped on SmartTrack's documented example: @MINI PACK 72, 0–3 kg,
 // 25 × 25 × 25 cm, L+W+H ≤ 90 cm, GB only.
@@ -174,6 +176,58 @@ const services = [parcel20kg, miniPack, parcel2kg, largeLetter];
   check("an unparseable size rule is refused, not ignored", !c.fits && c.reasons[0]!.includes("not understood"), c.reasons.join("; "));
 }
 check("no services at all says so", selectService([], vialBox, "GB").note.includes("No postal services"));
+
+// ── The delivery option the customer paid for ────────────────────
+{
+  const economy: ServiceRule = { ...base, code: "ECO", name: "InPost", priority: 10, deliveryOption: "economy" };
+  const tracked: ServiceRule = { ...base, code: "T48", name: "Tracked 48", priority: 20, deliveryOption: "standard" };
+  const nextDay: ServiceRule = { ...base, code: "ND", name: "One Day", priority: 30, deliveryOption: "next_day" };
+  const linked = [economy, tracked, nextDay];
+
+  const paidNextDay = selectService(linked, vialBox, "GB", null, "next_day");
+  check("next day paid for goes next day, though cheaper services fit", paidNextDay.service?.code === "ND", paidNextDay.note);
+  const eco = paidNextDay.checks.find((c) => c.service.code === "ECO")!;
+  check("…and the others say why", !eco.fits && eco.reasons[0]!.includes("Next day"), eco.reasons.join("; "));
+
+  const noChoice = selectService(linked, vialBox, "GB");
+  check("an order with no recorded choice is worked out as before", noChoice.service?.code === "ECO", noChoice.note);
+
+  const unlinked = selectService([parcel2kg, parcel20kg], vialBox, "GB", null, "next_day");
+  check("with nothing linked to the option, every service is still considered", unlinked.service?.code === "P2", unlinked.note);
+  check("…and the note says to link one", unlinked.note.includes("No service is linked to Next day"), unlinked.note);
+
+  const skuPinned = selectService(linked, vialBox, "GB", "ECO", "next_day");
+  check("a SKU's own service does not override the paid option", skuPinned.service?.code === "ND", skuPinned.note);
+
+  const offLinked = selectService([{ ...nextDay, active: false }, tracked], vialBox, "GB", null, "next_day");
+  check("a switched-off linked service does not count as linked", offLinked.note.includes("No service is linked"), offLinked.note);
+}
+
+// ── Delivery instructions typed by customers and staff ───────────
+check("blank instructions are none", cleanDeliveryInstructions("   ") === null && cleanDeliveryInstructions(undefined) === null);
+check("instructions are one line with single spaces", cleanDeliveryInstructions("  Leave   with\nneighbour ") === "Leave with neighbour");
+{
+  const long = cleanDeliveryInstructions("Please leave it with the neighbour at number twelve")!;
+  check("long instructions are cut at a word, within 30", long.length <= 30 && long === "Please leave it with the", long);
+}
+
+// ── Checkout delivery options and prices ─────────────────────────
+{
+  delete process.env.NEXT_PUBLIC_DELIVERY_CHOICE;
+  check("switched off, no delivery choice is offered", deliveryOptionsFor(2000).length === 0);
+  check("…and the quoted delivery is today's £2", deliveryMinorFor(2000) === 200 && deliveryMinorFor(3000) === 0);
+  process.env.NEXT_PUBLIC_DELIVERY_CHOICE = "on";
+  const byId = (minor: number) => Object.fromEntries(deliveryOptionsFor(minor).map((o) => [o.option.id, o.priceMinor]));
+  const under = byId(2000);
+  check("under £30 every option is offered at its price", under.standard === 200 && under.economy === 150 && under.next_day === 499, JSON.stringify(under));
+  const over = byId(3000);
+  check("at £30 Tracked 48 is free", over.standard === 0, JSON.stringify(over));
+  check("…next day drops by the Tracked 48 price", over.next_day === 299, JSON.stringify(over));
+  check("…and economy is no longer offered", !("economy" in over), JSON.stringify(over));
+  check("the storefront's quoted delivery is the Tracked 48 price", deliveryMinorFor(2000) === 200 && deliveryMinorFor(3000) === 0);
+  check("Tracked 48 is offered first, so Stripe preselects it", deliveryOptionsFor(2000)[0]?.option.id === "standard");
+  delete process.env.NEXT_PUBLIC_DELIVERY_CHOICE;
+}
 
 // ── Address wrapping ─────────────────────────────────────────────
 check("short lines pass through", JSON.stringify(wrapLines(["1 High St", ""], 30)) === JSON.stringify(["1 High St"]));

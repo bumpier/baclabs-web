@@ -64,6 +64,16 @@ export function truncateWords(text: string, max: number): string {
   return (cut > 0 ? clean.slice(0, cut) : clean.slice(0, max)).trim();
 }
 
+/**
+ * Tidy delivery instructions typed by a customer or staff: one line, single
+ * spaces, and never longer than SmartTrack's description field, since a
+ * refused label is worse than a shortened note. Null when blank.
+ */
+export function cleanDeliveryInstructions(text: unknown): string | null {
+  const clean = truncateWords(String(text ?? "").replace(/\s+/g, " "), LIMITS.description);
+  return clean || null;
+}
+
 const kg = (grams: number) => Math.round(grams) / 1000;
 const cm = (mm: number) => Math.round(mm) / 10;
 const pounds = (minor: number) => Math.round(minor) / 100;

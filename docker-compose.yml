@@ -27,6 +27,8 @@ services:
         NEXT_PUBLIC_META_PIXEL_ID: ${NEXT_PUBLIC_META_PIXEL_ID:-}
         NEXT_PUBLIC_GA4_ID: ${NEXT_PUBLIC_GA4_ID:-}
         NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:-}
+        # Delivery choice at checkout, in testing: leave unset in live.
+        NEXT_PUBLIC_DELIVERY_CHOICE: ${NEXT_PUBLIC_DELIVERY_CHOICE:-}
         # Build-time too — the verification meta tag is baked into the static
         # home page, so changing it requires a rebuild, not a restart.
         GOOGLE_SITE_VERIFICATION: ${GOOGLE_SITE_VERIFICATION:-}

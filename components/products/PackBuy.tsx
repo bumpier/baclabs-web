@@ -11,6 +11,9 @@ import {
   STOCK_LEVEL,
   VAT,
   deliveryMinorFor,
+  otherDeliveryOptionsLine,
+  deliveryChoiceEnabled,
+  STANDARD_DELIVERY,
   formatMinor,
   perVialMinor,
   referencePriceMinor,
@@ -105,6 +108,7 @@ export function PackBuy({
   const deliveryMinor = deliveryMinorFor(totalMinor);
   const deliveryFree = shipsFree(totalMinor);
   const deliveryKnown = DELIVERY.mode !== "unknown";
+  const otherDelivery = otherDeliveryOptionsLine(totalMinor);
   const toFreeDelivery = remainingForFreeDeliveryMinor(totalMinor);
 
   const sale = saleVisible();
@@ -199,7 +203,7 @@ export function PackBuy({
             </div>
           ) : null}
           <div className="flex justify-between gap-4">
-            <dt className="text-ink-soft">Delivery</dt>
+            <dt className="text-ink-soft">{deliveryKnown && deliveryChoiceEnabled() ? `Delivery (${STANDARD_DELIVERY.label})` : "Delivery"}</dt>
             <dd className="text-ink">
               {!deliveryKnown ? (
                 "Calculated at checkout"
@@ -220,6 +224,9 @@ export function PackBuy({
             </dd>
           </div>
         </dl>
+        {otherDelivery ? (
+          <p className="mt-2 text-xs text-ink-soft">Also at checkout: {otherDelivery}</p>
+        ) : null}
 
         {/* The saving in pounds, restated under the total where the decision
             is made. Same line as the home page's chooser. */}

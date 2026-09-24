@@ -1,4 +1,5 @@
 import type { PostalService } from "@prisma/client";
+import { deliveryOptionById } from "@/config/funnel";
 import {
   chargeableGrams,
   formatDimensions,
@@ -35,6 +36,8 @@ export interface ServiceRule {
   volumetricDivisor: number | null;
   /** Empty = delivers anywhere it is asked to. */
   deliveryCountryIsos: string[];
+  /** The checkout delivery option it fulfils (DeliveryOptionId), or "". */
+  deliveryOption: string;
 }
 
 export function toServiceRule(row: PostalService): ServiceRule {
@@ -60,6 +63,7 @@ export function toServiceRule(row: PostalService): ServiceRule {
     sizeLimitMm: row.sizeLimitMm,
     volumetricDivisor: row.volumetricDivisor,
     deliveryCountryIsos: isos,
+    deliveryOption: row.deliveryOption,
   };
 }
 
@@ -242,6 +246,11 @@ function rank(a: ServiceRule, b: ServiceRule): number {
 }
 
 /**
+ * The customer paid for a delivery option, so only the services linked to it
+ * on the Shipping page are candidates; every other one is marked with why.
+ * While no active service is linked to that option yet, nothing is ruled out
+ * and the note says so, rather than leaving the order with no service.
+ *
  * A service assigned to the SKU wins whenever it actually fits this parcel.
  * When it does not — two units outgrowing a single's Large Letter — the
  * choice falls back to the automatic one and the note says so, rather than
@@ -251,11 +260,32 @@ export function selectService(
   services: readonly ServiceRule[],
   parcel: Parcel,
   countryIso: string,
-  assignedCode: string | null = null
+  assignedCode: string | null = null,
+  deliveryOption: string | null = null
 ): ServiceSelection {
-  const checks = [...services].sort(rank).map((s) => checkService(s, parcel, countryIso));
-  const fitting = checks.filter((c) => c.fits);
+  let checks = [...services].sort(rank).map((s) => checkService(s, parcel, countryIso));
   let fallbackNote = "";
+
+  const paidFor = deliveryOptionById(deliveryOption);
+  if (paidFor) {
+    if (services.some((s) => s.active && s.deliveryOption === paidFor.id)) {
+      checks = checks.map((c) =>
+        c.service.deliveryOption === paidFor.id
+          ? c
+          : {
+              ...c,
+              fits: false,
+              reasons: [
+                `not linked to ${paidFor.label} delivery, which the customer paid for`,
+                ...c.reasons,
+              ],
+            }
+      );
+    } else {
+      fallbackNote = `No service is linked to ${paidFor.label} delivery on the Shipping page, so every service was considered. `;
+    }
+  }
+  const fitting = checks.filter((c) => c.fits);
 
   if (assignedCode) {
     const assigned = checks.find((c) => c.service.code === assignedCode);
@@ -267,7 +297,7 @@ export function selectService(
         checks,
       };
     }
-    fallbackNote = assigned
+    fallbackNote += assigned
       ? `The assigned service, ${assigned.service.name}, does not fit (${assigned.reasons.join("; ")}). `
       : `The assigned service ${assignedCode} is not on the Shipping page. `;
   }

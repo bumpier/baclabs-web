@@ -251,6 +251,11 @@ what to ship.
 `STRIPE_SHIPPING_RATE_ID` is genuinely optional; unset, Stripe still collects
 the delivery address but adds no shipping charge.
 
+`NEXT_PUBLIC_DELIVERY_CHOICE=on` lets customers choose their delivery at
+checkout, from `DELIVERY_OPTIONS` in `config/funnel.ts`; `STRIPE_SHIPPING_RATE_ID`
+is then ignored. It is being tested: leave it unset in live. It is read at
+build time, so rebuild after changing it.
+
 ## 6. Backups and cron
 
 As `baclab` (`crontab -e`):

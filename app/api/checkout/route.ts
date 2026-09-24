@@ -10,6 +10,7 @@ import {
   type CryptoPaymentMethod,
 } from "@/lib/crypto-gateway";
 import { createBundleCheckout, assertPriceMatchesConfig } from "@/lib/payments/stripe";
+import { cleanDeliveryInstructions } from "@/lib/smarttrack/payload";
 import { getPaymentConfig, providerForMethod } from "@/lib/payments/config";
 import { attributionFor } from "@/lib/meta-capi-event";
 import { getInventoryMode } from "@/lib/inventory/mode";
@@ -21,9 +22,12 @@ import {
   allowedPriceIds,
   priceIdFor,
   totalMinor,
+  deliveryChoiceEnabled,
+  deliveryOptionsFor,
   SHIPPING_COUNTRIES,
   PRODUCT,
   type BundleId,
+  type DeliveryOptionId,
 } from "@/config/funnel";
 
 export const runtime = "nodejs";
@@ -103,6 +107,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Not enough stock for that quantity" }, { status: 409 });
     }
 
+    // Crypto orders choose delivery here; card orders choose it on Stripe's
+    // page and the webhook records it. The price is always looked up, never
+    // taken from the request.
+    let delivery: { option: DeliveryOptionId; minor: number } | null = null;
+    if (input.method !== "card") {
+      const offered = deliveryOptionsFor(grandTotalMinor);
+      if (offered.length > 0) {
+        const chosen = offered.find((o) => o.option.id === input.deliveryOption);
+        if (!chosen) {
+          return NextResponse.json(
+            { error: "That delivery option is not available for this order." },
+            { status: 400 }
+          );
+        }
+        delivery = { option: chosen.option.id, minor: chosen.priceMinor };
+      }
+    }
+
     const total = new Prisma.Decimal((grandTotalMinor / 100).toFixed(2));
 
     // The crypto gateway settles in USD, so every order records a USD basis
@@ -136,6 +158,9 @@ export async function POST(req: Request) {
     ];
 
     const isCard = input.method === "card";
+    // Card orders give theirs on Stripe's page; the webhook records it.
+    const instructions =
+      input.method !== "card" && deliveryChoiceEnabled() ? cleanDeliveryInstructions(input.deliveryInstructions) : null;
 
     const order = await prisma.order.create({
       data: {
@@ -160,6 +185,8 @@ export async function POST(req: Request) {
         subtotalUsd,
         paymentMethod: input.method,
         paymentProvider: provider,
+        ...(delivery ? { deliveryOption: delivery.option, deliveryMinor: delivery.minor } : {}),
+        ...(instructions ? { deliveryInstructions: instructions } : {}),
         // Read now: the payment webhook comes from the provider's servers and
         // never sees the customer's IP, browser or Meta cookies. Kept only
         // with consent — see lib/meta-capi-event.ts.
@@ -213,9 +240,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ paymentUrl: checkout.paymentUrl, orderId: order.id });
     }
 
+    // Goods plus the chosen delivery, in USD. subtotalUsd stays goods-only,
+    // like totalAmount.
+    const chargeUsd = delivery
+      ? priceIn({ priceGbp: ((grandTotalMinor + delivery.minor) / 100).toFixed(2) }, "USD", rates).toFixed(2)
+      : subtotalUsd.toFixed(2);
     const cryptoPayment = await createCryptoPayment({
       orderId: order.id,
-      amount: subtotalUsd.toFixed(2), // USD total
+      amount: chargeUsd, // USD total
       method: input.method as CryptoPaymentMethod,
       customerName: input.name,
       customerEmail: input.email,

@@ -8,13 +8,15 @@ import type { FormState } from "@/lib/form-state";
 import { evaluateSizeFormula } from "@/lib/shipping/select-service";
 import {
   createShipmentLabel,
+  getDeliveryInstructions,
   reconcileShipment,
   ShippingError,
   voidShipment,
 } from "@/lib/shipping/shipments";
 import { getServices, SmartTrackError, testConnection } from "@/lib/smarttrack/client";
-import { LIMITS } from "@/lib/smarttrack/payload";
+import { cleanDeliveryInstructions, LIMITS } from "@/lib/smarttrack/payload";
 import { SETTING_KEYS, writeSetting } from "@/lib/settings";
+import { deliveryOptionById } from "@/config/funnel";
 
 function message(err: unknown, what: string): FormState {
   if (err instanceof ShippingError) return { error: err.message };
@@ -34,6 +36,11 @@ export async function testConnectionAction(_prev: FormState): Promise<FormState>
   await requireAdminRole("ADMIN");
   try {
     const { env, serviceCount } = await testConnection();
+    if (serviceCount === 0) {
+      return {
+        success: `Connected to SmartTrack ${env.toUpperCase()}: the API key works, but no services are assigned to this account yet. Ask SmartTrack to assign them, then press Sync services.`,
+      };
+    }
     return { success: `Connected to SmartTrack ${env.toUpperCase()}. ${serviceCount} service(s) on the account.` };
   } catch (err) {
     return message(err, "SmartTrack connection test");
@@ -43,9 +50,9 @@ export async function testConnectionAction(_prev: FormState): Promise<FormState>
 /**
  * Pull the account's services from SmartTrack. Limits are overwritten —
  * SmartTrack is the authority on what a service accepts — but the columns
- * that are the operator's call (switched on, priority, volumetric divisor)
- * are kept. A service SmartTrack no longer lists is switched off, not
- * deleted, so shipments that used it still read.
+ * that are the operator's call (switched on, priority, volumetric divisor,
+ * delivery option) are kept. A service SmartTrack no longer lists is
+ * switched off, not deleted, so shipments that used it still read.
  */
 export async function syncServicesAction(_prev: FormState): Promise<FormState> {
   await requireAdminRole("ADMIN");
@@ -109,6 +116,9 @@ const OperatorFields = z.object({
     .trim()
     .transform((v) => (v === "" ? null : Number(v)))
     .refine((v) => v === null || (Number.isInteger(v) && v >= 1000 && v <= 10000), "Volumetric divisor is usually 4000, 5000 or 6000"),
+  deliveryOption: z
+    .string()
+    .refine((v) => v === "" || deliveryOptionById(v) !== undefined, "Pick a delivery option from the list"),
 });
 
 const ManualLimits = z.object({
@@ -144,6 +154,7 @@ export async function saveServiceAction(_prev: FormState, formData: FormData): P
     active: formData.get("active") === "on",
     priority: formData.get("priority") || 100,
     volumetricDivisor: String(formData.get("volumetricDivisor") ?? ""),
+    deliveryOption: String(formData.get("deliveryOption") ?? ""),
   });
   if (!operator.success) return { error: operator.error.errors[0]?.message ?? "Check the service details" };
 
@@ -206,7 +217,7 @@ export async function saveDeliveryInstructionsAction(_prev: FormState, formData:
   }
   await writeSetting(SETTING_KEYS.deliveryInstructions, text);
   revalidatePath("/admin/shipping");
-  return { success: "Saved. Every label bought from now on carries it." };
+  return { success: "Saved. Labels for orders without their own instructions carry it." };
 }
 
 // ── Labels (packers too) ─────────────────────────────────────────
@@ -219,6 +230,15 @@ export async function createLabelAction(_prev: FormState, formData: FormData): P
   if (!orderId.success) return { error: "Order not found" };
   const serviceCode = String(formData.get("serviceCode") ?? "").trim() || null;
   try {
+    // What is in the box goes on the label, and stays with the order.
+    if (formData.has("deliveryInstructions")) {
+      const typed = cleanDeliveryInstructions(formData.get("deliveryInstructions"));
+      const fallback = await getDeliveryInstructions();
+      await prisma.order.update({
+        where: { id: orderId.data },
+        data: { deliveryInstructions: typed && typed !== fallback ? typed : null },
+      });
+    }
     const session = await getAdminSession();
     const { warnings } = await createShipmentLabel({
       orderId: orderId.data,

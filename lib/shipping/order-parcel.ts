@@ -7,7 +7,8 @@ import { selectService, toServiceRule, type ServiceSelection } from "@/lib/shipp
 
 /**
  * What an order will go out as: its SKUs, the parcel they make, and the
- * service that parcel needs. Read-only — the order page shows it, and label
+ * service that parcel needs — among those linked to the delivery option the
+ * customer paid for. Read-only — the order page shows it, and label
  * buying (lib/shipping/shipments.ts) acts on it.
  *
  * The parcel is built from the SKUs as SOLD, not the vials on the shelf: a
@@ -67,7 +68,8 @@ export async function planOrderShipment(order: Order): Promise<ShipmentPlan> {
     services.map(toServiceRule),
     parcel,
     countryIso,
-    assignedService(lines.map((l) => l.sku))
+    assignedService(lines.map((l) => l.sku)),
+    order.deliveryOption
   );
 
   return { lines, missingSkus, parcel, countryIso, selection, services };

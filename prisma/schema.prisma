@@ -60,6 +60,17 @@ model Order {
   // only. Reported to Meta as the Purchase value (lib/meta-capi-event.ts).
   amountPaidMinor Int?
 
+  // The delivery option the customer chose at checkout (DELIVERY_OPTIONS in
+  // config/funnel.ts) and what it cost them, in pence. Card orders learn both
+  // from the Stripe webhook; crypto orders at checkout. Null on orders from
+  // before there was a choice. Label buying only picks services linked to it.
+  deliveryOption String?
+  deliveryMinor  Int?
+  // What the customer asked the carrier to do ("Leave with neighbour at 12"),
+  // at most 30 characters: it travels in SmartTrack's description field.
+  // Null = the shop's default instructions (Shipping page).
+  deliveryInstructions String?
+
   // Meta attribution, captured at checkout because the payment webhook comes
   // from the provider's servers, not the customer's browser. Filled ONLY when
   // the visitor had accepted tracking on the cookie banner.
@@ -371,6 +382,10 @@ model PostalService {
   // Operator's columns. Lower priority wins when several services fit.
   active   Boolean   @default(true)
   priority Int       @default(100)
+  // The checkout delivery option this service fulfils ("economy", "standard",
+  // "next_day"), or "" for none. An order that paid for an option is only
+  // offered the services linked to it.
+  deliveryOption String @default("") @map("delivery_option")
   syncedAt DateTime? @map("synced_at")
 
   createdAt DateTime @default(now()) @map("created_at")
