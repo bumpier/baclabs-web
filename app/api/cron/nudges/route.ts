@@ -1,6 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { cronAuthorized } from "@/lib/cron-auth";
 import {
   sendRepurchaseNudgeEmail,
   sendReviewRequestEmail,
@@ -32,16 +32,6 @@ interface OrderItem {
   qty: number;
   unitPrice: string;
   unitPriceUsd: string;
-}
-
-function authorized(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const given = req.headers.get("authorization") ?? "";
-  const expected = `Bearer ${secret}`;
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 async function runNudges() {
@@ -176,7 +166,7 @@ export async function POST(req: Request) {
   if (!process.env.CRON_SECRET) {
     return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 503 });
   }
-  if (!authorized(req)) {
+  if (!cronAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const nudges = await runNudges();

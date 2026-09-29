@@ -2,7 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdmin, getAdminSession } from "@/lib/adminAuth";
 import { formatPrice, type Currency } from "@/config/brand";
-import { setOrderStatusAction } from "@/app/admin/actions";
+import { clearAbandonedCheckoutsAction, setOrderStatusAction } from "@/app/admin/actions";
+import { ActionForm } from "@/components/admin/ActionForm";
 import { formatSaleClock, formatSaleDate, saleTime } from "@/lib/saleTime";
 import { getInventoryMode } from "@/lib/inventory/mode";
 
@@ -76,6 +77,22 @@ export default async function AdminOrdersPage({
           </Link>
         ))}
       </div>
+
+      {filter === "pending" && !isPacker && (
+        <div className="card mt-6 flex flex-wrap items-center justify-between gap-4 p-5 text-sm">
+          <p className="max-w-xl text-ink-soft">
+            Pending orders are checkouts that were never paid. They are cleared every night once they
+            can no longer be paid — a card payment page stays open for 24 hours after checkout.
+          </p>
+          <ActionForm
+            action={clearAbandonedCheckoutsAction}
+            submitLabel="Clear abandoned checkouts"
+            submitClassName="btn-secondary"
+            className="flex flex-col items-end gap-2"
+            confirm="Delete every pending order that can no longer be paid? This cannot be undone."
+          />
+        </div>
+      )}
 
       {orders.length === 0 ? (
         <p className="card mt-8 p-8 text-center text-sm text-ink-soft">No orders found.</p>

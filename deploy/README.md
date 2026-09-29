@@ -266,6 +266,8 @@ As `baclab` (`crontab -e`):
 0 4 * * * /usr/bin/bash /srv/baclab/deploy/scripts/baclab-backup.sh >> /var/log/baclab-backup.log 2>&1
 # Daily repurchase nudges
 15 9 * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/nudges
+# Nightly: delete abandoned checkouts (pending orders that can no longer be paid)
+0 0 * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/clear-pending
 ```
 
 Verify: `bash /srv/baclab/deploy/scripts/baclab-backup.sh`, then
