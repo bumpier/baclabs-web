@@ -3,23 +3,61 @@ import Link from "next/link";
 import { brand } from "@/config/brand";
 import { getAdminSession } from "@/lib/adminAuth";
 import { adminLogoutAction } from "@/app/admin/actions";
+import { AdminNav, type NavEntry, type NavLink } from "@/components/admin/AdminNav";
 
 // robots.txt already disallows /admin/, but a disallow stops crawling, not
 // indexing: a URL linked from elsewhere can still appear as a bare result.
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
-const ALL_NAV = [
+type Gated<T> = T & { adminOnly?: boolean };
+
+// Packers only ever see Orders; everything else is Admin-only.
+const ALL_NAV: Gated<NavLink | { label: string; items: Gated<NavLink>[] }>[] = [
   { href: "/admin", label: "Overview", adminOnly: true },
-  { href: "/admin/orders", label: "Orders", adminOnly: false },
-  { href: "/admin/products", label: "Products", adminOnly: true },
-  { href: "/admin/inventory", label: "Inventory", adminOnly: true },
-  { href: "/admin/shipping", label: "Shipping", adminOnly: true },
-  { href: "/admin/content", label: "Content", adminOnly: true },
-  { href: "/admin/subscribers", label: "Subscribers", adminOnly: true },
-  { href: "/admin/campaigns", label: "Campaigns", adminOnly: true },
-  { href: "/admin/affiliates", label: "Affiliates", adminOnly: true },
-  { href: "/admin/subusers", label: "Team", adminOnly: true },
-  { href: "/admin/settings", label: "Settings", adminOnly: true },
+  {
+    label: "Orders",
+    items: [
+      { href: "/admin/orders", label: "All orders", hint: "Pick, pack and dispatch" },
+      { href: "/admin/orders/scan", label: "Scan station", hint: "Check a parcel against its order" },
+    ],
+  },
+  {
+    label: "Catalogue",
+    adminOnly: true,
+    items: [
+      { href: "/admin/products", label: "Products" },
+      { href: "/admin/products/new", label: "Add a product" },
+      { href: "/admin/content", label: "Content", hint: "Articles and guides" },
+    ],
+  },
+  {
+    label: "Warehouse",
+    adminOnly: true,
+    items: [
+      { href: "/admin/inventory", label: "Inventory", hint: "Stock levels by SKU" },
+      { href: "/admin/inventory/stock", label: "Book stock in / adjust" },
+      { href: "/admin/inventory/warehouses", label: "Warehouses & locations" },
+      { href: "/admin/inventory/skus/new", label: "New SKU" },
+      { href: "/admin/shipping", label: "Shipping", hint: "SmartTrack and postal services" },
+    ],
+  },
+  {
+    label: "Marketing",
+    adminOnly: true,
+    items: [
+      { href: "/admin/subscribers", label: "Subscribers", hint: "Mailing list signups" },
+      { href: "/admin/campaigns", label: "Campaigns", hint: "Emails sent to the list" },
+      { href: "/admin/campaigns/new", label: "New campaign" },
+    ],
+  },
+  {
+    label: "Settings",
+    adminOnly: true,
+    items: [
+      { href: "/admin/settings", label: "Tracking", hint: "Meta Pixel" },
+      { href: "/admin/subusers", label: "Team", hint: "Admin and packer logins" },
+    ],
+  },
 ];
 
 export default async function AdminLayout({
@@ -30,11 +68,11 @@ export default async function AdminLayout({
   const session = await getAdminSession();
   const isAdminRole = session?.role === "ADMIN";
 
-  const nav = ALL_NAV.filter((item) => !item.adminOnly || isAdminRole);
+  const nav: NavEntry[] = ALL_NAV.filter((e) => !e.adminOnly || isAdminRole);
 
   return (
     <div className="relative z-10 flex min-h-screen flex-col">
-      <header className="no-print border-b border-line bg-brand-deep text-white">
+      <header className="no-print relative border-b border-line bg-brand-deep text-white">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <div className="flex items-center gap-6">
             <Link
@@ -46,19 +84,7 @@ export default async function AdminLayout({
                 {session?.role === "PACKER" ? "Packer" : "Admin"}
               </span>
             </Link>
-            {session && (
-              <nav className="flex items-center gap-4 text-sm">
-                {nav.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="text-white/75 transition-colors hover:text-white"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            )}
+            {session && <AdminNav entries={nav} />}
           </div>
           {session && (
             <form action={adminLogoutAction}>
