@@ -37,6 +37,8 @@ export default async function OrderConfirmationPage({
     lineTotal?: string;
     bundleName?: string;
     bundleQty?: number;
+    /** The mailing-list welcome vial. */
+    welcome?: boolean;
   }[];
 
   const paid = order.status !== "pending" && order.status !== "cancelled";
@@ -128,9 +130,11 @@ export default async function OrderConfirmationPage({
                 ) : null}
               </dt>
               <dd className="tabular shrink-0 text-ink">
-                {formatMinor(
-                  item.lineTotal ? toMinor(item.lineTotal) : toMinor(item.unitPrice) * item.qty
-                )}
+                {item.welcome
+                  ? "Free"
+                  : formatMinor(
+                      item.lineTotal ? toMinor(item.lineTotal) : toMinor(item.unitPrice) * item.qty
+                    )}
               </dd>
             </div>
           ))}

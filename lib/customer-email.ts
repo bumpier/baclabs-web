@@ -23,6 +23,8 @@ interface OrderItem {
   unitPriceUsd: string;
   /** Exact line total. Falls back to unitPrice × qty for orders placed before this field existed. */
   lineTotal?: string;
+  /** The mailing-list welcome vial (lib/mailing-list.ts): shown as "Free". */
+  welcome?: boolean;
 }
 
 // Order + nudge emails are sent from the payment webhook and the cron job —
@@ -41,6 +43,54 @@ export function unsubscribeSig(email: string): string {
 export function unsubscribeUrl(email: string): string {
   const e = email.toLowerCase();
   return `${siteUrl()}/api/email/unsubscribe?email=${encodeURIComponent(e)}&sig=${unsubscribeSig(e)}`;
+}
+
+/**
+ * Headers every marketing email carries. Gmail and Yahoo require one-click
+ * unsubscribe (RFC 8058) from bulk senders: the mail client POSTs
+ * "List-Unsubscribe=One-Click" to the https URL, which the unsubscribe route
+ * accepts. The mailto is a fallback for clients that only offer that.
+ */
+export function marketingHeaders(email: string): Record<string, string> {
+  const links = [`<${unsubscribeUrl(email)}>`];
+  if (brand.contact.email) links.push(`<mailto:${brand.contact.email}?subject=unsubscribe>`);
+  return {
+    "List-Unsubscribe": links.join(", "),
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
+
+/** The line at the foot of every marketing email. */
+export function marketingFooter(email: string): string {
+  return `<p style="font-size:11px;color:${LITERAL.inkSoft};margin-top:28px">You are receiving this because you signed up to ${escapeHtml(brand.name)} emails or bought from us.
+    <a href="${unsubscribeUrl(email)}" style="color:${LITERAL.inkSoft}">Unsubscribe</a></p>`;
+}
+
+/**
+ * Sent once, on signup. Carries the welcome offer when it is switched on and
+ * this person has not ordered yet. Never throws.
+ */
+export async function sendWelcomeEmail(email: string, opts: { withOffer: boolean }): Promise<void> {
+  try {
+    const offer = opts.withOffer
+      ? `<p>As promised, your first order comes with <strong>an extra 10ml vial, free</strong>. There is no code to enter: check out from this browser, or with this email address (${escapeHtml(email)}), and we add it to your order automatically. You will see it on the payment page.</p>`
+      : "";
+    await send(
+      email,
+      offer ? `Your free vial is waiting` : `You're on the ${brand.name} list`,
+      layout(
+        `<p>Hi,</p>
+        <p>Thanks for joining the ${escapeHtml(brand.name)} mailing list. We will email you about offers, restocks and new pack sizes, and nothing else.</p>
+        ${offer}
+        <p style="margin:28px 0 0">${ctaButton(`${siteUrl()}/#buy`, "Choose your pack")}</p>
+        ${marketingFooter(email)}`,
+        { preheader: offer ? "An extra vial on your first order, added automatically." : "Thanks for signing up." }
+      ),
+      { headers: marketingHeaders(email) }
+    );
+  } catch (err) {
+    console.error("[email] welcome email failed", err);
+  }
 }
 
 /**
@@ -89,7 +139,7 @@ function receiptTable(
       const amount = i.lineTotal ? parseFloat(i.lineTotal) : parseFloat(i.unitPrice) * i.qty;
       return `<tr>
         <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};color:${LITERAL.ink}">${escapeHtml(i.name)} <span style="color:${LITERAL.inkSoft}">&times; ${i.qty}</span></td>
-        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};text-align:right;color:${LITERAL.ink};white-space:nowrap">${formatPrice(amount, currency)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};text-align:right;color:${LITERAL.ink};white-space:nowrap">${i.welcome ? "Free" : formatPrice(amount, currency)}</td>
       </tr>`;
     })
     .join("");
@@ -206,6 +256,7 @@ export async function sendOrderConfirmationEmail(
     layout(
       `<p>Hi ${escapeHtml(order.customerName)},</p>
       <p>Thanks for your order! Your payment has been received and we're getting it ready.</p>
+      ${items.some((i) => i.welcome) ? `<p style="margin:0 0 12px">Your mailing-list welcome gift, an extra 10ml vial, is included in this order.</p>` : ""}
       <p style="margin:0 0 4px;font-size:12px;color:${LITERAL.inkSoft}">Order ${order.id} &middot; placed ${placedOn}</p>
       ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString())}
       ${

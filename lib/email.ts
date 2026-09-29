@@ -30,7 +30,7 @@ export async function send(
   to: string,
   subject: string,
   html: string,
-  opts?: { bcc?: string }
+  opts?: { bcc?: string; headers?: Record<string, string> }
 ) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -60,6 +60,7 @@ export async function send(
       subject,
       html,
       ...(opts?.bcc ? { bcc: opts.bcc } : {}),
+      ...(opts?.headers ? { headers: opts.headers } : {}),
     });
     if (error) {
       console.error("[email] Resend send failed", JSON.stringify(error));
@@ -70,6 +71,64 @@ export async function send(
     // (e.g. `void sendNewOrderAlert(order)`) and an order must not fail because
     // its receipt did.
     console.error("[email] Resend send failed", err);
+  }
+}
+
+export interface BatchEmail {
+  to: string;
+  subject: string;
+  html: string;
+  headers?: Record<string, string>;
+}
+
+/** One result per email handed to sendBatch, in the same order. */
+export type BatchResult = { ok: true; id: string | null } | { ok: false; error: string };
+
+/**
+ * Up to 100 emails in one Resend call (the batch API's limit). Never throws:
+ * a failure is returned against every email in the batch, for the caller to
+ * record and retry. `idempotencyKey` makes a retried call return the first
+ * call's result instead of sending again, so it must identify exactly these
+ * emails.
+ *
+ * Without RESEND_API_KEY it logs in development and reports success, so a
+ * campaign can be walked through end to end locally; in production it
+ * reports failure, because an unsent campaign must not read as sent.
+ */
+export async function sendBatch(emails: BatchEmail[], idempotencyKey: string): Promise<BatchResult[]> {
+  if (emails.length === 0) return [];
+  if (emails.length > 100) throw new Error("sendBatch takes at most 100 emails");
+  const fail = (error: string): BatchResult[] => emails.map(() => ({ ok: false, error }));
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    if (process.env.NODE_ENV !== "production") {
+      for (const e of emails) console.log(`[dev email batch] to=${e.to} subject="${e.subject}"`);
+      return emails.map(() => ({ ok: true, id: null }));
+    }
+    return fail("RESEND_API_KEY is not set");
+  }
+  if (from.includes("example.com")) return fail("EMAIL_FROM is still the placeholder (example.com)");
+
+  try {
+    const { data, error } = await getClient(apiKey).batch.send(
+      emails.map((e) => ({
+        from,
+        to: e.to,
+        subject: e.subject,
+        html: e.html,
+        ...(e.headers ? { headers: e.headers } : {}),
+      })),
+      { idempotencyKey }
+    );
+    if (error || !data) {
+      console.error("[email] Resend batch failed", JSON.stringify(error));
+      return fail(error?.message ?? "Resend returned no data");
+    }
+    return emails.map((_, i) => ({ ok: true, id: data.data[i]?.id ?? null }));
+  } catch (err) {
+    console.error("[email] Resend batch failed", err);
+    return fail(err instanceof Error ? err.message : "Network error");
   }
 }
 

@@ -59,6 +59,19 @@ export type CardCheckoutInput = z.infer<typeof CardCheckoutSchema>;
 export type CryptoCheckoutInput = z.infer<typeof CryptoCheckoutSchema>;
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
 
+/**
+ * Mailing-list signup. `website` is the honeypot: a hidden field people never
+ * see, so anything in it is a bot. Accepted as any string so the route can
+ * answer a bot exactly as it answers a person.
+ */
+export const SubscribeSchema = z
+  .object({
+    email: z.string().trim().email().max(254),
+    source: z.enum(["popup", "footer", "inline"]),
+    website: z.string().max(200).optional(),
+  })
+  .strict();
+
 export const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters")

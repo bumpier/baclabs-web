@@ -4,6 +4,7 @@ import type { PaymentProvider } from "@/lib/payments/config";
 import { sendMetaPurchase } from "@/lib/meta-capi";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { allocateOrder } from "@/lib/inventory/store";
+import { settleWelcomeVial } from "@/lib/mailing-list";
 
 // Single post-payment code path shared by every provider's webhook.
 // Idempotent: only the pending → paid transition does work; retries are no-ops.
@@ -47,10 +48,28 @@ export async function fulfillPaidOrder(
       },
     });
     if (count === 0) return false; // another concurrent delivery already claimed it
+
+    // The mailing-list welcome vial: claim the one checkout added, or add it
+    // now for a subscriber who signed up on another device. Before any stock
+    // is taken, so the vial is decremented, allocated and picked with the
+    // rest. See lib/mailing-list.ts.
+    const welcome = await settleWelcomeVial(tx, order, { legacyStockCheck: mode === "legacy" });
+    if (welcome.items !== order.items || welcome.subscriberId !== order.welcomeSubscriberId) {
+      const notes = opts.notes !== undefined ? opts.notes : order.notes;
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          items: welcome.items,
+          welcomeSubscriberId: welcome.subscriberId,
+          ...(welcome.note ? { notes: notes ? `${notes}\n${welcome.note}` : welcome.note } : {}),
+        },
+      });
+    }
+
     // Legacy: decrement the vial counter now that payment is confirmed. In
     // warehouse mode stock is allocated to locations below instead.
     if (mode === "legacy") {
-      const items = JSON.parse(order.items) as { productId: string; qty: number }[];
+      const items = JSON.parse(welcome.items) as { productId: string; qty: number }[];
       for (const item of items) {
         await tx.product.update({
           where: { id: item.productId },

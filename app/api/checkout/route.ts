@@ -15,6 +15,9 @@ import { getPaymentConfig, providerForMethod } from "@/lib/payments/config";
 import { attributionFor } from "@/lib/meta-capi-event";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { availableToSell } from "@/lib/inventory/store";
+import { VIAL_SKU_CODE } from "@/lib/inventory/demand";
+import { normaliseCode } from "@/lib/inventory/codes";
+import { welcomeForCheckout, welcomeItem } from "@/lib/mailing-list";
 import { priceIn } from "@/lib/fx";
 import { fetchFxRates } from "@/lib/fx-rates";
 import {
@@ -107,6 +110,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Not enough stock for that quantity" }, { status: 409 });
     }
 
+    // The mailing-list welcome vial, when this browser (or, for crypto, this
+    // email) belongs to a subscriber who has not ordered yet. Only added when
+    // the shelves can cover it: a missing gift is better than a failed sale.
+    let welcome = await welcomeForCheckout({
+      cookieHeader: req.headers.get("cookie"),
+      email: input.method === "card" ? undefined : input.email,
+    });
+    if (welcome) {
+      let covered: boolean;
+      if ((await getInventoryMode()) === "warehouse") {
+        const vials = await availableToSell(VIAL_SKU_CODE);
+        // Loose vials the order itself already takes off the shelf: the
+        // single-vial tier, or a pack made up from vials at packing time.
+        const bundleSku = await prisma.sku.findUnique({
+          where: { code: normaliseCode(bundle.sku) },
+          select: { _count: { select: { components: true } } },
+        });
+        const fromShelf =
+          normaliseCode(bundle.sku) === VIAL_SKU_CODE || (bundleSku?._count.components ?? 0) > 0
+            ? totalVials
+            : 0;
+        covered = vials !== null && vials >= fromShelf + 1;
+      } else {
+        covered = product.stock >= totalVials + 1;
+      }
+      if (!covered) welcome = null;
+    }
+
     // Crypto orders choose delivery here; card orders choose it on Stripe's
     // page and the webhook records it. The price is always looked up, never
     // taken from the request.
@@ -155,6 +186,8 @@ export async function POST(req: Request) {
         bundleName: `${bundle.vials}-vial pack`,
         bundleQty: input.quantity,
       },
+      // £0, so every total that sums lineTotal still matches the charge.
+      ...(welcome ? [welcomeItem(product.id, product.slug)] : []),
     ];
 
     const isCard = input.method === "card";
@@ -185,6 +218,7 @@ export async function POST(req: Request) {
         subtotalUsd,
         paymentMethod: input.method,
         paymentProvider: provider,
+        ...(welcome ? { welcomeSubscriberId: welcome.id } : {}),
         ...(delivery ? { deliveryOption: delivery.option, deliveryMinor: delivery.minor } : {}),
         ...(instructions ? { deliveryInstructions: instructions } : {}),
         // Read now: the payment webhook comes from the provider's servers and
@@ -231,6 +265,7 @@ export async function POST(req: Request) {
         orderValueMinor: grandTotalMinor,
         shippingCountries: SHIPPING_COUNTRIES,
         origin,
+        ...(welcome ? { welcome: { email: welcome.email } } : {}),
       });
 
       await prisma.order.update({

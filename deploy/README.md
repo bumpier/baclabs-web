@@ -268,6 +268,8 @@ As `baclab` (`crontab -e`):
 15 9 * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/nudges
 # Nightly: delete abandoned checkouts (pending orders that can no longer be paid)
 0 0 * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/clear-pending
+# Every 5 minutes: finish any email campaign a restart left part-way through
+*/5 * * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/campaigns
 ```
 
 Verify: `bash /srv/baclab/deploy/scripts/baclab-backup.sh`, then

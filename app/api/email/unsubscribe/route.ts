@@ -6,7 +6,7 @@ import { brand } from "@/config/brand";
 
 export const dynamic = "force-dynamic";
 
-// One-click unsubscribe from marketing (nudge) emails. The link carries an
+// Unsubscribe from marketing emails (nudges, review requests, campaigns). The link carries an
 // HMAC of the email address, so no per-recipient token storage is needed.
 
 function page(title: string, body: string, status = 200) {
@@ -19,27 +19,50 @@ function page(title: string, body: string, status = 200) {
   );
 }
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
+/** The lower-cased email, if the signature is ours; otherwise null. */
+function verified(url: URL): string | null {
   const email = (url.searchParams.get("email") ?? "").toLowerCase();
   const sig = url.searchParams.get("sig") ?? "";
-
-  if (!email || !sig) return page("Invalid link", "This unsubscribe link is invalid.", 400);
-
+  if (!email || !sig) return null;
   const expected = Buffer.from(unsubscribeSig(email), "hex");
   const given = Buffer.from(sig, "hex");
-  if (expected.length !== given.length || !timingSafeEqual(expected, given)) {
-    return page("Invalid link", "This unsubscribe link is invalid.", 400);
-  }
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+  return email;
+}
 
-  await prisma.emailOptOut.upsert({
-    where: { email },
-    update: {},
-    create: { email },
+/**
+ * Opt out of every marketing email: nudges, review requests and campaigns
+ * all check EmailOptOut. A mailing-list subscriber is marked unsubscribed as
+ * well, so the admin list shows it.
+ */
+async function optOut(email: string): Promise<void> {
+  await prisma.emailOptOut.upsert({ where: { email }, update: {}, create: { email } });
+  await prisma.subscriber.updateMany({
+    where: { email, status: "subscribed" },
+    data: { status: "unsubscribed", unsubscribedAt: new Date() },
   });
+}
+
+export async function GET(req: Request) {
+  const email = verified(new URL(req.url));
+  if (!email) return page("Invalid link", "This unsubscribe link is invalid.", 400);
+
+  await optOut(email);
 
   return page(
     "Unsubscribed",
-    "You've been unsubscribed from repurchase reminders. You'll still receive order receipts and shipping updates."
+    "You've been unsubscribed from marketing emails from us, including offers and reminders. You'll still receive order receipts and shipping updates."
   );
+}
+
+/**
+ * One-click unsubscribe (RFC 8058). Mail clients POST
+ * "List-Unsubscribe=One-Click" to the List-Unsubscribe URL without showing
+ * the customer a page, so this answers with a bare status.
+ */
+export async function POST(req: Request) {
+  const email = verified(new URL(req.url));
+  if (!email) return NextResponse.json({ error: "Invalid link" }, { status: 400 });
+  await optOut(email);
+  return NextResponse.json({ unsubscribed: true });
 }

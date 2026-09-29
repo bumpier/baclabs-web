@@ -33,6 +33,7 @@ import { hasTrackingConsent } from "@/components/consent/consent-store";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
 import { SaleTag } from "@/components/funnel/SaleTag";
+import { WelcomeVialPanel } from "@/components/mailing-list/WelcomeVialPanel";
 
 /**
  * The home page's purchase block: pick a vial amount, then pay.
@@ -367,6 +368,11 @@ export function VialChooser({ cryptoEnabled }: { cryptoEnabled: boolean }) {
             <span className="tabular">{STOCK_LEVEL}</span> vials currently in stock.
           </p>
         ) : null}
+
+        {/* The mailing-list welcome vial, or the offer. */}
+
+        <WelcomeVialPanel />
+
 
         <button
           type="button"

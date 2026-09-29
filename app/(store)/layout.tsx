@@ -1,6 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { contentHref } from "@/lib/blog-migration";
+import { SignupPopup } from "@/components/mailing-list/SignupPopup";
 
 /**
  * Bound how long any cache may hold a storefront page. Fully static pages
@@ -26,6 +27,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
         {children}
       </main>
       <Footer />
+      <SignupPopup />
     </div>
   );
 }

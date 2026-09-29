@@ -62,7 +62,12 @@ async function runNudges() {
 
   for (const { order, items } of parsed) {
     try {
-      const nudgeable = items.filter((i) => (supplyDays.get(i.productId) ?? 0) > 0);
+      // The mailing-list welcome vial rides along with a real purchase; as a
+      // line of its own it would bring the reminder forward to one vial's
+      // supply.
+      const nudgeable = items.filter(
+        (i) => !(i as { welcome?: boolean }).welcome && (supplyDays.get(i.productId) ?? 0) > 0
+      );
       if (nudgeable.length === 0) {
         skipped++;
         continue;

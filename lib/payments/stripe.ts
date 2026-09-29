@@ -6,6 +6,7 @@ import {
   deliveryOptionById,
   deliveryOptionsFor,
   shipsFree,
+  MAILING_LIST,
   type BundleId,
   type DeliveryOptionId,
 } from "@/config/funnel";
@@ -82,6 +83,12 @@ export interface BundleCheckoutParams {
   /** ISO-3166-1 alpha-2 codes Stripe will collect a shipping address for. */
   shippingCountries: readonly string[];
   origin: string;
+  /**
+   * The mailing-list welcome vial (lib/mailing-list.ts). Shown on Stripe's
+   * page as a £0 line, and the subscriber's email pre-filled so the paid
+   * order matches them. Changes nothing that is charged.
+   */
+  welcome?: { email: string };
 }
 
 /**
@@ -143,7 +150,24 @@ export async function createBundleCheckout(
       // settle later via checkout.session.async_payment_succeeded, an event
       // this app does not handle.
       payment_method_types: ["card"],
-      line_items: [{ price: priceId, quantity }],
+      line_items: [
+        { price: priceId, quantity },
+        // Stripe supports no-cost line items when the session total is above
+        // zero (docs.stripe.com/payments/checkout/no-cost-orders).
+        ...(params.welcome
+          ? [
+              {
+                price_data: {
+                  currency: "gbp",
+                  unit_amount: 0,
+                  product_data: { name: MAILING_LIST.welcomeLineName },
+                },
+                quantity: 1,
+              },
+            ]
+          : []),
+      ],
+      ...(params.welcome ? { customer_email: params.welcome.email } : {}),
       client_reference_id: orderId,
       metadata: { orderId, bundleId: params.bundleId },
       // Also on the PaymentIntent, where refunds and disputes are worked.

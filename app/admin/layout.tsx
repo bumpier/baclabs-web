@@ -15,6 +15,8 @@ const ALL_NAV = [
   { href: "/admin/inventory", label: "Inventory", adminOnly: true },
   { href: "/admin/shipping", label: "Shipping", adminOnly: true },
   { href: "/admin/content", label: "Content", adminOnly: true },
+  { href: "/admin/subscribers", label: "Subscribers", adminOnly: true },
+  { href: "/admin/campaigns", label: "Campaigns", adminOnly: true },
   { href: "/admin/affiliates", label: "Affiliates", adminOnly: true },
   { href: "/admin/subusers", label: "Team", adminOnly: true },
   { href: "/admin/settings", label: "Settings", adminOnly: true },

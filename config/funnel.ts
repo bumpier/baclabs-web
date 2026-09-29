@@ -679,6 +679,38 @@ export const EXIT_INTENT: { enabled: boolean; heading: string; body: string; pro
 };
 
 /**
+ * The mailing-list signup and its welcome offer: one free vial on the
+ * subscriber's first order. Read by components/mailing-list/*, the checkout
+ * route and lib/mailing-list.ts, so switching the offer off here removes it
+ * from the forms, the Stripe page and the order at once.
+ *
+ * Empty config renders nothing: `enabled: false` hides every signup surface;
+ * an empty `headline` or `offerLine` drops that line; `welcomeVial.enabled:
+ * false` keeps the list running without the gift. `consentText` is stored
+ * against each subscriber as the record of what they agreed to, so change
+ * it deliberately.
+ */
+export const MAILING_LIST = {
+  enabled: true,
+  headline: "Get a free vial on your first order",
+  offerLine:
+    "Join the BacLab mailing list and we will add an extra 10ml vial to your first order, on us.",
+  consentText:
+    "By signing up you agree to receive marketing emails from BacLab: offers, restocks and new pack sizes. Unsubscribe at any time from any email.",
+  /** The name of the free line on the order, the Stripe page and the receipt. */
+  welcomeLineName: "Free vial (mailing list welcome)",
+  popup: {
+    /** Opens this long after landing. 0 disables the entry popup. */
+    entryDelayMs: 4000,
+    /** Opens again as the pointer leaves the top of the window (desktop). */
+    exitIntent: true,
+    /** How long a dismissal is remembered in this browser. */
+    dismissDays: 14,
+  },
+  welcomeVial: { enabled: true },
+} as const;
+
+/**
  * Product photography. Empty array falls back to the neutral placeholder.
  * Shot list lives in LAUNCH-CHECKLIST.md.
  */

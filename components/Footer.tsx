@@ -5,6 +5,7 @@ import { PRODUCT, formatMinor } from "@/config/funnel";
 import { CookieSettingsButton } from "@/components/consent/CookieSettingsButton";
 import { TrustBox } from "@/components/funnel/TrustBox";
 import { TrustpilotLogoLink } from "@/components/funnel/TrustpilotLogoLink";
+import { FooterSignup } from "@/components/mailing-list/FooterSignup";
 
 /**
  * Legal and support links. These URLs are stable — do not rename them; the
@@ -52,6 +53,7 @@ export function Footer() {
   return (
     <footer className="no-print mt-auto bg-abyss text-white/70">
       <div className="shell-wide py-20 sm:py-24">
+        <FooterSignup />
         <div className="grid gap-10 lg:grid-cols-12">
           {/* Identity and the product line, so the footer restates what is
               sold rather than being purely navigational. */}

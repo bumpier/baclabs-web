@@ -8,6 +8,8 @@ interface OrderItem {
   unitPrice: string;
   /** Exact line total. Falls back to unitPrice × qty for orders placed before this field existed. */
   lineTotal?: string;
+  /** The mailing-list welcome vial: packed like any vial, priced as Free. */
+  welcome?: boolean;
 }
 
 /** The A4 sheet that goes in the box. Shared by the order page and the batch print. */
@@ -84,12 +86,14 @@ export function PackingSlip({ order }: { order: Order }) {
             <tr key={idx}>
               <td className="py-3">{item.name}</td>
               <td className="py-3 text-center">{item.qty}</td>
-              <td className="py-3 text-right">{formatPrice(item.unitPrice, currency)}</td>
+              <td className="py-3 text-right">{item.welcome ? "Free" : formatPrice(item.unitPrice, currency)}</td>
               <td className="py-3 text-right font-medium">
-                {formatPrice(
-                  item.lineTotal ? parseFloat(item.lineTotal) : parseFloat(item.unitPrice) * item.qty,
-                  currency
-                )}
+                {item.welcome
+                  ? "Free"
+                  : formatPrice(
+                      item.lineTotal ? parseFloat(item.lineTotal) : parseFloat(item.unitPrice) * item.qty,
+                      currency
+                    )}
               </td>
             </tr>
           ))}

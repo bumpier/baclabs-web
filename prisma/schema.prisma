@@ -86,12 +86,21 @@ model Order {
   // pending, and on orders cancelled before paying.
   paidAt DateTime?
 
+  // The mailing-list subscriber whose welcome vial this order carries, set
+  // at checkout when the signed-up browser buys (lib/mailing-list.ts). The
+  // claim itself is Subscriber.welcomeOrderId, made when payment lands.
+  welcomeSubscriberId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   emailLogs EmailLog[]
   pickLines PickLine[]
   shipments Shipment[]
+
+  // "Is this their first order?" and the campaign audiences look orders up
+  // by email.
+  @@index([customerEmail])
 }
 
 model AdminUser {
@@ -118,6 +127,87 @@ model EmailLog {
 model EmailOptOut {
   email     String   @id
   createdAt DateTime @default(now())
+}
+
+// ── Mailing list and campaigns ────────────────────────────────────
+//
+// Someone who ASKED to hear from us, by typing their email into the signup
+// form. The consent record (what they were shown, when) is kept because
+// PECR puts the burden of proving consent on the sender. lib/mailing-list.ts
+// is the only file that writes this table outside the admin.
+//
+// Unsubscribing also writes an EmailOptOut row, which is what every sender
+// checks: the opt-out list stays the one source of "never email this person".
+model Subscriber {
+  id          String    @id @default(cuid())
+  email       String    @unique // lower-cased
+  status      String    @default("subscribed") // subscribed | unsubscribed
+  source      String    @default("footer") // popup | footer | inline | admin
+  consentText String    @default("") @map("consent_text")
+  consentAt   DateTime  @default(now()) @map("consent_at")
+  // SHA-256 of the IP with JWT_SECRET, never the address itself: enough to
+  // spot one machine signing up a hundred addresses, not enough to locate it.
+  ipHash      String    @default("") @map("ip_hash")
+
+  // The order that received the welcome vial. Unique, and claimed with a
+  // conditional update, so a subscriber can never get a second one.
+  welcomeOrderId   String?   @unique @map("welcome_order_id")
+  welcomeClaimedAt DateTime? @map("welcome_claimed_at")
+
+  createdAt      DateTime  @default(now()) @map("created_at")
+  unsubscribedAt DateTime? @map("unsubscribed_at")
+
+  @@index([status, createdAt])
+}
+
+// One marketing email, written in /admin/campaigns and sent to an audience
+// resolved at send time. lib/campaigns.ts sends it.
+model Campaign {
+  id           String @id @default(cuid())
+  subject      String
+  preheader    String @default("")
+  bodyMarkdown String @default("") @map("body_markdown")
+  // JSON AudienceSpec — see lib/campaigns.ts.
+  audience     String @default("{}")
+  status       String @default("draft") // draft | sending | sent
+
+  // The offer, when there is one: a real Stripe promotion code, created
+  // from the composer. Card checkout only — crypto has no discount path.
+  promoCode             String?   @map("promo_code")
+  stripeCouponId        String?   @map("stripe_coupon_id")
+  stripePromotionCodeId String?   @map("stripe_promotion_code_id")
+  offerSummary          String    @default("") @map("offer_summary") // "10% off"
+  offerExpiresAt        DateTime? @map("offer_expires_at")
+
+  recipientCount Int @default(0) @map("recipient_count")
+  sentCount      Int @default(0) @map("sent_count")
+  failedCount    Int @default(0) @map("failed_count")
+
+  createdBy String    @default("") @map("created_by")
+  sentAt    DateTime? @map("sent_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  recipients CampaignRecipient[]
+}
+
+// One email of a campaign. Written for the whole audience BEFORE the first
+// send, so a send that dies part-way resumes from the queued rows instead of
+// starting again. The unique pair means nobody gets the same campaign twice.
+model CampaignRecipient {
+  id         String    @id @default(cuid())
+  campaignId String    @map("campaign_id")
+  campaign   Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email      String
+  firstName  String    @default("") @map("first_name")
+  status     String    @default("queued") // queued | sent | failed
+  resendId   String?   @map("resend_id")
+  error      String?
+  sentAt     DateTime? @map("sent_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@unique([campaignId, email])
+  @@index([campaignId, status])
 }
 
 // Operator-editable runtime configuration — one row per key.

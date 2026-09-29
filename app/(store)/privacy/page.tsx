@@ -35,6 +35,9 @@ export const metadata: Metadata = pageMetadata({
  *    localStorage, not a cookie. "Cookie settings" reopens the banner.
  *  - Repurchase nudges (app/api/cron/nudges) are marketing, sent under the
  *    PECR soft opt-in with a working unsubscribe (app/api/email/unsubscribe).
+ *  - The mailing list (app/api/subscribe) is consent-based and sets the
+ *    bl_sub cookie on signup; campaigns (/admin/campaigns) go to subscribers
+ *    and, under the soft opt-in, past customers.
  *
  * If any of those change, this page must change with them.
  */
@@ -157,6 +160,12 @@ export default async function PrivacyPage() {
                   Which order emails were sent to which address and when, so we do not send the same
                   message twice.
                 </dd>
+                <dt>Mailing list</dt>
+                <dd>
+                  If you join our mailing list: your email address, when and where on the site you
+                  signed up, the wording you agreed to, a one-way scrambled form of your IP address
+                  (used only to spot bulk sign-ups), and whether your welcome gift has been used.
+                </dd>
               </dl>
               <p>
                 We do not ask for, and do not want, any special category data &mdash; including
@@ -190,7 +199,12 @@ export default async function PrivacyPage() {
                   Our interest, and yours, in not being defrauded. This includes rate-limiting and
                   checking orders that look anomalous.
                 </dd>
-                <dt>To send repurchase reminders &mdash; the PECR soft opt-in</dt>
+                <dt>To send our mailing list &mdash; consent</dt>
+                <dd>You opted in when you signed up. See clause 5.</dd>
+                <dt>
+                  To send past customers repurchase reminders and occasional offers &mdash; the PECR
+                  soft opt-in
+                </dt>
                 <dd>See clause 5.</dd>
                 <dt>To measure how the site is used &mdash; consent</dt>
                 <dd>See clause 6.</dd>
@@ -241,6 +255,21 @@ export default async function PrivacyPage() {
                 we will record your address on a suppression list and never send you another. You may
                 also opt out at any time by emailing {contactLine}.
               </p>
+              <p id="mailing-list">
+                <strong>Our mailing list.</strong> If you sign up on this site, we email you about
+                offers, restocks and new pack sizes, on the basis of your consent. Signing up also
+                entitles you to one free vial on your first order: we add it automatically when you
+                check out from the browser you signed up on, or with the email address you signed
+                up with. Every email carries a one-click unsubscribe link; use it, or email{" "}
+                {contactLine}, and we stop. We keep your signup record while you are subscribed, and
+                the fact that you unsubscribed (your email address only) so that we never email you
+                again.
+              </p>
+              <p>
+                <strong>Offers to past customers.</strong> If you have bought from us, we may also
+                occasionally email you offers on our own products under the same soft opt-in as
+                repurchase reminders, with the same one-click unsubscribe.
+              </p>
               <p>
                 Email is delivered by <strong>Resend</strong>, acting as our processor. We keep a
                 record of which emails were sent to which address and when.
@@ -253,11 +282,13 @@ export default async function PrivacyPage() {
           body: (
             <>
               <p>
-                <strong>Unless you accept cookies, this site sets no cookies on a shopping visitor&rsquo;s browser.</strong> Your
+                <strong>Unless you accept cookies or join our mailing list, this site sets no cookies on a shopping visitor&rsquo;s browser.</strong> Your
                 basket is held in your own browser&rsquo;s local storage, on your device, and is
                 never transmitted to us until you check out. Clearing your browser data clears it.
-                The only cookie this site sets is a session cookie for staff signing into the admin
-                area, which is strictly necessary and set only after a successful staff login.
+                The only cookies this site sets itself are a session cookie for staff signing into the
+                admin area, set only after a successful staff login, and, if you join our mailing
+                list, a cookie that remembers you did so this browser can receive your welcome vial.
+                Both are strictly necessary for something you asked for, and neither tracks you.
               </p>
               {/* PECR requires consent BEFORE a non-essential cookie is set.
                   components/Analytics.tsx renders no tag until the visitor
