@@ -125,6 +125,7 @@ async function main() {
     },
   });
   const shipments = () => prisma.shipment.findMany({ where: { orderId: order.id }, orderBy: { createdAt: "asc" } });
+  const orderStatus = async () => (await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status;
 
   // ── 1. Sign-in down: nothing sent, nothing bought ───────────────
   mode = "authdown";
@@ -149,13 +150,15 @@ async function main() {
   // ── 4. Reconcile: SmartTrack has no such label ──────────────────
   labelExists = false;
   assert((await reconcileShipment(rows[2]!.id)) === "FAILED", "reconcile marks it FAILED when SmartTrack never made it");
+  assert((await orderStatus()) === "paid", "no label bought so far, so the order is still paid");
 
   // ── 5. Bought ───────────────────────────────────────────────────
   mode = "ok";
   const before = generateCalls();
-  const { shipmentId } = await createShipmentLabel({ orderId: order.id, actor: "smoke" });
+  const { shipmentId, packed } = await createShipmentLabel({ orderId: order.id, actor: "smoke" });
   const bought = await prisma.shipment.findUniqueOrThrow({ where: { id: shipmentId } });
   assert(bought.status === "CREATED" && bought.environment === "uat", "a successful call is CREATED, tagged UAT");
+  assert(packed && (await orderStatus()) === "packed", "buying the label moves the order from paid to packed");
   assert(bought.trackingNumbers === '["JD0001"]', "tracking number stored");
   assert(bought.serviceCode === "STYDL3HPA" && bought.serviceChoice === "auto", "the automatically chosen service was used");
   const sent = calls.filter((c) => c.path === "generate-label")[before]!.body as {
@@ -182,17 +185,21 @@ async function main() {
   await voidShipment(shipmentId);
   const voided = await prisma.shipment.findUniqueOrThrow({ where: { id: shipmentId } });
   assert(voided.status === "VOIDED" && voided.voidedAt !== null, "voiding marks it VOIDED");
+  assert((await orderStatus()) === "packed", "…and leaves the order packed");
   const voidCall = calls.filter((c) => c.path === "void-labels").at(-1)!;
   assert(JSON.stringify(voidCall.body) === JSON.stringify({ order_reference: { "0": `${order.id}-4` } }), "void sends the reference keyed as SmartTrack documents");
 
   // ── 7. Reconcile: SmartTrack did make it ────────────────────────
+  await prisma.order.update({ where: { id: order.id }, data: { status: "paid" } });
   mode = "timeout";
   await rejects(() => createShipmentLabel({ orderId: order.id, actor: "smoke" }), "not known whether", "another timeout");
+  assert((await orderStatus()) === "paid", "an unknown outcome does not mark the order packed");
   const pending = (await shipments()).at(-1)!;
   labelExists = true;
   assert((await reconcileShipment(pending.id)) === "CREATED", "reconcile recovers a label that was bought");
   const recovered = await prisma.shipment.findUniqueOrThrow({ where: { id: pending.id } });
   assert(recovered.trackingNumbers === '["JD0002"]' && recovered.labelPdf === PDF, "…with its tracking number and label");
+  assert((await orderStatus()) === "packed", "…and the order moves to packed, as if bought first time");
 
   // ── 8. Sign-in down during reconcile says nothing about the label ─
   mode = "ok";

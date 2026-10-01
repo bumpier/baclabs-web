@@ -26,6 +26,9 @@ import { buildShipmentRequest } from "@/lib/smarttrack/payload";
  * One active label per order (PENDING or CREATED). Replacing one means
  * voiding it first, and every attempt gets its own reference, so SmartTrack
  * never sees a reused order_reference.
+ *
+ * A label that is bought — straight away, or found by reconcileShipment —
+ * moves a paid order to packed. Voiding it does not move the order back.
  */
 
 /** Something the operator can fix, worded for them. */
@@ -89,12 +92,31 @@ async function labelBase64(data: {
   }
 }
 
+/**
+ * A bought label moves the order on from paid to packed. Conditional on it
+ * still being paid, so a shipped or cancelled order is never pulled back.
+ * Never throws: the label is paid for by now, and a failure here must not
+ * read as the purchase having failed.
+ */
+async function advanceToPacked(orderId: string): Promise<boolean> {
+  try {
+    const { count } = await prisma.order.updateMany({
+      where: { id: orderId, status: "paid" },
+      data: { status: "packed" },
+    });
+    return count > 0;
+  } catch (err) {
+    console.error(`[internal] marking order ${orderId} packed after its label was bought failed`, err);
+    return false;
+  }
+}
+
 export async function createShipmentLabel(input: {
   orderId: string;
   /** A service picked on the order page, overriding the automatic choice. */
   serviceCode?: string | null;
   actor: string;
-}): Promise<{ shipmentId: string; warnings: string[] }> {
+}): Promise<{ shipmentId: string; warnings: string[]; packed: boolean }> {
   const cfg = smartTrackConfig();
   if (!cfg) throw new SmartTrackNotConfiguredError();
 
@@ -223,7 +245,7 @@ export async function createShipmentLabel(input: {
     );
   }
 
-  return { shipmentId: shipment.id, warnings: built.warnings };
+  return { shipmentId: shipment.id, warnings: built.warnings, packed: await advanceToPacked(order.id) };
 }
 
 function sameEnvironment(shipment: { environment: string }) {
@@ -258,6 +280,7 @@ export async function reconcileShipment(shipmentId: string): Promise<"CREATED" |
         error: null,
       },
     });
+    await advanceToPacked(shipment.orderId);
     return "CREATED";
   } catch (err) {
     // Could not sign in, so SmartTrack was never asked: that says nothing

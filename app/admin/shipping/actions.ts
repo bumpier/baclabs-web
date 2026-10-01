@@ -240,13 +240,18 @@ export async function createLabelAction(_prev: FormState, formData: FormData): P
       });
     }
     const session = await getAdminSession();
-    const { warnings } = await createShipmentLabel({
+    const { warnings, packed } = await createShipmentLabel({
       orderId: orderId.data,
       serviceCode,
       actor: session?.adminUserId ?? "admin",
     });
     revalidatePath(`/admin/orders/${orderId.data}`);
-    return { success: `Label bought.${warnings.length ? ` Note: ${warnings.join("; ")}.` : ""}` };
+    revalidatePath("/admin/orders");
+    return {
+      success: `Label bought${packed ? " and the order marked packed" : ""}.${
+        warnings.length ? ` Note: ${warnings.join("; ")}.` : ""
+      }`,
+    };
   } catch (err) {
     revalidatePath(`/admin/orders/${orderId.data}`);
     return message(err, "create label");
@@ -273,6 +278,7 @@ export async function reconcileShipmentAction(_prev: FormState, formData: FormDa
   try {
     const outcome = await reconcileShipment(shipmentId);
     revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
     return outcome === "CREATED"
       ? { success: "SmartTrack has the label — it was bought, and is now stored here." }
       : { success: "SmartTrack has no such label, so nothing was bought. You can buy one now." };
