@@ -14,9 +14,10 @@ import type { ParcelItemRequest, ShipmentRequest } from "@/lib/smarttrack/client
  *  2. FIELD LENGTHS. SmartTrack caps every field (30 characters for a sender
  *     address line, 40 for a receiver's). An address is never truncated —
  *     a cut-off street is a parcel that goes to the wrong door — it is
- *     re-flowed across the three lines SmartTrack allows, at word breaks.
- *     Anything that still does not fit is reported as a problem and no
- *     label is bought.
+ *     re-flowed across the three lines SmartTrack allows, at word breaks,
+ *     and a delivery address is laid out narrower than the documented 40
+ *     wherever it can be (see RECEIVER_LINE_WIDTHS). Anything that still
+ *     does not fit is reported as a problem and no label is bought.
  */
 
 export const LIMITS = {
@@ -37,23 +38,62 @@ export const LIMITS = {
 } as const;
 
 /**
- * Re-flow address lines to fit `max` characters, keeping the customer's own
- * line breaks and only breaking long lines between words. Null when the
- * result needs more than `maxLines`, or a single word is longer than a line.
+ * SmartTrack documents 40 characters for a receiver's address line, but on
+ * 1 Oct 2026 it refused a label over a 38-character one: the carrier behind
+ * a service can take less than SmartTrack says. So a delivery address is
+ * laid out at the narrowest of these widths that holds it in three lines,
+ * and only reaches for the documented maximum when nothing narrower will do.
+ */
+export const RECEIVER_LINE_WIDTHS = [30, 35, LIMITS.receiverLine] as const;
+
+/** Break one line to `max` characters. Null when a single word is longer than that. */
+function breakLine(text: string, max: number, atCommas: boolean): string[] | null {
+  const out: string[] = [];
+  let rest = text;
+  while (rest.length > max) {
+    // After a comma keeps "Unit 14" in one piece; a space is the fallback.
+    const comma = atCommas ? rest.lastIndexOf(", ", max - 1) : -1;
+    const cut = comma > 0 ? comma + 1 : rest.lastIndexOf(" ", max);
+    if (cut <= 0) return null;
+    out.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) out.push(rest);
+  return out;
+}
+
+/**
+ * Re-flow address lines to fit `max` characters without losing a word. The
+ * customer's own line breaks are kept and long lines are broken after a
+ * comma, else between words. If that takes more than `maxLines`, the whole
+ * address is run together and packed as tightly as it will go. Null when it
+ * still does not fit, or a single word is longer than a line.
  */
 export function wrapLines(lines: readonly string[], max: number, maxLines = 3): string[] | null {
-  const out: string[] = [];
-  for (const raw of lines) {
-    let rest = raw.replace(/\s+/g, " ").trim();
-    while (rest.length > max) {
-      const cut = rest.lastIndexOf(" ", max);
-      if (cut <= 0) return null;
-      out.push(rest.slice(0, cut).trim());
-      rest = rest.slice(cut).trim();
-    }
-    if (rest) out.push(rest);
+  const clean = lines.map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (clean.length === 0) return null;
+
+  const fits = (broken: (string[] | null)[]) => {
+    if (broken.some((b) => b === null)) return null;
+    const out = broken.flat() as string[];
+    return out.length <= maxLines ? out : null;
+  };
+  const joined = clean.reduce((all, line) => (all.endsWith(",") ? `${all} ${line}` : `${all}, ${line}`));
+
+  return (
+    fits(clean.map((l) => breakLine(l, max, true))) ??
+    fits(clean.map((l) => breakLine(l, max, false))) ??
+    fits([breakLine(joined, max, false)])
+  );
+}
+
+/** wrapLines at the first of `widths` (narrowest first) that fits. */
+export function wrapNarrowest(lines: readonly string[], widths: readonly number[], maxLines = 3): string[] | null {
+  for (const max of widths) {
+    const fit = wrapLines(lines, max, maxLines);
+    if (fit) return fit;
   }
-  return out.length > 0 && out.length <= maxLines ? out : null;
+  return null;
 }
 
 /** Shorten at a word break. For descriptions only — never for an address. */
@@ -175,7 +215,7 @@ export function buildShipmentRequest(input: LabelInput): BuiltRequest {
 
   // Receiver — the customer.
   const a = r.address;
-  const receiverLines = wrapLines([a.line1, a.line2 ?? ""], LIMITS.receiverLine);
+  const receiverLines = wrapNarrowest([a.line1, a.line2 ?? ""], RECEIVER_LINE_WIDTHS);
   if (!a.line1.trim()) problems.push("Delivery address line 1 is missing");
   else if (!receiverLines) problems.push(`Delivery address does not fit SmartTrack's three ${LIMITS.receiverLine}-character lines`);
   const receiverContact = bounded(r.name, LIMITS.receiverContact, "Customer name");

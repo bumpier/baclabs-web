@@ -12,7 +12,7 @@ import {
   type ServiceRule,
 } from "@/lib/shipping/select-service";
 import { deliveryMinorFor, deliveryOptionsFor } from "@/config/funnel";
-import { buildShipmentRequest, cleanDeliveryInstructions, truncateWords, wrapLines, type LabelInput } from "@/lib/smarttrack/payload";
+import { buildShipmentRequest, cleanDeliveryInstructions, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
 
 let failures = 0;
 
@@ -238,6 +238,20 @@ check("short lines pass through", JSON.stringify(wrapLines(["1 High St", ""], 30
 }
 check("more than three lines is refused", wrapLines(["aaaa bbbb cccc dddd"], 4) === null);
 check("a word longer than a line is refused, not cut", wrapLines(["Supercalifragilisticexpialidocious"], 20) === null);
+check(
+  "a long line breaks after a comma, not mid-phrase",
+  JSON.stringify(wrapLines(["Caerphilly sports supplements, unit 14"], 35)) === JSON.stringify(["Caerphilly sports supplements,", "unit 14"])
+);
+check(
+  "…unless the comma break would cost a line too many",
+  JSON.stringify(wrapLines(["aa, bbbbbb cc dddddd ee ffff"], 10)) === JSON.stringify(["aa, bbbbbb", "cc dddddd", "ee ffff"])
+);
+check(
+  "lines that wrap past three are run together and repacked",
+  JSON.stringify(wrapLines(["aaaa bbbb cc", "dddd eeee ff"], 10)) === JSON.stringify(["aaaa bbbb", "cc, dddd", "eeee ff"])
+);
+check("the narrowest width that fits wins", JSON.stringify(wrapNarrowest(["aaaa bbbb cccc"], [4, 9, 14])) === JSON.stringify(["aaaa", "bbbb", "cccc"]));
+check("…and a wider one is used only when it has to be", JSON.stringify(wrapNarrowest(["aaaa bbbb cccc dddd"], [4, 9, 14])) === JSON.stringify(["aaaa bbbb", "cccc dddd"]));
 check("truncateWords cuts at a space", truncateWords("Bacteriostatic Water 10ml vial — 5-pack", 30) === "Bacteriostatic Water 10ml vial");
 
 // ── SmartTrack request ───────────────────────────────────────────
@@ -283,6 +297,38 @@ const input: LabelInput = {
   check("the contents travel per item instead", p.items![0]!.item_description.startsWith("Bacteriostatic Water"), p.items![0]!.item_description);
   check("empty optional fields are left undefined", request!.sender_telephone === undefined);
   check("the order reference is what we sent", request!.order_reference === input.reference);
+}
+{
+  // The address SmartTrack refused on 1 Oct 2026: 38 characters on line 1,
+  // inside the 40 its docs allow.
+  const { request, problems } = buildShipmentRequest({
+    ...input,
+    receiver: {
+      ...input.receiver,
+      address: { line1: "Caerphilly sports supplements, unit 14", line2: "Bedwas house industrial estate", city: "Caerphilly", country: "GB", postalCode: "CF83 8GF" },
+    },
+  });
+  const lines = [request?.receiver_address_line_1, request?.receiver_address_line_2, request?.receiver_address_line_3];
+  check(
+    "a delivery address is laid out narrower than the documented 40",
+    JSON.stringify(lines) === JSON.stringify(["Caerphilly sports supplements,", "unit 14", "Bedwas house industrial estate"]),
+    JSON.stringify(lines) + problems.join("; ")
+  );
+}
+{
+  const line1 = "The Old Schoolhouse Annexe Upper Flat Twelve";
+  const line2 = "Great Northern Industrial Park and Business Centre West Entrance";
+  const { request, problems } = buildShipmentRequest({
+    ...input,
+    receiver: { ...input.receiver, address: { ...input.receiver.address, line1, line2 } },
+  });
+  const lines = [request?.receiver_address_line_1, request?.receiver_address_line_2, request?.receiver_address_line_3];
+  check("an address too long for narrow lines still uses the full 40", lines.every((l) => l && l.length <= 40) && lines.some((l) => l!.length > 35), JSON.stringify(lines) + problems.join("; "));
+  check("…with every word kept", lines.join(" ").replace(/,/g, "") === `${line1} ${line2}`, JSON.stringify(lines));
+}
+{
+  const { request } = buildShipmentRequest(input);
+  check("a short address goes through as typed", request?.receiver_address_line_1 === "22 Acacia Avenue" && request.receiver_address_line_2 === undefined);
 }
 {
   const { request, problems } = buildShipmentRequest({

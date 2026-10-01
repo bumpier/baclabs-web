@@ -103,6 +103,11 @@ Also worth confirming with them:
   instructions** — "Leave at doorstep" unless changed on the Shipping page
   (30 characters). The contents go in each parcel item's own description.
   Confirm that is how their carriers read it.
+- The real **address line length** per service. Their docs say 40
+  characters for a receiver's line, but a label was refused over a
+  38-character one on 1 October. Delivery addresses are now re-flowed to 30
+  characters a line where they fit (`RECEIVER_LINE_WIDTHS` in
+  `lib/smarttrack/payload.ts`); set that to whatever they confirm.
 - Their `create-order` / `create-sku` endpoints (SmartTrack holding the
   orders itself) are an alternative integration. This build keeps orders
   here and only buys labels.
