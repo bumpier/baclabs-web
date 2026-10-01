@@ -17,7 +17,14 @@ import { getInventoryMode } from "@/lib/inventory/mode";
 import { availableToSell } from "@/lib/inventory/store";
 import { VIAL_SKU_CODE } from "@/lib/inventory/demand";
 import { normaliseCode } from "@/lib/inventory/codes";
-import { welcomeForCheckout, welcomeItem } from "@/lib/mailing-list";
+import {
+  SUBSCRIBER_COOKIE,
+  cookieFrom,
+  isLinkToken,
+  welcomeForCheckout,
+  welcomeItem,
+  welcomeVialCount,
+} from "@/lib/mailing-list";
 import { priceIn } from "@/lib/fx";
 import { fetchFxRates } from "@/lib/fx-rates";
 import {
@@ -117,8 +124,11 @@ export async function POST(req: Request) {
       cookieHeader: req.headers.get("cookie"),
       email: input.method === "card" ? undefined : input.email,
     });
+    // One vial, or more with the reminder bonus on a big enough order.
+    let welcomeQty = welcome ? welcomeVialCount(welcome, totalVials) : 0;
     if (welcome) {
-      let covered: boolean;
+      // Vials on the shelf beyond the ones this order pays for.
+      let spare: number;
       if ((await getInventoryMode()) === "warehouse") {
         const vials = await availableToSell(VIAL_SKU_CODE);
         // Loose vials the order itself already takes off the shelf: the
@@ -131,11 +141,13 @@ export async function POST(req: Request) {
           normaliseCode(bundle.sku) === VIAL_SKU_CODE || (bundleSku?._count.components ?? 0) > 0
             ? totalVials
             : 0;
-        covered = vials !== null && vials >= fromShelf + 1;
+        spare = vials === null ? 0 : vials - fromShelf;
       } else {
-        covered = product.stock >= totalVials + 1;
+        spare = product.stock - totalVials;
       }
-      if (!covered) welcome = null;
+      // Short of the bonus vials: the one vial. Short of that: none.
+      if (spare < welcomeQty) welcomeQty = spare >= 1 ? 1 : 0;
+      if (welcomeQty === 0) welcome = null;
     }
 
     // Crypto orders choose delivery here; card orders choose it on Stripe's
@@ -187,7 +199,7 @@ export async function POST(req: Request) {
         bundleQty: input.quantity,
       },
       // £0, so every total that sums lineTotal still matches the charge.
-      ...(welcome ? [welcomeItem(product.id, product.slug)] : []),
+      ...(welcome ? [welcomeItem(product.id, product.slug, welcomeQty)] : []),
     ];
 
     const isCard = input.method === "card";
@@ -265,7 +277,19 @@ export async function POST(req: Request) {
         orderValueMinor: grandTotalMinor,
         shippingCountries: SHIPPING_COUNTRIES,
         origin,
-        ...(welcome ? { welcome: { email: welcome.email } } : {}),
+        ...(welcome
+          ? {
+              welcome: {
+                qty: welcomeQty,
+                // The subscriber's email is locked onto Stripe's page only
+                // for the browser that signed up, never for one that merely
+                // followed an email's link: see isLinkToken().
+                ...(isLinkToken(cookieFrom(req.headers.get("cookie"), SUBSCRIBER_COOKIE))
+                  ? {}
+                  : { email: welcome.email }),
+              },
+            }
+          : {}),
       });
 
       await prisma.order.update({

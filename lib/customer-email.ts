@@ -1,7 +1,8 @@
 import { createHmac } from "node:crypto";
-import type { Order } from "@prisma/client";
+import type { Order, Subscriber } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { send, layout, escapeHtml, ctaButton } from "@/lib/email";
+import { welcomeLink } from "@/lib/mailing-list";
 import { canonicalOrigin } from "@/lib/site-url";
 import { LITERAL } from "@/lib/theme";
 import { brand, formatPrice, type Currency } from "@/config/brand";
@@ -68,12 +69,18 @@ export function marketingFooter(email: string): string {
 
 /**
  * Sent once, on signup. Carries the welcome offer when it is switched on and
- * this person has not ordered yet. Never throws.
+ * this person has not ordered yet; its button then goes through welcomeLink,
+ * so the vial follows them to whichever device opens the email. The
+ * reminders that follow are lib/welcome-reminders.ts. Never throws.
  */
-export async function sendWelcomeEmail(email: string, opts: { withOffer: boolean }): Promise<void> {
+export async function sendWelcomeEmail(
+  sub: Pick<Subscriber, "id" | "email">,
+  opts: { withOffer: boolean }
+): Promise<void> {
+  const { email } = sub;
   try {
     const offer = opts.withOffer
-      ? `<p>As promised, your first order comes with <strong>an extra 10ml vial, free</strong>. There is no code to enter: check out from this browser, or with this email address (${escapeHtml(email)}), and we add it to your order automatically. You will see it on the payment page.</p>`
+      ? `<p>As promised, your first order comes with <strong>an extra 10ml vial, free</strong>. There is no code to enter: use the button below, or check out with this email address (${escapeHtml(email)}), and we add it to your order automatically. You will see it on the payment page.</p>`
       : "";
     await send(
       email,
@@ -82,7 +89,7 @@ export async function sendWelcomeEmail(email: string, opts: { withOffer: boolean
         `<p>Hi,</p>
         <p>Thanks for joining the ${escapeHtml(brand.name)} mailing list. We will email you about offers, restocks and new pack sizes, and nothing else.</p>
         ${offer}
-        <p style="margin:28px 0 0">${ctaButton(`${siteUrl()}/#buy`, "Choose your pack")}</p>
+        <p style="margin:28px 0 0">${ctaButton(offer ? welcomeLink(sub.id) : `${siteUrl()}/#buy`, "Choose your pack")}</p>
         ${marketingFooter(email)}`,
         { preheader: offer ? "An extra vial on your first order, added automatically." : "Thanks for signing up." }
       ),
@@ -248,6 +255,8 @@ export async function sendOrderConfirmationEmail(
   const deliveryMinor = opts?.deliveryMinor ?? 0;
   const grandTotal = parseFloat(order.totalAmount.toString()) + deliveryMinor / 100;
   const bcc = await trustpilotBccFor(order);
+  // More than one with the reminder bonus (lib/mailing-list.ts welcomeVialCount).
+  const welcomeVials = items.reduce((n, i) => (i.welcome ? n + i.qty : n), 0);
 
   await logAndSend(
     order,
@@ -256,7 +265,7 @@ export async function sendOrderConfirmationEmail(
     layout(
       `<p>Hi ${escapeHtml(order.customerName)},</p>
       <p>Thanks for your order! Your payment has been received and we're getting it ready.</p>
-      ${items.some((i) => i.welcome) ? `<p style="margin:0 0 12px">Your mailing-list welcome gift, an extra 10ml vial, is included in this order.</p>` : ""}
+      ${welcomeVials > 0 ? `<p style="margin:0 0 12px">Your mailing-list welcome gift, ${welcomeVials === 1 ? "an extra 10ml vial" : `${welcomeVials} extra 10ml vials`}, is included in this order.</p>` : ""}
       <p style="margin:0 0 4px;font-size:12px;color:${LITERAL.inkSoft}">Order ${order.id} &middot; placed ${placedOn}</p>
       ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString())}
       ${

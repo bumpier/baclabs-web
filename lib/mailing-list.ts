@@ -1,7 +1,9 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { Prisma, type Subscriber } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { MAILING_LIST } from "@/config/funnel";
+import { canonicalOrigin } from "@/lib/site-url";
+import { SHOP_TIME_ZONE } from "@/lib/saleTime";
+import { MAILING_LIST, type BundleId } from "@/config/funnel";
 
 // The mailing list and its welcome gift: one free vial on a subscriber's
 // first order.
@@ -17,6 +19,10 @@ import { MAILING_LIST } from "@/config/funnel";
 //     order's email to a subscriber instead, and adds the line then.
 // Either way the line is on the order before stock is allocated, so the pick
 // list, the pick label and the packing slip all carry it.
+//
+// A subscriber who has had the second reminder (lib/welcome-reminders.ts)
+// gets extra vials on a big enough first order: the same line, with a larger
+// quantity. See welcomeVialCount().
 
 export const SUBSCRIBER_COOKIE = "bl_sub";
 export const SUBSCRIBER_COOKIE_MAX_AGE = 365 * 24 * 3600;
@@ -32,9 +38,10 @@ function key(): string {
 
 // Domain-separated from the unsubscribe signature, which HMACs a bare email
 // with the same key: a value signed for one purpose must never verify for
-// the other.
-function tokenSig(subscriberId: string): string {
-  return createHmac("sha256", key()).update(`subscriber:${subscriberId}`).digest("hex");
+// the other. The same goes for the two kinds of subscriber token.
+type TokenPurpose = "subscriber" | "subscriber-link";
+function tokenSig(subscriberId: string, purpose: TokenPurpose = "subscriber"): string {
+  return createHmac("sha256", key()).update(`${purpose}:${subscriberId}`).digest("hex");
 }
 
 /** The cookie value: the subscriber id and its signature. */
@@ -42,16 +49,57 @@ export function signSubscriberToken(subscriberId: string): string {
   return `${subscriberId}.${tokenSig(subscriberId)}`;
 }
 
-/** The subscriber id from a cookie value, or null if it was not signed by us. */
-export function readSubscriberToken(token: string | null | undefined): string | null {
+const LINK_MARK = ".link";
+
+/**
+ * The token in an email's link (welcomeLink), which becomes the cookie on
+ * whichever device opens it. Marked and signed apart from the signup form's
+ * token because it proves less: the form's token was handed to the browser
+ * that typed the address, this one to anyone holding the email. See
+ * isLinkToken().
+ */
+export function signSubscriberLinkToken(subscriberId: string): string {
+  return `${subscriberId}${LINK_MARK}.${tokenSig(subscriberId, "subscriber-link")}`;
+}
+
+function parseToken(token: string | null | undefined): { id: string; link: boolean } | null {
   if (!token || !key()) return null;
   const dot = token.lastIndexOf(".");
   if (dot <= 0) return null;
-  const id = token.slice(0, dot);
+  const head = token.slice(0, dot);
+  const link = head.endsWith(LINK_MARK);
+  const id = link ? head.slice(0, -LINK_MARK.length) : head;
+  if (!id) return null;
   const given = Buffer.from(token.slice(dot + 1), "hex");
-  const expected = Buffer.from(tokenSig(id), "hex");
+  const expected = Buffer.from(tokenSig(id, link ? "subscriber-link" : "subscriber"), "hex");
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
-  return id;
+  return { id, link };
+}
+
+/** The subscriber id from a cookie value of either kind, or null if it was not signed by us. */
+export function readSubscriberToken(token: string | null | undefined): string | null {
+  return parseToken(token)?.id ?? null;
+}
+
+/**
+ * Did this cookie come from an email's link rather than the signup form?
+ * Checkout does not lock such a browser's Stripe page to the subscriber's
+ * email: a link can be forwarded, and whoever opened it must be able to pay
+ * under their own address.
+ */
+export function isLinkToken(token: string | null | undefined): boolean {
+  return parseToken(token)?.link === true;
+}
+
+/**
+ * The button in the welcome email and its reminders. It goes through
+ * app/api/subscribe/link/route.ts, which sets the cookie, so the vial shows
+ * on the site and on the payment page whichever device opens the email.
+ * `pack` lands on that pack's page instead of the home page's buy block.
+ */
+export function welcomeLink(subscriberId: string, pack?: BundleId): string {
+  const query = new URLSearchParams({ t: signSubscriberLinkToken(subscriberId), ...(pack ? { pack } : {}) });
+  return `${canonicalOrigin()}/api/subscribe/link?${query}`;
 }
 
 /** Pull one cookie out of a raw Cookie header. */
@@ -100,14 +148,15 @@ export interface OrderItemLike {
  * The free vial, as an Order.items line. No bundleId, so
  * lib/inventory/demand.ts soldLines() reads it as the single-vial SKU and the
  * warehouse picks it like any other vial. Priced at zero so every total that
- * sums lineTotal still reconciles to what was charged.
+ * sums lineTotal still reconciles to what was charged. `qty` is more than
+ * one only with the reminder bonus: see welcomeVialCount().
  */
-export function welcomeItem(productId: string, slug: string): OrderItemLike {
+export function welcomeItem(productId: string, slug: string, qty = 1): OrderItemLike {
   return {
     productId,
     slug,
     name: MAILING_LIST.welcomeLineName,
-    qty: 1,
+    qty,
     unitPrice: "0.00",
     unitPriceUsd: "0.00",
     lineTotal: "0.00",
@@ -135,6 +184,64 @@ export function welcomeEligible(
   if (sub.status !== "subscribed") return false;
   if (sub.welcomeOrderId) return false;
   return previousOrders === 0;
+}
+
+// ── The second reminder's bonus ────────────────────────────────────
+
+/**
+ * The bonus is honoured this long past Subscriber.welcomeBonusUntil. The
+ * email names that moment's date, not its time, so the whole of the named
+ * day has to count.
+ */
+const BONUS_GRACE_MS = 24 * 3600 * 1000;
+
+/** Is the bonus this subscriber was emailed still open at `at`? */
+export function bonusActive(sub: Pick<Subscriber, "welcomeBonusUntil">, at: Date = new Date()): boolean {
+  return sub.welcomeBonusUntil !== null && at.getTime() <= sub.welcomeBonusUntil.getTime() + BONUS_GRACE_MS;
+}
+
+/**
+ * How many free vials an eligible subscriber's first order carries: the
+ * welcome vial, plus the bonus (MAILING_LIST.reminders.bonus) while it is
+ * open and the order pays for enough vials. Pure, like welcomeEligible().
+ */
+export function welcomeVialCount(
+  sub: Pick<Subscriber, "welcomeBonusUntil">,
+  paidVials: number,
+  at: Date = new Date()
+): number {
+  const { extraVials, minVials } = MAILING_LIST.reminders.bonus;
+  return bonusActive(sub, at) && paidVials >= minVials ? 1 + extraVials : 1;
+}
+
+/** "Sunday 11 October": the bonus's last day, as the email and the buy block state it. */
+export function bonusDeadlineText(until: Date): string {
+  return until.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: SHOP_TIME_ZONE,
+  });
+}
+
+/** The bonus as the buy block shows it (GET /api/subscribe). */
+export interface BonusOffer {
+  /** Free vials in all on an order that earns it. */
+  vials: number;
+  minVials: number;
+  /**
+   * The last day to say, or null in the grace period after it: the vials are
+   * still added then, but nobody is told to hurry for a day that has gone.
+   */
+  by: string | null;
+}
+
+export function bonusOffer(sub: Pick<Subscriber, "welcomeBonusUntil">, at: Date = new Date()): BonusOffer | null {
+  if (!sub.welcomeBonusUntil || !bonusActive(sub, at)) return null;
+  const { extraVials, minVials } = MAILING_LIST.reminders.bonus;
+  const stated = bonusDeadlineText(sub.welcomeBonusUntil);
+  const dayOver = at > sub.welcomeBonusUntil && bonusDeadlineText(at) !== stated;
+  return { vials: 1 + extraVials, minVials, by: dayOver ? null : stated };
 }
 
 type Db = Prisma.TransactionClient | typeof prisma;
@@ -190,12 +297,14 @@ export async function welcomeForCheckout(opts: {
  *  - The order carries the line from checkout: claim it. Losing the claim
  *    (the same subscriber paid for another order first) removes the line.
  *  - It does not: if the paid email belongs to an eligible subscriber, add
- *    the line and claim it. Skipped when legacy stock cannot cover the extra
- *    vial, so the gift never oversells.
+ *    the line and claim it, with the bonus vials if the order earned them
+ *    when checkout began. Legacy stock that cannot cover the bonus gives the
+ *    one vial; stock that cannot cover that gives none, so the gift never
+ *    oversells.
  */
 export async function settleWelcomeVial(
   tx: Prisma.TransactionClient,
-  order: { id: string; items: string; customerEmail: string; welcomeSubscriberId: string | null },
+  order: { id: string; items: string; customerEmail: string; welcomeSubscriberId: string | null; createdAt: Date },
   opts: { legacyStockCheck: boolean }
 ): Promise<{ items: string; note: string | null; subscriberId: string | null }> {
   const items = JSON.parse(order.items) as OrderItemLike[];
@@ -227,10 +336,13 @@ export async function settleWelcomeVial(
   const vial = items[0];
   if (!vial) return unchanged;
 
+  const paidVials = items.reduce((n, i) => n + i.qty, 0);
+  let qty = welcomeVialCount(sub, paidVials, order.createdAt);
   if (opts.legacyStockCheck) {
     const product = await tx.product.findUnique({ where: { id: vial.productId } });
-    const needed = items.reduce((n, i) => n + i.qty, 0) + 1;
-    if (!product || product.stock < needed) return unchanged;
+    const stock = product?.stock ?? 0;
+    if (stock < paidVials + qty) qty = 1;
+    if (stock < paidVials + qty) return unchanged;
   }
 
   const { count } = await tx.subscriber.updateMany({
@@ -239,7 +351,7 @@ export async function settleWelcomeVial(
   });
   if (count !== 1) return unchanged;
   return {
-    items: JSON.stringify([...items, welcomeItem(vial.productId, vial.slug)]),
+    items: JSON.stringify([...items, welcomeItem(vial.productId, vial.slug, qty)]),
     note: null,
     subscriberId: sub.id,
   };

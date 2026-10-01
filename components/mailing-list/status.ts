@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { BonusOffer } from "@/lib/mailing-list";
 
 /**
  * The browser's mailing-list state, shared by the popup, the signup forms and
@@ -13,16 +14,19 @@ export interface MailingStatus {
   subscribed: boolean;
   /** Its welcome vial is still waiting for a first order. */
   welcome: boolean;
+  /** The second reminder's extra vials, while that offer is open. */
+  bonus: BonusOffer | null;
 }
 
 const CHANGE_EVENT = "mailing-status-change";
+const UNKNOWN: MailingStatus = { subscribed: false, welcome: false, bonus: null };
 let request: Promise<MailingStatus> | null = null;
 let current: MailingStatus | null = null;
 
 function fetchStatus(): Promise<MailingStatus> {
   request ??= fetch("/api/subscribe", { cache: "no-store" })
-    .then((res) => (res.ok ? (res.json() as Promise<MailingStatus>) : { subscribed: false, welcome: false }))
-    .catch(() => ({ subscribed: false, welcome: false }))
+    .then((res) => (res.ok ? (res.json() as Promise<MailingStatus>) : UNKNOWN))
+    .catch(() => UNKNOWN)
     .then((status) => (current ??= status));
   return request;
 }
@@ -51,7 +55,7 @@ export function useMailingStatus(): MailingStatus | null {
  * before anything is added to an order.
  */
 export function markSubscribed(withOffer: boolean): void {
-  current = { subscribed: true, welcome: withOffer };
+  current = { subscribed: true, welcome: withOffer, bonus: null };
   request = Promise.resolve(current);
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }

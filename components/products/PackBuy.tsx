@@ -271,7 +271,7 @@ export function PackBuy({
 
         {/* The mailing-list welcome vial, or the offer. */}
 
-        <WelcomeVialPanel />
+        <WelcomeVialPanel vials={totalVials} />
 
 
         <button

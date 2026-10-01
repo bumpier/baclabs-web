@@ -10,17 +10,25 @@ const OFFER_ON = MAILING_LIST.enabled && MAILING_LIST.welcomeVial.enabled;
  * Inside the purchase blocks, just above the checkout button: the free vial
  * already waiting for a signed-up browser, or the offer for one that is not.
  * Renders nothing until the status is known, and nothing for a subscriber
- * whose gift has been used.
+ * whose gift has been used. `vials` is how many the current selection pays
+ * for: with the reminder bonus open, enough of them earn the extra vials.
  */
-export function WelcomeVialPanel() {
+export function WelcomeVialPanel({ vials }: { vials: number }) {
   const status = useMailingStatus();
   if (!OFFER_ON || !status) return null;
 
   if (status.welcome) {
+    const bonus = status.bonus ?? null;
+    const earned = bonus && vials >= bonus.minVials ? bonus : null;
     return (
       <p aria-live="polite" className="alert-note mt-3">
-        <span className="font-semibold">+1 free vial included.</span> Your mailing-list welcome gift is
-        added at checkout; you will see it on the payment page.
+        <span className="font-semibold">
+          {earned ? `+${earned.vials} free vials included.` : "+1 free vial included."}
+        </span>{" "}
+        Your mailing-list welcome gift is added at checkout; you will see it on the payment page.
+        {bonus?.by && !earned
+          ? ` Order ${bonus.minVials} vials or more by ${bonus.by} and it becomes ${bonus.vials}.`
+          : null}
       </p>
     );
   }

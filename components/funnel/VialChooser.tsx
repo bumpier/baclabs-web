@@ -371,7 +371,7 @@ export function VialChooser({ cryptoEnabled }: { cryptoEnabled: boolean }) {
 
         {/* The mailing-list welcome vial, or the offer. */}
 
-        <WelcomeVialPanel />
+        <WelcomeVialPanel vials={totalVials} />
 
 
         <button

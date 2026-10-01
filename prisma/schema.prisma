@@ -154,6 +154,16 @@ model Subscriber {
   welcomeOrderId   String?   @unique @map("welcome_order_id")
   welcomeClaimedAt DateTime? @map("welcome_claimed_at")
 
+  // The reminders sent while the welcome vial is still unused
+  // (lib/welcome-reminders.ts). Each is claimed with a conditional update
+  // before its email goes, so a subscriber gets each one once.
+  welcomeReminder1At DateTime? @map("welcome_reminder_1_at")
+  welcomeReminder2At DateTime? @map("welcome_reminder_2_at")
+  // The second reminder's bonus (extra free vials on a bigger first order)
+  // runs until this moment. Stored rather than derived from config, so a
+  // later change to the offer cannot alter a date already emailed.
+  welcomeBonusUntil  DateTime? @map("welcome_bonus_until")
+
   createdAt      DateTime  @default(now()) @map("created_at")
   unsubscribedAt DateTime? @map("unsubscribed_at")
 

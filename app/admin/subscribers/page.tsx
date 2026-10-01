@@ -153,7 +153,19 @@ export default async function AdminSubscribersPage({
                         )}
                       </span>
                     ) : (
-                      <span className="text-ink-soft">Waiting</span>
+                      <span className="text-ink-soft">
+                        Waiting
+                        {s.welcomeReminder1At && (
+                          <span className="block text-xs">
+                            {s.welcomeReminder2At
+                              ? `Reminded twice, last ${formatSaleDate(s.welcomeReminder2At)}`
+                              : `Reminded ${formatSaleDate(s.welcomeReminder1At)}`}
+                            {s.welcomeReminder2At && s.welcomeBonusUntil
+                              ? `; bonus vials to ${formatSaleDate(s.welcomeBonusUntil)}`
+                              : null}
+                          </span>
+                        )}
+                      </span>
                     )}
                   </td>
                   <td className="px-5 py-3">

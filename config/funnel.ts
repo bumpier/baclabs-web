@@ -708,6 +708,30 @@ export const MAILING_LIST = {
     dismissDays: 14,
   },
   welcomeVial: { enabled: true },
+  /**
+   * Follow-up emails to a subscriber whose welcome vial is still unused
+   * (lib/welcome-reminders.ts). They stop as soon as the subscriber orders or
+   * unsubscribes. `enabled: false` sends none; the bonus already promised to
+   * anyone who has had the second reminder is still honoured.
+   */
+  reminders: {
+    enabled: true,
+    /** The first reminder goes this long after signup. */
+    firstAfterHours: 48,
+    /** The second goes this long after the first, and carries the bonus. */
+    secondAfterHours: 72,
+    /**
+     * A signup older than this is never chased, so a job that was switched
+     * off for a while does not email a list that has gone cold.
+     */
+    staleAfterDays: 14,
+    /**
+     * The second reminder's offer: this many vials on top of the welcome
+     * vial, on a first order of at least `minVials`, for `validDays` after
+     * the email. The email states the end date, so checkout enforces it.
+     */
+    bonus: { extraVials: 2, minVials: 10, validDays: 7 },
+  },
 } as const;
 
 /**

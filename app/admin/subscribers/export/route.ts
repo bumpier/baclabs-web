@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   const q = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
 
   const rows = await subscriberRows({ filter, q });
-  const header = ["email", "status", "source", "signed_up", "orders", "welcome_order_id", "welcome_claimed_at", "unsubscribed_at", "consent_text"];
+  const header = ["email", "status", "source", "signed_up", "orders", "welcome_order_id", "welcome_claimed_at", "reminder_1_at", "reminder_2_at", "bonus_until", "unsubscribed_at", "consent_text"];
   const lines = rows.map((s) =>
     [
       s.email,
@@ -34,6 +34,9 @@ export async function GET(req: Request) {
       String(s.orderCount),
       s.welcomeOrderId ?? "",
       s.welcomeClaimedAt?.toISOString() ?? "",
+      s.welcomeReminder1At?.toISOString() ?? "",
+      s.welcomeReminder2At?.toISOString() ?? "",
+      s.welcomeBonusUntil?.toISOString() ?? "",
       s.unsubscribedAt?.toISOString() ?? "",
       s.consentText,
     ]

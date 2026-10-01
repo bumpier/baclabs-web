@@ -36,8 +36,10 @@ export const metadata: Metadata = pageMetadata({
  *  - Repurchase nudges (app/api/cron/nudges) are marketing, sent under the
  *    PECR soft opt-in with a working unsubscribe (app/api/email/unsubscribe).
  *  - The mailing list (app/api/subscribe) is consent-based and sets the
- *    bl_sub cookie on signup; campaigns (/admin/campaigns) go to subscribers
- *    and, under the soft opt-in, past customers.
+ *    bl_sub cookie on signup, and again when a subscriber follows the link
+ *    in a welcome email or reminder (app/api/subscribe/link); campaigns
+ *    (/admin/campaigns) go to subscribers and, under the soft opt-in, past
+ *    customers.
  *
  * If any of those change, this page must change with them.
  */
@@ -287,7 +289,8 @@ export default async function PrivacyPage() {
                 never transmitted to us until you check out. Clearing your browser data clears it.
                 The only cookies this site sets itself are a session cookie for staff signing into the
                 admin area, set only after a successful staff login, and, if you join our mailing
-                list, a cookie that remembers you did so this browser can receive your welcome vial.
+                list, a cookie that remembers you did, set when you sign up or follow the link in
+                one of our emails, so this browser can receive your welcome vial.
                 Both are strictly necessary for something you asked for, and neither tracks you.
               </p>
               {/* PECR requires consent BEFORE a non-essential cookie is set.

@@ -7,6 +7,7 @@ import { sendWelcomeEmail } from "@/lib/customer-email";
 import {
   SUBSCRIBER_COOKIE,
   SUBSCRIBER_COOKIE_MAX_AGE,
+  bonusOffer,
   hashIp,
   normEmail,
   previousOrderCount,
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
     await prisma.emailOptOut.deleteMany({ where: { email } });
 
     const withOffer = welcomeEligible(sub, await previousOrderCount(email));
-    void sendWelcomeEmail(email, { withOffer });
+    void sendWelcomeEmail(sub, { withOffer });
 
     const res = OK();
     res.cookies.set(SUBSCRIBER_COOKIE, signSubscriberToken(sub.id), {
@@ -89,21 +90,23 @@ export async function POST(req: Request) {
 }
 
 /**
- * Whether this browser signed up, and whether its welcome vial is still
- * waiting. Read by the popup (to stay closed) and the buy blocks (to show
- * the free vial), from the browser, because the storefront pages are static
- * and cannot read the cookie themselves.
+ * Whether this browser signed up (or followed an email's link), whether its
+ * welcome vial is still waiting, and the reminder bonus on top of it while
+ * that is open. Read by the popup (to stay closed) and the buy blocks (to
+ * show the free vials), from the browser, because the storefront pages are
+ * static and cannot read the cookie themselves.
  */
 export async function GET(req: Request) {
   const headers = { "Cache-Control": "private, no-store" };
+  const none = { subscribed: false, welcome: false, bonus: null };
   try {
     const sub = await subscriberFromCookie(req.headers.get("cookie"));
     if (!sub || sub.status !== "subscribed") {
-      return NextResponse.json({ subscribed: false, welcome: false }, { headers });
+      return NextResponse.json(none, { headers });
     }
     const welcome = welcomeVialOn() && welcomeEligible(sub, await previousOrderCount(sub.email));
-    return NextResponse.json({ subscribed: true, welcome }, { headers });
+    return NextResponse.json({ subscribed: true, welcome, bonus: welcome ? bonusOffer(sub) : null }, { headers });
   } catch {
-    return NextResponse.json({ subscribed: false, welcome: false }, { headers });
+    return NextResponse.json(none, { headers });
   }
 }

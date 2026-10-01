@@ -84,11 +84,13 @@ export interface BundleCheckoutParams {
   shippingCountries: readonly string[];
   origin: string;
   /**
-   * The mailing-list welcome vial (lib/mailing-list.ts). Shown on Stripe's
-   * page as a £0 line, and the subscriber's email pre-filled so the paid
-   * order matches them. Changes nothing that is charged.
+   * The mailing-list welcome vials (lib/mailing-list.ts), shown on Stripe's
+   * page as a £0 line of `qty`. With `email`, the subscriber's address is
+   * pre-filled and locked, so the paid order matches them; it is left out
+   * for a browser that only followed an email's link. Changes nothing that
+   * is charged.
    */
-  welcome?: { email: string };
+  welcome?: { qty: number; email?: string };
 }
 
 /**
@@ -162,12 +164,12 @@ export async function createBundleCheckout(
                   unit_amount: 0,
                   product_data: { name: MAILING_LIST.welcomeLineName },
                 },
-                quantity: 1,
+                quantity: params.welcome.qty,
               },
             ]
           : []),
       ],
-      ...(params.welcome ? { customer_email: params.welcome.email } : {}),
+      ...(params.welcome?.email ? { customer_email: params.welcome.email } : {}),
       client_reference_id: orderId,
       metadata: { orderId, bundleId: params.bundleId },
       // Also on the PaymentIntent, where refunds and disputes are worked.

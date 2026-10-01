@@ -6,12 +6,19 @@
  */
 import {
   cookieFrom,
+  isLinkToken,
   isWelcomeItem,
   normEmail,
   readSubscriberToken,
+  signSubscriberLinkToken,
   signSubscriberToken,
+  bonusActive,
+  bonusDeadlineText,
+  bonusOffer,
   welcomeEligible,
   welcomeItem,
+  welcomeLink,
+  welcomeVialCount,
   addressKey,
 } from "@/lib/mailing-list";
 import {
@@ -24,6 +31,9 @@ import {
 } from "@/lib/campaigns";
 import { soldLines, VIAL_SKU_CODE } from "@/lib/inventory/demand";
 import { unsubscribeSig } from "@/lib/customer-email";
+import { reminderDue, reminderEmail } from "@/lib/welcome-reminders";
+import { checkCompliance } from "@/lib/content-rules";
+import { MAILING_LIST } from "@/config/funnel";
 
 process.env.JWT_SECRET ??= "test-secret-that-is-at-least-32-characters-long";
 
@@ -50,6 +60,29 @@ check(
 );
 check("cookieFrom finds the cookie", cookieFrom(`a=1; bl_sub=${encodeURIComponent(token)}; b=2`, "bl_sub") === token);
 check("cookieFrom misses cleanly", cookieFrom("a=1", "bl_sub") === null && cookieFrom(null, "bl_sub") === null);
+
+// ── The token in an email's link ────────────────────────────────────
+const linkToken = signSubscriberLinkToken("sub_123");
+check("link token names its subscriber", readSubscriberToken(linkToken) === "sub_123");
+check("link token is told from a signup token", isLinkToken(linkToken) && !isLinkToken(token));
+check("tampered link token is rejected", readSubscriberToken(linkToken.replace("sub_123", "sub_124")) === null);
+check(
+  "a link signature does not make a signup token",
+  readSubscriberToken(linkToken.replace(".link.", ".")) === null
+);
+check(
+  "a signup signature does not make a link token",
+  readSubscriberToken(token.replace("sub_123.", "sub_123.link.")) === null
+);
+check("garbage is not a link token", !isLinkToken("nonsense") && !isLinkToken(null));
+const link = new URL(welcomeLink("sub_123", "ten"));
+check(
+  "welcomeLink carries the token and the pack",
+  link.pathname === "/api/subscribe/link" &&
+    readSubscriberToken(link.searchParams.get("t")) === "sub_123" &&
+    link.searchParams.get("pack") === "ten"
+);
+check("welcomeLink without a pack names none", !new URL(welcomeLink("sub_123")).searchParams.has("pack"));
 
 // ── Eligibility ─────────────────────────────────────────────────────
 const fresh = { status: "subscribed", welcomeOrderId: null };
@@ -83,6 +116,109 @@ check(
   lines.reduce((n, l) => n + l.lineTotalMinor, 0) === 2199,
   String(lines.map((l) => l.lineTotalMinor))
 );
+
+// ── The second reminder's bonus ─────────────────────────────────────
+const { extraVials, minVials, validDays } = MAILING_LIST.reminders.bonus;
+const at = new Date("2026-10-04T12:00:00Z");
+const hours = (h: number) => new Date(at.getTime() + h * 3_600_000);
+const noBonus = { welcomeBonusUntil: null };
+const open = { welcomeBonusUntil: hours(validDays * 24) };
+check("no bonus without the second reminder", !bonusActive(noBonus, at) && welcomeVialCount(noBonus, 50, at) === 1);
+check("bonus on a big enough order", welcomeVialCount(open, minVials, at) === 1 + extraVials);
+check("bonus counts vials, not packs", welcomeVialCount(open, minVials + 5, at) === 1 + extraVials);
+check("order under the minimum keeps the one vial", welcomeVialCount(open, minVials - 1, at) === 1);
+check("bonus holds to its stated moment", welcomeVialCount(open, minVials, open.welcomeBonusUntil) === 1 + extraVials);
+check(
+  "bonus holds for the rest of its last day",
+  welcomeVialCount(open, minVials, hours(validDays * 24 + 23)) === 1 + extraVials
+);
+check("bonus ends after that", welcomeVialCount(open, minVials, hours(validDays * 24 + 25)) === 1);
+check(
+  "the stated day is named in UK time",
+  /^Sunday,? 11 October$/.test(bonusDeadlineText(new Date("2026-10-11T12:00:00Z"))),
+  bonusDeadlineText(new Date("2026-10-11T12:00:00Z"))
+);
+check(
+  "a late-evening UTC moment is named by its UK date",
+  /^Sunday,? 11 October$/.test(bonusDeadlineText(new Date("2026-10-10T23:30:00Z"))),
+  bonusDeadlineText(new Date("2026-10-10T23:30:00Z"))
+);
+check("no bonus, nothing to show", bonusOffer(noBonus, at) === null);
+const shown = bonusOffer(open, at);
+check(
+  "an open bonus is shown with its day",
+  shown?.vials === 1 + extraVials && shown.minVials === minVials && shown.by === bonusDeadlineText(open.welcomeBonusUntil)
+);
+check(
+  "later on its last day, the day is still named",
+  bonusOffer({ welcomeBonusUntil: new Date("2026-10-11T12:00:00Z") }, new Date("2026-10-11T20:00:00Z"))?.by !== null
+);
+const inGrace = bonusOffer({ welcomeBonusUntil: new Date("2026-10-11T12:00:00Z") }, new Date("2026-10-12T08:00:00Z"));
+check("the day after, the vials still count but the day is not named", inGrace !== null && inGrace.by === null);
+check("after the grace period there is nothing to show", bonusOffer(open, hours(validDays * 24 + 25)) === null);
+
+const bonusGift = welcomeItem("p1", "baclab-10ml", 1 + extraVials);
+const bonusLines = soldLines(JSON.stringify([{ ...bundleLine, qty: 10, unitPrice: "34.99", lineTotal: "34.99", bundleId: "ten" }, bonusGift]));
+check(
+  "bonus vials are picked as single vials",
+  bonusLines[1]?.skuCode === VIAL_SKU_CODE && bonusLines[1].quantity === 1 + extraVials
+);
+check("bonus vials cost nothing", bonusGift.lineTotal === "0.00" && bonusLines.reduce((n, l) => n + l.lineTotalMinor, 0) === 3499);
+
+// ── Reminders: who is due which ─────────────────────────────────────
+const R = MAILING_LIST.reminders;
+const rNow = new Date("2026-10-10T12:00:00Z");
+const hoursAgo = (h: number) => new Date(rNow.getTime() - h * 3_600_000);
+const waiting = {
+  status: "subscribed",
+  welcomeOrderId: null,
+  consentAt: hoursAgo(R.firstAfterHours + 1),
+  welcomeReminder1At: null,
+  welcomeReminder2At: null,
+};
+check("first reminder is due after the wait", reminderDue(waiting, rNow, true) === 1);
+check("not before it", reminderDue({ ...waiting, consentAt: hoursAgo(R.firstAfterHours - 1) }, rNow, true) === null);
+check("not when reminders are off", reminderDue(waiting, rNow, false) === null);
+check("not to an unsubscriber", reminderDue({ ...waiting, status: "unsubscribed" }, rNow, true) === null);
+check("not once the vial is used", reminderDue({ ...waiting, welcomeOrderId: "o1" }, rNow, true) === null);
+check(
+  "not to a signup that has gone stale",
+  reminderDue({ ...waiting, consentAt: hoursAgo(R.staleAfterDays * 24 + 1) }, rNow, true) === null
+);
+const reminded = {
+  ...waiting,
+  consentAt: hoursAgo(R.firstAfterHours + R.secondAfterHours + 2),
+  welcomeReminder1At: hoursAgo(R.secondAfterHours + 1),
+};
+check("second reminder is due after its wait", reminderDue(reminded, rNow, true) === 2);
+check(
+  "not before it",
+  reminderDue({ ...reminded, welcomeReminder1At: hoursAgo(R.secondAfterHours - 1) }, rNow, true) === null
+);
+check("nothing after the second", reminderDue({ ...reminded, welcomeReminder2At: hoursAgo(1) }, rNow, true) === null);
+check(
+  "a fresh opt-in restarts the wait for the second",
+  reminderDue({ ...reminded, consentAt: hoursAgo(1) }, rNow, true) === null
+);
+
+// ── Reminders: the emails ───────────────────────────────────────────
+const text = (html: string) => html.replace(/<[^>]+>/g, " ");
+const recipient = { id: "sub_123", email: "alex@example.com", welcomeBonusUntil: new Date("2026-10-11T12:00:00Z") };
+for (const step of [1, 2] as const) {
+  const email = reminderEmail(step, recipient);
+  const violations = checkCompliance([email.subject, email.preheader, text(email.body)]);
+  check(`reminder ${step} passes the house rules`, violations.length === 0, violations.map((v) => `${v.match}: ${v.why}`).join("; "));
+  check(`reminder ${step} links back with the subscriber's token`, email.body.includes("/api/subscribe/link?t=sub_123.link."));
+  check(`reminder ${step} can be unsubscribed from`, email.body.includes("/api/email/unsubscribe?email="));
+  check(`reminder ${step} is wrapped in the shared layout`, email.html.includes(email.body) && email.html.startsWith("<!doctype html>"));
+}
+const second = reminderEmail(2, recipient);
+check("second reminder states the deadline", /Sunday,? 11 October/.test(second.body));
+check(
+  "second reminder states the offer",
+  second.subject.includes(String(extraVials)) && text(second.body).includes(`${1 + extraVials} free vials`) && text(second.body).includes(`${minVials} vials or more`)
+);
+check("first reminder promises no bonus", !/Sunday/.test(reminderEmail(1, recipient).body));
 
 // ── Repeat-address key ──────────────────────────────────────────────
 const a1 = JSON.stringify({ line1: "12 High St", postalCode: "SW1A 1AA" });
