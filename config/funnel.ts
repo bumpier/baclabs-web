@@ -659,11 +659,16 @@ export const LOWEST_PRICE_BADGE = "Cheapest in the UK";
  * The badge, the basket nudge and the amount Stripe charges all resolve from
  * the same figure, so re-pricing delivery can never leave a stale promise on
  * the page. Returns "" when the current mode makes no free-delivery claim.
+ *
+ * `standard` names the service the offer covers, "Free standard delivery over
+ * £40", for anywhere the badge sits beside a next-day promise: next day is
+ * never free, and the bare badge beside it reads as if it were.
  */
-export function freeDeliveryBadge(): string {
-  if (DELIVERY.mode === "free") return "Free UK delivery";
+export function freeDeliveryBadge({ standard = false }: { standard?: boolean } = {}): string {
+  const free = standard ? "Free standard delivery" : "Free UK delivery";
+  if (DELIVERY.mode === "free") return free;
   if (DELIVERY.mode === "threshold" && DELIVERY.freeFromMinor !== null) {
-    return `Free UK delivery over ${formatMinorShort(DELIVERY.freeFromMinor)}`;
+    return `${free} over ${formatMinorShort(DELIVERY.freeFromMinor)}`;
   }
   return "";
 }

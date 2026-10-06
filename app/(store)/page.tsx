@@ -2,14 +2,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { brand } from "@/config/brand";
 import {
-  ANNOUNCEMENT,
-  SALE,
-  saleLabel,
-  saleVisible,
   BUNDLES,
   DELIVERY,
   LOWEST_PRICE_BADGE,
-  PRICE_MATCH_BADGE,
   PRICES_UPDATED,
   PRODUCT,
   PRODUCT_IMAGES,
@@ -174,17 +169,6 @@ export default function FunnelPage() {
   };
 
   const whyBuy = WHY_BUY.filter((w) => w.title && w.body);
-  const sale = saleVisible();
-  const bannerText = sale ? SALE.bannerText || saleLabel() : ANNOUNCEMENT;
-
-  // The announcement bar now carries up to three lines rather than one. Each
-  // is dropped when its source config goes empty, so the bar shortens to two,
-  // to one, or vanishes entirely without any of them needing a guard here.
-  const bannerParts = [
-    bannerText,
-    freeDeliveryBadge(),
-    PRICE_MATCH_BADGE,
-  ].filter(Boolean);
 
   return (
     <>
@@ -192,53 +176,9 @@ export default function FunnelPage() {
       <JsonLd data={faqSchema} />
       <JsonLd data={webPageSchema} />
 
-      {/* Announcement bar. The sale line takes precedence over ANNOUNCEMENT,
-          and sits alongside the delivery and price-match lines. The whole bar
-          disappears when every part resolves empty.
-
-          The third part is hidden below `sm`: on a narrow phone three parts
-          wrap to two lines and push the hero down, and the price-match claim
-          is the one already repeated in the hero, the trust bar and the buy
-          bar — so it is the one that can afford to go.
-
-          While the sale shows, the bar turns solid brand blue with the sale
-          line in bold: the first thing on the page says there is a sale. */}
-      {bannerParts.length > 0 ? (
-        <div
-          className={[
-            "border-b px-4 text-sm font-medium",
-            sale
-              ? "border-brand bg-brand py-2.5 text-white"
-              : "border-line bg-brand-tint py-2 text-ink",
-          ].join(" ")}
-        >
-          <ul className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-            {bannerParts.map((part, i) => (
-              <li
-                key={part}
-                // `hidden sm:flex` rather than `flex hidden sm:flex`: two
-                // display utilities on one element resolve by stylesheet
-                // order, not by the order they are written here, so the
-                // conditional supplies the base display itself.
-                className={[
-                  i > 1 ? "hidden sm:flex" : "flex",
-                  "items-center gap-3",
-                ].join(" ")}
-              >
-                {i > 0 ? (
-                  <span
-                    aria-hidden="true"
-                    className={sale ? "text-white/60" : "text-ink-soft"}
-                  >
-                    &middot;
-                  </span>
-                ) : null}
-                {sale && i === 0 ? <span className="font-bold">{part}</span> : part}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      {/* The sale, delivery and price-match lines that used to sit in a bar
+          here are in the strip under the header (AnnouncementBanner), with
+          the next-day countdown, on every storefront page. */}
 
       <FunnelStateProvider>
         {/* ══ 1. LANDING HERO ═══════════════════════════════════════ */}

@@ -2,7 +2,8 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { contentHref } from "@/lib/blog-migration";
 import { SignupPopup } from "@/components/mailing-list/SignupPopup";
-import { NextDayBanner } from "@/components/funnel/NextDayBanner";
+import { AnnouncementBanner } from "@/components/funnel/AnnouncementBanner";
+import { saleVisible } from "@/config/funnel";
 
 /**
  * Bound how long any cache may hold a storefront page. Fully static pages
@@ -24,9 +25,11 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
         Skip to content
       </a>
       <Header guidesHref={contentHref("/guides")} />
-      {/* Outside <main>: the skip link jumps past it with the header. Renders
-          nothing where Next day cannot be bought (see the component). */}
-      <NextDayBanner />
+      {/* Outside <main>: the skip link jumps past it with the header. The
+          sale line, the next-day countdown and free delivery in one strip;
+          each part renders nothing while its source is off (see the
+          component). */}
+      <AnnouncementBanner sale={saleVisible()} />
       <main id="main" className="flex-1">
         {children}
       </main>
