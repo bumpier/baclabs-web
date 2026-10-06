@@ -2,6 +2,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { contentHref } from "@/lib/blog-migration";
 import { SignupPopup } from "@/components/mailing-list/SignupPopup";
+import { NextDayBanner } from "@/components/funnel/NextDayBanner";
 
 /**
  * Bound how long any cache may hold a storefront page. Fully static pages
@@ -23,6 +24,9 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
         Skip to content
       </a>
       <Header guidesHref={contentHref("/guides")} />
+      {/* Outside <main>: the skip link jumps past it with the header. Renders
+          nothing where Next day cannot be bought (see the component). */}
+      <NextDayBanner />
       <main id="main" className="flex-1">
         {children}
       </main>
