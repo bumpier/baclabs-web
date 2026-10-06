@@ -2,12 +2,17 @@
 
 import { useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { Truck } from "lucide-react";
 import { nextDayOffered } from "@/config/funnel";
 import { dayAfter, formatCutoffHour, formatDeliveryDay, nextDayDeadline, ukDayKey } from "@/lib/delivery-date";
 
 /**
- * The next-day countdown: "Want it tomorrow? Order within 02:14:33".
+ * The next-day countdown: "Want it tomorrow? Order within 02h 14m 33s".
+ *
+ * WHY IT LOOKS LIKE THE HEADER. It is a strip, not a band: the neutral wash,
+ * a hairline under it and 14px text, so it reads as part of the header
+ * rather than as a second hero. The page's one dark band is the footer, and
+ * on the home page the announcement bar directly below may be solid blue,
+ * so anything louder here stacks three heavy bands above the price.
  *
  * WHY IT CAN RENDER NOTHING. It promises a service, so it shows only where
  * checkout can sell that service (nextDayOffered). While the delivery choice
@@ -17,8 +22,8 @@ import { dayAfter, formatCutoffHour, formatDeliveryDay, nextDayDeadline, ukDayKe
  * WHY THE CLOCK IS CLIENT-ONLY. Storefront pages are cached for five minutes
  * (app/(store)/layout.tsx), so a countdown rendered on the server would be
  * up to five minutes wrong before it ever reached the screen. The server and
- * the no-JS page get the timeless line, "Order by 3pm for next-day delivery",
- * in a box of the same height, and the ticking clock replaces it after
+ * the no-JS page get the timeless line, "Next-day delivery, order by 3pm",
+ * on the same number of lines, and the ticking clock replaces it after
  * hydration with nothing below it moving.
  *
  * WHY THE DAY IS NAMED. After the cutoff, at weekends and over bank holidays
@@ -52,26 +57,27 @@ const weekdayOf = (dayKey: string) => weekdayFmt.format(new Date(`${dayKey}T12:0
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
- * The clock's tiles. Under a day: hours, minutes, seconds. A day or more out
- * (a Friday evening, a bank-holiday weekend): days, hours, minutes, since a
- * seconds hand 60 hours from the deadline is noise, not urgency.
+ * The clock's parts, "03h 17m 44s". Under a day: hours, minutes, seconds. A
+ * day or more out (a Friday evening, a bank-holiday weekend): days, hours,
+ * minutes, since a seconds hand 60 hours from the deadline is noise, not
+ * urgency.
  */
-function tilesFor(secondsLeft: number): { value: string; unit: string }[] {
+function clockFor(secondsLeft: number): { value: string; unit: string }[] {
   const days = Math.floor(secondsLeft / 86_400);
   const hours = Math.floor((secondsLeft % 86_400) / 3600);
   const mins = Math.floor((secondsLeft % 3600) / 60);
   const secs = secondsLeft % 60;
   if (days > 0) {
     return [
-      { value: String(days), unit: days === 1 ? "day" : "days" },
-      { value: pad(hours), unit: "hrs" },
-      { value: pad(mins), unit: "mins" },
+      { value: String(days), unit: "d" },
+      { value: pad(hours), unit: "h" },
+      { value: pad(mins), unit: "m" },
     ];
   }
   return [
-    { value: pad(hours), unit: "hrs" },
-    { value: pad(mins), unit: "mins" },
-    { value: pad(secs), unit: "secs" },
+    { value: pad(hours), unit: "h" },
+    { value: pad(mins), unit: "m" },
+    { value: pad(secs), unit: "s" },
   ];
 }
 
@@ -80,7 +86,7 @@ function spokenDuration(secondsLeft: number): string {
   if (secondsLeft < 60) return "under a minute";
   const days = Math.floor(secondsLeft / 86_400);
   const hours = Math.floor((secondsLeft % 86_400) / 3600);
-  // Floored, like the tiles, so the two never disagree.
+  // Floored, like the clock, so the two never disagree.
   const mins = Math.floor((secondsLeft % 3600) / 60);
   const part = (n: number, word: string) => (n > 0 ? `${n} ${word}${n === 1 ? "" : "s"}` : "");
   return [part(days, "day"), part(hours, "hour"), part(mins, "minute")].filter(Boolean).join(" ");
@@ -103,93 +109,111 @@ export function NextDayBanner() {
       ? "tomorrow"
       : weekdayOf(deadline.deliveryDayKey);
 
-  return (
-    <section aria-label="Next-day delivery" className="no-print relative overflow-hidden bg-abyss text-white">
-      {/* A cyan rule along the top: the band's one hard edge of colour,
-          so it reads as an alert rather than as more footer. */}
-      <div aria-hidden="true" className="h-1 bg-gradient-to-r from-cyan via-brand to-cyan" />
+  const headline = when ? `Want it ${when}?` : "Next-day delivery";
 
-      <div className="shell-wide flex flex-col items-center gap-3 py-4 sm:py-5 lg:flex-row lg:justify-center lg:gap-10">
-        {/* Headline */}
-        <div className="flex items-center gap-3 sm:gap-4">
-          <span
-            aria-hidden="true"
-            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cyan text-abyss sm:h-14 sm:w-14"
-          >
-            <Truck className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} />
-            {/* "Live" pulse. Off for anyone who has asked for less motion. */}
-            <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-cyan opacity-75 motion-safe:animate-ping" />
-              <span className="relative inline-flex h-3.5 w-3.5 rounded-full border-2 border-abyss bg-cyan" />
-            </span>
-          </span>
+  // Two layouts rather than one that wraps. A centred sentence wraps
+  // unpredictably on a 360px phone, and "Wednesday" is longer than
+  // "tomorrow", so the phone gets two fixed rows with the clock set apart on
+  // the right. The server text and the ticking text fill the same rows in
+  // both layouts, so hydration moves nothing.
+  return (
+    <section aria-label="Next-day delivery" className="no-print border-b border-line bg-neutral text-sm">
+      {/* Phone: headline and instruction left, clock right. */}
+      <div className="shell-wide flex items-center justify-between gap-4 py-2 sm:hidden">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <VanMark />
           <div>
-            <p className="font-display text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">
-              {when ? (
-                <>
-                  Want it <span className="text-cyan">{when}</span>?
-                </>
-              ) : (
-                <>
-                  <span className="text-cyan">Next-day</span> delivery
-                </>
-              )}
-            </p>
-            <p className="mt-0.5 text-sm text-white/70 sm:text-base">
-              {/* Two lines on a phone, broken at the dot, rather than one
-                  that wraps and strands "at checkout" on its own. */}
-              {deliveryDate ? <>Delivered {deliveryDate}</> : <>Order by {cutoffLabel}</>}
-              <span className="hidden sm:inline"> &middot; </span>
-              <br className="sm:hidden" />
-              Choose Next day at checkout
-            </p>
+            <p className="font-semibold text-ink">{headline}</p>
+            <p className="text-xs text-ink-soft">Choose Next day at checkout</p>
           </div>
         </div>
-
-        {/* The clock. Fixed height in both states so hydration moves nothing. */}
-        <div className="flex h-[76px] items-center gap-3 sm:h-[88px] sm:gap-4">
+        <div className="shrink-0 text-right">
+          <p className="text-xs text-ink-soft">{deadline ? "Order within" : "Order by"}</p>
           {deadline ? (
-            <>
-              <p className="text-right text-xs font-semibold uppercase leading-tight tracking-[0.14em] text-white/70 sm:text-sm">
-                Order
-                <br />
-                within
-              </p>
-              {/* The visual clock is hidden from screen readers, which get
-                  the sentence below instead: a region that changed every
-                  second would be either silent or unbearable. */}
-              <ol aria-hidden="true" className="flex items-start gap-1.5 sm:gap-2">
-                {tilesFor(secondsLeft).map((t, i) => (
-                  <li key={t.unit} className="flex items-start gap-1.5 sm:gap-2">
-                    {i > 0 ? (
-                      <span className="pt-2 font-display text-2xl font-bold text-cyan sm:pt-2.5 sm:text-4xl">:</span>
-                    ) : null}
-                    <span className="flex flex-col items-center">
-                      {/* tabular-nums despite the display size (see .tabular
-                          in globals.css): there is no decimal point here, and
-                          without it the digits shuffle sideways every second. */}
-                      <span className="flex h-14 min-w-14 items-center justify-center rounded-control bg-white px-2 font-display text-3xl font-bold tabular-nums text-abyss shadow-[0_0_0_3px_rgb(0_209_255/0.35)] sm:h-16 sm:min-w-16 sm:text-4xl">
-                        {t.value}
-                      </span>
-                      <span className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
-                        {t.unit}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              <p className="sr-only">
-                Order within {spokenDuration(secondsLeft)} for delivery{" "}
-                {when === "tomorrow" ? `tomorrow, ${deliveryDate}` : `on ${deliveryDate}`}.
-              </p>
-            </>
+            <Clock secondsLeft={secondsLeft} />
           ) : (
-            <p className="font-display text-xl font-bold sm:text-2xl">
-              Order by <span className="text-cyan">{cutoffLabel}</span>
-            </p>
+            <p className="font-semibold text-brand">{cutoffLabel}</p>
           )}
         </div>
       </div>
+
+      {/* sm and up: one centred line. */}
+      <div className="shell-wide hidden min-h-11 items-center justify-center gap-3 py-2 sm:flex">
+        <p className="flex items-center gap-2 text-ink">
+          <VanMark />
+          <span>
+            <span className="font-semibold">{headline}</span>
+            {deadline ? (
+              <>
+                {" "}
+                Order within <Clock secondsLeft={secondsLeft} />
+              </>
+            ) : (
+              <>, order by {cutoffLabel}</>
+            )}
+          </span>
+        </p>
+        <span aria-hidden="true" className="text-ink-soft">
+          &middot;
+        </span>
+        <p className="text-ink-soft">
+          {deliveryDate ? <>Arrives {deliveryDate}. </> : null}
+          Choose Next day at checkout
+        </p>
+      </div>
+
+      {deadline ? (
+        <p className="sr-only">
+          Order within {spokenDuration(secondsLeft)} for delivery{" "}
+          {when === "tomorrow" ? `tomorrow, ${deliveryDate}` : `on ${deliveryDate}`}.
+        </p>
+      ) : null}
     </section>
+  );
+}
+
+/**
+ * The visible clock, hidden from screen readers, which get the sentence at
+ * the foot of the banner instead: a region that changed every second would be
+ * either silent or unbearable. `.tabular` so the digits hold their places
+ * rather than shuffling sideways every second.
+ */
+function Clock({ secondsLeft }: { secondsLeft: number }) {
+  return (
+    <span aria-hidden="true" className="tabular inline-block font-semibold text-brand">
+      {clockFor(secondsLeft).map((p, i) => (
+        <span key={p.unit}>
+          {i > 0 ? " " : null}
+          {p.value}
+          <span className="font-medium">{p.unit}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * The trust bar's delivery van at the same 1.6 stroke, so the banner draws
+ * from the page's one set of marks rather than an icon library.
+ */
+function VanMark() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="var(--color-primary)"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      <path d="M1.8 5.2h9.4v8.2H1.8z" />
+      <path d="M11.2 8h3l3 2.6v2.8h-6z" />
+      <circle cx="5.4" cy="15.4" r="1.7" />
+      <circle cx="13.6" cy="15.4" r="1.7" />
+    </svg>
   );
 }
