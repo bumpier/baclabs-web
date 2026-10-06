@@ -248,8 +248,10 @@ function rank(a: ServiceRule, b: ServiceRule): number {
 /**
  * The customer paid for a delivery option, so only the services linked to it
  * on the Shipping page are candidates; every other one is marked with why.
- * While no active service is linked to that option yet, nothing is ruled out
- * and the note says so, rather than leaving the order with no service.
+ * While no active service is linked to that option, none is chosen: any
+ * other would send the order by a carrier the customer did not pay for. The
+ * automatic label is refused with the note as Order.labelError, and the
+ * order page still lists every service to pick by hand.
  *
  * A service assigned to the SKU wins whenever it actually fits this parcel.
  * When it does not — two units outgrowing a single's Large Letter — the
@@ -268,22 +270,23 @@ export function selectService(
 
   const paidFor = deliveryOptionById(deliveryOption);
   if (paidFor) {
-    if (services.some((s) => s.active && s.deliveryOption === paidFor.id)) {
-      checks = checks.map((c) =>
-        c.service.deliveryOption === paidFor.id
-          ? c
-          : {
-              ...c,
-              fits: false,
-              reasons: [
-                `not linked to ${paidFor.label} delivery, which the customer paid for`,
-                ...c.reasons,
-              ],
-            }
-      );
-    } else {
-      fallbackNote = `No service is linked to ${paidFor.label} delivery on the Shipping page, so every service was considered. `;
+    if (!services.some((s) => s.active && s.deliveryOption === paidFor.id)) {
+      return {
+        service: null,
+        choice: null,
+        note: `No service is linked to ${paidFor.label} delivery, which the customer paid for. Link one on the Shipping page, or pick a service by hand.`,
+        checks,
+      };
     }
+    checks = checks.map((c) =>
+      c.service.deliveryOption === paidFor.id
+        ? c
+        : {
+            ...c,
+            fits: false,
+            reasons: [`not linked to ${paidFor.label} delivery, which the customer paid for`, ...c.reasons],
+          }
+    );
   }
   const fitting = checks.filter((c) => c.fits);
 

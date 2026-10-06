@@ -3,13 +3,18 @@ import {
   DELIVERY,
   MAX_QUANTITY,
   PRODUCT,
+  STANDARD_DELIVERY,
   VIAL_ML,
+  deliveryChoiceEnabled,
+  deliveryOptionsFor,
   drawsPerVial,
   formatMinor,
   formatMinorShort,
+  nextDayOffered,
   perVialMinor,
 } from "@/config/funnel";
 import { FACTS } from "@/content/facts";
+import { formatCutoffHour } from "@/lib/delivery-date";
 import { PACK_PAGES, bundleForPack, packByBundleId, packPath, type PackPage } from "@/config/products";
 import {
   cheaperPerVialThan,
@@ -253,7 +258,9 @@ export function PackSpec({ m }: { m: PackMetrics }) {
 /**
  * Delivery as it applies to THIS pack: whether one pack clears the free
  * threshold, and what is charged when it does not. Every figure is the one
- * Stripe is handed.
+ * Stripe is handed. Once customers choose their delivery, the free and
+ * charged lines name the standard carrier, and next day follows at this
+ * pack's price.
  */
 export function PackDelivery({ m }: { m: PackMetrics }) {
   if (DELIVERY.mode === "unknown") {
@@ -264,12 +271,22 @@ export function PackDelivery({ m }: { m: PackMetrics }) {
     );
   }
 
+  const standard = deliveryChoiceEnabled()
+    ? `standard delivery by ${STANDARD_DELIVERY.carrier} (${STANDARD_DELIVERY.transit})`
+    : null;
+  const nextDay = nextDayOffered()
+    ? deliveryOptionsFor(m.priceMinor).find((o) => o.option.id === "next_day")
+    : undefined;
+
   return (
     <p className="measure text-ink-soft">
       {m.shipsFree ? (
         <>
           A single {packLabel(m.bundle).toLowerCase()} order{" "}
-          <span className="font-semibold text-ink">qualifies for free UK delivery</span>
+          <span className="font-semibold text-ink">
+            qualifies for free {standard ? "standard " : ""}UK delivery
+          </span>
+          {standard ? ` by ${STANDARD_DELIVERY.carrier} (${STANDARD_DELIVERY.transit})` : null}
           {DELIVERY.mode === "threshold" && DELIVERY.freeFromMinor !== null ? (
             <>
               , because it is at or above the{" "}
@@ -284,13 +301,23 @@ export function PackDelivery({ m }: { m: PackMetrics }) {
           {DELIVERY.freeFromMinor !== null ? (
             <> of {formatMinorShort(DELIVERY.freeFromMinor)}</>
           ) : null}
-          , so delivery is{" "}
+          , so {standard ?? "delivery"} is{" "}
           <span className="tabular font-semibold text-ink">
             {formatMinor(m.deliveryMinor)}
           </span>{" "}
           on an order of one. It is shown in full before you pay.
         </>
       )}
+      {nextDay ? (
+        <>
+          {" "}
+          Next day by {nextDay.option.carrier} is{" "}
+          <span className="tabular font-semibold text-ink">
+            {nextDay.priceMinor === 0 ? "free" : formatMinor(nextDay.priceMinor)}
+          </span>{" "}
+          if you order by {formatCutoffHour()} on a working day.
+        </>
+      ) : null}
     </p>
   );
 }

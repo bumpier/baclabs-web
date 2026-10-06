@@ -53,10 +53,13 @@ vial counter (`Product.stock`).
 
 1. **Shipping** — add services by hand, or connect SmartTrack (below) and
    press *Sync services*. Link each service to the checkout delivery option
-   it fulfils (Tracked 48, Economy, Next day), then set priorities. An order
-   is only offered the services linked to the option the customer paid for;
-   the options and their prices are `DELIVERY_OPTIONS` in
-   `config/funnel.ts`. The customer's choice is **in testing** and only
+   it fulfils (Standard is Yodel, Next day is Amazon Shipping), then set
+   priorities. An order is only offered the services linked to the option
+   the customer paid for, and while none is linked its label is not bought
+   automatically: the order gets the red label warning instead of going by
+   a carrier the customer did not pay for. The options and their prices are
+   `DELIVERY_OPTIONS` in `config/funnel.ts`; next day's 3pm cutoff and the
+   bank holidays it skips are in `lib/delivery-date.ts`. The choice is only
    offered where `NEXT_PUBLIC_DELIVERY_CHOICE=on`; until then no order
    records a choice and every service is considered, as before.
 2. **Inventory → Warehouses & locations** — add the warehouse with its full

@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────────────────────────
 
 import { brand } from "@/config/brand";
+import { formatCutoffHour, formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
 
 /** Money is held in integer pence everywhere. Never use floats for totals. */
 export const CURRENCY = "GBP" as const;
@@ -341,10 +342,12 @@ export const SHIPPING_COUNTRIES = ["GB"] as const;
  *                      would only ever be picked by mistake
  *
  * The first option offered is the one preselected on Stripe's page.
- * `detail` is shown under the label. Promise no speed here that dispatch
- * cannot keep: next day only means next day after dispatch.
+ * `detail` is the timeless wording, for the FAQ, llms.txt and the admin.
+ * Checkout shows deliveryDetailAt() instead, where next day carries the
+ * date it arrives (lib/delivery-date.ts). Promise no speed here that
+ * dispatch cannot keep: next day only means next day after dispatch.
  */
-export type DeliveryOptionId = "standard" | "economy" | "next_day";
+export type DeliveryOptionId = "standard" | "next_day";
 
 /**
  * The customer's choice of delivery is being TESTED and is off in live.
@@ -361,29 +364,79 @@ export function deliveryChoiceEnabled(): boolean {
 export interface DeliveryOption {
   id: DeliveryOptionId;
   label: string;
+  carrier: string;
+  /** How long it takes, as a phrase: "3–5 working days". */
+  transit: string;
+  /** Carrier and transit together: "Yodel, 3–5 working days". */
   detail: string;
   priceMinor: number;
   overThreshold: "free" | "less-standard" | "hide";
 }
 
+const option = (o: Omit<DeliveryOption, "detail">): DeliveryOption => ({ ...o, detail: `${o.carrier}, ${o.transit}` });
+
+/** Yodel's working days in transit, [min, max]: the Standard line and the structured data both read it. */
+const STANDARD_TRANSIT_DAYS: [number, number] = [3, 5];
+
 export const DELIVERY_OPTIONS: readonly DeliveryOption[] = [
-  // £2 is today's live delivery price. Raise it here (e.g. 250) when the
-  // choice goes live, if that is the decision.
-  { id: "standard", label: "Tracked 48", detail: "Royal Mail Tracked 48", priceMinor: 200, overThreshold: "free" },
-  { id: "economy", label: "Economy", detail: "InPost", priceMinor: 150, overThreshold: "hide" },
-  {
+  option({
+    id: "standard",
+    label: "Standard",
+    carrier: "Yodel",
+    transit: `${STANDARD_TRANSIT_DAYS[0]}–${STANDARD_TRANSIT_DAYS[1]} working days`,
+    priceMinor: 365,
+    overThreshold: "free",
+  }),
+  option({
     id: "next_day",
     label: "Next day",
-    detail: "Amazon Shipping, next working day after dispatch",
-    priceMinor: 499,
+    carrier: "Amazon Shipping",
+    transit: `next working day if ordered by ${formatCutoffHour()}`,
+    priceMinor: 500,
     overThreshold: "less-standard",
-  },
+  }),
 ];
 
 export const STANDARD_DELIVERY = DELIVERY_OPTIONS.find((o) => o.id === "standard")!;
 
 export function deliveryOptionById(id: string | null | undefined): DeliveryOption | undefined {
   return DELIVERY_OPTIONS.find((o) => o.id === id);
+}
+
+/**
+ * An option's line at checkout at this moment. Next day carries the day it
+ * arrives: "Amazon Shipping. Order by 3pm for delivery Wed 7 Oct" before the
+ * cutoff, "Amazon Shipping. Delivery Thu 8 Oct" after it. Every other option
+ * shows its detail.
+ */
+export function deliveryDetailAt(option: DeliveryOption, now: Date): string {
+  if (option.id !== "next_day") return option.detail;
+  const { deliveryDayKey, dispatchedToday } = nextDayDeadline(now);
+  const day = formatDeliveryDay(deliveryDayKey);
+  return dispatchedToday
+    ? `${option.carrier}. Order by ${formatCutoffHour()} for delivery ${day}`
+    : `${option.carrier}. Delivery ${day}`;
+}
+
+/**
+ * Whether next day can be bought, for anything that promises it outside
+ * checkout. False while the choice is switched off: live checkout cannot
+ * sell it then.
+ */
+export function nextDayOffered(): boolean {
+  return deliveryChoiceEnabled() && DELIVERY.mode !== "unknown" && deliveryOptionById("next_day") !== undefined;
+}
+
+/**
+ * What STRIPE_SHIPPING_RATE_ID charges: the one delivery price while the
+ * choice is switched off, so the storefront quotes what Stripe will charge.
+ * Delete it with the switch once the choice is live.
+ */
+const SINGLE_RATE_MINOR = 299;
+
+/** The delivery price the storefront quotes below the free threshold. */
+function quotedDeliveryMinor(): number {
+  return deliveryChoiceEnabled() ? STANDARD_DELIVERY.priceMinor : SINGLE_RATE_MINOR;
 }
 
 /**
@@ -409,22 +462,27 @@ export const DELIVERY: {
   transitDays: [number, number] | null;
 } = {
   mode: "threshold",
-  // The Standard option's price: the figure the storefront quotes. Set it on
-  // DELIVERY_OPTIONS above.
-  priceMinor: STANDARD_DELIVERY.priceMinor,
-  freeFromMinor: 3000,
+  // The figure the storefront quotes: the Standard option's price, set on
+  // DELIVERY_OPTIONS above, or the single Stripe rate while the choice is off.
+  priceMinor: quotedDeliveryMinor(),
+  freeFromMinor: 4000,
   note: deliveryChoiceEnabled()
-    ? "Free Tracked 48 UK delivery on orders of £30 or more."
-    : "Free UK delivery on orders of £30 or more.",
-  dispatchLine: "",
+    ? "Free standard UK delivery on orders of £40 or more."
+    : "Free UK delivery on orders of £40 or more.",
+  // Every order, standard and next day alike, leaves the same day when it is
+  // placed before the cutoff on a working day (lib/delivery-date.ts).
+  dispatchLine: `Orders placed by ${formatCutoffHour()} on a working day are dispatched the same day.`,
   /**
    * Working days from order to dispatch, and from dispatch to arrival, as
    * `[min, max]`. Feed Product `shippingDetails.deliveryTime`; null omits the
    * block, so the structured data never asserts a speed the shop has not
    * committed to on the page. Set both, and dispatchLine above, together.
+   * Handling is 0 before the cutoff, 1 after it. Transit is the Standard
+   * option's, whose price the structured data quotes, so it is only stated
+   * while the customer chooses Standard and the carrier is known.
    */
-  handlingDays: null,
-  transitDays: null,
+  handlingDays: [0, 1],
+  transitDays: deliveryChoiceEnabled() ? STANDARD_TRANSIT_DAYS : null,
 };
 
 /**
@@ -460,7 +518,9 @@ export function shipsFree(orderValueMinor: number): boolean {
 export function deliveryMinorFor(orderValueMinor: number): number {
   if (DELIVERY.mode === "unknown") return 0;
   if (shipsFree(orderValueMinor)) return 0;
-  return DELIVERY.priceMinor ?? 0;
+  // Read the switch now rather than DELIVERY.priceMinor's copy from load
+  // time, for scripts that flip it (scripts/test-shipping.ts).
+  return quotedDeliveryMinor();
 }
 
 /**
@@ -487,7 +547,7 @@ export function deliveryOptionsFor(orderValueMinor: number): { option: DeliveryO
 }
 
 /**
- * "Economy £1.50 · Next day £4.99" — the options other than Standard, for
+ * "Next day £5.00" — the options other than Standard, for
  * the line under a purchase block's total. "" when there are none.
  */
 export function otherDeliveryOptionsLine(orderValueMinor: number): string {
@@ -507,13 +567,26 @@ export function deliveryOptionsSentence(): string {
   const parts = DELIVERY_OPTIONS.map((o) => {
     const base = `${o.label} (${o.detail}) ${formatMinorShort(o.priceMinor)}`;
     if (DELIVERY.mode !== "threshold" || over === null) return base;
-    if (o.overThreshold === "free") return `${base}, free over ${formatMinorShort(over)}`;
+    if (o.overThreshold === "free") return `${base}, free from ${formatMinorShort(over)}`;
     if (o.overThreshold === "less-standard") {
-      return `${base}, ${formatMinorShort(Math.max(0, o.priceMinor - STANDARD_DELIVERY.priceMinor))} over ${formatMinorShort(over)}`;
+      return `${base}, ${formatMinorShort(Math.max(0, o.priceMinor - STANDARD_DELIVERY.priceMinor))} from ${formatMinorShort(over)}`;
     }
     return base;
   });
   return `Choose your delivery at checkout: ${parts.join("; ")}.`;
+}
+
+/**
+ * How long each option takes, for "How long does delivery take?": "You
+ * choose at checkout: standard by Yodel (3–5 working days) or next day by
+ * Amazon Shipping (…)". "" while the choice is switched off, since the
+ * carrier is then not the customer's to pick.
+ */
+export function deliveryTimesSentence(): string {
+  if (!deliveryChoiceEnabled() || DELIVERY.mode === "unknown") return "";
+  const parts = DELIVERY_OPTIONS.map((o) => `${o.label.toLowerCase()} by ${o.carrier} (${o.transit})`);
+  const dated = nextDayOffered() ? " For next day, checkout shows the date it will arrive." : "";
+  return `You choose at checkout: ${parts.join(" or ")}.${dated}`;
 }
 
 /**
@@ -582,7 +655,7 @@ export const PRICE_MATCH_BADGE = "UK price match guarantee";
 export const LOWEST_PRICE_BADGE = "Cheapest in the UK";
 
 /**
- * "Free UK delivery over £30", DERIVED from DELIVERY rather than typed.
+ * "Free UK delivery over £40", DERIVED from DELIVERY rather than typed.
  * The badge, the basket nudge and the amount Stripe charges all resolve from
  * the same figure, so re-pricing delivery can never leave a stale promise on
  * the page. Returns "" when the current mode makes no free-delivery claim.
@@ -593,6 +666,15 @@ export function freeDeliveryBadge(): string {
     return `Free UK delivery over ${formatMinorShort(DELIVERY.freeFromMinor)}`;
   }
   return "";
+}
+
+/**
+ * "Next-day delivery, order by 3pm", beside the free-delivery badge. "" while
+ * next day cannot be bought (nextDayOffered), so the claim never outlives
+ * the option.
+ */
+export function nextDayBadge(): string {
+  return nextDayOffered() ? `Next-day delivery, order by ${formatCutoffHour()}` : "";
 }
 
 /**

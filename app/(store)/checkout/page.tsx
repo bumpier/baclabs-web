@@ -51,7 +51,7 @@ export default async function CheckoutPage({
 
   return (
     <Suspense>
-      <CheckoutForm coins={coins} bundleId={bundle.id} quantity={quantity} />
+      <CheckoutForm coins={coins} bundleId={bundle.id} quantity={quantity} nowMs={Date.now()} />
     </Suspense>
   );
 }

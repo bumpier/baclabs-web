@@ -3,6 +3,7 @@ import {
   BUNDLES,
   bundleById,
   deliveryChoiceEnabled,
+  deliveryDetailAt,
   deliveryOptionById,
   deliveryOptionsFor,
   shipsFree,
@@ -122,17 +123,19 @@ export async function createBundleCheckout(
   // their prices come from deliveryOptionsFor(), the same function the
   // purchase block calls, so the customer is never charged for delivery the
   // page showed as free. Each rate carries its option id so the webhook can
-  // record the choice (chosenDeliveryOption).
+  // record the choice (chosenDeliveryOption). Next day's name carries the
+  // day it arrives, as of when the session is made (deliveryDetailAt).
   //
   // While the choice is switched off (deliveryChoiceEnabled), delivery is
   // the one Stripe rate, charged only below the free-delivery threshold —
   // exactly as before there was a choice.
   let shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[];
   if (deliveryChoiceEnabled()) {
+    const now = new Date();
     shippingOptions = deliveryOptionsFor(orderValueMinor).map(({ option, priceMinor }) => ({
       shipping_rate_data: {
         type: "fixed_amount",
-        display_name: `${option.label} — ${option.detail}`,
+        display_name: `${option.label} — ${deliveryDetailAt(option, now)}`,
         fixed_amount: { amount: priceMinor, currency: "gbp" },
         metadata: { deliveryOption: option.id },
       },

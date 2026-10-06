@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { brand } from "@/config/brand";
-import { formatMinor } from "@/config/funnel";
+import { deliveryOptionById, formatMinor } from "@/config/funnel";
+import { formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
 import { paidMinor, purchaseContents, purchaseEventId } from "@/lib/meta-capi-event";
 import { PurchaseTracker } from "./PurchaseTracker";
 
@@ -54,6 +55,14 @@ export default async function OrderConfirmationPage({
     (Boolean(sp.session_id) || sp.paid === "stripe");
 
   const hasEmail = Boolean(brand.contact.email);
+  // The delivery the customer chose, once it is recorded: the webhook writes
+  // it for cards, so a card customer who beats the webhook reads the general
+  // line. Next day's due date counts from when payment cleared.
+  const paidFor = deliveryOptionById(order.deliveryOption);
+  const nextDayDue =
+    paidFor?.id === "next_day" && order.paidAt
+      ? formatDeliveryDay(nextDayDeadline(order.paidAt).deliveryDayKey)
+      : null;
   // Meta's content ids and item count, built by the same helper as the
   // server-side Purchase so the two reports agree.
   const contents = purchaseContents(order.items);
@@ -166,7 +175,24 @@ export default async function OrderConfirmationPage({
           </li>
           <li className="flex gap-3">
             <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
-            <span>We pack your order and dispatch it to the address you gave at checkout.</span>
+            <span>
+              {paidFor ? (
+                <>
+                  We pack your order and send it by {paidFor.carrier} to the address you gave at
+                  checkout
+                  {nextDayDue ? (
+                    <>
+                      . It is due <span className="font-medium text-ink">{nextDayDue}</span>
+                    </>
+                  ) : (
+                    <> ({paidFor.transit})</>
+                  )}
+                  .
+                </>
+              ) : (
+                "We pack your order and dispatch it to the address you gave at checkout."
+              )}
+            </span>
           </li>
           <li className="flex gap-3">
             <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />

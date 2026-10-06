@@ -3,6 +3,7 @@ import {
   LOWEST_PRICE_BADGE,
   PRODUCT,
   freeDeliveryBadge,
+  nextDayBadge,
   referenceUnitPriceMinor,
   saleSaveLabel,
   saleUnitSavingMinor,
@@ -43,16 +44,19 @@ const SPEC_CHIPS = [
 ];
 
 /**
- * Things that are true today. Dispatch is absent until it is confirmed.
+ * Things that are true today. The dispatch line (DELIVERY.dispatchLine) is
+ * left to the closing section and the FAQ; the next-day line covers speed.
  *
  * The price and delivery lines are read from config rather than typed, and
  * the price claim links to the guarantee that substantiates it — see
  * LOWEST_PRICE_BADGE in config/funnel.ts for why that link is not optional.
- * `filter` drops either one the moment config stops making the claim.
+ * `filter` drops any of them the moment config stops making the claim; the
+ * next-day line, while next day cannot be bought.
  */
 const TRUST: { label: string; href?: string }[] = [
   { label: LOWEST_PRICE_BADGE, href: "#guarantee" },
   { label: freeDeliveryBadge() },
+  { label: nextDayBadge() },
   { label: "Secure checkout by Stripe" },
   { label: "Sealed, tamper-evident vial" },
   { label: "Sold as a laboratory and research diluent" },

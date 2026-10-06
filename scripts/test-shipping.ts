@@ -11,7 +11,15 @@ import {
   selectService,
   type ServiceRule,
 } from "@/lib/shipping/select-service";
-import { deliveryMinorFor, deliveryOptionsFor } from "@/config/funnel";
+import {
+  STANDARD_DELIVERY,
+  deliveryDetailAt,
+  deliveryMinorFor,
+  deliveryOptionById,
+  deliveryOptionsFor,
+  nextDayOffered,
+} from "@/config/funnel";
+import { formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
 import { buildShipmentRequest, cleanDeliveryInstructions, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
 
 let failures = 0;
@@ -179,28 +187,35 @@ check("no services at all says so", selectService([], vialBox, "GB").note.includ
 
 // ── The delivery option the customer paid for ────────────────────
 {
-  const economy: ServiceRule = { ...base, code: "ECO", name: "InPost", priority: 10, deliveryOption: "economy" };
-  const tracked: ServiceRule = { ...base, code: "T48", name: "Tracked 48", priority: 20, deliveryOption: "standard" };
-  const nextDay: ServiceRule = { ...base, code: "ND", name: "One Day", priority: 30, deliveryOption: "next_day" };
-  const linked = [economy, tracked, nextDay];
+  const yodel: ServiceRule = { ...base, code: "YDL", name: "Yodel", priority: 10, deliveryOption: "standard" };
+  const nextDay: ServiceRule = { ...base, code: "ND", name: "Amazon Next Day", priority: 30, deliveryOption: "next_day" };
+  const linked = [yodel, nextDay];
 
   const paidNextDay = selectService(linked, vialBox, "GB", null, "next_day");
-  check("next day paid for goes next day, though cheaper services fit", paidNextDay.service?.code === "ND", paidNextDay.note);
-  const eco = paidNextDay.checks.find((c) => c.service.code === "ECO")!;
-  check("…and the others say why", !eco.fits && eco.reasons[0]!.includes("Next day"), eco.reasons.join("; "));
+  check("next day paid for goes next day, though a cheaper service fits", paidNextDay.service?.code === "ND", paidNextDay.note);
+  const ydl = paidNextDay.checks.find((c) => c.service.code === "YDL")!;
+  check("…and the others say why", !ydl.fits && ydl.reasons[0]!.includes("Next day"), ydl.reasons.join("; "));
+
+  const paidStandard = selectService(linked, vialBox, "GB", null, "standard");
+  check("standard paid for goes standard", paidStandard.service?.code === "YDL", paidStandard.note);
 
   const noChoice = selectService(linked, vialBox, "GB");
-  check("an order with no recorded choice is worked out as before", noChoice.service?.code === "ECO", noChoice.note);
+  check("an order with no recorded choice is worked out as before", noChoice.service?.code === "YDL", noChoice.note);
 
   const unlinked = selectService([parcel2kg, parcel20kg], vialBox, "GB", null, "next_day");
-  check("with nothing linked to the option, every service is still considered", unlinked.service?.code === "P2", unlinked.note);
+  check("with nothing linked to the option, no service is chosen", unlinked.service === null, unlinked.note);
   check("…and the note says to link one", unlinked.note.includes("No service is linked to Next day"), unlinked.note);
+  check("…while the order page still sees what fits", unlinked.checks.some((c) => c.fits));
 
-  const skuPinned = selectService(linked, vialBox, "GB", "ECO", "next_day");
+  const skuPinned = selectService(linked, vialBox, "GB", "YDL", "next_day");
   check("a SKU's own service does not override the paid option", skuPinned.service?.code === "ND", skuPinned.note);
 
-  const offLinked = selectService([{ ...nextDay, active: false }, tracked], vialBox, "GB", null, "next_day");
-  check("a switched-off linked service does not count as linked", offLinked.note.includes("No service is linked"), offLinked.note);
+  const offLinked = selectService([{ ...nextDay, active: false }, yodel], vialBox, "GB", null, "next_day");
+  check(
+    "a switched-off linked service does not count as linked",
+    offLinked.service === null && offLinked.note.includes("No service is linked"),
+    offLinked.note
+  );
 }
 
 // ── Delivery instructions typed by customers and staff ───────────
@@ -215,18 +230,52 @@ check("instructions are one line with single spaces", cleanDeliveryInstructions(
 {
   delete process.env.NEXT_PUBLIC_DELIVERY_CHOICE;
   check("switched off, no delivery choice is offered", deliveryOptionsFor(2000).length === 0);
-  check("…and the quoted delivery is today's £2", deliveryMinorFor(2000) === 200 && deliveryMinorFor(3000) === 0);
+  check("…the quoted delivery is the single Stripe rate, £2.99", deliveryMinorFor(2000) === 299, String(deliveryMinorFor(2000)));
+  check("…free from £40", deliveryMinorFor(3999) === 299 && deliveryMinorFor(4000) === 0);
+  check("…and next day is promised nowhere", !nextDayOffered());
   process.env.NEXT_PUBLIC_DELIVERY_CHOICE = "on";
   const byId = (minor: number) => Object.fromEntries(deliveryOptionsFor(minor).map((o) => [o.option.id, o.priceMinor]));
-  const under = byId(2000);
-  check("under £30 every option is offered at its price", under.standard === 200 && under.economy === 150 && under.next_day === 499, JSON.stringify(under));
-  const over = byId(3000);
-  check("at £30 Tracked 48 is free", over.standard === 0, JSON.stringify(over));
-  check("…next day drops by the Tracked 48 price", over.next_day === 299, JSON.stringify(over));
-  check("…and economy is no longer offered", !("economy" in over), JSON.stringify(over));
-  check("the storefront's quoted delivery is the Tracked 48 price", deliveryMinorFor(2000) === 200 && deliveryMinorFor(3000) === 0);
-  check("Tracked 48 is offered first, so Stripe preselects it", deliveryOptionsFor(2000)[0]?.option.id === "standard");
+  const under = byId(3999);
+  check("under £40 Standard is £3.65 and next day £5", under.standard === 365 && under.next_day === 500, JSON.stringify(under));
+  check("…and they are the only options", Object.keys(under).join() === "standard,next_day", JSON.stringify(under));
+  const over = byId(4000);
+  check("at £40 Standard is free", over.standard === 0, JSON.stringify(over));
+  check("…and next day drops by the Standard price, to £1.35", over.next_day === 135, JSON.stringify(over));
+  check("the storefront's quoted delivery is the Standard price", deliveryMinorFor(2000) === 365 && deliveryMinorFor(4000) === 0);
+  check("Standard is offered first, so Stripe preselects it", deliveryOptionsFor(2000)[0]?.option.id === "standard");
+  check("next day is offered", nextDayOffered());
   delete process.env.NEXT_PUBLIC_DELIVERY_CHOICE;
+}
+
+// ── Next-day dates, in UK time ───────────────────────────────────
+{
+  const at = (iso: string) => nextDayDeadline(new Date(iso));
+  const days = (iso: string) => `${at(iso).dispatchDayKey} > ${at(iso).deliveryDayKey}`;
+  // 6 Oct 2026 is a Tuesday, in BST (UTC+1).
+  check("before 3pm on a weekday: out today, there tomorrow", days("2026-10-06T13:59:00Z") === "2026-10-06 > 2026-10-07", days("2026-10-06T13:59:00Z"));
+  check("…to beat today's 3pm, 14:00 UTC in summer", at("2026-10-06T13:59:00Z").cutoff.toISOString() === "2026-10-06T14:00:00.000Z");
+  check("at 3pm exactly: out tomorrow, there the day after", days("2026-10-06T14:00:00Z") === "2026-10-07 > 2026-10-08", days("2026-10-06T14:00:00Z"));
+  check("…and the cutoff ahead is tomorrow's", at("2026-10-06T14:00:00Z").cutoff.toISOString() === "2026-10-07T14:00:00.000Z");
+  check("00:30 in the UK is the next day, though not yet in UTC", days("2026-10-06T23:30:00Z") === "2026-10-07 > 2026-10-08", days("2026-10-06T23:30:00Z"));
+  check("Friday before 3pm arrives Monday", days("2026-10-09T10:00:00Z") === "2026-10-09 > 2026-10-12", days("2026-10-09T10:00:00Z"));
+  check("Friday after 3pm goes Monday, arrives Tuesday", days("2026-10-09T15:00:00Z") === "2026-10-12 > 2026-10-13", days("2026-10-09T15:00:00Z"));
+  check("Saturday goes Monday", days("2026-10-10T12:00:00Z") === "2026-10-12 > 2026-10-13", days("2026-10-10T12:00:00Z"));
+  // The clocks go back on Sunday 25 Oct 2026.
+  check("across the clock change, Monday's cutoff is 15:00 UTC", at("2026-10-24T22:30:00Z").cutoff.toISOString() === "2026-10-26T15:00:00.000Z", at("2026-10-24T22:30:00Z").cutoff.toISOString());
+  check(
+    "in winter 3pm UK is 15:00 UTC",
+    days("2026-11-03T14:59:00Z") === "2026-11-03 > 2026-11-04" && days("2026-11-03T15:00:00Z") === "2026-11-04 > 2026-11-05"
+  );
+  check("Christmas Eve morning skips Christmas, the weekend and Boxing Day", days("2026-12-24T10:00:00Z") === "2026-12-24 > 2026-12-29", days("2026-12-24T10:00:00Z"));
+  check("Christmas Eve afternoon goes out on the 29th", days("2026-12-24T16:00:00Z") === "2026-12-29 > 2026-12-30", days("2026-12-24T16:00:00Z"));
+  check("dates read like Wed 7 Oct", formatDeliveryDay("2026-10-07") === "Wed 7 Oct", formatDeliveryDay("2026-10-07"));
+
+  const nextDayOption = deliveryOptionById("next_day")!;
+  const before = deliveryDetailAt(nextDayOption, new Date("2026-10-06T13:00:00Z"));
+  check("before the cutoff, checkout says order by 3pm and gives the date", before === "Amazon Shipping. Order by 3pm for delivery Wed 7 Oct", before);
+  const after = deliveryDetailAt(nextDayOption, new Date("2026-10-06T15:00:00Z"));
+  check("after it, next day is still offered with the later date", after === "Amazon Shipping. Delivery Thu 8 Oct", after);
+  check("Standard's line has no date", deliveryDetailAt(STANDARD_DELIVERY, new Date()) === "Yodel, 3–5 working days");
 }
 
 // ── Address wrapping ─────────────────────────────────────────────

@@ -4,6 +4,7 @@ import {
   DELIVERY,
   deliveryChoiceEnabled,
   deliveryOptionsSentence,
+  deliveryTimesSentence,
   MAX_QUANTITY,
   PRODUCT,
   RETURNS,
@@ -56,6 +57,12 @@ function deliveryAnswer(): string {
     default:
       return "Delivery is calculated at checkout, before payment.";
   }
+}
+
+/** When an order leaves (DELIVERY.dispatchLine), and how the customer hears that it has. */
+function dispatchAnswer(): string {
+  const notice = "You get an email when your order is dispatched.";
+  return DELIVERY.dispatchLine ? `${DELIVERY.dispatchLine} ${notice}` : notice;
 }
 
 export const FAQ_GROUPS: readonly FaqGroup[] = [
@@ -162,13 +169,14 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
         q: "How much is delivery?",
         a: deliveryAnswer(),
       },
+      ...(deliveryTimesSentence() ? [{ q: "How long does delivery take?", a: deliveryTimesSentence() }] : []),
       {
         q: "Where do you deliver?",
         a: "To addresses in the United Kingdom. Your delivery address is collected by Stripe at checkout.",
       },
       {
         q: "When will my order be dispatched?",
-        a: DELIVERY.dispatchLine || "Dispatch times are shown on the product page and confirmed in your dispatch email.",
+        a: dispatchAnswer(),
       },
       {
         q: "How is it packaged?",

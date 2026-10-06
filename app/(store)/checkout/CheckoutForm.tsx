@@ -7,6 +7,7 @@ import {
   PRODUCT,
   bundleById,
   deliveryChoiceEnabled,
+  deliveryDetailAt,
   deliveryOptionsFor,
   formatMinor,
   totalMinor,
@@ -35,10 +36,13 @@ export function CheckoutForm({
   coins,
   bundleId,
   quantity,
+  nowMs,
 }: {
   coins: string[];
   bundleId: string;
   quantity: number;
+  /** When the page was rendered: next day's date is worked out from it, the same on server and client. */
+  nowMs: number;
 }) {
   const searchParams = useSearchParams();
   const cancelled = searchParams.get("cancelled") === "1";
@@ -152,7 +156,7 @@ export function CheckoutForm({
                   >
                     <span>
                       <span className="block text-sm font-medium text-ink">{option.label}</span>
-                      <span className="block text-xs text-ink-soft">{option.detail}</span>
+                      <span className="block text-xs text-ink-soft">{deliveryDetailAt(option, new Date(nowMs))}</span>
                     </span>
                     <span className="tabular text-sm text-ink">{priceMinor === 0 ? "Free" : formatMinor(priceMinor)}</span>
                     <input

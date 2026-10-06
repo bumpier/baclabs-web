@@ -12,8 +12,8 @@ import { canonicalOrigin } from "@/lib/site-url";
 
 /**
  * OfferShippingDetails for an offer of this value. The rate is what Stripe
- * charges for that basket, so the £30 threshold shows as "free" on the packs
- * that qualify and "£2" on the ones that do not. `deliveryTime` is emitted
+ * charges for that basket, so the £40 threshold shows as "free" on the packs
+ * that qualify and the standard price on the ones that do not. `deliveryTime` is emitted
  * only once DELIVERY.handlingDays and transitDays hold real figures.
  */
 export function shippingDetailsFor(offerMinor: number): Record<string, unknown> | undefined {

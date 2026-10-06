@@ -6,15 +6,21 @@ import {
   MAX_QUANTITY,
   PRICE_MATCH_BADGE,
   PRODUCT,
+  STANDARD_DELIVERY,
   VIAL_ML,
   bundleById,
+  deliveryChoiceEnabled,
+  deliveryOptionById,
+  deliveryOptionsFor,
   formatMinor,
   formatMinorShort,
+  nextDayOffered,
   perVialMinor,
   savingPercent,
   shipsFree,
 } from "@/config/funnel";
 import { brand } from "@/config/brand";
+import { formatCutoffHour } from "@/lib/delivery-date";
 import { JsonLd } from "@/components/JsonLd";
 import { pageBreadcrumbSchema } from "@/lib/guide-seo";
 import { pageMetadata } from "@/lib/seo";
@@ -52,6 +58,13 @@ const MAX_ORDER_VIALS = Math.max(...BUNDLES.map((b) => b.vials)) * MAX_QUANTITY;
 
 /** The smallest tier that clears the free-delivery threshold, if there is one. */
 const FIRST_FREE_DELIVERY = BUNDLES.find((b) => shipsFree(b.priceMinor));
+
+/** Next day, while customers can buy it, and its price once an order ships free. */
+const NEXT_DAY = nextDayOffered() ? deliveryOptionById("next_day") : undefined;
+const NEXT_DAY_OVER_MINOR =
+  NEXT_DAY && DELIVERY.freeFromMinor !== null
+    ? deliveryOptionsFor(DELIVERY.freeFromMinor).find((o) => o.option.id === NEXT_DAY.id)?.priceMinor
+    : undefined;
 
 export const metadata: Metadata = pageMetadata({
   title: "Bulk bacteriostatic water UK",
@@ -167,7 +180,10 @@ export default function BulkPage() {
           <div className="grid gap-1 py-5 sm:grid-cols-[12rem_1fr] sm:gap-4">
             <dt className="text-sm font-medium text-ink-soft">Delivery</dt>
             <dd className="text-base text-ink">
-              Free to any UK address on orders of{" "}
+              {deliveryChoiceEnabled()
+                ? `Standard delivery by ${STANDARD_DELIVERY.carrier} (${STANDARD_DELIVERY.transit}) is free`
+                : "Free"}{" "}
+              to any UK address on orders of{" "}
               {formatMinorShort(DELIVERY.freeFromMinor)} or more, which every pack from{" "}
               <span className="tabular">{FIRST_FREE_DELIVERY.vials}</span> vials up already clears.
               {DELIVERY.priceMinor !== null ? (
@@ -177,6 +193,22 @@ export default function BulkPage() {
                   you pay.
                 </>
               ) : null}
+            </dd>
+          </div>
+        ) : null}
+        {NEXT_DAY ? (
+          <div className="grid gap-1 py-5 sm:grid-cols-[12rem_1fr] sm:gap-4">
+            <dt className="text-sm font-medium text-ink-soft">Next day</dt>
+            <dd className="text-base text-ink">
+              By {NEXT_DAY.carrier}: order by {formatCutoffHour()} on a working day and it arrives the
+              next working day. {formatMinorShort(NEXT_DAY.priceMinor)}
+              {NEXT_DAY_OVER_MINOR !== undefined && DELIVERY.freeFromMinor !== null ? (
+                <>
+                  , or {formatMinorShort(NEXT_DAY_OVER_MINOR)} on orders of{" "}
+                  {formatMinorShort(DELIVERY.freeFromMinor)} or more
+                </>
+              ) : null}
+              .
             </dd>
           </div>
         ) : null}

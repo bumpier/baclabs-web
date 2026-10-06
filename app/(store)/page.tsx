@@ -18,6 +18,7 @@ import {
   drawsPerVial,
   formatMinor,
   freeDeliveryBadge,
+  nextDayBadge,
 } from "@/config/funnel";
 import { FAQ_PUBLISHABLE } from "@/config/faq";
 import { FACTS } from "@/content/facts";
@@ -581,8 +582,8 @@ export default function FunnelPage() {
                 </li>
               ) : null}
               {freeDeliveryBadge() ? <li>{freeDeliveryBadge()}</li> : null}
+              {nextDayBadge() ? <li>{nextDayBadge()}</li> : null}
               <li>Secure checkout by Stripe</li>
-              {DELIVERY.dispatchLine ? <li>{DELIVERY.dispatchLine}</li> : null}
               <li>
                 <Link href="/returns" className="link">
                   Returns &amp; refunds
