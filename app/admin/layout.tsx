@@ -11,7 +11,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 type Gated<T> = T & { adminOnly?: boolean };
 
-// Packers only ever see Orders; everything else is Admin-only.
+// Packers only ever see Orders, less its money pages; everything else is Admin-only.
 const ALL_NAV: Gated<NavLink | { label: string; items: Gated<NavLink>[] }>[] = [
   { href: "/admin", label: "Overview", adminOnly: true },
   {
@@ -19,6 +19,7 @@ const ALL_NAV: Gated<NavLink | { label: string; items: Gated<NavLink>[] }>[] = [
     items: [
       { href: "/admin/orders", label: "All orders", hint: "Pick, pack and dispatch" },
       { href: "/admin/orders/scan", label: "Scan station", hint: "Check a parcel against its order" },
+      { href: "/admin/takings", label: "Daily takings", hint: "Money taken, day by day", adminOnly: true },
     ],
   },
   {
@@ -68,7 +69,10 @@ export default async function AdminLayout({
   const session = await getAdminSession();
   const isAdminRole = session?.role === "ADMIN";
 
-  const nav: NavEntry[] = ALL_NAV.filter((e) => !e.adminOnly || isAdminRole);
+  const visible = (e: { adminOnly?: boolean }) => !e.adminOnly || isAdminRole;
+  const nav: NavEntry[] = ALL_NAV.filter(visible).map((e) =>
+    "items" in e ? { ...e, items: e.items.filter(visible) } : e
+  );
 
   return (
     <div className="relative z-10 flex min-h-screen flex-col">

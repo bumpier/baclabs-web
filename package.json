@@ -23,6 +23,7 @@
     "test:shipping": "tsx scripts/test-shipping.ts",
     "test:barcode": "tsx scripts/test-barcode.ts",
     "test:mailing": "tsx scripts/test-mailing-list.ts",
+    "test:takings": "tsx scripts/test-takings.ts",
     "preview:smarttrack": "tsx scripts/preview-smarttrack.ts",
     "preview:reminders": "tsx scripts/preview-welcome-reminders.ts",
     "check:smarttrack": "tsx scripts/check-smarttrack.ts"

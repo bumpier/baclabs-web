@@ -9,6 +9,8 @@ import { PrintUnfulfilledMenu } from "@/components/admin/PrintUnfulfilledMenu";
 import { LabelWarning } from "@/components/admin/LabelWarning";
 import { SalesActivityChart } from "@/components/admin/SalesActivity";
 import { buildSalesActivity } from "@/lib/salesActivity";
+import { dailyTakings } from "@/lib/dailyTakings";
+import { shopDayKey } from "@/lib/saleTime";
 import type {
   DailyRevenue,
   StatusCount,
@@ -35,6 +37,7 @@ export default async function AdminOverviewPage() {
     allPaidOrders,
     paymentGroups,
     saleTimes,
+    takingsToday,
   ] = await Promise.all([
     // Paid or packed: labels are bought on payment, which moves an order to
     // packed, so both are still waiting to go out.
@@ -61,6 +64,7 @@ export default async function AdminOverviewPage() {
       },
       select: { paidAt: true },
     }),
+    dailyTakings(shopDayKey(new Date())),
   ]);
 
   const allOrdersAgg = await prisma.order.aggregate({
@@ -72,6 +76,7 @@ export default async function AdminOverviewPage() {
   const cards = [
     { label: "Awaiting fulfilment", value: String(unshippedOrders), href: "/admin/orders?status=packed", highlight: unshippedOrders > 0 },
     { label: "Shipped", value: String(shippedOrders), href: "/admin/orders?status=shipped" },
+    { label: "Taken today", value: formatPrice(takingsToday.summary.takenMinor / 100, "GBP"), href: "/admin/takings" },
     { label: "Revenue (GBP)", value: formatPrice(revenueDecimal.toString(), "GBP"), href: "/admin/orders" },
     { label: "Active products", value: String(productCount), href: "/admin/products" },
   ];
