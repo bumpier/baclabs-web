@@ -53,7 +53,7 @@ vial counter (`Product.stock`).
 
 1. **Shipping** — add services by hand, or connect SmartTrack (below) and
    press *Sync services*. Link each service to the checkout delivery option
-   it fulfils (Standard is Yodel, Next day is Amazon Shipping), then set
+   it fulfils (Standard is Royal Mail Tracked 48, Next day is Amazon Shipping), then set
    priorities. An order is only offered the services linked to the option
    the customer paid for, and while none is linked its label is not bought
    automatically: the order gets the red label warning instead of going by

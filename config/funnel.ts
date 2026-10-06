@@ -365,9 +365,9 @@ export interface DeliveryOption {
   id: DeliveryOptionId;
   label: string;
   carrier: string;
-  /** How long it takes, as a phrase: "3–5 working days". */
+  /** How long it takes, as a phrase: "2–3 working days". */
   transit: string;
-  /** Carrier and transit together: "Yodel, 3–5 working days". */
+  /** Carrier and transit together: "Royal Mail Tracked 48, 2–3 working days". */
   detail: string;
   priceMinor: number;
   overThreshold: "free" | "less-standard" | "hide";
@@ -375,16 +375,20 @@ export interface DeliveryOption {
 
 const option = (o: Omit<DeliveryOption, "detail">): DeliveryOption => ({ ...o, detail: `${o.carrier}, ${o.transit}` });
 
-/** Yodel's working days in transit, [min, max]: the Standard line and the structured data both read it. */
-const STANDARD_TRANSIT_DAYS: [number, number] = [3, 5];
+/**
+ * Standard's working days in transit, [min, max]: the Standard line and the
+ * structured data both read it. 2–3 is Royal Mail's own target for Tracked
+ * 48, so the site promises no more than the carrier does.
+ */
+const STANDARD_TRANSIT_DAYS: [number, number] = [2, 3];
 
 export const DELIVERY_OPTIONS: readonly DeliveryOption[] = [
   option({
     id: "standard",
     label: "Standard",
-    carrier: "Yodel",
+    carrier: "Royal Mail Tracked 48",
     transit: `${STANDARD_TRANSIT_DAYS[0]}–${STANDARD_TRANSIT_DAYS[1]} working days`,
-    priceMinor: 365,
+    priceMinor: 390,
     overThreshold: "free",
   }),
   option({
@@ -578,7 +582,7 @@ export function deliveryOptionsSentence(): string {
 
 /**
  * How long each option takes, for "How long does delivery take?": "You
- * choose at checkout: standard by Yodel (3–5 working days) or next day by
+ * choose at checkout: standard by Royal Mail Tracked 48 (2–3 working days) or next day by
  * Amazon Shipping (…)". "" while the choice is switched off, since the
  * carrier is then not the customer's to pick.
  */
