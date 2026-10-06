@@ -21,7 +21,9 @@ import type { ParcelItemRequest, ShipmentRequest } from "@/lib/smarttrack/client
  */
 
 export const LIMITS = {
-  reference: 40,
+  // SmartTrack documents 40. Royal Mail Tracked 48 refused labels on 6 Oct
+  // 2026 for a value over 35 when the only thing sent that long was this.
+  reference: 35,
   description: 30,
   senderContact: 40,
   senderCompany: 25,
@@ -94,6 +96,15 @@ export function wrapNarrowest(lines: readonly string[], widths: readonly number[
     if (fit) return fit;
   }
   return null;
+}
+
+/**
+ * SmartTrack's order_reference for one label attempt: the order id without
+ * its dashes, then the attempt number. As unique as `${id}-${n}`, but 34
+ * characters rather than 38, inside LIMITS.reference.
+ */
+export function labelReference(orderId: string, attempt: number): string {
+  return `${orderId.replace(/-/g, "")}-${attempt}`;
 }
 
 /** Shorten at a word break. For descriptions only — never for an address. */

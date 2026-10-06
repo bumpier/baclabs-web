@@ -20,7 +20,7 @@ import {
   nextDayOffered,
 } from "@/config/funnel";
 import { formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
-import { buildShipmentRequest, cleanDeliveryInstructions, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
+import { buildShipmentRequest, cleanDeliveryInstructions, labelReference, LIMITS, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
 
 let failures = 0;
 
@@ -309,7 +309,7 @@ check("truncateWords cuts at a space", truncateWords("Bacteriostatic Water 10ml 
 
 // ── SmartTrack request ───────────────────────────────────────────
 const input: LabelInput = {
-  reference: "3f9a1c2d-0000-4000-8000-000000000000-1",
+  reference: labelReference("3f9a1c2d-0000-4000-8000-000000000000", 1),
   orderRef: "3F9A1C2D",
   serviceCode: "STYDL3HPA",
   labelSize: "100x150",
@@ -415,6 +415,17 @@ const input: LabelInput = {
 {
   const { request, problems } = buildShipmentRequest({ ...input, sender: { ...input.sender, company: "B".repeat(26) } });
   check("an over-long company blocks the label rather than being left off", request === null && problems.some((p) => p.includes("Warehouse company")), problems.join("; "));
+}
+{
+  // Royal Mail (through SmartTrack) refuses something over 35 characters
+  // even with every sender field short; the dashed reference was 38.
+  const id = "612e6d61-8a79-4fd6-98d3-4557f86c9011";
+  const refs = [1, 9, 10, 99].map((n) => labelReference(id, n));
+  check("a label reference fits 35 characters", refs.every((r) => r.length <= 35), refs.join(", "));
+  check("…and is still unique per attempt", new Set(refs).size === refs.length && refs[0] === "612e6d618a794fd698d34557f86c9011-1", refs[0]);
+  check("…within the limit the request enforces", LIMITS.reference === 35);
+  const { problems } = buildShipmentRequest({ ...input, reference: `${id}-1` });
+  check("a reference over 35 blocks the label", problems.some((p) => p.includes("Reference")), problems.join("; "));
 }
 {
   const { request } = buildShipmentRequest(input);

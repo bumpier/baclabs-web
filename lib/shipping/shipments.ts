@@ -11,7 +11,7 @@ import {
   SmartTrackNotConfiguredError,
   voidLabels,
 } from "@/lib/smarttrack/client";
-import { buildShipmentRequest } from "@/lib/smarttrack/payload";
+import { buildShipmentRequest, labelReference } from "@/lib/smarttrack/payload";
 
 /**
  * Buying, fetching and voiding carrier labels for an order.
@@ -176,7 +176,7 @@ export async function createShipmentLabel(input: {
     (await prisma.warehouse.findFirst({ where: { active: true }, orderBy: { createdAt: "asc" } }));
   if (!warehouse) throw new ShippingError("Add a warehouse, with its address, on the Inventory page first");
 
-  const reference = `${order.id}-${order.shipments.length + 1}`;
+  const reference = labelReference(order.id, order.shipments.length + 1);
   const built = buildShipmentRequest({
     reference,
     orderRef: order.id.slice(0, 8).toUpperCase(),
