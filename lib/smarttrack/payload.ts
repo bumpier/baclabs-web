@@ -209,6 +209,9 @@ export function buildShipmentRequest(input: LabelInput): BuiltRequest {
   if (!s.addressLine1.trim()) problems.push("Warehouse address line 1 is missing");
   else if (!senderLines) problems.push(`Warehouse address does not fit SmartTrack's three ${LIMITS.senderLine}-character lines`);
   const senderContact = bounded(s.contactName, LIMITS.senderContact, "Warehouse contact name");
+  // Optional in SmartTrack's docs, but sent without one SmartTrack fills in
+  // its own, and on 6 Oct 2026 Royal Mail refused that as over 35 characters.
+  const senderCompany = bounded(s.company, LIMITS.senderCompany, "Warehouse company");
   const senderCity = bounded(s.city, LIMITS.senderCity, "Warehouse town or city");
   const senderPostcode = bounded(s.postcode, LIMITS.postcode, "Warehouse postcode");
   const senderCountry = iso(s.countryIso, "Warehouse country");
@@ -258,7 +261,7 @@ export function buildShipmentRequest(input: LabelInput): BuiltRequest {
     shipment_type: "D",
     sender_country_iso: senderCountry,
     sender_contact: senderContact,
-    sender_company: optional(s.company, LIMITS.senderCompany, "Warehouse company"),
+    sender_company: senderCompany,
     sender_email: optional(s.email, LIMITS.senderEmail, "Warehouse email"),
     sender_telephone: optional(s.phone, LIMITS.telephone, "Warehouse phone"),
     sender_address_line_1: senderLines![0]!,

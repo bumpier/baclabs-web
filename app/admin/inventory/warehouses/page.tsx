@@ -27,7 +27,7 @@ function WarehouseFields({ w }: { w?: Warehouse }) {
       {!w && field("code", "Code", 12, { required: true, placeholder: "MAIN", className: "field font-mono uppercase" })}
       {field("name", "Name", 80, { required: true })}
       {field("contactName", "Contact name (on labels)", 40)}
-      {field("company", "Company", 25)}
+      {field("company", "Company (on labels)", 25, { required: true })}
       {field("addressLine1", "Address line 1", 60)}
       {field("addressLine2", "Address line 2", 60)}
       {field("city", "Town or city", 25)}

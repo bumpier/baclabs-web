@@ -407,6 +407,20 @@ const input: LabelInput = {
   check("a warehouse without an address blocks the label", problems.some((p) => p.includes("Warehouse address")), problems.join("; "));
 }
 {
+  // 6 Oct 2026: sent without a company, SmartTrack filled in its own and
+  // Royal Mail refused it as over 35 characters.
+  const { request, problems } = buildShipmentRequest({ ...input, sender: { ...input.sender, company: "" } });
+  check("a warehouse without a company blocks the label", request === null && problems.some((p) => p.includes("Warehouse company")), problems.join("; "));
+}
+{
+  const { request, problems } = buildShipmentRequest({ ...input, sender: { ...input.sender, company: "B".repeat(26) } });
+  check("an over-long company blocks the label rather than being left off", request === null && problems.some((p) => p.includes("Warehouse company")), problems.join("; "));
+}
+{
+  const { request } = buildShipmentRequest(input);
+  check("the company is always sent", request?.sender_company === "BacLab", String(request?.sender_company));
+}
+{
   const { request, warnings } = buildShipmentRequest({
     ...input,
     receiver: { ...input.receiver, email: `${"a".repeat(50)}@example.com` },
