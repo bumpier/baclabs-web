@@ -49,11 +49,13 @@ export default async function AdminBatchPrintPage({
   const kind: Kind = type === "labels" ? "labels" : "slips";
   const other: Kind = kind === "labels" ? "slips" : "labels";
 
-  // "Unfulfilled" is what the dashboard calls awaiting fulfilment: paid, not
-  // yet packed. Oldest first, and the same sort for both kinds, so the slips
-  // and labels come off their printers in matching stacks.
+  // "Unfulfilled" is what the dashboard calls awaiting fulfilment: paid or
+  // packed, not yet shipped. Packed counts because the carrier label is
+  // bought on payment, which marks the order packed before anything is in a
+  // box. Oldest first, and the same sort for both kinds, so the slips and
+  // labels come off their printers in matching stacks.
   const orders = await prisma.order.findMany({
-    where: { status: "paid" },
+    where: { status: { in: ["paid", "packed"] } },
     orderBy: { createdAt: "asc" },
   });
   const printable = orders.flatMap((order) => {
@@ -96,8 +98,8 @@ export default async function AdminBatchPrintPage({
         {skipped > 0 && (
           <p className="mt-2 text-sm text-ink-soft">
             {skipped === 1
-              ? "1 paid order has no shipping address yet and was left out."
-              : `${skipped} paid orders have no shipping address yet and were left out.`}
+              ? "1 unshipped order has no shipping address yet and was left out."
+              : `${skipped} unshipped orders have no shipping address yet and were left out.`}
           </p>
         )}
       </div>

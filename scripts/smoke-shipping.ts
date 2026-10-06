@@ -13,8 +13,11 @@ process.env.SMARTTRACK_API_SECRET = "smoke-secret";
 process.env.SMARTTRACK_ENV = "uat";
 
 import { prisma } from "../lib/db";
+import { SETTING_KEYS, writeSetting } from "../lib/settings";
 import {
+  autoBuyLabel,
   createShipmentLabel,
+  labelProblems,
   reconcileShipment,
   shipmentLabelPdf,
   ShippingError,
@@ -54,7 +57,7 @@ const json = (body: unknown, status = 200) =>
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = String(input);
-  const path = url.replace(/^https:\/\/qa\.smarttrack\.co\/api\/v2\//, "");
+  const path = url.replace(/^https:\/\/(qa|www)\.smarttrack\.co\/api\/v2\//, "");
   const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
   calls.push({ path, body });
 
@@ -112,18 +115,17 @@ async function main() {
     await prisma.warehouse.create({ data: { code: "MAIN", name: "Main", contactName: "Dispatch", addressLine1: "Unit 1", city: "Leeds", postcode: "LS1 1AA" } });
   }
 
-  const order = await prisma.order.create({
-    data: {
-      status: "paid",
-      customerName: "Label Smoke",
-      customerEmail: "smoke@example.com",
-      shippingAddress: JSON.stringify({ line1: "22 Acacia Avenue", line2: null, city: "Leeds", country: "GB", postalCode: "LS2 2BB" }),
-      items: JSON.stringify([{ productId: "x", slug: "baclab-10ml", name: "Vial", qty: 5, unitPrice: "21.99", lineTotal: "21.99", bundleId: "five", bundleQty: 1 }]),
-      currency: "GBP",
-      totalAmount: 21.99,
-      paymentMethod: "card",
-    },
-  });
+  const orderData = {
+    status: "paid",
+    customerName: "Label Smoke",
+    customerEmail: "smoke@example.com",
+    shippingAddress: JSON.stringify({ line1: "22 Acacia Avenue", line2: null, city: "Leeds", country: "GB", postalCode: "LS2 2BB" }),
+    items: JSON.stringify([{ productId: "x", slug: "baclab-10ml", name: "Vial", qty: 5, unitPrice: "21.99", lineTotal: "21.99", bundleId: "five", bundleQty: 1 }]),
+    currency: "GBP",
+    totalAmount: 21.99,
+    paymentMethod: "card",
+  };
+  const order = await prisma.order.create({ data: orderData });
   const shipments = () => prisma.shipment.findMany({ where: { orderId: order.id }, orderBy: { createdAt: "asc" } });
   const orderStatus = async () => (await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status;
 
@@ -211,6 +213,49 @@ async function main() {
   mode = "authdown";
   await rejects(() => reconcileShipment(third.id), "sign-in failed", "reconcile reports a sign-in failure");
   assert((await prisma.shipment.findUniqueOrThrow({ where: { id: third.id } })).status === "PENDING", "…and leaves the label PENDING");
+
+  // ── 9. Bought automatically when the order is paid ─────────────
+  mode = "ok";
+  process.env.SMARTTRACK_API_KEY = "smoke-key";
+  await prisma.setting.deleteMany({ where: { key: SETTING_KEYS.autoLabels } });
+  const auto = await prisma.order.create({ data: orderData });
+  const autoOrder = () => prisma.order.findUniqueOrThrow({ where: { id: auto.id } });
+  const flagged = async (id: string) => (await labelProblems()).some((o) => o.id === id);
+
+  let callsBefore = generateCalls();
+  await autoBuyLabel(auto.id); // still UAT
+  assert((await autoOrder()).labelError?.includes("UAT") === true && generateCalls() === callsBefore, "in UAT nothing is bought automatically, and the order says why");
+  assert(await flagged(auto.id), "…which puts it in the missing-label warning");
+
+  process.env.SMARTTRACK_ENV = "live";
+  mode = "refuse";
+  await autoBuyLabel(auto.id);
+  const refused = await autoOrder();
+  assert(refused.status === "paid" && refused.labelError?.includes("receiver postcode") === true, "a refused label leaves the order paid, with SmartTrack's reason");
+  assert(await flagged(auto.id), "…and still in the warning");
+
+  mode = "ok";
+  await autoBuyLabel(auto.id);
+  const autoBought = await autoOrder();
+  assert(autoBought.status === "packed" && autoBought.labelError === null, "a label bought automatically moves the order to packed and clears the reason");
+  assert(!(await flagged(auto.id)), "…and takes it out of the warning");
+  const autoShipment = await prisma.shipment.findFirst({ where: { orderId: auto.id, status: "CREATED" } });
+  assert(autoShipment?.actor === "system" && autoShipment.environment === "live", "the label is recorded as bought by the system, in LIVE");
+
+  const off = await prisma.order.create({ data: orderData });
+  const offOrder = () => prisma.order.findUniqueOrThrow({ where: { id: off.id } });
+  await writeSetting(SETTING_KEYS.autoLabels, "off");
+  callsBefore = generateCalls();
+  await autoBuyLabel(off.id);
+  assert((await offOrder()).labelError === null && generateCalls() === callsBefore, "switched off, nothing is bought and nothing is flagged");
+  await writeSetting(SETTING_KEYS.autoLabels, "on");
+
+  delete process.env.SMARTTRACK_API_KEY;
+  await autoBuyLabel(off.id);
+  assert((await offOrder()).labelError?.includes("not connected") === true, "with SmartTrack not connected, the order says so");
+
+  await prisma.order.update({ where: { id: off.id }, data: { status: "shipped" } });
+  assert(!(await flagged(off.id)), "an order shipped by hand leaves the warning");
 
   console.log("\nAll shipping smoke checks passed.");
 }

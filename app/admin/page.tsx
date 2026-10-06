@@ -6,6 +6,7 @@ import { formatPrice } from "@/config/brand";
 import { Prisma } from "@prisma/client";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import { PrintUnfulfilledMenu } from "@/components/admin/PrintUnfulfilledMenu";
+import { LabelWarning } from "@/components/admin/LabelWarning";
 import { SalesActivityChart } from "@/components/admin/SalesActivity";
 import { buildSalesActivity } from "@/lib/salesActivity";
 import type {
@@ -24,9 +25,9 @@ export default async function AdminOverviewPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
+  // Pending orders (checkouts never paid) are left out of everything here.
   const [
-    pendingOrders,
-    paidOrders,
+    unshippedOrders,
     shippedOrders,
     productCount,
     revenueOrders,
@@ -35,8 +36,9 @@ export default async function AdminOverviewPage() {
     paymentGroups,
     saleTimes,
   ] = await Promise.all([
-    prisma.order.count({ where: { status: "pending" } }),
-    prisma.order.count({ where: { status: "paid" } }),
+    // Paid or packed: labels are bought on payment, which moves an order to
+    // packed, so both are still waiting to go out.
+    prisma.order.count({ where: { status: { in: ["paid", "packed"] } } }),
     prisma.order.count({ where: { status: "shipped" } }),
     prisma.product.count({ where: { active: true } }),
     prisma.order.findMany({
@@ -46,12 +48,12 @@ export default async function AdminOverviewPage() {
       },
       select: { createdAt: true, totalAmount: true },
     }),
-    prisma.order.groupBy({ by: ["status"], _count: { id: true } }),
+    prisma.order.groupBy({ by: ["status"], where: { status: { not: "pending" } }, _count: { id: true } }),
     prisma.order.findMany({
       where: { status: { in: ["paid", "packed", "shipped", "delivered"] } },
       select: { items: true },
     }),
-    prisma.order.groupBy({ by: ["paymentMethod"], _count: { id: true } }),
+    prisma.order.groupBy({ by: ["paymentMethod"], where: { status: { not: "pending" } }, _count: { id: true } }),
     prisma.order.findMany({
       where: {
         status: { in: ["paid", "packed", "shipped", "delivered"] },
@@ -68,9 +70,8 @@ export default async function AdminOverviewPage() {
   const revenueDecimal = allOrdersAgg._sum?.totalAmount ?? new Prisma.Decimal(0);
 
   const cards = [
-    { label: "Awaiting fulfilment", value: String(paidOrders), href: "/admin/orders?status=paid", highlight: paidOrders > 0 },
+    { label: "Awaiting fulfilment", value: String(unshippedOrders), href: "/admin/orders?status=packed", highlight: unshippedOrders > 0 },
     { label: "Shipped", value: String(shippedOrders), href: "/admin/orders?status=shipped" },
-    { label: "Pending payment", value: String(pendingOrders), href: "/admin/orders?status=pending" },
     { label: "Revenue (GBP)", value: formatPrice(revenueDecimal.toString(), "GBP"), href: "/admin/orders" },
     { label: "Active products", value: String(productCount), href: "/admin/products" },
   ];
@@ -136,6 +137,8 @@ export default async function AdminOverviewPage() {
         Dashboard
       </h1>
 
+      <LabelWarning />
+
       <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((c) => (
           <Link
@@ -154,7 +157,7 @@ export default async function AdminOverviewPage() {
       </div>
 
       <div className="mt-10 flex flex-wrap gap-3">
-        <PrintUnfulfilledMenu count={paidOrders} />
+        <PrintUnfulfilledMenu count={unshippedOrders} />
         <Link href="/admin/products/new" className="btn-primary">
           Add product
         </Link>

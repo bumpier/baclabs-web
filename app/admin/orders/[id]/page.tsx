@@ -18,6 +18,11 @@ const NEXT_ACTIONS: Record<string, { status: string; label: string }[]> = {
     { status: "shipped", label: "Mark as shipped" },
     { status: "cancelled", label: "Cancel order" },
   ],
+  // Where an order lands once its label is bought — on payment, usually.
+  packed: [
+    { status: "shipped", label: "Mark as shipped" },
+    { status: "cancelled", label: "Cancel order" },
+  ],
   shipped: [{ status: "delivered", label: "Mark as delivered" }],
   delivered: [],
   cancelled: [],
@@ -77,6 +82,13 @@ export default async function AdminOrderDetailPage({
             <>Not paid · checkout started {formatSaleDateTime(order.createdAt)} UK time</>
           )}
         </p>
+
+        {order.status === "paid" && order.labelError && (
+          <p role="alert" className="card mt-6 border-red-200 bg-red-50 p-5 text-sm text-red-700">
+            <span className="font-semibold">The label could not be bought automatically:</span>{" "}
+            {order.labelError}
+          </p>
+        )}
 
         <dl className="card mt-6 grid gap-4 p-6 text-sm sm:grid-cols-4">
           <div>

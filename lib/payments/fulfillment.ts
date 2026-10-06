@@ -5,6 +5,7 @@ import { sendMetaPurchase } from "@/lib/meta-capi";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { allocateOrder } from "@/lib/inventory/store";
 import { settleWelcomeVial } from "@/lib/mailing-list";
+import { autoBuyLabel } from "@/lib/shipping/shipments";
 
 // Single post-payment code path shared by every provider's webhook.
 // Idempotent: only the pending → paid transition does work; retries are no-ops.
@@ -97,8 +98,8 @@ export async function fulfillPaidOrder(
     }
   }
 
-  // Order fulfilment hooks go here — shipping label, accounting export,
-  // 3PL handoff. Every payment provider funnels through this one function, so
+  // Order fulfilment hooks go here — accounting export, 3PL handoff; the
+  // shipping label is the last one. Every payment provider funnels through this one function, so
   // anything added here runs for cards and crypto alike. Wrap each in its own
   // try/catch: the order is already claimed as paid, so a throw would fail the
   // webhook, and the provider's retry would then find a non-pending order and
@@ -113,5 +114,12 @@ export async function fulfillPaidOrder(
     // throws; still counted if the customer never reaches the confirmation page.
     void sendMetaPurchase(paidOrder);
   }
+
+  // The carrier label, bought now so the order reaches SmartTrack without
+  // anyone pressing a button. After allocation, because the label's sender is
+  // the warehouse the stock was picked from. Not awaited: SmartTrack can take
+  // seconds and the payment provider is waiting on this webhook. Never
+  // throws; a label it cannot buy shows in the admin warning.
+  void autoBuyLabel(orderId);
   return { alreadyPaid: false };
 }

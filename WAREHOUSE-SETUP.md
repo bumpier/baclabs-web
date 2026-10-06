@@ -40,8 +40,12 @@ vial counter (`Product.stock`).
   Volumetric weight is applied per service where a divisor is set.
 - **Labels.** "Buy label" on the order calls SmartTrack `generate-label`,
   stores the PDF and tracking number, and can void it. Buying a label moves
-  a paid order to **packed**; voiding it does not move the order back. A
-  **pick label** at
+  a paid order to **packed**; voiding it does not move the order back.
+  With SmartTrack on LIVE the label is bought **automatically** the moment an
+  order is paid (switch on the Shipping page, on by default). If it cannot
+  be, the order stays **paid** with the reason, and a red warning on the
+  dashboard and the orders page links straight to it; fix the cause and
+  press Buy label there. A **pick label** at
   the same 100 × 150 mm size lists location, SKU and quantity in walking
   order, to print alongside the carrier label.
 

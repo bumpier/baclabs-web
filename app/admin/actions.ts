@@ -125,24 +125,6 @@ export async function setOrderStatusAction(formData: FormData): Promise<void> {
   revalidatePath(`/admin/orders/${id}`);
 }
 
-/** Delete pending orders that can no longer be paid — see lib/payments/abandoned.ts. */
-export async function clearAbandonedCheckoutsAction(
-  _prev: FormState,
-  _formData: FormData
-): Promise<FormState> {
-  await requireAdminRole("ADMIN");
-  const { clearAbandonedCheckouts, describeClearResult } = await import("@/lib/payments/abandoned");
-  try {
-    const result = await clearAbandonedCheckouts();
-    revalidatePath("/admin/orders");
-    revalidatePath("/admin");
-    return { success: describeClearResult(result) };
-  } catch (err) {
-    console.error("[internal] clearing abandoned checkouts failed", err);
-    return { error: "Could not clear abandoned checkouts. Nothing was deleted." };
-  }
-}
-
 // ── Products ─────────────────────────────────────────────────────
 
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {

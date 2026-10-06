@@ -71,6 +71,12 @@ model Order {
   // Null = the shop's default instructions (Shipping page).
   deliveryInstructions String?
 
+  // Why the label bought automatically on payment could not be bought
+  // (lib/shipping/shipments.ts autoBuyLabel). Cleared when a label is
+  // bought. A paid order with this set is listed in the warning on the
+  // dashboard and the orders page.
+  labelError String?
+
   // Meta attribution, captured at checkout because the payment webhook comes
   // from the provider's servers, not the customer's browser. Filled ONLY when
   // the visitor had accepted tracking on the cookie banner.

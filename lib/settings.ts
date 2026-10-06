@@ -23,6 +23,8 @@ export const SETTING_KEYS = {
   inventoryMode: "inventory_mode",
   // Sent on every carrier label — see lib/shipping/shipments.ts
   deliveryInstructions: "delivery_instructions",
+  // "on" | "off": buy the label when an order is paid — lib/shipping/shipments.ts
+  autoLabels: "auto_labels",
 } as const;
 
 /**

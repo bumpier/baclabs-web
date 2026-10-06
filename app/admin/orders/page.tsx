@@ -2,17 +2,19 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdmin, getAdminSession } from "@/lib/adminAuth";
 import { formatPrice, type Currency } from "@/config/brand";
-import { clearAbandonedCheckoutsAction, setOrderStatusAction } from "@/app/admin/actions";
-import { ActionForm } from "@/components/admin/ActionForm";
+import { setOrderStatusAction } from "@/app/admin/actions";
+import { LabelWarning } from "@/components/admin/LabelWarning";
 import { formatSaleClock, formatSaleDate, saleTime } from "@/lib/saleTime";
 import { getInventoryMode } from "@/lib/inventory/mode";
 
 export const dynamic = "force-dynamic";
 
-const STATUSES = ["all", "pending", "paid", "packed", "shipped", "delivered", "cancelled"] as const;
+// Pending orders are checkouts that were never paid, so they are not listed
+// here. The nightly job deletes them once they can no longer be paid
+// (lib/payments/abandoned.ts).
+const STATUSES = ["all", "paid", "packed", "shipped", "delivered", "cancelled"] as const;
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700",
   paid: "bg-brand-tint text-brand-deep",
   packed: "bg-blue-50 text-blue-700",
   shipped: "bg-indigo-50 text-indigo-700",
@@ -40,7 +42,7 @@ export default async function AdminOrdersPage({
 
   const [orders, inventoryMode] = await Promise.all([
     prisma.order.findMany({
-      where: filter && filter !== "all" ? { status: filter } : undefined,
+      where: { status: filter && filter !== "all" ? filter : { not: "pending" } },
       orderBy: { createdAt: "desc" },
       take: 200,
     }),
@@ -62,6 +64,8 @@ export default async function AdminOrdersPage({
         )}
       </div>
 
+      <LabelWarning />
+
       <div className="mt-8 flex flex-wrap gap-2">
         {STATUSES.map((s) => (
           <Link
@@ -77,22 +81,6 @@ export default async function AdminOrdersPage({
           </Link>
         ))}
       </div>
-
-      {filter === "pending" && !isPacker && (
-        <div className="card mt-6 flex flex-wrap items-center justify-between gap-4 p-5 text-sm">
-          <p className="max-w-xl text-ink-soft">
-            Pending orders are checkouts that were never paid. They are cleared every night once they
-            can no longer be paid — a card payment page stays open for 24 hours after checkout.
-          </p>
-          <ActionForm
-            action={clearAbandonedCheckoutsAction}
-            submitLabel="Clear abandoned checkouts"
-            submitClassName="btn-secondary"
-            className="flex flex-col items-end gap-2"
-            confirm="Delete every pending order that can no longer be paid? This cannot be undone."
-          />
-        </div>
-      )}
 
       {orders.length === 0 ? (
         <p className="card mt-8 p-8 text-center text-sm text-ink-soft">No orders found.</p>
@@ -136,6 +124,11 @@ export default async function AdminOrdersPage({
                       >
                         {o.status}
                       </span>
+                      {o.status === "paid" && o.labelError && (
+                        <span className="mt-1 block text-xs font-semibold text-red-600" title={o.labelError}>
+                          No label
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-3">

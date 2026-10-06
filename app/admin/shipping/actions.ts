@@ -220,6 +220,20 @@ export async function saveDeliveryInstructionsAction(_prev: FormState, formData:
   return { success: "Saved. Labels for orders without their own instructions carry it." };
 }
 
+// ── Automatic labels ─────────────────────────────────────────────
+
+export async function saveAutoLabelsAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdminRole("ADMIN");
+  const on = formData.get("autoLabels") === "on";
+  await writeSetting(SETTING_KEYS.autoLabels, on ? "on" : "off");
+  revalidatePath("/admin/shipping");
+  return {
+    success: on
+      ? "Saved. Labels are bought as soon as an order is paid."
+      : "Saved. Labels are only bought from the order page.",
+  };
+}
+
 // ── Labels (packers too) ─────────────────────────────────────────
 
 const orderIdField = z.string().uuid();

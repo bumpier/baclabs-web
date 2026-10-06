@@ -29,6 +29,12 @@ import { buildShipmentRequest } from "@/lib/smarttrack/payload";
  *
  * A label that is bought — straight away, or found by reconcileShipment —
  * moves a paid order to packed. Voiding it does not move the order back.
+ *
+ * Labels are bought automatically when an order is paid (autoBuyLabel,
+ * called from fulfillPaidOrder), unless switched off on the Shipping page.
+ * One that cannot be bought leaves the order paid with Order.labelError
+ * saying why, and labelProblems() lists those orders in the warning on the
+ * dashboard and the orders page (components/admin/LabelWarning.tsx).
  */
 
 /** Something the operator can fix, worded for them. */
@@ -50,6 +56,11 @@ export const DEFAULT_DELIVERY_INSTRUCTIONS = "Leave at doorstep";
 
 export async function getDeliveryInstructions(): Promise<string> {
   return (await readSetting(SETTING_KEYS.deliveryInstructions))?.trim() || DEFAULT_DELIVERY_INSTRUCTIONS;
+}
+
+/** On unless someone switched it off on the Shipping page. */
+export async function getAutoLabels(): Promise<boolean> {
+  return (await readSetting(SETTING_KEYS.autoLabels)) !== "off";
 }
 
 /**
@@ -93,13 +104,15 @@ async function labelBase64(data: {
 }
 
 /**
- * A bought label moves the order on from paid to packed. Conditional on it
- * still being paid, so a shipped or cancelled order is never pulled back.
+ * A bought label moves the order on from paid to packed, and takes it out of
+ * the missing-label warning. The move is conditional on the order still
+ * being paid, so a shipped or cancelled order is never pulled back.
  * Never throws: the label is paid for by now, and a failure here must not
  * read as the purchase having failed.
  */
 async function advanceToPacked(orderId: string): Promise<boolean> {
   try {
+    await prisma.order.updateMany({ where: { id: orderId, labelError: { not: null } }, data: { labelError: null } });
     const { count } = await prisma.order.updateMany({
       where: { id: orderId, status: "paid" },
       data: { status: "packed" },
@@ -246,6 +259,50 @@ export async function createShipmentLabel(input: {
   }
 
   return { shipmentId: shipment.id, warnings: built.warnings, packed: await advanceToPacked(order.id) };
+}
+
+/**
+ * Buy the label for an order that has just been paid, with nobody pressing
+ * the button, so the order reaches SmartTrack and moves to packed on its own.
+ * LIVE only: a UAT label is not postage, and buying one would still move a
+ * real order to packed. Never throws (the payment is taken whatever happens
+ * here); a label it cannot buy is recorded in Order.labelError instead,
+ * which puts the order in the admin warning.
+ */
+export async function autoBuyLabel(orderId: string): Promise<void> {
+  try {
+    if (!(await getAutoLabels())) return;
+    const cfg = smartTrackConfig();
+    let problem: string | null = null;
+    if (!cfg) {
+      problem = "SmartTrack is not connected, so no label could be bought";
+    } else if (cfg.env !== "live") {
+      problem = "SmartTrack is connected to UAT (test), so no real label was bought";
+    } else {
+      try {
+        await createShipmentLabel({ orderId, actor: "system" });
+      } catch (err) {
+        if (err instanceof ShippingError) problem = err.message;
+        else if (err instanceof SmartTrackError) problem = err.detail;
+        else {
+          console.error(`[internal] automatic label for order ${orderId} failed`, err);
+          problem = "Something went wrong buying the label";
+        }
+      }
+    }
+    if (problem) await prisma.order.update({ where: { id: orderId }, data: { labelError: problem } });
+  } catch (err) {
+    console.error(`[internal] automatic label for order ${orderId} could not run`, err);
+  }
+}
+
+/** Paid orders whose automatic label could not be bought, oldest first. */
+export function labelProblems() {
+  return prisma.order.findMany({
+    where: { status: "paid", labelError: { not: null } },
+    select: { id: true, customerName: true, labelError: true },
+    orderBy: { createdAt: "asc" },
+  });
 }
 
 function sameEnvironment(shipment: { environment: string }) {
