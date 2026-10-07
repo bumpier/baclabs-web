@@ -17,7 +17,11 @@ import {
   deliveryMinorFor,
   deliveryOptionById,
   deliveryOptionsFor,
+  deliveryOptionsSentence,
+  freeDeliveryName,
   nextDayOffered,
+  otherDeliveryOptionsLine,
+  quotedDeliveryOption,
 } from "@/config/funnel";
 import { formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
 import { buildShipmentRequest, cleanDeliveryInstructions, labelReference, LIMITS, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
@@ -239,12 +243,25 @@ check("instructions are one line with single spaces", cleanDeliveryInstructions(
   check("under £40 Standard is £3.90 and next day £5", under.standard === 390 && under.next_day === 500, JSON.stringify(under));
   check("…and they are the only options", Object.keys(under).join() === "standard,next_day", JSON.stringify(under));
   const over = byId(4000);
-  check("at £40 Standard is free", over.standard === 0, JSON.stringify(over));
-  check("…and next day drops by the Standard price, to £1.10", over.next_day === 110, JSON.stringify(over));
+  check("at £40 next day is the only option", Object.keys(over).join() === "next_day", JSON.stringify(over));
+  check("…and it is free", over.next_day === 0, JSON.stringify(over));
   check("the storefront's quoted delivery is the Standard price", deliveryMinorFor(2000) === 390 && deliveryMinorFor(4000) === 0);
   check("Standard is offered first, so Stripe preselects it", deliveryOptionsFor(2000)[0]?.option.id === "standard");
+  check(
+    "the purchase block quotes Standard under £40 and next day from £40",
+    quotedDeliveryOption(3999).id === "standard" && quotedDeliveryOption(4000).id === "next_day",
+  );
+  check("…lists next day beside Standard under £40", otherDeliveryOptionsLine(3999) === "Next day £5.00", otherDeliveryOptionsLine(3999));
+  check("…and nothing beside the free next day", otherDeliveryOptionsLine(4000) === "", otherDeliveryOptionsLine(4000));
+  check("the free delivery is named next day", freeDeliveryName() === "next-day delivery", freeDeliveryName());
+  check(
+    "the FAQ sentence says Standard is under £40 and next day free from £40",
+    deliveryOptionsSentence().includes("£3.90 on orders under £40") && deliveryOptionsSentence().includes("£5, free from £40"),
+    deliveryOptionsSentence(),
+  );
   check("next day is offered", nextDayOffered());
   delete process.env.NEXT_PUBLIC_DELIVERY_CHOICE;
+  check("switched off, the free delivery is not named", freeDeliveryName() === "UK delivery", freeDeliveryName());
 }
 
 // ── Next-day dates, in UK time ───────────────────────────────────

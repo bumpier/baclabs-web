@@ -18,7 +18,7 @@ import { dayAfter, formatCutoffHour, formatDeliveryDay, nextDayDeadline, ukDayKe
  * free delivery and a way to buy, in one place.
  *
  *   30% off   every bundle             Want it tomorrow?          [02]:[31]:[27]   [ Shop the sale → ]
- *             Free standard delivery   Choose Next day and order   hrs  min  sec
+ *             Free next-day delivery   Choose Next day and order   hrs  min  sec
  *
  * WHY IT IS BIG. It is the page's one promotion, so it is built to be seen:
  * the offer in the display face at 40px, the clock in white tiles, and its
@@ -37,9 +37,9 @@ import { dayAfter, formatCutoffHour, formatDeliveryDay, nextDayDeadline, ukDayKe
  * bar, which all carry it, and comes back here only when there is no
  * countdown.
  *
- * WHY "STANDARD". Next day is never free (over the threshold it costs the
- * difference), so beside the countdown the free-delivery line names the
- * service it covers. Without the word, the pair reads as free next day.
+ * WHY "NEXT-DAY". Over the threshold the only option is next day, free, so
+ * beside the countdown the free-delivery line names it: "Free next-day
+ * delivery over £40" is the stronger offer and says which service is free.
  *
  * WHY PARTS RENDER NOTHING. Each part is dropped when its source goes empty,
  * and the band vanishes when all of them do. The countdown promises a
@@ -142,7 +142,7 @@ export function AnnouncementBanner({ sale }: { sale: boolean }) {
 
   const offer = sale ? SALE.bannerText || saleLabel() : ANNOUNCEMENT;
   const nextDay = nextDayOffered();
-  const perks = [freeDeliveryBadge({ standard: nextDay }), nextDay ? "" : PRICE_MATCH_BADGE].filter(Boolean);
+  const perks = [freeDeliveryBadge({ named: nextDay }), nextDay ? "" : PRICE_MATCH_BADGE].filter(Boolean);
   if (!offer && !nextDay && perks.length === 0) return null;
 
   const at = now === null ? null : new Date(now * 1000);

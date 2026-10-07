@@ -12,6 +12,7 @@ import {
   formatMinorShort,
   nextDayOffered,
   perVialMinor,
+  quotedDeliveryOption,
 } from "@/config/funnel";
 import { FACTS } from "@/content/facts";
 import { formatCutoffHour } from "@/lib/delivery-date";
@@ -274,6 +275,9 @@ export function PackDelivery({ m }: { m: PackMetrics }) {
   const standard = deliveryChoiceEnabled()
     ? `standard delivery by ${STANDARD_DELIVERY.carrier} (${STANDARD_DELIVERY.transit})`
     : null;
+  // The service a free order goes by: next day, the only option offered once
+  // the order clears the threshold.
+  const free = deliveryChoiceEnabled() ? quotedDeliveryOption(m.priceMinor) : null;
   const nextDay = nextDayOffered()
     ? deliveryOptionsFor(m.priceMinor).find((o) => o.option.id === "next_day")
     : undefined;
@@ -284,9 +288,9 @@ export function PackDelivery({ m }: { m: PackMetrics }) {
         <>
           A single {packLabel(m.bundle).toLowerCase()} order{" "}
           <span className="font-semibold text-ink">
-            qualifies for free {standard ? "standard " : ""}UK delivery
+            qualifies for free {free ? free.noun : "UK delivery"}
           </span>
-          {standard ? ` by ${STANDARD_DELIVERY.carrier} (${STANDARD_DELIVERY.transit})` : null}
+          {free ? ` by ${free.carrier}` : null}
           {DELIVERY.mode === "threshold" && DELIVERY.freeFromMinor !== null ? (
             <>
               , because it is at or above the{" "}
@@ -308,13 +312,16 @@ export function PackDelivery({ m }: { m: PackMetrics }) {
           on an order of one. It is shown in full before you pay.
         </>
       )}
-      {nextDay ? (
+      {nextDay && nextDay.priceMinor === 0 ? (
+        <>
+          {" "}
+          Order by {formatCutoffHour()} on a working day and it arrives the next working day.
+        </>
+      ) : nextDay ? (
         <>
           {" "}
           Next day by {nextDay.option.carrier} is{" "}
-          <span className="tabular font-semibold text-ink">
-            {nextDay.priceMinor === 0 ? "free" : formatMinor(nextDay.priceMinor)}
-          </span>{" "}
+          <span className="tabular font-semibold text-ink">{formatMinor(nextDay.priceMinor)}</span>{" "}
           if you order by {formatCutoffHour()} on a working day.
         </>
       ) : null}

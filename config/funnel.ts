@@ -338,8 +338,8 @@ export const SHIPPING_COUNTRIES = ["GB"] as const;
  *  - "free"          → £0
  *  - "less-standard" → priceMinor minus the Standard option's price, so the
  *                      customer still gets the free delivery they earned
- *  - "hide"          → not offered: a paid option slower than a free one
- *                      would only ever be picked by mistake
+ *  - "hide"          → not offered. Standard hides, so an order over the
+ *                      threshold has the one option: next day, free
  *
  * The first option offered is the one preselected on Stripe's page.
  * `detail` is the timeless wording, for the FAQ, llms.txt and the admin.
@@ -369,6 +369,8 @@ export interface DeliveryOption {
   transit: string;
   /** Carrier and transit together: "Royal Mail Tracked 48, 2–3 working days". */
   detail: string;
+  /** The service in a sentence: "next-day delivery". */
+  noun: string;
   priceMinor: number;
   overThreshold: "free" | "less-standard" | "hide";
 }
@@ -388,20 +390,25 @@ export const DELIVERY_OPTIONS: readonly DeliveryOption[] = [
     label: "Standard",
     carrier: "Royal Mail Tracked 48",
     transit: `${STANDARD_TRANSIT_DAYS[0]}–${STANDARD_TRANSIT_DAYS[1]} working days`,
+    noun: "standard delivery",
     priceMinor: 390,
-    overThreshold: "free",
+    overThreshold: "hide",
   }),
   option({
     id: "next_day",
     label: "Next day",
     carrier: "Amazon Shipping",
     transit: `next working day if ordered by ${formatCutoffHour()}`,
+    noun: "next-day delivery",
     priceMinor: 500,
-    overThreshold: "less-standard",
+    overThreshold: "free",
   }),
 ];
 
 export const STANDARD_DELIVERY = DELIVERY_OPTIONS.find((o) => o.id === "standard")!;
+
+/** The option an order gets free once it clears the threshold: next day. */
+const FREE_DELIVERY = DELIVERY_OPTIONS.find((o) => o.overThreshold === "free");
 
 export function deliveryOptionById(id: string | null | undefined): DeliveryOption | undefined {
   return DELIVERY_OPTIONS.find((o) => o.id === id);
@@ -470,9 +477,10 @@ export const DELIVERY: {
   // DELIVERY_OPTIONS above, or the single Stripe rate while the choice is off.
   priceMinor: quotedDeliveryMinor(),
   freeFromMinor: 4000,
-  note: deliveryChoiceEnabled()
-    ? "Free standard UK delivery on orders of £40 or more."
-    : "Free UK delivery on orders of £40 or more.",
+  note:
+    deliveryChoiceEnabled() && FREE_DELIVERY
+      ? `Free ${FREE_DELIVERY.noun} on UK orders of £40 or more.`
+      : "Free UK delivery on orders of £40 or more.",
   // Every order, standard and next day alike, leaves the same day when it is
   // placed before the cutoff on a working day (lib/delivery-date.ts).
   dispatchLine: `Orders placed by ${formatCutoffHour()} on a working day are dispatched the same day.`,
@@ -551,14 +559,31 @@ export function deliveryOptionsFor(orderValueMinor: number): { option: DeliveryO
 }
 
 /**
- * "Next day £5.00" — the options other than Standard, for
- * the line under a purchase block's total. "" when there are none.
+ * The option a purchase block prices for an order of this value: the first
+ * one offered, which Stripe preselects too. Standard below the threshold,
+ * next day once the order ships free.
+ */
+export function quotedDeliveryOption(orderValueMinor: number): DeliveryOption {
+  return deliveryOptionsFor(orderValueMinor)[0]?.option ?? STANDARD_DELIVERY;
+}
+
+/**
+ * "Next day £5.00" — the options other than the quoted one, for the line
+ * under a purchase block's total. "" when there are none.
  */
 export function otherDeliveryOptionsLine(orderValueMinor: number): string {
   return deliveryOptionsFor(orderValueMinor)
-    .filter((o) => o.option.id !== STANDARD_DELIVERY.id)
+    .slice(1)
     .map((o) => `${o.option.label} ${o.priceMinor === 0 ? "free" : formatMinor(o.priceMinor)}`)
     .join(" · ");
+}
+
+/**
+ * What an order over the threshold gets free: "next-day delivery" while the
+ * customer chooses their delivery, plain "UK delivery" while they cannot.
+ */
+export function freeDeliveryName(): string {
+  return deliveryChoiceEnabled() && FREE_DELIVERY ? FREE_DELIVERY.noun : "UK delivery";
 }
 
 /**
@@ -575,7 +600,7 @@ export function deliveryOptionsSentence(): string {
     if (o.overThreshold === "less-standard") {
       return `${base}, ${formatMinorShort(Math.max(0, o.priceMinor - STANDARD_DELIVERY.priceMinor))} from ${formatMinorShort(over)}`;
     }
-    return base;
+    return `${base} on orders under ${formatMinorShort(over)}`;
   });
   return `Choose your delivery at checkout: ${parts.join("; ")}.`;
 }
@@ -589,8 +614,13 @@ export function deliveryOptionsSentence(): string {
 export function deliveryTimesSentence(): string {
   if (!deliveryChoiceEnabled() || DELIVERY.mode === "unknown") return "";
   const parts = DELIVERY_OPTIONS.map((o) => `${o.label.toLowerCase()} by ${o.carrier} (${o.transit})`);
+  const over = DELIVERY.mode === "threshold" ? DELIVERY.freeFromMinor : null;
+  const freeOnly =
+    over !== null && FREE_DELIVERY && DELIVERY_OPTIONS.some((o) => o.overThreshold === "hide")
+      ? ` Orders of ${formatMinorShort(over)} or more go ${FREE_DELIVERY.label.toLowerCase()}, free.`
+      : "";
   const dated = nextDayOffered() ? " For next day, checkout shows the date it will arrive." : "";
-  return `You choose at checkout: ${parts.join(" or ")}.${dated}`;
+  return `You choose at checkout: ${parts.join(" or ")}.${freeOnly}${dated}`;
 }
 
 /**
@@ -664,12 +694,12 @@ export const LOWEST_PRICE_BADGE = "Cheapest in the UK";
  * the same figure, so re-pricing delivery can never leave a stale promise on
  * the page. Returns "" when the current mode makes no free-delivery claim.
  *
- * `standard` names the service the offer covers, "Free standard delivery over
- * £40", for anywhere the badge sits beside a next-day promise: next day is
- * never free, and the bare badge beside it reads as if it were.
+ * `named` names the service the offer covers, "Free next-day delivery over
+ * £40", for beside the next-day countdown, so the pair says outright that
+ * the free delivery is the fast one.
  */
-export function freeDeliveryBadge({ standard = false }: { standard?: boolean } = {}): string {
-  const free = standard ? "Free standard delivery" : "Free UK delivery";
+export function freeDeliveryBadge({ named = false }: { named?: boolean } = {}): string {
+  const free = named ? `Free ${freeDeliveryName()}` : "Free UK delivery";
   if (DELIVERY.mode === "free") return free;
   if (DELIVERY.mode === "threshold" && DELIVERY.freeFromMinor !== null) {
     return `${free} over ${formatMinorShort(DELIVERY.freeFromMinor)}`;

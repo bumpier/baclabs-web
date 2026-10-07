@@ -6,7 +6,6 @@ import {
   MAX_QUANTITY,
   PRICE_MATCH_BADGE,
   PRODUCT,
-  STANDARD_DELIVERY,
   VIAL_ML,
   bundleById,
   deliveryChoiceEnabled,
@@ -16,6 +15,7 @@ import {
   formatMinorShort,
   nextDayOffered,
   perVialMinor,
+  quotedDeliveryOption,
   savingPercent,
   shipsFree,
 } from "@/config/funnel";
@@ -58,6 +58,10 @@ const MAX_ORDER_VIALS = Math.max(...BUNDLES.map((b) => b.vials)) * MAX_QUANTITY;
 
 /** The smallest tier that clears the free-delivery threshold, if there is one. */
 const FIRST_FREE_DELIVERY = BUNDLES.find((b) => shipsFree(b.priceMinor));
+
+/** What an order goes by once it ships free, while the customer chooses: next day. */
+const FREE_SERVICE =
+  deliveryChoiceEnabled() && DELIVERY.freeFromMinor !== null ? quotedDeliveryOption(DELIVERY.freeFromMinor) : undefined;
 
 /** Next day, while customers can buy it, and its price once an order ships free. */
 const NEXT_DAY = nextDayOffered() ? deliveryOptionById("next_day") : undefined;
@@ -180,8 +184,8 @@ export default function BulkPage() {
           <div className="grid gap-1 py-5 sm:grid-cols-[12rem_1fr] sm:gap-4">
             <dt className="text-sm font-medium text-ink-soft">Delivery</dt>
             <dd className="text-base text-ink">
-              {deliveryChoiceEnabled()
-                ? `Standard delivery by ${STANDARD_DELIVERY.carrier} (${STANDARD_DELIVERY.transit}) is free`
+              {FREE_SERVICE
+                ? `${FREE_SERVICE.noun.charAt(0).toUpperCase()}${FREE_SERVICE.noun.slice(1)} by ${FREE_SERVICE.carrier} is free`
                 : "Free"}{" "}
               to any UK address on orders of{" "}
               {formatMinorShort(DELIVERY.freeFromMinor)} or more, which every pack from{" "}
@@ -189,8 +193,8 @@ export default function BulkPage() {
               {DELIVERY.priceMinor !== null ? (
                 <>
                   {" "}
-                  Below the threshold it is {formatMinorShort(DELIVERY.priceMinor)}, shown before
-                  you pay.
+                  Below the threshold {FREE_SERVICE ? "standard delivery" : "it"} is{" "}
+                  {formatMinorShort(DELIVERY.priceMinor)}, shown before you pay.
                 </>
               ) : null}
             </dd>
@@ -204,7 +208,7 @@ export default function BulkPage() {
               next working day. {formatMinorShort(NEXT_DAY.priceMinor)}
               {NEXT_DAY_OVER_MINOR !== undefined && DELIVERY.freeFromMinor !== null ? (
                 <>
-                  , or {formatMinorShort(NEXT_DAY_OVER_MINOR)} on orders of{" "}
+                  , {NEXT_DAY_OVER_MINOR === 0 ? "free" : `or ${formatMinorShort(NEXT_DAY_OVER_MINOR)}`} on orders of{" "}
                   {formatMinorShort(DELIVERY.freeFromMinor)} or more
                 </>
               ) : null}

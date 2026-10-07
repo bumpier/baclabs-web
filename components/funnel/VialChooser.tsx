@@ -15,7 +15,8 @@ import {
   deliveryMinorFor,
   otherDeliveryOptionsLine,
   deliveryChoiceEnabled,
-  STANDARD_DELIVERY,
+  freeDeliveryName,
+  quotedDeliveryOption,
   formatMinor,
   perVialMinor,
   referencePerVialMinor,
@@ -304,7 +305,7 @@ export function VialChooser({ cryptoEnabled }: { cryptoEnabled: boolean }) {
             </div>
           ) : null}
           <div className="flex justify-between gap-4">
-            <dt className="text-ink-soft">{deliveryKnown && deliveryChoiceEnabled() ? `Delivery (${STANDARD_DELIVERY.label})` : "Delivery"}</dt>
+            <dt className="text-ink-soft">{deliveryKnown && deliveryChoiceEnabled() ? `Delivery (${quotedDeliveryOption(totalMinor).label})` : "Delivery"}</dt>
             <dd className="text-ink">
               {!deliveryKnown ? (
                 "Calculated at checkout"
@@ -351,11 +352,11 @@ export function VialChooser({ cryptoEnabled }: { cryptoEnabled: boolean }) {
           {toFreeDelivery > 0 ? (
             <span className="alert-note block">
               Add <span className="tabular font-semibold">{formatMinor(toFreeDelivery)}</span> more
-              for free UK delivery.
+              for free {freeDeliveryName()}.
             </span>
           ) : deliveryKnown && deliveryFree ? (
             <span className="alert-note block">
-              This order qualifies for <span className="font-semibold">free UK delivery</span>.
+              This order qualifies for <span className="font-semibold">free {freeDeliveryName()}</span>.
             </span>
           ) : (
             <span className="block text-xs text-ink-soft">{DELIVERY.note}</span>
