@@ -145,10 +145,19 @@ one. When the order is complete a chime plays and *Mark packed* appears. Any
 USB or Bluetooth scanner that types like a keyboard works, with no drivers.
 The tally is saved on the server, so it survives a refresh.
 
+**Tracking** (built 7 Oct 2026): every 30 minutes (`/api/cron/tracking`)
+each LIVE label's SmartTrack tracking is checked. The carrier's first scan
+moves the order to shipped and emails the customer their tracking number;
+the delivery scan moves it to delivered and sends the delivered email.
+Customers whose order is over a week old are not emailed, so old orders move
+silently. Switch it off on the Shipping page. Which event codes count is in
+`lib/shipping/tracking.ts`; `scripts/check-tracking.ts` shows what real
+parcels return. Orders that went out before this existed are cleared on
+Admin → Shipping → catch-up page (`/admin/shipping/catch-up`).
+
 ## Open — for the next session
 
 - Confirm the barcode contents above with the fulfilment team.
-- Tracking updates feeding order status and the "shipped" email.
 - Batch buying and printing of labels for all unfulfilled orders.
 - Cheapest-service choice from live `get-quotes` prices (the choice is by
   priority today).

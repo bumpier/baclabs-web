@@ -16,6 +16,8 @@ import {
 import { getServices, SmartTrackError, testConnection } from "@/lib/smarttrack/client";
 import { cleanDeliveryInstructions, LIMITS } from "@/lib/smarttrack/payload";
 import { SETTING_KEYS, writeSetting } from "@/lib/settings";
+import { syncTracking, type TrackingSyncResult } from "@/lib/shipping/tracking-sync";
+import { closeCatchUpGroup, type CatchUpGroup } from "@/lib/shipping/catch-up";
 import { deliveryOptionById } from "@/config/funnel";
 
 function message(err: unknown, what: string): FormState {
@@ -232,6 +234,93 @@ export async function saveAutoLabelsAction(_prev: FormState, formData: FormData)
       ? "Saved. Labels are bought as soon as an order is paid."
       : "Saved. Labels are only bought from the order page.",
   };
+}
+
+// ── Tracking ─────────────────────────────────────────────────────
+
+export async function saveTrackingUpdatesAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdminRole("ADMIN");
+  const on = formData.get("trackingUpdates") === "on";
+  await writeSetting(SETTING_KEYS.trackingUpdates, on ? "on" : "off");
+  revalidatePath("/admin/shipping");
+  return {
+    success: on
+      ? "Saved. Orders move to shipped and delivered from SmartTrack tracking."
+      : "Saved. Orders only move on when marked by hand.",
+  };
+}
+
+function describeSync(r: TrackingSyncResult): string {
+  const parts = [`${r.checked} label${r.checked === 1 ? "" : "s"} checked`];
+  if (r.shipped) parts.push(`${r.shipped} moved to shipped`);
+  if (r.delivered) parts.push(`${r.delivered} moved to delivered`);
+  if (r.problems) parts.push(`${r.problems} with a delivery problem`);
+  if (r.errors) parts.push(`${r.errors} could not be checked`);
+  return parts.join(", ");
+}
+
+/** One label, now. Packers too: it is on the order page. */
+export async function checkTrackingAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  const shipmentId = String(formData.get("shipmentId") ?? "");
+  const orderId = String(formData.get("orderId") ?? "");
+  try {
+    // A moment ahead, so a label checked a second ago is still checked again.
+    const r = await syncTracking({ shipmentId, staleBefore: new Date(Date.now() + 1000) });
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
+    if (!r.ran) return { error: `Tracking is not running: ${r.reason}.` };
+    if (r.errors) return { error: r.reason ?? "SmartTrack could not be asked. Try again in a minute." };
+    if (r.checked === 0) return { error: "This label is not one tracking follows (it has no tracking number, or the order is closed)." };
+    if (r.delivered) return { success: "Delivered — the order is now marked delivered." };
+    if (r.shipped) return { success: "The carrier has it — the order is now marked shipped." };
+    return { success: "Checked. Nothing new." };
+  } catch (err) {
+    return message(err, "check tracking");
+  }
+}
+
+/**
+ * One batch of the catch-up's tracking check. Each press checks for about a
+ * minute — the Cloudflare proxy gives up on a request after 100 seconds.
+ * A label checked in the last hour (by an earlier press, or the cron) is
+ * not checked again, so "Continue" moves on to the rest.
+ */
+export async function catchUpTrackingAction(_prev: FormState): Promise<FormState> {
+  await requireAdminRole("ADMIN");
+  try {
+    const r = await syncTracking({ budgetMs: 60_000, limit: 500 });
+    revalidatePath("/admin/shipping/catch-up");
+    revalidatePath("/admin");
+    if (!r.ran) return { error: `Tracking is not running: ${r.reason}.` };
+    const summary = describeSync(r);
+    if (r.reason) return { error: `${summary}. Stopped: ${r.reason}` };
+    return {
+      success:
+        r.remaining > 0
+          ? `${summary}. ${r.remaining} still to check — press Continue.`
+          : `${summary}. Every label has been checked.`,
+    };
+  } catch (err) {
+    return message(err, "catch-up tracking");
+  }
+}
+
+const catchUpGroupField = z.enum(["noLabel", "labelFailed", "notScanned"]);
+
+export async function closeCatchUpGroupAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdminRole("ADMIN");
+  const group = catchUpGroupField.safeParse(formData.get("group"));
+  if (!group.success) return { error: "Unknown group" };
+  try {
+    const moved = await closeCatchUpGroup(group.data as CatchUpGroup);
+    revalidatePath("/admin/shipping/catch-up");
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin");
+    return { success: `${moved} order${moved === 1 ? "" : "s"} marked delivered. No emails were sent.` };
+  } catch (err) {
+    return message(err, "close catch-up group");
+  }
 }
 
 // ── Labels (packers too) ─────────────────────────────────────────

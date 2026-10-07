@@ -16,14 +16,19 @@ export const dynamic = "force-dynamic";
 const LEAD_DAYS = 4; // nudge this many days before the supply runs out
 const NUDGEABLE_STATUSES = ["paid", "packed", "shipped", "delivered"];
 
-/** Days after an order is marked delivered before the review request goes. */
+/** Days after an order is delivered before the review request goes. */
 const REVIEW_DELAY_DAYS = 5;
 /**
- * An order still "shipped" this many days after it was marked so is treated
- * as delivered for the review request — most are never marked delivered by
- * hand. Long enough that a UK parcel has arrived either way.
+ * An order still "shipped" this many days after it shipped is treated as
+ * delivered for the review request — tracking does not see every delivery.
+ * Long enough that a UK parcel has arrived either way.
  */
 const REVIEW_SHIPPED_FALLBACK_DAYS = 12;
+/**
+ * Never ask about a parcel that arrived longer ago than this. Orders closed
+ * by the catch-up page have no dates at all, so are never asked.
+ */
+const REVIEW_MAX_AGE_DAYS = 30;
 
 interface OrderItem {
   productId: string;
@@ -118,9 +123,9 @@ async function runNudges() {
 
 /**
  * Review requests. One per order, only once the parcel has had time to
- * arrive, never to an opted-out address. `updatedAt` is the last status
- * change, which for a delivered or shipped order is the moment it was marked
- * so — that is the clock the delay runs from.
+ * arrive, never to an opted-out address. The delay runs from deliveredAt
+ * (or shippedAt), set by tracking or by marking the order by hand — not
+ * updatedAt, which moves on every write.
  */
 async function runReviewRequests() {
   // With Trustpilot invitations on, Trustpilot asks every customer itself
@@ -130,15 +135,16 @@ async function runReviewRequests() {
 
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
+  const tooOld = new Date(now - REVIEW_MAX_AGE_DAYS * day);
   const orders = await prisma.order.findMany({
     where: {
       emailLogs: { none: { type: "review" } },
       OR: [
-        { status: "delivered", updatedAt: { lte: new Date(now - REVIEW_DELAY_DAYS * day) } },
-        { status: "shipped", updatedAt: { lte: new Date(now - REVIEW_SHIPPED_FALLBACK_DAYS * day) } },
+        { status: "delivered", deliveredAt: { lte: new Date(now - REVIEW_DELAY_DAYS * day), gte: tooOld } },
+        { status: "shipped", shippedAt: { lte: new Date(now - REVIEW_SHIPPED_FALLBACK_DAYS * day), gte: tooOld } },
       ],
     },
-    orderBy: { updatedAt: "asc" },
+    orderBy: [{ deliveredAt: "asc" }, { shippedAt: "asc" }],
   });
 
   let sent = 0;

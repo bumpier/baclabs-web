@@ -272,7 +272,16 @@ As `baclab` (`crontab -e`):
 */5 * * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/campaigns
 # Every 15 minutes: remind mailing-list subscribers whose free vial is still unused
 */15 * * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/welcome-reminders
+# Every 30 minutes: move orders on from SmartTrack tracking (first carrier scan → shipped, delivery scan → delivered)
+*/30 * * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/tracking
 ```
+
+Before adding the tracking line the first time, check what SmartTrack's
+tracking says for a few real parcels — read-only, nothing changes:
+`docker compose -f /srv/baclab/docker-compose.yml exec baclab npx tsx scripts/check-tracking.ts --recent 5`.
+Every parcel should come out with the stage it is really at, and no
+"unknown codes". Then clear the orders that went out before tracking was on,
+at Admin → Shipping → *catch-up page*.
 
 Verify: `bash /srv/baclab/deploy/scripts/baclab-backup.sh`, then
 `rclone ls offsite:baclab-backups/` lists today's two files. Open a copied DB

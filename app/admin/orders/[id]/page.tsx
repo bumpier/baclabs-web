@@ -9,6 +9,7 @@ import { PackingSlip } from "@/components/admin/PackingSlip";
 import { OrderFulfilment } from "@/components/admin/OrderFulfilment";
 import { SubmitButton } from "@/components/forms";
 import { SHOP_TIME_ZONE, formatSaleDateTime } from "@/lib/saleTime";
+import { statusLabel } from "@/lib/order-status";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ const NEXT_ACTIONS: Record<string, { status: string; label: string }[]> = {
     { status: "cancelled", label: "Cancel order" },
   ],
   // Where an order lands once its label is bought — on payment, usually.
+  // Tracking moves it on from here by itself (lib/shipping/tracking-sync.ts).
   packed: [
     { status: "shipped", label: "Mark as shipped" },
     { status: "cancelled", label: "Cancel order" },
@@ -43,7 +45,10 @@ export default async function AdminOrderDetailPage({
   });
   if (!order) notFound();
 
-  const session = await getAdminSession();
+  const [session, labels] = await Promise.all([
+    getAdminSession(),
+    prisma.shipment.count({ where: { orderId: order.id, status: "CREATED" } }),
+  ]);
   const actions = NEXT_ACTIONS[order.status] ?? [];
 
   return (
@@ -81,6 +86,19 @@ export default async function AdminOrderDetailPage({
           ) : (
             <>Not paid · checkout started {formatSaleDateTime(order.createdAt)} UK time</>
           )}
+          {order.shippedAt && (
+            <>
+              {" "}
+              · shipped <span className="font-semibold text-ink">{formatSaleDateTime(order.shippedAt)}</span>
+            </>
+          )}
+          {order.deliveredAt && (
+            <>
+              {" "}
+              · delivered <span className="font-semibold text-ink">{formatSaleDateTime(order.deliveredAt)}</span>
+            </>
+          )}
+          {order.status === "delivered" && !order.deliveredAt && <> · delivered (date not known)</>}
         </p>
 
         {order.status === "paid" && order.labelError && (
@@ -93,7 +111,7 @@ export default async function AdminOrderDetailPage({
         <dl className="card mt-6 grid gap-4 p-6 text-sm sm:grid-cols-4">
           <div>
             <dt className="label">Status</dt>
-            <dd className="font-semibold capitalize">{order.status}</dd>
+            <dd className="font-semibold">{statusLabel(order.status, { hasLabel: labels > 0 })}</dd>
           </div>
           <div>
             <dt className="label">Payment</dt>

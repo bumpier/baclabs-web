@@ -7,6 +7,9 @@ import { Prisma } from "@prisma/client";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import { PrintUnfulfilledMenu } from "@/components/admin/PrintUnfulfilledMenu";
 import { LabelWarning } from "@/components/admin/LabelWarning";
+import { TrackingWarning } from "@/components/admin/TrackingWarning";
+import { catchUpCount } from "@/lib/shipping/catch-up";
+import { statusLabel } from "@/lib/order-status";
 import { SalesActivityChart } from "@/components/admin/SalesActivity";
 import { buildSalesActivity } from "@/lib/salesActivity";
 import { dailyTakings } from "@/lib/dailyTakings";
@@ -29,8 +32,8 @@ export default async function AdminOverviewPage() {
 
   // Pending orders (checkouts never paid) are left out of everything here.
   const [
-    unshippedOrders,
-    shippedOrders,
+    stageGroups,
+    oldOpenOrders,
     productCount,
     revenueOrders,
     allStatusGroups,
@@ -39,10 +42,14 @@ export default async function AdminOverviewPage() {
     saleTimes,
     takingsToday,
   ] = await Promise.all([
-    // Paid or packed: labels are bought on payment, which moves an order to
-    // packed, so both are still waiting to go out.
-    prisma.order.count({ where: { status: { in: ["paid", "packed"] } } }),
-    prisma.order.count({ where: { status: "shipped" } }),
+    // Where every order has got to: paid (no label yet) → label created →
+    // shipped → delivered. Tracking moves them on (lib/shipping/tracking-sync.ts).
+    prisma.order.groupBy({
+      by: ["status"],
+      where: { status: { in: ["paid", "packed", "shipped", "delivered"] } },
+      _count: { id: true },
+    }),
+    catchUpCount(),
     prisma.product.count({ where: { active: true } }),
     prisma.order.findMany({
       where: {
@@ -73,9 +80,16 @@ export default async function AdminOverviewPage() {
   });
   const revenueDecimal = allOrdersAgg._sum?.totalAmount ?? new Prisma.Decimal(0);
 
+  const stageCount = (status: string) => stageGroups.find((g) => g.status === status)?._count.id ?? 0;
+  const unshippedOrders = stageCount("paid") + stageCount("packed");
+  const stages = [
+    { status: "paid", label: "Paid · needs a label", highlight: stageCount("paid") > 0 },
+    { status: "packed", label: `${statusLabel("packed")} · waiting for the carrier`, highlight: false },
+    { status: "shipped", label: statusLabel("shipped"), highlight: false },
+    { status: "delivered", label: statusLabel("delivered"), highlight: false },
+  ];
+
   const cards = [
-    { label: "Awaiting fulfilment", value: String(unshippedOrders), href: "/admin/orders?status=packed", highlight: unshippedOrders > 0 },
-    { label: "Shipped", value: String(shippedOrders), href: "/admin/orders?status=shipped" },
     { label: "Taken today", value: formatPrice(takingsToday.summary.takenMinor / 100, "GBP"), href: "/admin/takings" },
     { label: "Revenue (GBP)", value: formatPrice(revenueDecimal.toString(), "GBP"), href: "/admin/orders" },
     { label: "Active products", value: String(productCount), href: "/admin/products" },
@@ -143,15 +157,38 @@ export default async function AdminOverviewPage() {
       </h1>
 
       <LabelWarning />
+      <TrackingWarning />
+
+      {oldOpenOrders > 0 && (
+        <p className="card mt-6 p-5 text-sm">
+          <span className="font-semibold text-brand-deep">
+            {oldOpenOrders} order{oldOpenOrders === 1 ? "" : "s"} sold more than 3 days ago still count as not shipped.
+          </span>{" "}
+          <Link href="/admin/shipping/catch-up" className="font-semibold text-brand hover:text-brand-deep">
+            Catch up old orders →
+          </Link>
+        </p>
+      )}
 
       <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {stages.map((s) => (
+          <Link
+            key={s.status}
+            href={`/admin/orders?status=${s.status}`}
+            className={`card p-5 transition-shadow hover:shadow-lift ${s.highlight ? "border-brand bg-brand-tint" : ""}`}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">{s.label}</p>
+            <p className="mt-2 font-display text-3xl font-medium text-brand-deep">{stageCount(s.status)}</p>
+          </Link>
+        ))}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-3">
         {cards.map((c) => (
           <Link
             key={c.label}
             href={c.href}
-            className={`card p-5 transition-shadow hover:shadow-lift ${
-              c.highlight ? "border-brand bg-brand-tint" : ""
-            }`}
+            className="card p-5 transition-shadow hover:shadow-lift"
           >
             <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
               {c.label}

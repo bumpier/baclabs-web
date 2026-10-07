@@ -10,7 +10,14 @@ import { LIMITS } from "@/lib/smarttrack/payload";
 import { smartTrackConfig } from "@/lib/smarttrack/config";
 import { deliveryChoiceEnabled, deliveryOptionById, formatMinor } from "@/config/funnel";
 import { allocateOrderAction } from "@/app/admin/inventory/actions";
-import { createLabelAction, reconcileShipmentAction, voidShipmentAction } from "@/app/admin/shipping/actions";
+import {
+  checkTrackingAction,
+  createLabelAction,
+  reconcileShipmentAction,
+  voidShipmentAction,
+} from "@/app/admin/shipping/actions";
+import { TRACKING_STAGE_LABELS, type TrackingStage } from "@/lib/shipping/tracking";
+import { formatSaleDateTime } from "@/lib/saleTime";
 
 const SHIPMENT_STYLES: Record<string, string> = {
   CREATED: "bg-brand-tint text-brand-deep",
@@ -183,6 +190,23 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
                     <span className="text-xs text-ink-soft">({s.serviceChoice})</span>
                   </div>
                   {tracking.length > 0 && <p className="mt-1 font-mono text-xs">{tracking.join(", ")}</p>}
+                  {s.status === "CREATED" && s.environment === "live" && tracking.length > 0 && (
+                    <p className="mt-1 text-xs text-ink-soft">
+                      {s.trackingCheckedAt ? (
+                        <>
+                          <span className={`font-semibold ${s.trackingStage === "problem" ? "text-red-700" : "text-ink"}`}>
+                            {TRACKING_STAGE_LABELS[(s.trackingStage ?? "awaiting") as TrackingStage]}
+                          </span>
+                          {s.carrierName && ` · ${s.carrierName}`}
+                          {s.trackingEvent && ` — ${s.trackingEvent}`}
+                          {s.trackingEventAt && ` (${formatSaleDateTime(s.trackingEventAt)})`}
+                          <span className="block">Tracking checked {formatSaleDateTime(s.trackingCheckedAt)}</span>
+                        </>
+                      ) : (
+                        "Tracking not checked yet"
+                      )}
+                    </p>
+                  )}
                   {s.error && s.status !== "CREATED" && <p className="mt-1 text-xs text-red-700">{s.error}</p>}
                   <div className="mt-2 flex flex-wrap items-start gap-4">
                     {s.status === "CREATED" && (
@@ -205,6 +229,17 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
                           <input type="hidden" name="shipmentId" value={s.id} />
                           <input type="hidden" name="orderId" value={order.id} />
                         </ActionForm>
+                        {s.environment === "live" && tracking.length > 0 && (
+                          <ActionForm
+                            action={checkTrackingAction}
+                            submitLabel="Check tracking now"
+                            submitClassName="text-sm font-semibold text-brand hover:text-brand-deep"
+                            className="space-y-1"
+                          >
+                            <input type="hidden" name="shipmentId" value={s.id} />
+                            <input type="hidden" name="orderId" value={order.id} />
+                          </ActionForm>
+                        )}
                       </>
                     )}
                     {s.status === "PENDING" && (

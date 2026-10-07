@@ -92,6 +92,15 @@ model Order {
   // pending, and on orders cancelled before paying.
   paidAt DateTime?
 
+  // When the parcel left and when it arrived. Set from SmartTrack tracking
+  // (lib/shipping/tracking-sync.ts) — the first carrier scan and the
+  // delivery scan — or when someone marks the order by hand. Null on orders
+  // closed by the catch-up page without a label, whose dates nobody knows.
+  // The review request counts from these, not updatedAt, which moves on
+  // every write.
+  shippedAt   DateTime?
+  deliveredAt DateTime?
+
   // The mailing-list subscriber whose welcome vial this order carries, set
   // at checkout when the signed-up browser buys (lib/mailing-list.ts). The
   // claim itself is Subscriber.welcomeOrderId, made when payment lands.
@@ -526,6 +535,14 @@ model Shipment {
   labelPdf          String? @map("label_pdf") // base64, as returned
   error             String?
   actor             String  @default("")
+
+  // What SmartTrack tracking last said (lib/shipping/tracking-sync.ts).
+  // Null until the first check.
+  carrierName       String    @default("") @map("carrier_name")
+  trackingStage     String?   @map("tracking_stage") // awaiting | in_transit | delivered | problem
+  trackingEvent     String?   @map("tracking_event") // the latest event, as the carrier worded it
+  trackingEventAt   DateTime? @map("tracking_event_at")
+  trackingCheckedAt DateTime? @map("tracking_checked_at")
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")

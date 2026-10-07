@@ -25,6 +25,8 @@ export const SETTING_KEYS = {
   deliveryInstructions: "delivery_instructions",
   // "on" | "off": buy the label when an order is paid — lib/shipping/shipments.ts
   autoLabels: "auto_labels",
+  // "on" | "off": move orders on from SmartTrack tracking — lib/shipping/tracking-sync.ts
+  trackingUpdates: "tracking_updates",
 } as const;
 
 /**

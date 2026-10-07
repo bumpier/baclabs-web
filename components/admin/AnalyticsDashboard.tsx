@@ -14,6 +14,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { statusLabel } from "@/lib/order-status";
 import { CHART, CHART_LINE } from "@/lib/theme";
 
 /**
@@ -64,8 +65,11 @@ export default function AnalyticsDashboard({
   totalRevenueGbp,
   totalOrders,
 }: Props) {
-  const paidCount = statusCounts.find((s) => s.status === "paid")?.count ?? 0;
-  const shippedCount = statusCounts.find((s) => s.status === "shipped")?.count ?? 0;
+  const countOf = (status: string) => statusCounts.find((s) => s.status === status)?.count ?? 0;
+  // Paid (no label yet) and label created: both still to leave.
+  const unshippedCount = countOf("paid") + countOf("packed");
+  const shippedCount = countOf("shipped");
+  const statusBars = statusCounts.map((s) => ({ ...s, status: statusLabel(s.status) }));
 
   return (
     <div className="space-y-8">
@@ -89,9 +93,9 @@ export default function AnalyticsDashboard({
         </div>
         <div className="card p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-            Awaiting Fulfilment
+            Not Yet Shipped
           </p>
-          <p className="mt-2 font-display text-3xl font-medium text-brand-deep">{paidCount}</p>
+          <p className="mt-2 font-display text-3xl font-medium text-brand-deep">{unshippedCount}</p>
         </div>
         <div className="card p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
@@ -142,14 +146,14 @@ export default function AnalyticsDashboard({
           </h2>
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={statusCounts} layout="vertical">
+              <BarChart data={statusBars} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_LINE} />
                 <XAxis type="number" tick={{ fontSize: 11 }} />
                 <YAxis
                   dataKey="status"
                   type="category"
                   tick={{ fontSize: 11 }}
-                  width={68}
+                  width={84}
                 />
                 <Tooltip />
                 <Bar dataKey="count" fill={CHART[0]} radius={[0, 4, 4, 0]} />

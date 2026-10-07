@@ -7,10 +7,12 @@ import { smartTrackConfig, smartTrackEnv } from "@/lib/smarttrack/config";
 import { formatWeight } from "@/lib/shipping/parcel";
 import { toServiceRule } from "@/lib/shipping/select-service";
 import { getAutoLabels, getDeliveryInstructions } from "@/lib/shipping/shipments";
+import { getTrackingUpdates } from "@/lib/shipping/tracking-sync";
 import { LIMITS } from "@/lib/smarttrack/payload";
 import { DELIVERY_OPTIONS, deliveryOptionById } from "@/config/funnel";
 import {
   saveAutoLabelsAction,
+  saveTrackingUpdatesAction,
   saveDeliveryInstructionsAction,
   saveServiceAction,
   syncServicesAction,
@@ -117,10 +119,11 @@ export default async function ShippingPage() {
   await requireAdminRole("ADMIN");
   const cfg = smartTrackConfig();
   const env = smartTrackEnv();
-  const [services, deliveryInstructions, autoLabels] = await Promise.all([
+  const [services, deliveryInstructions, autoLabels, trackingUpdates] = await Promise.all([
     prisma.postalService.findMany({ orderBy: [{ active: "desc" }, { priority: "asc" }, { name: "asc" }] }),
     getDeliveryInstructions(),
     getAutoLabels(),
+    getTrackingUpdates(),
   ]);
   const lastSync = services.map((s) => s.syncedAt).filter((d): d is Date => !!d).sort((a, b) => b.getTime() - a.getTime())[0];
 
@@ -185,9 +188,36 @@ export default async function ShippingPage() {
               Buy the label as soon as an order is paid
             </label>
             <p className="mt-1.5 text-xs text-ink-soft/70">
-              The order goes to SmartTrack and moves to packed on its own. Only while connected to LIVE: a UAT label is
+              The order goes to SmartTrack and moves to &ldquo;Label created&rdquo; on its own. Only while connected to LIVE: a UAT label is
               not postage. A label that cannot be bought leaves the order paid, and it is listed on the dashboard and
               the orders page with the reason.
+            </p>
+          </div>
+        </ActionForm>
+      </section>
+
+      {/* ── Tracking ── */}
+      <section className="card mt-4 p-6">
+        <ActionForm
+          action={saveTrackingUpdatesAction}
+          submitLabel="Save"
+          submitClassName="btn-secondary"
+          className="flex flex-wrap items-end justify-between gap-4"
+        >
+          <div className="max-w-2xl">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" name="trackingUpdates" defaultChecked={trackingUpdates} className="h-4 w-4 accent-[var(--color-brand)]" />
+              Move orders on from SmartTrack tracking
+            </label>
+            <p className="mt-1.5 text-xs text-ink-soft/70">
+              Every 30 minutes each label&rsquo;s tracking is checked. When the carrier first scans the parcel the order
+              moves to shipped and the customer is emailed their tracking number; when it is delivered the order moves
+              to delivered. Only while connected to LIVE. Orders that went out before this was switched on can be
+              cleared on the{" "}
+              <Link href="/admin/shipping/catch-up" className="underline">
+                catch-up page
+              </Link>
+              .
             </p>
           </div>
         </ActionForm>

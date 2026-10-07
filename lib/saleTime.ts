@@ -111,14 +111,34 @@ export function shopDayKey(d: Date): string {
   return utcDayKey(shopWallMs(d));
 }
 
-/** The UK midnight that starts a day. */
-function shopMidnight(dayKey: string): Date {
-  const wall = Date.parse(`${dayKey}T00:00:00Z`);
+/** The moment a UK wall clock showed this time, given as if it were UTC. */
+function fromShopWall(wall: number): Date {
   // UK time is ahead of UTC by (wall clock − UTC). Taken once at the UTC
   // guess and again at the answer, in case the clocks changed in between.
   const offsetAt = (ms: number) => shopWallMs(new Date(ms)) - ms;
   const guess = wall - offsetAt(wall);
   return new Date(wall - offsetAt(guess));
+}
+
+/** The UK midnight that starts a day. */
+function shopMidnight(dayKey: string): Date {
+  return fromShopWall(Date.parse(`${dayKey}T00:00:00Z`));
+}
+
+/**
+ * A UK wall-clock time with no zone, "2026-10-07 14:05:00" (how SmartTrack
+ * writes tracking events), as a moment. Null when it is not one.
+ */
+export function shopWallClockToDate(raw: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(raw.trim());
+  if (!m) return null;
+  const [y, mo, d, h, mi, s = 0] = m.slice(1).filter((v) => v !== undefined).map(Number) as number[];
+  if (h! > 23 || mi! > 59 || s > 59) return null;
+  const wall = Date.UTC(y!, mo! - 1, d!, h!, mi!, s);
+  // Date.UTC rolls 31 September over into October rather than refusing it.
+  const back = new Date(wall);
+  if (back.getUTCMonth() !== mo! - 1 || back.getUTCDate() !== d!) return null;
+  return fromShopWall(wall);
 }
 
 /** A UK day as a half-open range of moments: start ≤ t < end. */

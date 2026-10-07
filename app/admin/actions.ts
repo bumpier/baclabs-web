@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { canonicalOrigin } from "@/lib/site-url";
+import { MANUAL_MOVES } from "@/lib/order-status";
 import bcrypt from "bcryptjs";
 import {
   createAdminSession,
@@ -97,7 +98,26 @@ export async function setOrderStatusAction(formData: FormData): Promise<void> {
   const status = orderStatusSchema.parse(formData.get("status"));
 
   const before = await prisma.order.findUnique({ where: { id }, select: { status: true } });
-  const order = await prisma.order.update({ where: { id }, data: { status } });
+  // Forward only, and only from the status the page was showing: a tab left
+  // open must not pull a delivered order back to shipped (lib/order-status.ts).
+  if (!before || !MANUAL_MOVES[before.status]?.includes(status)) {
+    revalidatePath(`/admin/orders/${id}`);
+    return;
+  }
+  const now = new Date();
+  const { count } = await prisma.order.updateMany({
+    where: { id, status: before.status },
+    data: {
+      status,
+      ...(status === "shipped" ? { shippedAt: now } : {}),
+      ...(status === "delivered" ? { deliveredAt: now } : {}),
+    },
+  });
+  if (count === 0) {
+    revalidatePath(`/admin/orders/${id}`);
+    return;
+  }
+  const order = await prisma.order.findUniqueOrThrow({ where: { id } });
 
   // Stock allocated to the order goes back on the shelf it came from — but
   // only while it is still in the building. A shipped order's stock has
@@ -115,7 +135,8 @@ export async function setOrderStatusAction(formData: FormData): Promise<void> {
 
   if (status === "shipped") {
     const { sendOrderShippedEmail } = await import("@/lib/customer-email");
-    void sendOrderShippedEmail(order);
+    const { orderTracking } = await import("@/lib/shipping/tracking-sync");
+    void orderTracking(order).then((tracking) => sendOrderShippedEmail(order, tracking));
   } else if (status === "delivered") {
     const { sendOrderDeliveredEmail } = await import("@/lib/customer-email");
     void sendOrderDeliveredEmail(order);

@@ -4,6 +4,8 @@ import { requireAdmin, getAdminSession } from "@/lib/adminAuth";
 import { formatPrice, type Currency } from "@/config/brand";
 import { setOrderStatusAction } from "@/app/admin/actions";
 import { LabelWarning } from "@/components/admin/LabelWarning";
+import { TrackingWarning } from "@/components/admin/TrackingWarning";
+import { STATUS_BADGE, STATUS_TABS, statusLabel } from "@/lib/order-status";
 import { formatSaleClock, formatSaleDate, saleTime } from "@/lib/saleTime";
 import { getInventoryMode } from "@/lib/inventory/mode";
 
@@ -12,15 +14,7 @@ export const dynamic = "force-dynamic";
 // Pending orders are checkouts that were never paid, so they are not listed
 // here. The nightly job deletes them once they can no longer be paid
 // (lib/payments/abandoned.ts).
-const STATUSES = ["all", "paid", "packed", "shipped", "delivered", "cancelled"] as const;
-
-const STATUS_STYLES: Record<string, string> = {
-  paid: "bg-brand-tint text-brand-deep",
-  packed: "bg-blue-50 text-blue-700",
-  shipped: "bg-indigo-50 text-indigo-700",
-  delivered: "bg-brand text-white",
-  cancelled: "bg-red-50 text-red-600",
-};
+const STATUSES = ["all", ...STATUS_TABS] as const;
 
 // What status a packer can advance an order to
 const PACKER_NEXT_STATUS: Record<string, string | null> = {
@@ -45,6 +39,11 @@ export default async function AdminOrdersPage({
       where: { status: filter && filter !== "all" ? filter : { not: "pending" } },
       orderBy: { createdAt: "desc" },
       take: 200,
+      // The active label, if any: "Label created" vs "Packed", and the latest
+      // tracking. Never the label PDF.
+      include: {
+        shipments: { where: { status: "CREATED" }, select: { trackingEvent: true }, take: 1 },
+      },
     }),
     getInventoryMode(),
   ]);
@@ -65,19 +64,20 @@ export default async function AdminOrdersPage({
       </div>
 
       <LabelWarning />
+      <TrackingWarning showCatchUpLink={!isPacker} />
 
       <div className="mt-8 flex flex-wrap gap-2">
         {STATUSES.map((s) => (
           <Link
             key={s}
             href={s === "all" ? "/admin/orders" : `/admin/orders?status=${s}`}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               filter === s
                 ? "bg-brand text-white"
                 : "border border-line bg-white text-ink-soft hover:border-brand"
             }`}
           >
-            {s}
+            {s === "all" ? "All" : statusLabel(s)}
           </Link>
         ))}
       </div>
@@ -100,6 +100,7 @@ export default async function AdminOrdersPage({
             <tbody className="divide-y divide-line">
               {orders.map((o) => {
                 const nextStatus = PACKER_NEXT_STATUS[o.status] ?? null;
+                const label = o.shipments[0];
                 return (
                   <tr key={o.id} className="hover:bg-brand-tint/40">
                     <td className="px-5 py-3 text-ink-soft">
@@ -118,12 +119,17 @@ export default async function AdminOrdersPage({
                     <td className="px-5 py-3 capitalize text-ink-soft">{o.paymentMethod}</td>
                     <td className="px-5 py-3">
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          STATUS_STYLES[o.status] ?? ""
+                        className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          STATUS_BADGE[o.status] ?? ""
                         }`}
                       >
-                        {o.status}
+                        {statusLabel(o.status, { hasLabel: Boolean(label) })}
                       </span>
+                      {o.status === "shipped" && label?.trackingEvent && (
+                        <span className="mt-1 block max-w-[14rem] truncate text-xs text-ink-soft" title={label.trackingEvent}>
+                          {label.trackingEvent}
+                        </span>
+                      )}
                       {o.status === "paid" && o.labelError && (
                         <span className="mt-1 block text-xs font-semibold text-red-600" title={o.labelError}>
                           No label
@@ -140,7 +146,7 @@ export default async function AdminOrdersPage({
                               type="submit"
                               className="rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand-deep"
                             >
-                              Mark {nextStatus} →
+                              Mark {statusLabel(nextStatus, { hasLabel: Boolean(label) }).toLowerCase()} →
                             </button>
                           </form>
                         )}

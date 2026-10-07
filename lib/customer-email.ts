@@ -281,8 +281,23 @@ export async function sendOrderConfirmationEmail(
   );
 }
 
-export async function sendOrderShippedEmail(order: Order): Promise<void> {
+/** The parcel's tracking, when the order has a label: its first number and who carries it. */
+export interface ShippedTracking {
+  number: string;
+  carrier: string;
+}
+
+/**
+ * Sent once, when the carrier first scans the parcel (lib/shipping/
+ * tracking-sync.ts) or when someone marks the order shipped by hand. The
+ * order page it links to shows the latest tracking.
+ */
+export async function sendOrderShippedEmail(order: Order, tracking?: ShippedTracking | null): Promise<void> {
   const orderUrl = `${siteUrl()}/order-confirmation/${order.id}`;
+  const trackingLine = tracking?.number
+    ? `<p style="margin:0 0 20px">Your tracking number${tracking.carrier ? ` with ${escapeHtml(tracking.carrier)}` : ""} is
+      <strong style="font-family:monospace;font-size:15px">${escapeHtml(tracking.number)}</strong>. Your order page shows where it has got to.</p>`
+    : "";
   await logAndSend(
     order,
     "shipped",
@@ -290,9 +305,10 @@ export async function sendOrderShippedEmail(order: Order): Promise<void> {
     layout(
       `<p>Hi ${escapeHtml(order.customerName)},</p>
       <p>Good news — your order has been shipped and is on its way to you.</p>
+      ${trackingLine}
       <p style="margin:0 0 20px;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id}</p>
-      ${ctaButton(orderUrl, "View your order")}`,
-      { preheader: `Order ${order.id} has shipped` }
+      ${ctaButton(orderUrl, tracking?.number ? "Track your order" : "View your order")}`,
+      { preheader: tracking?.number ? `Tracking number ${tracking.number}` : `Order ${order.id} has shipped` }
     )
   );
 }

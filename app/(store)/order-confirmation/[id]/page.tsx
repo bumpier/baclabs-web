@@ -6,6 +6,8 @@ import { brand } from "@/config/brand";
 import { deliveryOptionById, formatMinor } from "@/config/funnel";
 import { formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
 import { paidMinor, purchaseContents, purchaseEventId } from "@/lib/meta-capi-event";
+import { parseTrackingNumbers } from "@/lib/shipping/shipments";
+import { formatSaleDateTime } from "@/lib/saleTime";
 import { PurchaseTracker } from "./PurchaseTracker";
 
 export const dynamic = "force-dynamic";
@@ -67,6 +69,19 @@ export default async function OrderConfirmationPage({
   // server-side Purchase so the two reports agree.
   const contents = purchaseContents(order.items);
 
+  // Once it has gone out, the parcel and its latest tracking
+  // (lib/shipping/tracking-sync.ts) — what the shipped email points here for.
+  const sent = order.status === "shipped" || order.status === "delivered";
+  const parcel = sent
+    ? await prisma.shipment.findFirst({
+        where: { orderId: order.id, status: "CREATED" },
+        orderBy: { createdAt: "desc" },
+        select: { trackingNumbers: true, carrierName: true, trackingEvent: true, trackingEventAt: true },
+      })
+    : null;
+  const trackingNumber = parcel ? parseTrackingNumbers(parcel.trackingNumbers)[0] : undefined;
+  const carrier = parcel?.carrierName || paidFor?.carrier || "";
+
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-14 sm:px-8 sm:py-20">
       {/* Pick up the webhook's result without the customer having to reload. */}
@@ -100,11 +115,15 @@ export default async function OrderConfirmationPage({
             : "Order received"}
       </h1>
       <p className="measure mt-3 text-base text-ink-soft">
-        {paid
-          ? "Payment has cleared and your order is being prepared."
-          : confirming
-            ? "Your payment went through. We are confirming the order now — this page updates itself in a few seconds."
-            : "We are waiting for your payment to be confirmed. This page shows the latest status whenever you reload it."}
+        {order.status === "delivered"
+          ? "Your order has been delivered."
+          : order.status === "shipped"
+            ? "Your order is on its way."
+            : paid
+              ? "Payment has cleared and your order is being prepared."
+              : confirming
+                ? "Your payment went through. We are confirming the order now — this page updates itself in a few seconds."
+                : "We are waiting for your payment to be confirmed. This page shows the latest status whenever you reload it."}
       </p>
 
       <dl className="panel mt-8 p-5 text-sm sm:p-6">
@@ -155,51 +174,93 @@ export default async function OrderConfirmationPage({
         </div>
       </dl>
 
-      <section className="mt-10" aria-labelledby="next-heading">
-        <h2 id="next-heading" className="text-xl">
-          What happens next
-        </h2>
-        <ol className="measure mt-4 space-y-3 text-base text-ink-soft">
-          <li className="flex gap-3">
-            <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
-            <span>
-              A confirmation email is on its way
-              {order.customerEmail ? (
-                <>
-                  {" "}
-                  to <span className="font-medium text-ink">{order.customerEmail}</span>
-                </>
-              ) : null}
-              . Stripe also emails its own payment receipt.
-            </span>
-          </li>
-          <li className="flex gap-3">
-            <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
-            <span>
-              {paidFor ? (
-                <>
-                  We pack your order and send it by {paidFor.carrier} to the address you gave at
-                  checkout
-                  {nextDayDue ? (
-                    <>
-                      . It is due <span className="font-medium text-ink">{nextDayDue}</span>
-                    </>
-                  ) : (
-                    <> ({paidFor.transit})</>
-                  )}
-                  .
-                </>
-              ) : (
-                "We pack your order and dispatch it to the address you gave at checkout."
-              )}
-            </span>
-          </li>
-          <li className="flex gap-3">
-            <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
-            <span>You get a second email when it ships.</span>
-          </li>
-        </ol>
-      </section>
+      {sent ? (
+        <section className="mt-10" aria-labelledby="parcel-heading">
+          <h2 id="parcel-heading" className="text-xl">
+            Your parcel
+          </h2>
+          <dl className="measure mt-4 space-y-2 text-base text-ink-soft">
+            {carrier ? (
+              <div>
+                <dt className="inline">Sent by </dt>
+                <dd className="inline text-ink">{carrier}</dd>
+              </div>
+            ) : null}
+            {trackingNumber ? (
+              <div>
+                <dt className="inline">Tracking number </dt>
+                <dd className="tabular inline font-medium text-ink">{trackingNumber}</dd>
+              </div>
+            ) : null}
+            {parcel?.trackingEvent ? (
+              <div>
+                <dt className="inline">Latest update </dt>
+                <dd className="inline text-ink">
+                  {parcel.trackingEvent}
+                  {parcel.trackingEventAt ? `, ${formatSaleDateTime(parcel.trackingEventAt)}` : ""}
+                </dd>
+              </div>
+            ) : null}
+            {order.deliveredAt ? (
+              <div>
+                <dt className="inline">Delivered </dt>
+                <dd className="inline text-ink">{formatSaleDateTime(order.deliveredAt)}</dd>
+              </div>
+            ) : order.shippedAt ? (
+              <div>
+                <dt className="inline">Sent </dt>
+                <dd className="inline text-ink">{formatSaleDateTime(order.shippedAt)}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </section>
+      ) : (
+        <section className="mt-10" aria-labelledby="next-heading">
+          <h2 id="next-heading" className="text-xl">
+            What happens next
+          </h2>
+          <ol className="measure mt-4 space-y-3 text-base text-ink-soft">
+            <li className="flex gap-3">
+              <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
+              <span>
+                A confirmation email is on its way
+                {order.customerEmail ? (
+                  <>
+                    {" "}
+                    to <span className="font-medium text-ink">{order.customerEmail}</span>
+                  </>
+                ) : null}
+                . Stripe also emails its own payment receipt.
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
+              <span>
+                {paidFor ? (
+                  <>
+                    We pack your order and send it by {paidFor.carrier} to the address you gave at
+                    checkout
+                    {nextDayDue ? (
+                      <>
+                        . It is due <span className="font-medium text-ink">{nextDayDue}</span>
+                      </>
+                    ) : (
+                      <> ({paidFor.transit})</>
+                    )}
+                    .
+                  </>
+                ) : (
+                  "We pack your order and dispatch it to the address you gave at checkout."
+                )}
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
+              <span>You get a second email when it ships.</span>
+            </li>
+          </ol>
+        </section>
+      )}
 
       <p className="mt-10 text-sm text-ink-soft">
         Something not right?{" "}

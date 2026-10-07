@@ -3,6 +3,7 @@ import { requireAdminRole } from "@/lib/adminAuth";
 import { formatPrice } from "@/config/brand";
 import { dailyTakings } from "@/lib/dailyTakings";
 import { paidMinor } from "@/lib/meta-capi-event";
+import { statusLabel } from "@/lib/order-status";
 import {
   formatSaleClock,
   formatShopDay,
@@ -152,8 +153,8 @@ export default async function AdminTakingsPage({
                       <span className="block text-xs text-ink-soft">{o.customerEmail}</span>
                     </td>
                     <td className="px-5 py-3 capitalize text-ink-soft">{o.paymentMethod}</td>
-                    <td className={`px-5 py-3 capitalize ${cancelled ? "text-red-600" : "text-ink-soft"}`}>
-                      {o.status}
+                    <td className={`px-5 py-3 ${cancelled ? "text-red-600" : "text-ink-soft"}`}>
+                      {statusLabel(o.status)}
                     </td>
                     <td
                       className={`px-5 py-3 text-right font-medium tabular-nums ${
