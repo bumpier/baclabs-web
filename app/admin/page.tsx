@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin, getAdminSession } from "@/lib/adminAuth";
 import { formatPrice } from "@/config/brand";
-import { Prisma } from "@prisma/client";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import { PrintUnfulfilledMenu } from "@/components/admin/PrintUnfulfilledMenu";
 import { LabelWarning } from "@/components/admin/LabelWarning";
@@ -12,14 +11,10 @@ import { catchUpCount } from "@/lib/shipping/catch-up";
 import { statusLabel } from "@/lib/order-status";
 import { SalesActivityChart } from "@/components/admin/SalesActivity";
 import { buildSalesActivity } from "@/lib/salesActivity";
-import { dailyTakings } from "@/lib/dailyTakings";
-import { shopDayKey } from "@/lib/saleTime";
-import type {
-  DailyRevenue,
-  StatusCount,
-  ProductCount,
-  PaymentMethod,
-} from "@/components/admin/AnalyticsDashboard";
+import { dailyTakings, SOLD_STATUSES } from "@/lib/dailyTakings";
+import { loadFinance } from "@/lib/finance/query";
+import { shiftDayKey, shopDayKey } from "@/lib/saleTime";
+import type { DailyRevenue, StatusCount, ProductCount } from "@/components/admin/AnalyticsDashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -28,17 +23,18 @@ export default async function AdminOverviewPage() {
   const session = await getAdminSession();
   if (session?.role === "PACKER") redirect("/admin/orders");
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const today = shopDayKey(new Date());
 
   // Pending orders (checkouts never paid) are left out of everything here.
   const [
     stageGroups,
     oldOpenOrders,
     productCount,
-    revenueOrders,
+    lastThirtyDays,
+    takenWithAmount,
+    takenBeforeAmounts,
     allStatusGroups,
     allPaidOrders,
-    paymentGroups,
     saleTimes,
     takingsToday,
   ] = await Promise.all([
@@ -51,19 +47,23 @@ export default async function AdminOverviewPage() {
     }),
     catchUpCount(),
     prisma.product.count({ where: { active: true } }),
-    prisma.order.findMany({
-      where: {
-        createdAt: { gte: thirtyDaysAgo },
-        status: { in: ["paid", "packed", "shipped", "delivered"] },
-      },
-      select: { createdAt: true, totalAmount: true },
+    // Takings as /admin/finance counts them: what customers were charged, by
+    // the UK day they paid.
+    loadFinance(shiftDayKey(today, -29), today, { compare: false }),
+    prisma.order.aggregate({
+      where: { status: { in: SOLD_STATUSES }, amountPaidMinor: { not: null } },
+      _sum: { amountPaidMinor: true },
+    }),
+    // Paid before the amount charged was recorded: the goods total is all there is.
+    prisma.order.aggregate({
+      where: { status: { in: SOLD_STATUSES }, amountPaidMinor: null },
+      _sum: { totalAmount: true },
     }),
     prisma.order.groupBy({ by: ["status"], where: { status: { not: "pending" } }, _count: { id: true } }),
     prisma.order.findMany({
       where: { status: { in: ["paid", "packed", "shipped", "delivered"] } },
       select: { items: true },
     }),
-    prisma.order.groupBy({ by: ["paymentMethod"], where: { status: { not: "pending" } }, _count: { id: true } }),
     prisma.order.findMany({
       where: {
         status: { in: ["paid", "packed", "shipped", "delivered"] },
@@ -71,14 +71,12 @@ export default async function AdminOverviewPage() {
       },
       select: { paidAt: true },
     }),
-    dailyTakings(shopDayKey(new Date())),
+    dailyTakings(today),
   ]);
 
-  const allOrdersAgg = await prisma.order.aggregate({
-    where: { status: { in: ["paid", "packed", "shipped", "delivered"] } },
-    _sum: { totalAmount: true },
-  });
-  const revenueDecimal = allOrdersAgg._sum?.totalAmount ?? new Prisma.Decimal(0);
+  const takenAllTimeMinor =
+    (takenWithAmount._sum.amountPaidMinor ?? 0) +
+    Math.round(Number(takenBeforeAmounts._sum.totalAmount ?? 0) * 100);
 
   const stageCount = (status: string) => stageGroups.find((g) => g.status === status)?._count.id ?? 0;
   const unshippedOrders = stageCount("paid") + stageCount("packed");
@@ -91,23 +89,15 @@ export default async function AdminOverviewPage() {
 
   const cards = [
     { label: "Taken today", value: formatPrice(takingsToday.summary.takenMinor / 100, "GBP"), href: "/admin/takings" },
-    { label: "Revenue (GBP)", value: formatPrice(revenueDecimal.toString(), "GBP"), href: "/admin/orders" },
+    { label: "Taken, all time", value: formatPrice(takenAllTimeMinor / 100, "GBP"), href: "/admin/finance?range=this-year" },
     { label: "Active products", value: String(productCount), href: "/admin/products" },
   ];
 
   // ── Analytics data
-  const revenueByDate: Record<string, number> = {};
-  for (const o of revenueOrders) {
-    const key = o.createdAt.toISOString().split("T")[0]!;
-    revenueByDate[key] = (revenueByDate[key] ?? 0) + Number(o.totalAmount);
-  }
-  const dailyRevenue: DailyRevenue[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-    const key = d.toISOString().split("T")[0]!;
-    const label = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-    dailyRevenue.push({ date: label, revenue: Math.round(revenueByDate[key] ?? 0) });
-  }
+  const dailyRevenue: DailyRevenue[] = lastThirtyDays.buckets.map((b) => ({
+    date: b.label,
+    revenue: Math.round(b.totals.takenMinor / 100),
+  }));
 
   const statusCounts: StatusCount[] = allStatusGroups.map((s) => ({
     status: s.status,
@@ -130,14 +120,7 @@ export default async function AdminOverviewPage() {
     .slice(0, 5)
     .map(([name, count]) => ({ name, count }));
 
-  const paymentMethods: PaymentMethod[] = paymentGroups.map((g) => ({
-    name: g.paymentMethod,
-    value: g._count.id,
-  }));
-
-  const totalRevenueGbp = Math.round(
-    revenueOrders.reduce((sum: number, o: { totalAmount: unknown }) => sum + Number(o.totalAmount), 0)
-  );
+  const takenThirtyDaysGbp = Math.round(lastThirtyDays.totals.takenMinor / 100);
 
   const salesActivity = buildSalesActivity(
     saleTimes.flatMap((o) => (o.paidAt ? [o.paidAt] : [])),
@@ -208,8 +191,12 @@ export default async function AdminOverviewPage() {
       <div className="mt-14">
         <h2 className="font-display text-xl font-medium text-brand-deep">Analytics</h2>
         <p className="mt-1 text-sm text-ink-soft">
-          Revenue chart shows the last 30 days and the sales-times chart has its own range. All
-          other metrics are all-time.
+          The takings chart shows the last 30 days and the sales-times chart has its own range. All
+          other metrics are all-time. Costs and day-by-day figures are under{" "}
+          <Link href="/admin/finance" className="link">
+            Finance
+          </Link>
+          .
         </p>
         <div className="mt-6">
           <SalesActivityChart activity={salesActivity} />
@@ -219,8 +206,7 @@ export default async function AdminOverviewPage() {
             dailyRevenue={dailyRevenue}
             statusCounts={statusCounts}
             topProducts={topProducts}
-            paymentMethods={paymentMethods}
-            totalRevenueGbp={totalRevenueGbp}
+            takenThirtyDaysGbp={takenThirtyDaysGbp}
             totalOrders={totalOrders}
           />
         </div>

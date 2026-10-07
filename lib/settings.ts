@@ -27,6 +27,8 @@ export const SETTING_KEYS = {
   autoLabels: "auto_labels",
   // "on" | "off": move orders on from SmartTrack tracking — lib/shipping/tracking-sync.ts
   trackingUpdates: "tracking_updates",
+  // "" | a UK day, "2027-01-01": VAT-registered from then — lib/finance/rates.ts
+  vatRegisteredFrom: "vat_registered_from",
 } as const;
 
 /**

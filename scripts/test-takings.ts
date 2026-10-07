@@ -76,13 +76,19 @@ const order = (over: Partial<TakingsOrder>): TakingsOrder => ({
   amountPaidMinor: null,
   totalAmount: "0",
   deliveryMinor: null,
+  deliveryOption: null,
   ...over,
 });
 
 const none = summariseTakings([]);
 check(
   "a day with no sales is all zeros",
-  none.takenMinor === 0 && none.orders === 0 && none.averageMinor === 0 && none.deliveryMinor === 0
+  none.takenMinor === 0 &&
+    none.orders === 0 &&
+    none.averageMinor === 0 &&
+    none.deliveryMinor === 0 &&
+    none.goodsMinor === 0 &&
+    none.delivery.length === 0
 );
 
 const day = summariseTakings([
@@ -95,6 +101,34 @@ check("taken is the sum of what each customer was charged", day.takenMinor === 2
 check("every standing order is counted", day.orders === 3);
 check("delivery is totalled, missing counted as none", day.deliveryMinor === 299, String(day.deliveryMinor));
 check("the average is rounded to a whole penny", day.averageMinor === Math.round((2498 + 5999 + 2199) / 3), String(day.averageMinor));
+check(
+  "order value is what was charged less delivery",
+  day.goodsMinor === 2498 - 299 + 5999 + 2199 && day.goodsMinor + day.deliveryMinor === day.takenMinor,
+  String(day.goodsMinor)
+);
+
+// ── Delivery, one line per option and price
+const mixed = summariseTakings([
+  order({ amountPaidMinor: 2589, deliveryMinor: 0, deliveryOption: "next_day" }),
+  order({ amountPaidMinor: 2589, deliveryMinor: 390, deliveryOption: "standard" }),
+  order({ amountPaidMinor: 2699, deliveryMinor: 500, deliveryOption: "next_day" }),
+  order({ amountPaidMinor: 2589, deliveryMinor: 390, deliveryOption: "standard" }),
+  order({ amountPaidMinor: 4500, deliveryMinor: 0, deliveryOption: "next_day" }),
+  // From before there was a choice.
+  order({ amountPaidMinor: 2498, deliveryMinor: 299 }),
+  order({ status: "cancelled", amountPaidMinor: 2699, deliveryMinor: 500, deliveryOption: "next_day" }),
+]);
+const lines = mixed.delivery.map((l) => `${l.option}:${l.priceMinor}:${l.orders}:${l.totalMinor}`).join(" ");
+check(
+  "delivery is split by option and price, in checkout's order, dearest first, no-option last",
+  lines === "standard:390:2:780 next_day:500:1:500 next_day:0:2:0 null:299:1:299",
+  lines
+);
+check(
+  "the delivery lines add up to the delivery total",
+  mixed.delivery.reduce((sum, l) => sum + l.totalMinor, 0) === mixed.deliveryMinor &&
+    mixed.delivery.reduce((sum, l) => sum + l.orders, 0) === mixed.orders
+);
 
 const withCancelled = summariseTakings([
   order({ amountPaidMinor: 2498, deliveryMinor: 299 }),
@@ -102,6 +136,7 @@ const withCancelled = summariseTakings([
 ]);
 check("a cancelled order is not money taken", withCancelled.takenMinor === 2498 && withCancelled.orders === 1);
 check("…nor is its delivery", withCancelled.deliveryMinor === 299);
+check("…nor its order value", withCancelled.goodsMinor === 2498 - 299);
 check(
   "…it is reported on its own instead",
   withCancelled.cancelledOrders === 1 && withCancelled.cancelledMinor === 5999

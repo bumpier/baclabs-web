@@ -163,3 +163,57 @@ export function parseDayKey(raw: string | undefined): string | null {
 export function formatShopDay(dayKey: string): string {
   return dayFmt.format(new Date(`${dayKey}T12:00:00Z`)).replace(",", "");
 }
+
+// ── Ranges of UK days, for /admin/finance
+//
+// Days are grouped by their names, never by moments: "2026-10-25" is one day
+// whatever the clocks did, so arithmetic on the name at UTC midnight is safe.
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const dayMs = (dayKey: string) => Date.parse(`${dayKey}T00:00:00Z`);
+
+/** The days from `from` to `to`, both included, as one half-open range of moments. */
+export function shopRangeBounds(from: string, to: string): { start: Date; end: Date } {
+  return { start: shopDayBounds(from).start, end: shopDayBounds(to).end };
+}
+
+/** How many days from `from` to `to`, both included: 1 for a single day. */
+export function daysInRange(from: string, to: string): number {
+  return Math.round((dayMs(to) - dayMs(from)) / DAY_MS) + 1;
+}
+
+/** Every day from `from` to `to`, both included, earliest first. */
+export function dayKeysBetween(from: string, to: string): string[] {
+  const keys: string[] = [];
+  for (let ms = dayMs(from); ms <= dayMs(to); ms += DAY_MS) keys.push(utcDayKey(ms));
+  return keys;
+}
+
+/** The Monday that starts this day's week: "2026-10-05" for Wednesday 7 October. */
+export function weekKey(dayKey: string): string {
+  const weekday = (new Date(dayMs(dayKey)).getUTCDay() + 6) % 7; // 0 = Monday
+  return shiftDayKey(dayKey, -weekday);
+}
+
+/** The month a day is in: "2026-10". */
+export function monthKey(dayKey: string): string {
+  return dayKey.slice(0, 7);
+}
+
+const shortDayFmt = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "UTC",
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+});
+const monthFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", month: "short", year: "numeric" });
+
+/** "Wed 7 Oct" */
+export function formatShopDayShort(dayKey: string): string {
+  return shortDayFmt.format(new Date(`${dayKey}T12:00:00Z`)).replace(",", "");
+}
+
+/** "Oct 2026", from "2026-10". */
+export function formatMonth(month: string): string {
+  return monthFmt.format(new Date(`${month}-15T12:00:00Z`));
+}

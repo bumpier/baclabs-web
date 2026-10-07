@@ -11,7 +11,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 type Gated<T> = T & { adminOnly?: boolean };
 
-// Packers only ever see Orders, less its money pages; everything else is Admin-only.
+// Packers only ever see Orders; everything else, money included, is Admin-only.
 const ALL_NAV: Gated<NavLink | { label: string; items: Gated<NavLink>[] }>[] = [
   { href: "/admin", label: "Overview", adminOnly: true },
   {
@@ -19,7 +19,15 @@ const ALL_NAV: Gated<NavLink | { label: string; items: Gated<NavLink>[] }>[] = [
     items: [
       { href: "/admin/orders", label: "All orders", hint: "Pick, pack and dispatch" },
       { href: "/admin/orders/scan", label: "Scan station", hint: "Check a parcel against its order" },
-      { href: "/admin/takings", label: "Daily takings", hint: "Money taken, day by day", adminOnly: true },
+    ],
+  },
+  {
+    label: "Finance",
+    adminOnly: true,
+    items: [
+      { href: "/admin/finance", label: "Overview", hint: "Takings, shipping costs and charts" },
+      { href: "/admin/takings", label: "Daily takings", hint: "One day, order by order" },
+      { href: "/admin/finance/costs", label: "Costs", hint: "Postage, fulfilment and VAT" },
     ],
   },
   {

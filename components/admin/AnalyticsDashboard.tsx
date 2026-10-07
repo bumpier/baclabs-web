@@ -5,9 +5,6 @@ import {
   Area,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -26,8 +23,6 @@ import { CHART, CHART_LINE } from "@/lib/theme";
  * still have to be strings; they just have to be the RIGHT strings, from the
  * one place that owns them.
  */
-const COLORS = CHART;
-
 export interface DailyRevenue {
   date: string;
   revenue: number;
@@ -43,17 +38,12 @@ export interface ProductCount {
   count: number;
 }
 
-export interface PaymentMethod {
-  name: string;
-  value: number;
-}
-
 interface Props {
   dailyRevenue: DailyRevenue[];
   statusCounts: StatusCount[];
   topProducts: ProductCount[];
-  paymentMethods: PaymentMethod[];
-  totalRevenueGbp: number;
+  /** What customers were charged over the last 30 UK days, as /admin/finance counts it. */
+  takenThirtyDaysGbp: number;
   totalOrders: number;
 }
 
@@ -61,8 +51,7 @@ export default function AnalyticsDashboard({
   dailyRevenue,
   statusCounts,
   topProducts,
-  paymentMethods,
-  totalRevenueGbp,
+  takenThirtyDaysGbp,
   totalOrders,
 }: Props) {
   const countOf = (status: string) => statusCounts.find((s) => s.status === status)?.count ?? 0;
@@ -77,10 +66,10 @@ export default function AnalyticsDashboard({
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div className="card p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-            Total Revenue
+            Taken, last 30 days
           </p>
           <p className="mt-2 font-display text-3xl font-medium text-brand-deep">
-            £ {totalRevenueGbp.toLocaleString("en-GB", { maximumFractionDigits: 0 })}
+            £{takenThirtyDaysGbp.toLocaleString("en-GB", { maximumFractionDigits: 0 })}
           </p>
         </div>
         <div className="card p-5">
@@ -110,7 +99,7 @@ export default function AnalyticsDashboard({
         {/* Revenue chart — 2 cols */}
         <div className="card p-6 lg:col-span-2">
           <h2 className="font-display text-lg font-medium text-brand-deep">
-            Revenue — last 30 days (GBP)
+            Taken — last 30 days
           </h2>
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -125,7 +114,7 @@ export default function AnalyticsDashboard({
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip
-                  formatter={(v: unknown) => [`£${Number(v).toFixed(0)}`, "Revenue"]}
+                  formatter={(v: unknown) => [`£${Number(v).toFixed(0)}`, "Taken"]}
                 />
                 <Area
                   type="monotone"
@@ -164,7 +153,7 @@ export default function AnalyticsDashboard({
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6">
         {/* Top products */}
         <div className="card p-6">
           <h2 className="font-display text-lg font-medium text-brand-deep">
@@ -187,40 +176,6 @@ export default function AnalyticsDashboard({
                   <Tooltip />
                   <Bar dataKey="count" fill={CHART[1]} radius={[0, 4, 4, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Payment methods */}
-        <div className="card p-6">
-          <h2 className="font-display text-lg font-medium text-brand-deep">
-            Payment methods
-          </h2>
-          <div className="mt-4 h-48">
-            {paymentMethods.length === 0 ? (
-              <p className="text-sm text-ink-soft">No data yet.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={paymentMethods}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={70}
-                    label={({ name, percent }: { name?: string; percent?: number }) =>
-                      `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`
-                    }
-                    labelLine={false}
-                  >
-                    {paymentMethods.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
               </ResponsiveContainer>
             )}
           </div>

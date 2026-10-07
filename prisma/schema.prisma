@@ -550,3 +550,28 @@ model Shipment {
 
   @@index([orderId])
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// What the shop pays to send an order out, for /admin/finance. One row per
+// price and the day it took effect, so a new price never rewrites the days
+// before it: a cost is priced by the latest row whose effectiveFrom is on or
+// before its day (lib/finance/rates.ts). Typed in on /admin/finance/costs.
+// ─────────────────────────────────────────────────────────────────────────
+model CostRate {
+  id   String @id @default(cuid())
+  // "fulfilment": per package, to the fulfilment company. "postage": per
+  // label, keyed by SmartTrack service code.
+  kind String
+  key  String @default("")
+
+  amountMinor   Int    @map("amount_minor") // pence
+  // A UK day, "2026-10-01". "1970-01-01" = from the start.
+  effectiveFrom String @map("effective_from")
+  actor         String @default("")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // A second price for the same day replaces the first.
+  @@unique([kind, key, effectiveFrom])
+}
