@@ -1,5 +1,5 @@
 // Smoke test for monthly plans against the worktree database. Run with:
-//   NEXT_PUBLIC_DELIVERY_CHOICE=on DATABASE_URL=file:../data/baclab.db npx tsx scripts/smoke-plans.ts seed-product|activation|cleanup
+//   NEXT_PUBLIC_DELIVERY_CHOICE=on DATABASE_URL=file:../data/baclab.db npx tsx scripts/smoke-plans.ts seed-product|activation|boxes|renewals|cleanup
 // NEXT_PUBLIC_DELIVERY_CHOICE=on is required: plan prices depend on it (the
 // £266.70 asserted for a 12-month 5-vial plan includes £3.90 delivery per box).
 // Every row it makes has an @smoke-plans.test email; cleanup removes them all.
@@ -9,9 +9,17 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/db";
 import { planPrice, type PlanMonths, type PlanPackId } from "../config/plans";
 import { planPurchaseItems, planRowData } from "../lib/plans/items";
-import { boxDueAt } from "../lib/plans/schedule";
+import { afterBox, boxDueAt, renewalWindow } from "../lib/plans/schedule";
+import { runPlanBoxes, runPlanRenewals } from "../lib/plans/boxes";
 import { fulfillPaidOrder } from "../lib/payments/fulfillment";
 import { shopDayKey } from "../lib/saleTime";
+
+// The boxes command buys postage labels through the real code path. With
+// SmartTrack credentials in the environment that would buy real ones.
+if (process.env.SMARTTRACK_API_KEY) {
+  console.error("Refusing to run: SMARTTRACK_API_KEY is set, and this script buys postage labels. Unset SMARTTRACK_API_KEY (and SMARTTRACK_API_SECRET) first.");
+  process.exit(1);
+}
 
 const DOMAIN = "@smoke-plans.test";
 const VIAL_SLUG = "baclab-10ml";
@@ -136,6 +144,80 @@ async function activation() {
   console.log("activation: all good");
 }
 
+async function boxes() {
+  await activation(); // leaves an active 12-month plan (plan-a) and an active upgraded one (upgrade-a)
+  const product = await vialProduct();
+  const plan = await prisma.plan.findFirstOrThrow({ where: { email: `plan-a${DOMAIN}`, status: "active" } });
+  // Park the upgraded plan (its box 2 falls due two days before plan-a's) so
+  // the first runs below touch plan-a alone.
+  const up0 = await prisma.plan.findFirstOrThrow({ where: { email: `upgrade-a${DOMAIN}`, status: "active" } });
+  await prisma.plan.update({ where: { id: up0.id }, data: { nextBoxAt: new Date("2099-01-01T00:00:00Z") } });
+  const due = new Date(plan.nextBoxAt!.getTime() + 60_000);
+  const stockBefore = (await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).stock;
+
+  const r1 = await runPlanBoxes(due);
+  const box2 = await prisma.order.findFirstOrThrow({ where: { planId: plan.id, planBox: 2 } });
+  assert(r1.created === 1, "box 2 is made when due");
+  assert(box2.status === "paid" && box2.kind === "plan_box" && Number(box2.totalAmount) === 0 && box2.amountPaidMinor === 0, "box 2 is a paid £0 plan box");
+  assert(box2.deliveryOption === "standard" && box2.customerEmail === `plan-a${DOMAIN}` && box2.shippingAddress === ADDRESS, "box 2 goes Standard to box 1's address");
+  assert(JSON.parse(box2.items).length === 1 && JSON.parse(box2.items)[0].bundleId === "five", "box 2 is one 5-pack line");
+  assert((await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).stock === stockBefore - 5, "box 2 took 5 vials");
+  assert((await prisma.emailLog.count({ where: { orderId: box2.id } })) === 0, "box 2 sends no confirmation email");
+  const after = await prisma.plan.findUniqueOrThrow({ where: { id: plan.id } });
+  assert(after.boxesSent === 2 && after.nextBoxAt?.getTime() === afterBox({ months: 12, anchorDay: plan.anchorDay! }, 2).nextBoxAt?.getTime(), "the plan moves to box 3 a month on");
+
+  const r2 = await runPlanBoxes(due);
+  assert((await prisma.order.count({ where: { planId: plan.id, planBox: 2 } })) === 1 && r2.created === 0, "a re-run makes nothing");
+
+  // Force the race: put the plan back as if box 2 had not been counted.
+  await prisma.plan.update({ where: { id: plan.id }, data: { boxesSent: 1, nextBoxAt: plan.nextBoxAt } });
+  const r3 = await runPlanBoxes(due);
+  assert(r3.created === 0 && (await prisma.order.count({ where: { planId: plan.id, planBox: 2 } })) === 1, "the unique (planId, planBox) stops a second box 2");
+  assert((await prisma.plan.findUniqueOrThrow({ where: { id: plan.id } })).boxesSent === 1, "…and rolls the plan back with it");
+  await prisma.plan.update({ where: { id: plan.id }, data: { boxesSent: 2, nextBoxAt: after.nextBoxAt } });
+
+  // The upgraded plan's box 2 carries the bonus pack. Unpark it first; at its
+  // date plan-a is not due (its box 3 is a month later).
+  await prisma.plan.update({ where: { id: up0.id }, data: { nextBoxAt: up0.nextBoxAt } });
+  await runPlanBoxes(new Date(up0.nextBoxAt!.getTime() + 60_000));
+  const upBox2 = await prisma.order.findFirstOrThrow({ where: { planId: up0.id, planBox: 2 } });
+  assert(JSON.parse(upBox2.items).length === 2, "an upgraded 12-month plan's box 2 carries the bonus pack");
+
+  // A cancelled plan makes no more boxes (other plans may make theirs on this run).
+  await prisma.plan.update({ where: { id: plan.id }, data: { status: "cancelled", cancelledAt: new Date() } });
+  await runPlanBoxes(new Date(after.nextBoxAt!.getTime() + 60_000));
+  assert((await prisma.order.count({ where: { planId: plan.id, planBox: 3 } })) === 0, "a cancelled plan makes no box");
+
+  // A 3-month plan runs to completion.
+  const short = await pendingPlanPurchase(`plan-c${DOMAIN}`, "ten", 3);
+  await fulfillPaidOrder(short.id, { provider: "stripe", paymentRef: "smoke_c" });
+  for (let i = 0; i < 4; i++) {
+    const p = await prisma.plan.findUniqueOrThrow({ where: { purchaseOrderId: short.id } });
+    if (p.nextBoxAt) await runPlanBoxes(new Date(p.nextBoxAt.getTime() + 60_000));
+  }
+  const done = await prisma.plan.findUniqueOrThrow({ where: { purchaseOrderId: short.id } });
+  assert(done.status === "completed" && done.boxesSent === 3 && done.nextBoxAt === null, "a 3-month plan completes after box 3");
+  assert((await prisma.order.count({ where: { planId: done.id } })) === 3, "…with exactly three box orders");
+  console.log("boxes: all good");
+}
+
+async function renewals() {
+  await activation();
+  const plan = await prisma.plan.findFirstOrThrow({ where: { email: `plan-a${DOMAIN}`, status: "active" } });
+  const { from } = renewalWindow(plan.anchorDay!, plan.months);
+  // Counted on plan-a's own purchase order: the upgraded plan's window opens
+  // two days earlier, so run totals would include its email too.
+  const sentForA = () => prisma.emailLog.count({ where: { orderId: plan.purchaseOrderId, type: "plan_renewal" } });
+  await runPlanRenewals(new Date(from.getTime() - 60_000));
+  assert((await sentForA()) === 0, "no renewal before the window");
+  await runPlanRenewals(new Date(from.getTime() + 60_000));
+  assert((await sentForA()) === 1, "the renewal email goes once the window opens");
+  assert((await prisma.plan.findUniqueOrThrow({ where: { id: plan.id } })).renewalEmailSentAt !== null, "…and is recorded on the plan");
+  await runPlanRenewals(new Date(from.getTime() + 120_000));
+  assert((await sentForA()) === 1, "…and only once");
+  console.log("renewals: all good");
+}
+
 async function cleanup() {
   const orders = await prisma.order.findMany({ where: { customerEmail: { endsWith: DOMAIN } }, select: { id: true } });
   const ids = orders.map((o) => o.id);
@@ -152,6 +234,8 @@ async function cleanup() {
 const commands: Record<string, () => Promise<unknown>> = {
   "seed-product": async () => console.log(`product ${(await vialProduct()).slug} ready`),
   activation,
+  boxes,
+  renewals,
   cleanup,
 };
 const cmd = process.argv[2] ?? "";
