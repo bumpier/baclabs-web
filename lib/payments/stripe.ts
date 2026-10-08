@@ -8,9 +8,11 @@ import {
   deliveryOptionsFor,
   shipsFree,
   MAILING_LIST,
+  PRODUCT,
   type BundleId,
   type DeliveryOptionId,
 } from "@/config/funnel";
+import { planFreeLine, type PlanPrice } from "@/config/plans";
 
 let _stripe: Stripe | null = null;
 
@@ -220,6 +222,202 @@ export async function createBundleCheckout(
     { idempotencyKey: `checkout:${orderId}` }
   );
 
+  if (!session.url) throw new Error("Stripe did not return a checkout URL");
+  return { paymentUrl: session.url, paymentRef: session.id };
+}
+
+export interface PlanCheckoutParams {
+  orderId: string;
+  plan: PlanPrice;
+  shippingCountries: readonly string[];
+  origin: string;
+  /** The mailing-list welcome vials, as on createBundleCheckout. */
+  welcome?: { qty: number; email?: string };
+}
+
+/**
+ * What the plan is, on Stripe's page. Plain words: no em dashes, no
+ * exclamation marks. `bonusBox` is 1 for a checkout plan, 2 for an upgrade.
+ */
+function planDescription(plan: PlanPrice, bonusBox: number): string {
+  const free = planFreeLine(plan);
+  const delivery = plan.boxDeliveryMinor > 0 ? "Delivery on every box is included." : "Every box ships free.";
+  return [
+    `${plan.months} boxes, one a month, paid once. It never renews.`,
+    free ? `You pay for ${plan.paidMonths}: ${free}.` : "",
+    plan.bonusVials > 0 ? `The free ${plan.bonusVials}-pack comes in box ${bonusBox}.` : "",
+    delivery,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/**
+ * A Checkout Session for a prepaid monthly plan: ONE payment of the plan's
+ * total, priced here from config (planPrice), never from the request. No
+ * shipping rate: delivery for every box is inside the total. No promotion
+ * codes: a code would cut the plan's price and break the refund arithmetic.
+ */
+export async function createPlanCheckout(params: PlanCheckoutParams): Promise<{ paymentUrl: string; paymentRef: string }> {
+  const { orderId, plan, shippingCountries, origin } = params;
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    const ref = `cs_sim_${orderId.slice(0, 12)}`;
+    return { paymentUrl: `${origin}/dev/stripe?session=${ref}&order=${orderId}`, paymentRef: ref };
+  }
+
+  const allowedCountries =
+    shippingCountries as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[];
+  const metadata = { orderId, plan: plan.key, kind: "plan" };
+
+  const session = await getStripe().checkout.sessions.create(
+    {
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "gbp",
+            unit_amount: plan.totalMinor,
+            product_data: {
+              name: `${PRODUCT.name} ${PRODUCT.size}: ${plan.pack.vials} vials a month for ${plan.months} months`,
+              description: planDescription(plan, 1),
+            },
+          },
+          quantity: 1,
+        },
+        ...(plan.bonusVials > 0
+          ? [{ price_data: { currency: "gbp", unit_amount: 0, product_data: { name: `Free ${plan.bonusVials}-vial pack in box 1` } }, quantity: 1 }]
+          : []),
+        ...(params.welcome
+          ? [{ price_data: { currency: "gbp", unit_amount: 0, product_data: { name: MAILING_LIST.welcomeLineName } }, quantity: params.welcome.qty }]
+          : []),
+      ],
+      ...(params.welcome?.email ? { customer_email: params.welcome.email } : {}),
+      client_reference_id: orderId,
+      metadata,
+      payment_intent_data: { metadata },
+      shipping_address_collection: { allowed_countries: allowedCountries },
+      ...(deliveryChoiceEnabled()
+        ? {
+            custom_fields: [
+              {
+                key: DELIVERY_INSTRUCTIONS_FIELD,
+                label: { type: "custom", custom: "Delivery instructions" },
+                type: "text",
+                optional: true,
+                text: { maximum_length: 30 },
+              },
+            ],
+          }
+        : {}),
+      allow_promotion_codes: false,
+      automatic_tax: { enabled: false },
+      success_url: `${origin}/order-confirmation/${orderId}?session_id={CHECKOUT_SESSION_ID}`,
+      // Back to the plan picker, on the plan they had chosen.
+      cancel_url: `${origin}/?plan=${plan.key}#buy`,
+    },
+    { idempotencyKey: `checkout:${orderId}` }
+  );
+
+  if (!session.url) throw new Error("Stripe did not return a checkout URL");
+  return { paymentUrl: session.url, paymentRef: session.id };
+}
+
+/** A session from the keyless dev simulator: there is nothing at Stripe to read or close. */
+const simulated = (id: string) => !process.env.STRIPE_SECRET_KEY || id.startsWith("cs_sim_");
+
+export interface CheckoutSessionState {
+  /**
+   * "open": can still be paid, at `url`. "complete": already paid, though the
+   * webhook may not have landed yet. "gone": expired, unreadable, or a
+   * simulator session with nothing at Stripe.
+   */
+  status: "open" | "complete" | "gone";
+  url: string | null;
+}
+
+/** One read of a Checkout Session. Simulator-safe; never throws. */
+export async function checkoutSessionState(sessionId: string): Promise<CheckoutSessionState> {
+  if (simulated(sessionId)) return { status: "gone", url: null };
+  try {
+    const s = await getStripe().checkout.sessions.retrieve(sessionId);
+    if (s.status === "complete") return { status: "complete", url: null };
+    if (s.status === "open") return { status: "open", url: s.url };
+    return { status: "gone", url: null };
+  } catch (err) {
+    console.error(`[stripe] could not read session ${sessionId}`, err);
+    return { status: "gone", url: null };
+  }
+}
+
+/** Close a session nobody should pay any more. "complete" means it was paid first. Never throws. */
+export async function expireOpenCheckout(sessionId: string): Promise<"expired" | "complete" | "gone"> {
+  const before = await checkoutSessionState(sessionId);
+  if (before.status !== "open") return before.status;
+  try {
+    await getStripe().checkout.sessions.expire(sessionId);
+    return "expired";
+  } catch (err) {
+    // Stripe refuses to expire a session that stopped being open, as one
+    // paid between the read above and now has. Find out which it was.
+    const after = await checkoutSessionState(sessionId);
+    if (after.status === "complete") return "complete";
+    console.error(`[stripe] could not expire session ${sessionId}`, err);
+    return "gone";
+  }
+}
+
+/**
+ * Turning a paid one-off order into box 1 of a plan: ONE payment of the
+ * difference (lib/plans/upgrade.ts upgradePriceMinor), priced here, never from
+ * the request. Nothing ships, so no address and no shipping rate. The email is
+ * locked to the original order's. No promotion codes.
+ */
+export async function createPlanUpgradeCheckout(params: {
+  orderId: string;
+  originalOrderId: string;
+  plan: PlanPrice;
+  priceMinor: number;
+  email: string;
+  origin: string;
+}): Promise<{ paymentUrl: string; paymentRef: string }> {
+  const { orderId, originalOrderId, plan, priceMinor, origin } = params;
+  if (!process.env.STRIPE_SECRET_KEY) {
+    const ref = `cs_sim_${orderId.slice(0, 12)}`;
+    return { paymentUrl: `${origin}/dev/stripe?session=${ref}&order=${orderId}`, paymentRef: ref };
+  }
+  const ref = originalOrderId.slice(0, 8).toUpperCase();
+  const metadata = { orderId, upgradeOf: originalOrderId, plan: plan.key, kind: "plan_upgrade" };
+  const session = await getStripe().checkout.sessions.create(
+    {
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "gbp",
+            unit_amount: priceMinor,
+            product_data: {
+              name: `Make order ${ref} box 1 of a ${plan.months}-month plan`,
+              // An upgrade's box 1 has already been bought, so its bonus pack rides in box 2.
+              description: planDescription(plan, 2),
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      ...(params.email ? { customer_email: params.email } : {}),
+      client_reference_id: orderId,
+      metadata,
+      payment_intent_data: { metadata },
+      allow_promotion_codes: false,
+      automatic_tax: { enabled: false },
+      success_url: `${origin}/order-confirmation/${orderId}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/order-confirmation/${originalOrderId}#plan-upgrade`,
+    },
+    { idempotencyKey: `checkout:${orderId}` }
+  );
   if (!session.url) throw new Error("Stripe did not return a checkout URL");
   return { paymentUrl: session.url, paymentRef: session.id };
 }

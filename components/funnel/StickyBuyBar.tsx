@@ -29,7 +29,7 @@ import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
  * between a decided customer and the payment page. While the customer is
  * looking at a monthly plan it does the opposite: it names the plan and
  * scrolls back to it, because the bar must never charge the one-time pack
- * to someone who chose a plan (and plans have no checkout yet).
+ * to someone who chose a plan.
  *
  * Two rules govern when it shows:
  *  1. Not until the hero CTA has scrolled away — before that it is noise.
@@ -77,7 +77,7 @@ export function StickyBuyBar() {
   // case is tested first and the plain badge is the fallback.
   const toFreeDelivery = remainingForFreeDeliveryMinor(totalMinor);
   const deliveryLine = plan
-    ? "Free delivery on every box"
+    ? "Delivery included in the plan price"
     : shipsFree(totalMinor)
       ? "Free UK delivery"
       : toFreeDelivery > 0

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { PARCEL_KINDS } from "@/lib/plans/kinds";
 import { requireAdmin } from "@/lib/adminAuth";
 import { AutoPrint } from "@/components/AutoPrint";
 import { PrintButton } from "@/components/PrintButton";
@@ -55,7 +56,7 @@ export default async function AdminBatchPrintPage({
   // box. Oldest first, and the same sort for both kinds, so the slips and
   // labels come off their printers in matching stacks.
   const orders = await prisma.order.findMany({
-    where: { status: { in: ["paid", "packed"] } },
+    where: { status: { in: ["paid", "packed"] }, kind: { in: PARCEL_KINDS } },
     orderBy: { createdAt: "asc" },
   });
   const printable = orders.flatMap((order) => {

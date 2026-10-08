@@ -70,9 +70,10 @@ export async function GET(req: Request) {
       ];
     });
   } else {
-    header = ["order_id", "paid_at", "day", "status", "customer_name", "customer_email", "customer", "pack", "vials", "welcome_vials", "delivery_option", "order_value", "delivery", "taken", "discount", "vat", "postage", "postage_status", "packages", "fulfilment", "after_shipping_costs"];
+    header = ["order_id", "kind", "paid_at", "day", "status", "customer_name", "customer_email", "customer", "pack", "vials", "welcome_vials", "delivery_option", "order_value", "delivery", "taken", "discount", "vat", "postage", "postage_status", "packages", "fulfilment", "after_shipping_costs"];
     lines = f.rows.map((r) => [
       r.id,
+      r.kind,
       formatSaleDateTime(r.saleTime),
       r.day,
       r.status,

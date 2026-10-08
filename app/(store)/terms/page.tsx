@@ -3,7 +3,9 @@ import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
 import { brand } from "@/config/brand";
-import { MAX_QUANTITY, PRODUCT, VAT, formatMinor } from "@/config/funnel";
+import { MAX_QUANTITY, PRODUCT, STANDARD_DELIVERY, VAT, bundleById, formatMinor } from "@/config/funnel";
+import { BONUS_PACK_ID, PLAN_MONTHS, planPrice } from "@/config/plans";
+import { planRefundMinor } from "@/lib/plans/refund";
 import { COMPLAINT_ACK_DAYS, isSet, legalName } from "@/lib/legal";
 
 export const metadata: Metadata = pageMetadata({
@@ -25,6 +27,19 @@ export default function TermsPage() {
   // Set here rather than in brand.contact.email, which also feeds the footer
   // and home page — this address is meant to appear on the terms only.
   const email = "contact@baclab.co.uk";
+  // The monthly plans example is derived from config so it cannot drift from
+  // the prices on the storefront.
+  const bonus = bundleById(BONUS_PACK_ID)!;
+  const example = planPrice("five", 12);
+  const exampleRefund = planRefundMinor({
+    paidMinor: example.totalMinor,
+    boxesSent: 3,
+    boxPriceMinor: example.boxPriceMinor,
+    boxDeliveryMinor: example.boxDeliveryMinor,
+    bonusBox: 1,
+    bonusValueMinor: example.bonusValueMinor,
+  });
+  const lengths = `${PLAN_MONTHS.slice(0, -1).join(", ")} or ${PLAN_MONTHS[PLAN_MONTHS.length - 1]}`;
 
   return (
     <LegalPage
@@ -249,6 +264,51 @@ export default function TermsPage() {
                 when we refund, are set out in full in our{" "}
                 <Link href="/returns">returns and refunds policy</Link>, which forms part of these
                 Terms. Nothing in these Terms or in that policy limits your statutory rights.
+              </p>
+            </>
+          ),
+        },
+        {
+          heading: "Monthly plans",
+          body: (
+            <>
+              <p>
+                A monthly plan is a set number of boxes of one pack size: {lengths} boxes, one a month. You pay for the
+                whole plan once, when you order. The price includes delivery for every box, and we never take a further
+                payment for it. A plan never renews by itself.
+              </p>
+              <p>
+                Box 1 is sent like any other order. Each later box is sent on the same date of the month as the day you
+                paid, or on the last day of a month that has no such date, by {STANDARD_DELIVERY.carrier}. The price of
+                each box and its delivery are fixed for the whole plan when you pay.
+              </p>
+              <p>
+                Where a plan includes free months, they are its last boxes. Where it includes a free {bonus.vials}-vial
+                pack, the pack is sent with the first box, or with the second box where you turned an order you had
+                already placed into a plan.
+              </p>
+              <p>
+                To skip a box or move it to another date, reply to any email from us, or write to{" "}
+                <a href={`mailto:${email}`}>{email}</a>, before the box is due.
+              </p>
+              <p>
+                You may cancel a plan at any time by writing to us. We stop sending boxes and refund what you paid for
+                the plan, less, for each box already sent, the price of that pack and its delivery charge, and less the
+                price of the free {bonus.vials}-vial pack once it has been sent. If that leaves nothing, there is nothing
+                to refund. For example, a {example.pack.vials}-vial plan of {example.months} boxes costing{" "}
+                {formatMinor(example.totalMinor)}, cancelled after 3 boxes, is refunded{" "}
+                {formatMinor(example.totalMinor)} less 3 &times;{" "}
+                {formatMinor(example.boxPriceMinor + example.boxDeliveryMinor)} and less{" "}
+                {formatMinor(example.bonusValueMinor)}: {formatMinor(exampleRefund)}.
+              </p>
+              <p>
+                This does not reduce your statutory rights. For a plan, the 14-day cancellation period described in
+                clause 7 and in our <Link href="/returns">returns and refunds policy</Link> runs from the day you receive
+                box 1.
+              </p>
+              <p>
+                Unless you have opted out of our emails, about two weeks before your last box we email you to say the
+                plan is ending. To carry on, you buy a new plan at the price shown on the Site at that time.
               </p>
             </>
           ),

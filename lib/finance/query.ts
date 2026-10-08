@@ -38,7 +38,8 @@ export async function loadFinance(from: string, to: string, { compare }: { compa
     // Every sold order's email, to tell a first order from a repeat one.
     // Small: one short row per order the shop has ever sold.
     prisma.order.findMany({
-      where: { status: { in: SOLD_STATUSES }, customerEmail: { not: "" } },
+      // Sales only: a plan box or an upgrade is never anyone's first order.
+      where: { status: { in: SOLD_STATUSES }, kind: "sale", customerEmail: { not: "" } },
       select: { id: true, customerEmail: true, paidAt: true, createdAt: true },
     }),
     prisma.postalService.findMany({ select: { code: true, name: true } }),

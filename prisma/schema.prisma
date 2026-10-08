@@ -106,6 +106,24 @@ model Order {
   // claim itself is Subscriber.welcomeOrderId, made when payment lands.
   welcomeSubscriberId String?
 
+  // What this row is (lib/plans/kinds.ts): "sale", something a customer
+  // bought (a plan's purchase included: it is box 1); "plan_box", a later box
+  // of a prepaid plan, made already paid at £0 by /api/cron/plan-boxes;
+  // "plan_upgrade", the payment that turned a one-off order into box 1 of a
+  // plan: money, no parcel. Finance and fulfilment both read it.
+  kind String @default("sale")
+
+  // The plan this order belongs to and which box it is (1 = the first). Set
+  // on a plan's purchase order at checkout, on an upgraded one-off order when
+  // the upgrade is paid, and on every later box. An upgrade payment has
+  // planId and no planBox. The unique pair stops a box being made twice.
+  planId  String?
+  plan    Plan?   @relation("PlanOrders", fields: [planId], references: [id], onDelete: SetNull)
+  planBox Int?
+
+  // The plan this order paid for, when it paid for one (Plan.purchaseOrderId).
+  planPurchase Plan? @relation("PlanPurchase")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -116,6 +134,8 @@ model Order {
   // "Is this their first order?" and the campaign audiences look orders up
   // by email.
   @@index([customerEmail])
+  @@index([kind])
+  @@unique([planId, planBox])
 }
 
 model AdminUser {
@@ -132,7 +152,7 @@ model EmailLog {
   id        String   @id @default(uuid())
   orderId   String
   order     Order    @relation(fields: [orderId], references: [id])
-  type      String // confirmation | shipped | delivered | nudge | review
+  type      String // confirmation | shipped | delivered | nudge | review | plan_renewal
   recipient String
   sentAt    DateTime @default(now())
 
@@ -142,6 +162,67 @@ model EmailLog {
 model EmailOptOut {
   email     String   @id
   createdAt DateTime @default(now())
+}
+
+// ── Prepaid monthly plans ─────────────────────────────────────────
+//
+// One pack a month for 3, 6 or 12 months, paid ONCE (config/plans.ts). The
+// terms are copied here at checkout so a later re-price never changes a plan
+// already sold. Box 1 is a normal order; every later box is an Order with
+// kind "plan_box" made by /api/cron/plan-boxes (lib/plans/boxes.ts).
+//
+// pending → active (paid) → completed (last box made); cancelled by an admin
+// at any time. A pending plan is deleted with its abandoned purchase order
+// (onDelete: Cascade), which is why clear-pending can still delete it.
+model Plan {
+  id     String @id @default(cuid())
+  status String @default("pending") // pending | active | completed | cancelled
+
+  packId           String @map("pack_id") // BundleId: five | ten | twenty
+  vialsPerBox      Int    @map("vials_per_box")
+  months           Int // boxes in the plan: 3 | 6 | 12
+  paidMonths       Int    @map("paid_months")
+  boxPriceMinor    Int    @map("box_price_minor")
+  boxDeliveryMinor Int    @map("box_delivery_minor")
+  bonusVials       Int    @default(0) @map("bonus_vials")
+  bonusBox         Int    @default(0) @map("bonus_box") // which box carries the bonus pack; 0 = none
+  bonusValueMinor  Int    @default(0) @map("bonus_value_minor")
+  totalMinor       Int    @map("total_minor") // the plan's price
+  // What was actually charged for it, set on payment: the purchase order's
+  // charge, or for an upgrade the original order's plus the upgrade's. The
+  // refund is worked out from this (lib/plans/refund.ts).
+  paidMinor        Int?   @map("paid_minor")
+  source           String @default("checkout") // checkout | upgrade
+  email            String @default("")
+
+  // The order whose payment bought the plan: box 1 for a checkout plan, the
+  // kind "plan_upgrade" payment for an upgrade.
+  purchaseOrderId String @unique @map("purchase_order_id")
+  purchaseOrder   Order  @relation("PlanPurchase", fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  // For an upgrade: the one-off order that becomes box 1 when it is paid.
+  upgradeOfOrderId String? @map("upgrade_of_order_id")
+
+  boxesSent Int       @default(0) @map("boxes_sent")
+  // The UK day box 1 was paid for, "2026-10-08". Every box is due on this
+  // day of the month (lib/plans/schedule.ts).
+  anchorDay String?   @map("anchor_day")
+  nextBoxAt DateTime? @map("next_box_at")
+  paidAt    DateTime? @map("paid_at")
+
+  cancelledAt DateTime? @map("cancelled_at")
+  refundMinor Int?      @map("refund_minor") // recorded by the admin; refunded in Stripe by hand
+  cancelledBy String    @default("") @map("cancelled_by")
+
+  renewalEmailSentAt DateTime? @map("renewal_email_sent_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orders Order[] @relation("PlanOrders")
+
+  @@index([status, nextBoxAt])
+  @@index([upgradeOfOrderId])
+  @@index([email])
 }
 
 // ── Mailing list and campaigns ────────────────────────────────────

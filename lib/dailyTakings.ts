@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { DELIVERY_OPTIONS } from "@/config/funnel";
 import { prisma } from "@/lib/db";
 import { paidMinor } from "@/lib/meta-capi-event";
+import { orderKind } from "@/lib/plans/kinds";
 import { saleTime, shopDayBounds } from "@/lib/saleTime";
 
 /**
@@ -35,6 +36,8 @@ export function takingsWhere(start: Date, end: Date): Prisma.OrderWhereInput {
 }
 
 export interface TakingsOrder {
+  /** sale | plan_box | plan_upgrade; absent = sale (lib/plans/kinds.ts). */
+  kind?: string;
   status: string;
   amountPaidMinor: number | null;
   totalAmount: { toString(): string };
@@ -56,7 +59,7 @@ export interface TakingsSummary {
   /** What customers were charged, in pence. */
   takenMinor: number;
   orders: number;
-  /** takenMinor / orders, or 0 on a day with no sales. */
+  /** takenMinor / sales: a plan upgrade adds money to the sale it grew. 0 on a day with no sales. */
   averageMinor: number;
   /** The part of takenMinor that was delivery. */
   deliveryMinor: number;
@@ -93,15 +96,20 @@ export function summariseTakings(orders: TakingsOrder[]): TakingsSummary {
   };
   const lines = new Map<string, DeliveryLine>();
   for (const o of orders) {
+    const kind = orderKind(o.kind);
+    // A prepaid box brings no money and is no order; its costs are on the finance ledger.
+    if (kind === "plan_box") continue;
     if (o.status === "cancelled") {
-      s.cancelledOrders += 1;
+      s.cancelledOrders += kind === "sale" ? 1 : 0;
       s.cancelledMinor += paidMinor(o);
       continue;
     }
-    s.orders += 1;
+    if (kind === "sale") s.orders += 1;
     s.takenMinor += paidMinor(o);
     s.deliveryMinor += o.deliveryMinor ?? 0;
     s.goodsMinor += goodsMinor(o);
+    // An upgrade is money added to a sale: no delivery line of its own.
+    if (kind !== "sale") continue;
 
     // Free next day and paid next day are separate lines: same carrier,
     // different money.

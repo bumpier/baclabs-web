@@ -7,7 +7,12 @@ import { deliveryOptionById, formatMinor } from "@/config/funnel";
 import { formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
 import { paidMinor, purchaseContents, purchaseEventId } from "@/lib/meta-capi-event";
 import { parseTrackingNumbers } from "@/lib/shipping/shipments";
-import { formatSaleDateTime } from "@/lib/saleTime";
+import { formatSaleDateTime, formatShopDay, shopDayKey } from "@/lib/saleTime";
+import { planDeliveryNote, planFreeLine } from "@/config/plans";
+import { orderKind } from "@/lib/plans/kinds";
+import { upgradeEligibility, upgradeOffers } from "@/lib/plans/upgrade";
+import { PlanSchedule } from "@/components/plans/PlanSchedule";
+import { PlanUpgradeOffer, type UpgradeOfferCard } from "@/components/plans/PlanUpgradeOffer";
 import { PurchaseTracker } from "./PurchaseTracker";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +37,23 @@ export default async function OrderConfirmationPage({
   const order = await prisma.order.findUnique({ where: { id } });
   if (!order) notFound();
 
+  // What this row is (lib/plans/kinds.ts): a sale, a prepaid plan box, or the
+  // payment that turned a one-off order into box 1 of a plan.
+  const kind = orderKind(order.kind);
+  // The plan this order belongs to, with every box made so far.
+  const plan = order.planId
+    ? await prisma.plan.findUnique({
+        where: { id: order.planId },
+        include: {
+          orders: {
+            where: { planBox: { not: null } },
+            select: { id: true, planBox: true, status: true, paidAt: true },
+            orderBy: { planBox: "asc" },
+          },
+        },
+      })
+    : null;
+
   const items = JSON.parse(order.items) as {
     name: string;
     qty: number;
@@ -42,9 +64,35 @@ export default async function OrderConfirmationPage({
     bundleQty?: number;
     /** The mailing-list welcome vial. */
     welcome?: boolean;
+    /** A plan's free bonus pack (lib/plans/items.ts). */
+    planBonus?: boolean;
+    /** "box": a later plan box, already paid for by its plan. */
+    planLine?: "plan" | "box" | "bonus";
   }[];
 
   const paid = order.status !== "pending" && order.status !== "cancelled";
+  // A one-off pack paid in the last few days can become box 1 of a plan.
+  const verdict = paid && kind === "sale" && !plan ? upgradeEligibility(order, new Date()) : null;
+  const upgrade = verdict?.eligible
+    ? {
+        deadlineText: formatShopDay(shopDayKey(verdict.deadline)),
+        offers: upgradeOffers(verdict.packId).flatMap((o): UpgradeOfferCard[] =>
+          o.months === 6 || o.months === 12
+            ? [
+                {
+                  months: o.months,
+                  priceMinor: o.priceMinor,
+                  freeLine: planFreeLine(o.plan),
+                  saveMinor: o.plan.saveMinor,
+                  label: o.plan.label,
+                  deliveryNote: planDeliveryNote(o.plan),
+                  bonusInBox2: o.plan.bonusVials > 0,
+                },
+              ]
+            : []
+        ),
+      }
+    : null;
   // Stripe returns the browser here the moment the card clears, which usually
   // beats the webhook. Without this the card customer reads the crypto
   // "we're waiting for your payment" copy at the one moment that must feel
@@ -87,8 +135,9 @@ export default async function OrderConfirmationPage({
       {/* Pick up the webhook's result without the customer having to reload. */}
       {confirming ? <meta httpEquiv="refresh" content="5" /> : null}
 
-      {/* Fires `purchase` once, and only for an order that is actually paid. */}
-      {paid ? (
+      {/* Fires `purchase` once, and only for an order that is actually paid.
+          A prepaid plan box is not a purchase: it must never report £0. */}
+      {paid && kind !== "plan_box" ? (
         <PurchaseTracker
           orderId={order.id}
           eventId={purchaseEventId(order.id)}
@@ -108,7 +157,18 @@ export default async function OrderConfirmationPage({
       ) : null}
 
       <h1 className="text-3xl">
-        {paid
+        {kind === "plan_box" && plan ? (
+          <>
+            Box <span className="tabular">{order.planBox}</span> of <span className="tabular">{plan.months}</span> of
+            your monthly plan
+          </>
+        ) : kind === "plan_upgrade" && paid ? (
+          plan?.status === "cancelled" ? (
+            "Your monthly plan was cancelled"
+          ) : (
+            "Thank you, your monthly plan has started"
+          )
+        ) : paid
           ? "Thank you — your order is confirmed"
           : confirming
             ? "Payment received"
@@ -119,11 +179,17 @@ export default async function OrderConfirmationPage({
           ? "Your order has been delivered."
           : order.status === "shipped"
             ? "Your order is on its way."
-            : paid
-              ? "Payment has cleared and your order is being prepared."
-              : confirming
-                ? "Your payment went through. We are confirming the order now — this page updates itself in a few seconds."
-                : "We are waiting for your payment to be confirmed. This page shows the latest status whenever you reload it."}
+            : kind === "plan_box" && paid
+              ? "Your box is being prepared."
+              : kind === "plan_upgrade" && paid
+                ? plan?.status === "cancelled"
+                  ? "Payment has cleared. The plan's details are below."
+                  : "Payment has cleared. Your boxes and their dates are below."
+                : paid
+                  ? "Payment has cleared and your order is being prepared."
+                  : confirming
+                    ? "Your payment went through. We are confirming the order now — this page updates itself in a few seconds."
+                    : "We are waiting for your payment to be confirmed. This page shows the latest status whenever you reload it."}
       </p>
 
       <dl className="panel mt-8 p-5 text-sm sm:p-6">
@@ -147,6 +213,15 @@ export default async function OrderConfirmationPage({
         </div>
 
         <div className="divide-y divide-line">
+          {kind === "plan_upgrade" && plan ? (
+            <div className="flex justify-between gap-4 py-3">
+              <dt className="text-ink">
+                Monthly plan: <span className="tabular">{plan.vialsPerBox}</span> vials a month for{" "}
+                <span className="tabular">{plan.months}</span> months
+              </dt>
+              <dd className="tabular shrink-0 text-ink">{formatMinor(toMinor(order.totalAmount.toString()))}</dd>
+            </div>
+          ) : null}
           {items.map((item, idx) => (
             <div key={idx} className="flex justify-between gap-4 py-3">
               <dt className="text-ink">
@@ -158,21 +233,38 @@ export default async function OrderConfirmationPage({
                 ) : null}
               </dt>
               <dd className="tabular shrink-0 text-ink">
-                {item.welcome
+                {item.welcome || item.planBonus
                   ? "Free"
-                  : formatMinor(
-                      item.lineTotal ? toMinor(item.lineTotal) : toMinor(item.unitPrice) * item.qty
-                    )}
+                  : item.planLine === "box"
+                    ? "Included"
+                    : formatMinor(
+                        item.lineTotal ? toMinor(item.lineTotal) : toMinor(item.unitPrice) * item.qty
+                      )}
               </dd>
             </div>
           ))}
         </div>
 
-        <div className="flex justify-between gap-4 border-t border-line pt-4 text-base font-semibold">
-          <dt>Total paid</dt>
-          <dd className="tabular">{formatMinor(toMinor(order.totalAmount.toString()))}</dd>
-        </div>
+        {kind === "plan_box" ? (
+          <div className="flex justify-between gap-4 border-t border-line pt-4 text-base font-semibold">
+            <dt>Paid</dt>
+            <dd>Included in your plan</dd>
+          </div>
+        ) : (
+          <div className="flex justify-between gap-4 border-t border-line pt-4 text-base font-semibold">
+            <dt>Total paid</dt>
+            <dd className="tabular">{formatMinor(toMinor(order.totalAmount.toString()))}</dd>
+          </div>
+        )}
       </dl>
+
+      {plan && plan.status !== "pending" ? (
+        <PlanSchedule plan={plan} boxes={plan.orders} currentOrderId={order.id} />
+      ) : null}
+
+      {upgrade ? (
+        <PlanUpgradeOffer orderId={order.id} offers={upgrade.offers} deadlineText={upgrade.deadlineText} />
+      ) : null}
 
       {sent ? (
         <section className="mt-10" aria-labelledby="parcel-heading">
@@ -214,25 +306,28 @@ export default async function OrderConfirmationPage({
             ) : null}
           </dl>
         </section>
-      ) : (
+      ) : kind === "plan_upgrade" ? null : (
         <section className="mt-10" aria-labelledby="next-heading">
           <h2 id="next-heading" className="text-xl">
             What happens next
           </h2>
           <ol className="measure mt-4 space-y-3 text-base text-ink-soft">
-            <li className="flex gap-3">
-              <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
-              <span>
-                A confirmation email is on its way
-                {order.customerEmail ? (
-                  <>
-                    {" "}
-                    to <span className="font-medium text-ink">{order.customerEmail}</span>
-                  </>
-                ) : null}
-                . Stripe also emails its own payment receipt.
-              </span>
-            </li>
+            {/* A plan box is made by the daily cron: no confirmation email, no Stripe receipt. */}
+            {kind === "plan_box" ? null : (
+              <li className="flex gap-3">
+                <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
+                <span>
+                  A confirmation email is on its way
+                  {order.customerEmail ? (
+                    <>
+                      {" "}
+                      to <span className="font-medium text-ink">{order.customerEmail}</span>
+                    </>
+                  ) : null}
+                  . Stripe also emails its own payment receipt.
+                </span>
+              </li>
+            )}
             <li className="flex gap-3">
               <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
               <span>
@@ -256,7 +351,7 @@ export default async function OrderConfirmationPage({
             </li>
             <li className="flex gap-3">
               <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
-              <span>You get a second email when it ships.</span>
+              <span>{kind === "plan_box" ? "You get an email when it ships." : "You get a second email when it ships."}</span>
             </li>
           </ol>
         </section>

@@ -8,6 +8,7 @@ import { TrackingWarning } from "@/components/admin/TrackingWarning";
 import { STATUS_BADGE, STATUS_TABS, statusLabel } from "@/lib/order-status";
 import { formatSaleClock, formatSaleDate, saleTime } from "@/lib/saleTime";
 import { getInventoryMode } from "@/lib/inventory/mode";
+import { PARCEL_KINDS } from "@/lib/plans/kinds";
 
 export const dynamic = "force-dynamic";
 
@@ -36,13 +37,14 @@ export default async function AdminOrdersPage({
 
   const [orders, inventoryMode] = await Promise.all([
     prisma.order.findMany({
-      where: { status: filter && filter !== "all" ? filter : { not: "pending" } },
+      where: { kind: { in: PARCEL_KINDS }, status: filter && filter !== "all" ? filter : { not: "pending" } },
       orderBy: { createdAt: "desc" },
       take: 200,
       // The active label, if any: "Label created" vs "Packed", and the latest
       // tracking. Never the label PDF.
       include: {
         shipments: { where: { status: "CREATED" }, select: { trackingEvent: true }, take: 1 },
+        plan: { select: { months: true } },
       },
     }),
     getInventoryMode(),
@@ -135,6 +137,11 @@ export default async function AdminOrdersPage({
                           No label
                         </span>
                       )}
+                      {o.planBox && o.plan ? (
+                        <span className="mt-1 block text-xs font-semibold text-brand-deep">
+                          Plan box {o.planBox}/{o.plan.months}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-3">

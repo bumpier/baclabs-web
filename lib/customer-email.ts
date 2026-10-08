@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import type { Order, Subscriber } from "@prisma/client";
+import type { Order, Plan, Subscriber } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { send, layout, escapeHtml, ctaButton } from "@/lib/email";
 import { welcomeLink } from "@/lib/mailing-list";
@@ -7,13 +7,20 @@ import { canonicalOrigin } from "@/lib/site-url";
 import { LITERAL } from "@/lib/theme";
 import { brand, formatPrice, type Currency } from "@/config/brand";
 import { formatSaleDateTime, saleTime } from "@/lib/saleTime";
+import { orderKind } from "@/lib/plans/kinds";
+import { boxDueDay } from "@/lib/plans/schedule";
+import { nudgePlanPack, upgradeEligibility } from "@/lib/plans/upgrade";
+import {
+  boxShippedCopy, nudgePlanOfferHtml, planScheduleHtml, planStartedCopy, planTermsOf, renewalCopy, upgradeOfferHtml,
+} from "@/lib/plans/copy";
+import { isPlanMonths, isPlanPackId, planKey } from "@/config/plans";
 
 // Customer-facing order emails. Every send is recorded in EmailLog first;
 // the @@unique([orderId, type]) constraint makes double-sends impossible.
 // Senders never throw — a Resend outage must not break a webhook or
 // admin action. Callers fire-and-forget.
 
-export type EmailType = "confirmation" | "shipped" | "delivered" | "nudge" | "review";
+export type EmailType = "confirmation" | "shipped" | "delivered" | "nudge" | "review" | "plan_renewal";
 
 interface OrderItem {
   productId: string;
@@ -26,6 +33,12 @@ interface OrderItem {
   lineTotal?: string;
   /** The mailing-list welcome vial (lib/mailing-list.ts): shown as "Free". */
   welcome?: boolean;
+  /** The free pack of a 12-month plan: shown as "Free". */
+  planBonus?: boolean;
+  /** "5-vial monthly plan, 12 boxes" on a plan's purchase line (lib/plans/items.ts). */
+  bundleName?: string;
+  /** "plan": box 1's line, which carries the whole plan's price. */
+  planLine?: "plan" | "box" | "bonus";
 }
 
 // Order + nudge emails are sent from the payment webhook and the cron job —
@@ -109,7 +122,7 @@ async function logAndSend(
   type: EmailType,
   subject: string,
   html: string,
-  opts?: { bcc?: string }
+  opts?: { bcc?: string; headers?: Record<string, string> }
 ): Promise<boolean> {
   try {
     await prisma.emailLog.create({
@@ -144,9 +157,12 @@ function receiptTable(
   const rows = items
     .map((i) => {
       const amount = i.lineTotal ? parseFloat(i.lineTotal) : parseFloat(i.unitPrice) * i.qty;
+      // A plan's line carries the whole plan's price: name the plan, not "× 5".
+      const detail =
+        i.planLine === "plan" && i.bundleName ? `&middot; ${escapeHtml(i.bundleName)}` : `&times; ${i.qty}`;
       return `<tr>
-        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};color:${LITERAL.ink}">${escapeHtml(i.name)} <span style="color:${LITERAL.inkSoft}">&times; ${i.qty}</span></td>
-        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};text-align:right;color:${LITERAL.ink};white-space:nowrap">${i.welcome ? "Free" : formatPrice(amount, currency)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};color:${LITERAL.ink}">${escapeHtml(i.name)} <span style="color:${LITERAL.inkSoft}">${detail}</span></td>
+        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};text-align:right;color:${LITERAL.ink};white-space:nowrap">${i.welcome || i.planBonus ? "Free" : formatPrice(amount, currency)}</td>
       </tr>`;
     })
     .join("");
@@ -240,13 +256,44 @@ async function trustpilotBccFor(order: Order): Promise<string | null> {
   }
 }
 
+/**
+ * Whether the customer has unsubscribed (EmailOptOut, lowercased as every
+ * sender stores it). The plan upgrade offer is marketing, so it is left out
+ * of the receipt for them. Unknown state fails towards not offering.
+ */
+async function optedOutOfEmails(order: Order): Promise<boolean> {
+  if (!order.customerEmail) return true;
+  try {
+    return (await prisma.emailOptOut.findUnique({ where: { email: order.customerEmail.toLowerCase() } })) !== null;
+  } catch (err) {
+    console.error(`[email] opt-out check failed for order ${order.id}`, err);
+    return true;
+  }
+}
+
 export async function sendOrderConfirmationEmail(
   order: Order,
   opts?: { deliveryMinor?: number }
 ): Promise<void> {
+  const kind = orderKind(order.kind);
+  if (kind === "plan_box") return; // boxes are not sales; they get the shipped email only
+  const plan = order.planId ? await prisma.plan.findUnique({ where: { id: order.planId } }) : null;
+  if (kind === "plan_upgrade") {
+    // A payment that could not start a plan is cancelled and refunded by hand: no "started" email.
+    if (plan && plan.status !== "cancelled") await sendPlanStartedEmail(order, plan);
+    return;
+  }
   const items = JSON.parse(order.items) as OrderItem[];
   const currency = order.currency as Currency;
   const orderUrl = `${siteUrl()}/order-confirmation/${order.id}`;
+  const planBlock = plan
+    ? `<p style="margin:24px 0 0;font-weight:600;color:${LITERAL.ink}">Your monthly plan</p>${planScheduleHtml(planTermsOf(plan))}`
+    : "";
+  const verdict = plan ? null : upgradeEligibility(order, new Date());
+  const upgradeBlock =
+    verdict?.eligible && !(await optedOutOfEmails(order))
+      ? upgradeOfferHtml({ packId: verdict.packId, orderUrl, deadline: verdict.deadline })
+      : "";
   const placedOn = order.createdAt.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
@@ -261,23 +308,45 @@ export async function sendOrderConfirmationEmail(
   await logAndSend(
     order,
     "confirmation",
-    `Your ${brand.name} order is confirmed`,
+    plan ? `Your ${brand.name} monthly plan is confirmed` : `Your ${brand.name} order is confirmed`,
     layout(
       `<p>Hi ${escapeHtml(order.customerName)},</p>
-      <p>Thanks for your order! Your payment has been received and we're getting it ready.</p>
+      <p>${plan ? "Thank you for your order." : "Thanks for your order!"} Your payment has been received and we're getting it ready.</p>
       ${welcomeVials > 0 ? `<p style="margin:0 0 12px">Your mailing-list welcome gift, ${welcomeVials === 1 ? "an extra 10ml vial" : `${welcomeVials} extra 10ml vials`}, is included in this order.</p>` : ""}
       <p style="margin:0 0 4px;font-size:12px;color:${LITERAL.inkSoft}">Order ${order.id} &middot; placed ${placedOn}</p>
       ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString())}
+      ${planBlock}
       ${
         order.shippingAddress
           ? `<p style="margin:20px 0 0;font-size:13px;color:${LITERAL.inkSoft}"><strong style="color:${LITERAL.ink}">Shipping to</strong><br>${shippingAddressLine(order)}</p>`
           : ""
       }
+      ${upgradeBlock}
       <p style="margin:28px 0 0">${ctaButton(orderUrl, "View your order")}</p>
       ${bcc ? trustpilotSnippet(order) : ""}`,
       { preheader: `Order ${order.id} confirmed — total ${formatPrice(grandTotal, currency)}` }
     ),
     bcc ? { bcc } : undefined
+  );
+}
+
+/** The "plan has started" email for a plan-upgrade payment, sent instead of a receipt. */
+async function sendPlanStartedEmail(order: Order, plan: Plan): Promise<void> {
+  const original = await prisma.order.findFirst({ where: { planId: plan.id, planBox: 1 } });
+  const copy = planStartedCopy({
+    customerName: order.customerName,
+    originalRef: (original?.id ?? "").slice(0, 8).toUpperCase(),
+    plan: planTermsOf(plan),
+    paidMinor: order.amountPaidMinor ?? Math.round(Number(order.totalAmount) * 100),
+  });
+  await logAndSend(
+    order,
+    "confirmation",
+    copy.subject,
+    layout(
+      `${copy.body}<p style="margin:28px 0 0">${ctaButton(`${siteUrl()}/order-confirmation/${order.id}`, "View your plan")}</p>`,
+      { preheader: copy.preheader }
+    )
   );
 }
 
@@ -298,17 +367,32 @@ export async function sendOrderShippedEmail(order: Order, tracking?: ShippedTrac
     ? `<p style="margin:0 0 20px">Your tracking number${tracking.carrier ? ` with ${escapeHtml(tracking.carrier)}` : ""} is
       <strong style="font-family:monospace;font-size:15px">${escapeHtml(tracking.number)}</strong>. Your order page shows where it has got to.</p>`
     : "";
+  const plan = order.planId && order.planBox ? await prisma.plan.findUnique({ where: { id: order.planId } }) : null;
+  const box =
+    plan && order.planBox
+      ? boxShippedCopy({
+          boxNumber: order.planBox,
+          months: plan.months,
+          // Only a running plan has a next box; a cancelled one says no more are coming.
+          nextBoxDay:
+            plan.status === "active" && plan.anchorDay && order.planBox < plan.months
+              ? boxDueDay(plan.anchorDay, order.planBox + 1)
+              : null,
+          cancelled: plan.status === "cancelled",
+        })
+      : null;
   await logAndSend(
     order,
     "shipped",
-    `Your ${brand.name} order is on its way`,
+    box ? box.subject : `Your ${brand.name} order is on its way`,
     layout(
       `<p>Hi ${escapeHtml(order.customerName)},</p>
-      <p>Good news — your order has been shipped and is on its way to you.</p>
+      <p>${box ? escapeHtml(box.lead) : "Good news — your order has been shipped and is on its way to you."}</p>
       ${trackingLine}
+      ${box ? `<p style="margin:0 0 20px">${escapeHtml(box.next)}</p>` : ""}
       <p style="margin:0 0 20px;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id}</p>
       ${ctaButton(orderUrl, tracking?.number ? "Track your order" : "View your order")}`,
-      { preheader: tracking?.number ? `Tracking number ${tracking.number}` : `Order ${order.id} has shipped` }
+      { preheader: box ? box.preheader : tracking?.number ? `Tracking number ${tracking.number}` : `Order ${order.id} has shipped` }
     )
   );
 }
@@ -329,6 +413,25 @@ export async function sendOrderDeliveredEmail(order: Order): Promise<void> {
   );
 }
 
+/**
+ * The renewal email, 14 days before a plan's last box (lib/plans/boxes.ts).
+ * Plans never renew by themselves: this only offers a new one at today's
+ * price, preselected on the picker. Logged once per plan against its
+ * purchase order. Carries the marketing footer and headers.
+ */
+export async function sendPlanRenewalEmail(plan: Plan, order: Order): Promise<boolean> {
+  if (!isPlanPackId(plan.packId) || !isPlanMonths(plan.months)) return false;
+  const renewUrl = `${siteUrl()}/?plan=${planKey(plan.packId, plan.months)}#buy`;
+  const copy = renewalCopy({ customerName: order.customerName, plan: planTermsOf(plan), renewUrl });
+  return logAndSend(
+    order,
+    "plan_renewal",
+    copy.subject,
+    layout(`${copy.body}${marketingFooter(order.customerEmail)}`, { preheader: copy.preheader }),
+    { headers: marketingHeaders(order.customerEmail) }
+  );
+}
+
 /** items here are only the nudgeable ones (supplyDays > 0). */
 export async function sendRepurchaseNudgeEmail(
   order: Order,
@@ -340,6 +443,8 @@ export async function sendRepurchaseNudgeEmail(
         `<li style="margin:6px 0"><a href="${siteUrl()}/products/${i.slug}" style="color:${LITERAL.brand}">${i.name}</a></li>`
     )
     .join("");
+  const pack = nudgePlanPack(order);
+  const planBlock = pack ? nudgePlanOfferHtml(pack, siteUrl()) : "";
   return logAndSend(
     order,
     "nudge",
@@ -347,6 +452,7 @@ export async function sendRepurchaseNudgeEmail(
     layout(`<p>Hi ${order.customerName},</p>
       <p>By our count, the products from your last order may be running low. Reorder before you run out:</p>
       <ul style="padding-left:18px">${list}</ul>
+      ${planBlock}
       <p><a href="${siteUrl()}/products" style="background:${LITERAL.brand};color:#fff;padding:12px 24px;border-radius:24px;text-decoration:none">Shop again</a></p>
       <p style="font-size:11px;color:#6b7a72;margin-top:24px">Don't want reminders like this?
         <a href="${unsubscribeUrl(order.customerEmail)}" style="color:#6b7a72">Unsubscribe</a></p>`)
@@ -406,6 +512,7 @@ export function buildNewOrderAlert(
   const total = formatPrice(grandTotal, currency);
   const subject = `New paid order — ${total} from ${order.customerName}`;
   const html = layout(`<p style="font-weight:bold;margin-top:0">You have a new paid order.</p>
+      ${orderKind(order.kind) === "plan_upgrade" ? `<p style="margin:0 0 12px">${escapeHtml(order.notes ?? "Plan upgrade")}</p>` : ""}
       ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString())}
       <p style="margin:20px 0 0"><strong>Paid:</strong> ${formatSaleDateTime(saleTime(order))} (UK time)</p>
       <p style="margin:12px 0 0"><strong>Customer:</strong> ${escapeHtml(order.customerName)}<br>

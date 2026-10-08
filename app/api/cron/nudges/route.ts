@@ -42,6 +42,11 @@ interface OrderItem {
 async function runNudges() {
   const orders = await prisma.order.findMany({
     where: {
+      // Plan boxes and orders in a plan never get a repurchase nudge or a review
+      // request (the plan already sends the next box; one review ask per
+      // customer, not per box).
+      kind: "sale",
+      planId: null,
       status: { in: NUDGEABLE_STATUSES },
       emailLogs: { none: { type: "nudge" } },
     },
@@ -138,6 +143,9 @@ async function runReviewRequests() {
   const tooOld = new Date(now - REVIEW_MAX_AGE_DAYS * day);
   const orders = await prisma.order.findMany({
     where: {
+      // Not plan boxes or plan orders: see runNudges.
+      kind: "sale",
+      planId: null,
       emailLogs: { none: { type: "review" } },
       OR: [
         { status: "delivered", deliveredAt: { lte: new Date(now - REVIEW_DELAY_DAYS * day), gte: tooOld } },

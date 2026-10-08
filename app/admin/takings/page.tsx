@@ -195,6 +195,11 @@ export default async function AdminTakingsPage({
                     <td className="px-4 py-3">
                       <span className="font-medium">{o.customerName}</span>
                       <span className="block text-xs text-ink-soft">{o.customerEmail}</span>
+                      {o.kind !== "sale" ? (
+                        <span className="block text-xs text-ink-soft">
+                          {o.kind === "plan_box" ? "Plan box, prepaid" : "Plan upgrade"}
+                        </span>
+                      ) : null}
                     </td>
                     <td className={`px-4 py-3 ${o.cancelled ? "text-red-600" : "text-ink-soft"}`}>
                       {statusLabel(o.status)}

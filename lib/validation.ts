@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PLAN_PACK_IDS } from "@/config/plans";
 import { BUNDLES, DELIVERY_OPTIONS, MAX_QUANTITY, MIN_QUANTITY, type DeliveryOptionId } from "@/config/funnel";
 
 // Every form input and API body is validated with these schemas
@@ -53,10 +54,38 @@ export const CryptoCheckoutSchema = z
   })
   .strict();
 
-export const CheckoutSchema = z.union([CardCheckoutSchema, CryptoCheckoutSchema]);
+/**
+ * Monthly plan (config/plans.ts). Card only: a plan is one Stripe payment.
+ * Carries a pack and a term, never an amount; the route prices it.
+ */
+export const PlanCheckoutSchema = z
+  .object({
+    method: z.literal("card"),
+    plan: z
+      .object({
+        pack: z.enum(PLAN_PACK_IDS),
+        months: z.union([z.literal(3), z.literal(6), z.literal(12)]),
+      })
+      .strict(),
+    trackingConsent: z.boolean().optional(),
+  })
+  .strict();
+
+export const CheckoutSchema = z.union([CardCheckoutSchema, CryptoCheckoutSchema, PlanCheckoutSchema]);
+
+/** Turning a paid one-off order into box 1 of a plan (lib/plans/upgrade.ts). Never an amount. */
+export const PlanUpgradeSchema = z
+  .object({
+    orderId: z.string().uuid(),
+    months: z.union([z.literal(6), z.literal(12)]),
+    trackingConsent: z.boolean().optional(),
+  })
+  .strict();
+export type PlanUpgradeInput = z.infer<typeof PlanUpgradeSchema>;
 
 export type CardCheckoutInput = z.infer<typeof CardCheckoutSchema>;
 export type CryptoCheckoutInput = z.infer<typeof CryptoCheckoutSchema>;
+export type PlanCheckoutInput = z.infer<typeof PlanCheckoutSchema>;
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
 
 /**
