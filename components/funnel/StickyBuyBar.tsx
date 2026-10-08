@@ -10,15 +10,26 @@ import {
   remainingForFreeDeliveryMinor,
   saleVisible,
   shipsFree,
+  STOCK_LEVEL,
   VIAL_ML,
 } from "@/config/funnel";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { SaleTag } from "@/components/funnel/SaleTag";
+import { useCheckout } from "@/components/funnel/buy/useCheckout";
+import { planHeadline } from "@/components/funnel/buy/plans";
 import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
 
 /**
- * Mobile-only bottom bar: what is currently selected, and a way back to the
- * purchase block.
+ * Mobile-only bottom bar: what is currently selected, and the button that
+ * pays for it.
+ *
+ * "Buy now" goes STRAIGHT to Stripe with the pack and quantity the bar
+ * states, through the same useCheckout the buy box uses. It used to scroll
+ * back up to the buy box, which put a second tap and a screen of scrolling
+ * between a decided customer and the payment page. While the customer is
+ * looking at a monthly plan it does the opposite: it names the plan and
+ * scrolls back to it, because the bar must never charge the one-time pack
+ * to someone who chose a plan (and plans have no checkout yet).
  *
  * Two rules govern when it shows:
  *  1. Not until the hero CTA has scrolled away — before that it is noise.
@@ -36,7 +47,8 @@ import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
  * reduced-motion block can remove the slide while keeping the fade.
  */
 export function StickyBuyBar() {
-  const { bundle, quantity, totalMinor } = useFunnel();
+  const { bundle, quantity, totalMinor, mode } = useFunnel();
+  const { checkout, pending, error } = useCheckout();
   const heroCtaPassed = useHeroCtaPassed();
   const [buyBlockVisible, setBuyBlockVisible] = useState(false);
 
@@ -55,6 +67,8 @@ export function StickyBuyBar() {
   const shown = heroCtaPassed && !buyBlockVisible;
   const totalVials = bundle.vials * quantity;
   const sale = saleVisible();
+  const plan = mode === "plan";
+  const outOfStock = STOCK_LEVEL !== null && STOCK_LEVEL <= 0;
 
   // The same two functions the purchase block and the Stripe session call, so
   // this bar can never promise free delivery on a basket that will be charged
@@ -62,11 +76,13 @@ export function StickyBuyBar() {
   // already ships free and when no threshold applies, which is why the free
   // case is tested first and the plain badge is the fallback.
   const toFreeDelivery = remainingForFreeDeliveryMinor(totalMinor);
-  const deliveryLine = shipsFree(totalMinor)
-    ? "Free UK delivery"
-    : toFreeDelivery > 0
-      ? `${formatMinorShort(toFreeDelivery)} to free delivery`
-      : freeDeliveryBadge();
+  const deliveryLine = plan
+    ? "Free delivery on every box"
+    : shipsFree(totalMinor)
+      ? "Free UK delivery"
+      : toFreeDelivery > 0
+        ? `${formatMinorShort(toFreeDelivery)} to free delivery`
+        : freeDeliveryBadge();
 
   return (
     <div
@@ -79,50 +95,74 @@ export function StickyBuyBar() {
     >
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs text-ink-soft">
-            <span className="tabular">{totalVials}</span> ×{" "}
-            {totalVials === 1 ? "vial" : "vials"}, {VIAL_ML}ml
-          </p>
-          <p className="flex min-w-0 items-baseline gap-2 whitespace-nowrap leading-tight">
-            <span className="tabular text-lg font-semibold text-ink">
-              {formatMinor(totalMinor)}
-            </span>
-            {sale ? (
-              <>
-                <span className="tabular truncate text-xs text-ink-soft line-through">
-                  {formatMinor(referencePriceMinor(bundle) * quantity)}
-                </span>
-                <SaleTag />
-              </>
-            ) : null}
-          </p>
-          {/* Third line, carrying two claims. Kept to ONE line deliberately:
-              the page reserves a fixed strip of space for this bar, so a
-              fourth line would sit over the footer links rather than above
-              them. The delivery half is the live one — it counts down to the
-              threshold as the basket grows. */}
-          <p className="flex min-w-0 items-center gap-1.5 text-[11px] text-ink-soft">
-            {deliveryLine ? (
-              <>
-                <span className="truncate font-medium text-ink">{deliveryLine}</span>
-                <span aria-hidden="true">&middot;</span>
-              </>
-            ) : null}
-            <a
-              href="#guarantee"
-              className="truncate underline decoration-line underline-offset-2"
-            >
-              {PRICE_MATCH_BADGE}
-            </a>
-          </p>
+          {plan ? (
+            <>
+              <p className="truncate text-xs text-ink-soft">Monthly plan</p>
+              <p className="truncate text-lg font-semibold leading-tight text-ink">{planHeadline()}</p>
+            </>
+          ) : (
+            <>
+              <p className="truncate text-xs text-ink-soft">
+                <span className="tabular">{totalVials}</span> × {totalVials === 1 ? "vial" : "vials"}, {VIAL_ML}ml
+              </p>
+              <p className="flex min-w-0 items-baseline gap-2 whitespace-nowrap leading-tight">
+                <span className="tabular text-lg font-semibold text-ink">{formatMinor(totalMinor)}</span>
+                {sale ? (
+                  <>
+                    <span className="tabular truncate text-xs text-ink-soft line-through">
+                      {formatMinor(referencePriceMinor(bundle) * quantity)}
+                    </span>
+                    <SaleTag />
+                  </>
+                ) : null}
+              </p>
+            </>
+          )}
+          {/* Third line, carrying two claims, or a failed checkout's message.
+              Kept to ONE line deliberately: the page reserves a fixed strip
+              of space for this bar, so a fourth line would sit over the
+              footer links rather than above them. */}
+          {error ? (
+            <p role="alert" className="truncate text-[11px] font-medium text-warn">
+              {error}
+            </p>
+          ) : (
+            <p className="flex min-w-0 items-center gap-1.5 text-[11px] text-ink-soft">
+              {deliveryLine ? (
+                <>
+                  <span className="truncate font-medium text-ink">{deliveryLine}</span>
+                  <span aria-hidden="true">&middot;</span>
+                </>
+              ) : null}
+              {/* "/#guarantee", not "#guarantee": the guarantee lives in the
+                  home page's trust bar, and this bar also shows on the pack
+                  pages, where a bare fragment pointed at nothing. */}
+              <a href="/#guarantee" className="truncate underline decoration-line underline-offset-2">
+                {PRICE_MATCH_BADGE}
+              </a>
+            </p>
+          )}
         </div>
-        <a
-          href="#buy"
-          className="btn-cta !min-h-[48px] !w-auto shrink-0 !px-6"
-          tabIndex={shown ? undefined : -1}
-        >
-          Buy now
-        </a>
+        {plan ? (
+          <a
+            href="#buy"
+            className="btn-cta !min-h-[48px] !w-auto shrink-0 !px-6"
+            tabIndex={shown ? undefined : -1}
+          >
+            See plans
+          </a>
+        ) : (
+          <button
+            type="button"
+            onClick={checkout}
+            disabled={pending || outOfStock}
+            aria-busy={pending}
+            className="btn-cta !min-h-[48px] !w-auto shrink-0 !px-6"
+            tabIndex={shown ? undefined : -1}
+          >
+            {outOfStock ? "Out of stock" : pending ? "Redirecting…" : "Buy now"}
+          </button>
+        )}
       </div>
     </div>
   );

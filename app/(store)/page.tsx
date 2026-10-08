@@ -10,7 +10,6 @@ import {
   PRODUCT_IMAGES,
   STOCK_LEVEL,
   WHY_BUY,
-  drawsPerVial,
   formatMinor,
   freeDeliveryBadge,
   nextDayBadge,
@@ -24,14 +23,16 @@ import { JsonLd } from "@/components/JsonLd";
 import { FunnelStateProvider } from "@/components/funnel/FunnelState";
 import { Hero } from "@/components/funnel/Hero";
 import { TrustBar } from "@/components/funnel/TrustBar";
-import { VialChooser } from "@/components/funnel/VialChooser";
+import { BuyBoxPills } from "@/components/funnel/buy/BuyBoxPills";
+import { ProductMedia } from "@/components/funnel/ProductMedia";
+import { ProductSpecs } from "@/components/funnel/ProductSpecs";
+import { AboutProduct } from "@/components/funnel/AboutProduct";
 import { PackGrid } from "@/components/products/PackGrid";
 import { StickyBuyBar } from "@/components/funnel/StickyBuyBar";
 import { Faq } from "@/components/funnel/Faq";
 import { Reviews } from "@/components/funnel/Reviews";
 import { TrustpilotReviews } from "@/components/funnel/TrustpilotReviews";
 import { ComparisonTable } from "@/components/funnel/ComparisonTable";
-import { TechnicalData } from "@/components/funnel/TechnicalData";
 import { PACK_PAGES } from "@/config/products";
 import {
   priceValidUntil,
@@ -40,7 +41,6 @@ import {
   returnPolicySchema,
   shippingDetailsFor,
 } from "@/lib/product-schema";
-import { contentHref } from "@/lib/blog-migration";
 
 // Nothing on this page depends on the request, so it prerenders. Keep it
 // that way: adding per-request data here also makes middleware run on every
@@ -190,167 +190,33 @@ export default function FunnelPage() {
             reads a composition line. */}
         <TrustBar />
 
-        {/* ── The definition, in one quotable paragraph ────────────
-            The only plain-English definition used to sit in a collapsed FAQ
-            item below three other sections. This is the passage an answer
-            engine lifts and a first-time visitor reads before the price
-            ladder: definition, mechanism, the "not a steriliser" caveat and
-            the laboratory-only use, in that order. Every figure is read from
-            content/facts.ts. The heading is a question because that is the
-            query it answers. */}
-        <section className="section pb-0" aria-labelledby="what-heading">
-          <div className="grid gap-8 lg:grid-cols-12 lg:gap-14">
-            <div className="lg:col-span-4">
-              <h2 id="what-heading" className="text-3xl sm:text-4xl">
-                What is bacteriostatic water?
-              </h2>
-            </div>
-            <div className="min-w-0 lg:col-span-8">
-              <p className="measure text-lg text-ink-soft" data-explainer>
-                Bacteriostatic water is sterile, purified water to which a
-                bacteriostatic preservative has been added. It is supplied in a
-                sealed multi-dose vial with a rubber stopper and a crimped
-                collar. The preservative inhibits the growth of
-                bacteria that may enter the vial once the stopper has been
-                punctured, which is why the same vial can be entered more than
-                once, for up to {FACTS.openedLimit}. Plain sterile water
-                contains no preservative and is single-use once opened; that one
-                ingredient is the whole difference between the two. The
-                preservative is bacteriostatic, not bactericidal: it slows
-                bacterial growth but does not sterilise the contents and cannot
-                make a contaminated vial safe. It is used as a diluent and
-                solvent to dissolve or dilute substances in laboratory and
-                research work, and has no activity of its own. It is not a
-                medicine.
-              </p>
-              <p className="mt-5 text-sm text-ink-soft">
-                <Link
-                  href={contentHref("/guides/what-is-bacteriostatic-water")}
-                  className="link"
-                >
-                  Read the full guide
-                </Link>
-                {" · "}
-                <Link
-                  href={contentHref("/guides/bacteriostatic-water-vs-sterile-water")}
-                  className="link"
-                >
-                  How it compares with sterile water and saline
-                </Link>
-              </p>
-            </div>
-          </div>
-        </section>
-
         {/* ══ 2. PRODUCT ════════════════════════════════════════════
-            Specification on the left, the thing that charges on the right.
-            The panel is sticky on desktop so the price stays with the
-            reader as they work down the specification. */}
+            Shopify style: the photo on the left with the specification
+            under it, the buy box on the right. The home page sells; the
+            pack pages under /products exist for search and indexing, not to
+            take the sale away from here.
+
+            The DOM is in phone order (photo, buy box, specification), so on
+            a phone the details never stand between the photo and the price.
+            From lg up the specification moves under the photo and the buy
+            box spans both rows beside them. */}
         <section
           id="product"
-          className="section scroll-mt-24"
-          aria-labelledby="product-heading"
+          className="section scroll-mt-24 !pt-10 sm:!pt-28"
+          aria-labelledby="buy-heading"
         >
-          <div className="grid gap-12 lg:grid-cols-12 lg:gap-12">
-            <div className="min-w-0 lg:col-span-7">
-              <h2 id="product-heading" className="text-3xl sm:text-4xl">
-                What you are buying
-              </h2>
-              <p className="measure mt-4 text-lg text-ink-soft">
-                {PRODUCT.use}
-              </p>
-
-              <dl className="mt-10 divide-y divide-line border-y border-line">
-                <SpecRow term="Composition">{PRODUCT.composition}</SpecRow>
-                <SpecRow term="Format">
-                  Sealed multi-dose vial,{" "}
-                  <span className="tabular">{PRODUCT.size}</span>
-                </SpecRow>
-                <SpecRow term="Draws per vial">
-                  <span className="tabular">{drawsPerVial(1)}</span> at 1ml, or{" "}
-                  <span className="tabular">{drawsPerVial(2)}</span> at 2ml. How
-                  many you get depends entirely on the volume taken each time.
-                </SpecRow>
-                {PRODUCT.storage ? (
-                  <SpecRow term="Storage">{PRODUCT.storage}</SpecRow>
-                ) : null}
-                {PRODUCT.shelfLifeAfterOpening ? (
-                  <SpecRow term="Once opened">
-                    {PRODUCT.shelfLifeAfterOpening}
-                  </SpecRow>
-                ) : null}
-              </dl>
-
-              {/* The reference rows a laboratory buyer checks — CAS numbers,
-                  formula, appearance, hazard class — behind a disclosure so
-                  the specification above stays the thing you read. Closed
-                  by default; the rows are still in the HTML, so a search
-                  engine reads them either way. Only rows the list above does
-                  not already state are in here. */}
-              <details
-                id="technical-data"
-                className="group mt-8 scroll-mt-24 rounded-panel border border-line bg-surface open:border-brand/35"
-              >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left [&::-webkit-details-marker]:hidden sm:px-6">
-                  <span className="text-base font-semibold text-ink">
-                    Full technical data
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="shrink-0 transition-transform duration-200 group-open:rotate-45"
-                    style={{ transitionTimingFunction: "var(--ease-out)" }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M8 1v14M1 8h14"
-                        stroke="var(--color-primary)"
-                        strokeWidth="1.75"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </span>
-                </summary>
-                <div className="border-t border-line">
-                  <TechnicalData />
-                </div>
-              </details>
-
-              {/* The two commercial pages that sit beside the product page.
-                  Placed under the specification because that is where the
-                  two questions they answer — "what is the evidence" and
-                  "what does it cost at volume" — actually get asked. */}
-              <p className="mt-5 text-sm text-ink-soft">
-                <Link href="/quality-and-documentation" className="link">
-                  Quality and documentation
-                </Link>{" "}
-                &middot;{" "}
-                <Link href="/bulk-bacteriostatic-water" className="link">
-                  Bulk and wholesale pricing
-                </Link>
-              </p>
+          <div className="grid items-start gap-x-14 gap-y-10 lg:grid-cols-12">
+            <div className="lg:col-span-6 lg:col-start-1 lg:row-start-1">
+              <ProductMedia />
             </div>
-
-            {/* ── The purchase block ──
-                The home page sells. The pack pages under /products exist for
-                search and indexing, not to take the sale away from here: a
-                visitor who has read this far should not have to load another
-                page to buy. Sticky on desktop so the price stays with the
-                reader as they work down the specification. */}
-            <div className="lg:col-span-5">
-              <div className="lg:sticky lg:top-24">
-                <h3 id="buy-heading" className="sr-only">
-                  Buy {PRODUCT.name}
-                </h3>
-                <div id="buy" className="scroll-mt-24">
-                  <VialChooser cryptoEnabled={cryptoEnabled} />
-                </div>
-              </div>
+            <div
+              id="buy"
+              className="min-w-0 scroll-mt-24 lg:col-span-6 lg:col-start-7 lg:row-span-2 lg:row-start-1"
+            >
+              <BuyBoxPills cryptoEnabled={cryptoEnabled} />
+            </div>
+            <div className="min-w-0 lg:col-span-6 lg:col-start-1 lg:row-start-2">
+              <ProductSpecs />
             </div>
           </div>
         </section>
@@ -385,6 +251,10 @@ export default function FunnelPage() {
           <PackGrid heading="Read more" />
         </div>
       </section>
+
+      {/* ── What it is: the definition, after the buy section and the
+          pack grid rather than in front of the price. ── */}
+      <AboutProduct />
 
       {/* ══ 3. INFORMATION ════════════════════════════════════════
             The dark band. One big-number moment, on the fact that
@@ -543,21 +413,5 @@ export default function FunnelPage() {
         <StickyBuyBar />
       </FunnelStateProvider>
     </>
-  );
-}
-
-/** One row of the specification list. */
-function SpecRow({
-  term,
-  children,
-}: {
-  term: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="grid gap-1 py-5 sm:grid-cols-[11rem_1fr] sm:gap-6">
-      <dt className="text-sm font-semibold text-ink">{term}</dt>
-      <dd className="measure text-base text-ink-soft">{children}</dd>
-    </div>
   );
 }
