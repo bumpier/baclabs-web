@@ -122,7 +122,7 @@ export function SkuForm({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label" htmlFor="hsCode">HS code</label>
-              <input id="hsCode" name="hsCode" maxLength={14} defaultValue={values.hsCode} className="field font-mono" placeholder="Customs only" />
+              <input id="hsCode" name="hsCode" maxLength={14} defaultValue={values.hsCode} className="field font-mono" placeholder="Needed for Northern Ireland" />
             </div>
             <div>
               <label className="label" htmlFor="originCountryIso">Made in</label>

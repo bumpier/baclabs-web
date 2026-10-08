@@ -455,6 +455,20 @@ const input: LabelInput = {
   });
   check("an over-long optional email is left off, with a warning", request !== null && request.receiver_email === undefined && warnings.length === 1);
 }
+{
+  // 4 Oct 2026, order fc1f197b to Belfast: Amazon Shipping refused it seven
+  // times with "Please enter parcel 1 item 1 HS Code". GB to Northern Ireland
+  // carries customs data per item.
+  const belfast = { ...input.receiver, address: { line1: "23 Kenard Avenue", line2: null, city: "Belfast", country: "GB", postalCode: "BT11 8LY" } };
+  const { request, problems } = buildShipmentRequest({ ...input, receiver: belfast });
+  check("a Northern Ireland item without an HS code blocks the label", request === null && problems.some((p) => p.includes("HS code")), problems.join("; "));
+  check("…naming the SKU to fix", problems.some((p) => p.includes("BACLAB-10ML-X5")), problems.join("; "));
+  const coded = buildShipmentRequest({ ...input, receiver: belfast, items: [{ ...input.items[0]!, hsCode: "2853901000" }] });
+  check("…and with one it goes through, carrying the code", coded.request?.parcel[0]!.items![0]!.hscode === "2853901000", coded.problems.join("; "));
+  const lower = { ...belfast, address: { ...belfast.address, postalCode: "bt11 8ly" } };
+  check("a lower-case BT postcode counts too", buildShipmentRequest({ ...input, receiver: lower }).request === null);
+  check("a mainland GB item needs no HS code", buildShipmentRequest(input).request !== null);
+}
 
 if (failures > 0) {
   console.error(`\n${failures} shipping check(s) failed`);

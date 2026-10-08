@@ -245,6 +245,15 @@ export function buildShipmentRequest(input: LabelInput): BuiltRequest {
   }
   if (input.items.length === 0) problems.push("The order has no items");
 
+  // GB to Northern Ireland carries customs data per item: on 4 Oct 2026
+  // Amazon Shipping refused a Belfast parcel for want of HS codes.
+  if (/^BT\d/i.test(receiverPostcode)) {
+    const uncoded = new Set(input.items.filter((i) => !i.hsCode?.trim()).map((i) => i.skuCode));
+    for (const code of uncoded) {
+      problems.push(`HS code is not set for ${code} — Northern Ireland parcels need one; add it to the SKU`);
+    }
+  }
+
   const items: ParcelItemRequest[] = input.items.map((item) => {
     const unitValueMinor = item.quantity > 0 ? item.lineTotalMinor / item.quantity : 0;
     const line: ParcelItemRequest = {
