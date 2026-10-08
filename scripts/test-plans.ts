@@ -29,7 +29,7 @@ import { planRefundMinor, refundBreakdown } from "@/lib/plans/refund";
 import { nudgePlanPack, planPackOf, upgradeEligibility, upgradeOffers, upgradePriceMinor } from "@/lib/plans/upgrade";
 import { planBoxItems, planPurchaseItems, planRowData } from "@/lib/plans/items";
 import { soldLines } from "@/lib/inventory/demand";
-import { CheckoutSchema } from "@/lib/validation";
+import { CheckoutSchema, PlanUpgradeSchema } from "@/lib/validation";
 import {
   boxShippedCopy, nudgePlanOfferHtml, planScheduleSentences, planStartedCopy, renewalCopy, upgradeOfferHtml,
 } from "@/lib/plans/copy";
@@ -319,6 +319,16 @@ allCopy.push(started.subject, started.preheader, text(started.body));
   check("nudge offers nothing to an order inside a plan", nudgePlanPack({ kind: "sale", planId: "p1", items }) === null);
   check("nudge offers nothing on a plan box", nudgePlanPack({ kind: "plan_box", planId: null, items }) === null);
   check("nudge offers nothing on a plan upgrade", nudgePlanPack({ kind: "plan_upgrade", planId: null, items }) === null);
+}
+
+// ── Task 12: upgrade bodies
+{
+  const uid = "6f1c2a7e-3b4d-4c5e-8f90-1a2b3c4d5e6f";
+  check("an upgrade body parses", PlanUpgradeSchema.safeParse({ orderId: uid, months: 6 }).success);
+  check("12 months too", PlanUpgradeSchema.safeParse({ orderId: uid, months: 12, trackingConsent: true }).success);
+  check("3 months is not an upgrade", !PlanUpgradeSchema.safeParse({ orderId: uid, months: 3 }).success);
+  check("the order id must be a uuid", !PlanUpgradeSchema.safeParse({ orderId: "abc", months: 6 }).success);
+  check("no amount can be sent", !PlanUpgradeSchema.safeParse({ orderId: uid, months: 6, priceMinor: 1 }).success);
 }
 
 // ── Later tasks append sections here, above the report.

@@ -73,6 +73,16 @@ export const PlanCheckoutSchema = z
 
 export const CheckoutSchema = z.union([CardCheckoutSchema, CryptoCheckoutSchema, PlanCheckoutSchema]);
 
+/** Turning a paid one-off order into box 1 of a plan (lib/plans/upgrade.ts). Never an amount. */
+export const PlanUpgradeSchema = z
+  .object({
+    orderId: z.string().uuid(),
+    months: z.union([z.literal(6), z.literal(12)]),
+    trackingConsent: z.boolean().optional(),
+  })
+  .strict();
+export type PlanUpgradeInput = z.infer<typeof PlanUpgradeSchema>;
+
 export type CardCheckoutInput = z.infer<typeof CardCheckoutSchema>;
 export type CryptoCheckoutInput = z.infer<typeof CryptoCheckoutSchema>;
 export type PlanCheckoutInput = z.infer<typeof PlanCheckoutSchema>;

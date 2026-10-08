@@ -324,6 +324,90 @@ export async function createPlanCheckout(params: PlanCheckoutParams): Promise<{ 
   return { paymentUrl: session.url, paymentRef: session.id };
 }
 
+/** A session from the keyless dev simulator: there is nothing at Stripe to read or close. */
+const simulated = (id: string) => !process.env.STRIPE_SECRET_KEY || id.startsWith("cs_sim_");
+
+/** The live URL of a Checkout Session that can still be paid, else null. */
+export async function openCheckoutUrl(sessionId: string): Promise<string | null> {
+  if (simulated(sessionId)) return null;
+  try {
+    const s = await getStripe().checkout.sessions.retrieve(sessionId);
+    return s.status === "open" ? s.url : null;
+  } catch (err) {
+    console.error(`[stripe] could not read session ${sessionId}`, err);
+    return null;
+  }
+}
+
+/** Close a session nobody should pay any more. "complete" means it was paid first. */
+export async function expireOpenCheckout(sessionId: string): Promise<"expired" | "complete" | "gone"> {
+  if (simulated(sessionId)) return "gone";
+  try {
+    const s = await getStripe().checkout.sessions.retrieve(sessionId);
+    if (s.status === "complete") return "complete";
+    if (s.status !== "open") return "gone";
+    await getStripe().checkout.sessions.expire(sessionId);
+    return "expired";
+  } catch (err) {
+    console.error(`[stripe] could not expire session ${sessionId}`, err);
+    return "gone";
+  }
+}
+
+/**
+ * Turning a paid one-off order into box 1 of a plan: ONE payment of the
+ * difference (lib/plans/upgrade.ts upgradePriceMinor), priced here, never from
+ * the request. Nothing ships, so no address and no shipping rate. The email is
+ * locked to the original order's. No promotion codes.
+ */
+export async function createPlanUpgradeCheckout(params: {
+  orderId: string;
+  originalOrderId: string;
+  plan: PlanPrice;
+  priceMinor: number;
+  email: string;
+  origin: string;
+}): Promise<{ paymentUrl: string; paymentRef: string }> {
+  const { orderId, originalOrderId, plan, priceMinor, origin } = params;
+  if (!process.env.STRIPE_SECRET_KEY) {
+    const ref = `cs_sim_${orderId.slice(0, 12)}`;
+    return { paymentUrl: `${origin}/dev/stripe?session=${ref}&order=${orderId}`, paymentRef: ref };
+  }
+  const ref = originalOrderId.slice(0, 8).toUpperCase();
+  const metadata = { orderId, upgradeOf: originalOrderId, plan: plan.key, kind: "plan_upgrade" };
+  const session = await getStripe().checkout.sessions.create(
+    {
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "gbp",
+            unit_amount: priceMinor,
+            product_data: {
+              name: `Make order ${ref} box 1 of a ${plan.months}-month plan`,
+              // An upgrade's box 1 has already been bought, so its bonus pack rides in box 2.
+              description: planDescription(plan, 2),
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      ...(params.email ? { customer_email: params.email } : {}),
+      client_reference_id: orderId,
+      metadata,
+      payment_intent_data: { metadata },
+      allow_promotion_codes: false,
+      automatic_tax: { enabled: false },
+      success_url: `${origin}/order-confirmation/${orderId}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/order-confirmation/${originalOrderId}#plan-upgrade`,
+    },
+    { idempotencyKey: `checkout:${orderId}` }
+  );
+  if (!session.url) throw new Error("Stripe did not return a checkout URL");
+  return { paymentUrl: session.url, paymentRef: session.id };
+}
+
 /** Stripe Checkout custom field carrying the customer's delivery instructions. */
 const DELIVERY_INSTRUCTIONS_FIELD = "deliveryinstructions";
 
