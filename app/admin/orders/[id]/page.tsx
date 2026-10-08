@@ -41,7 +41,10 @@ export default async function AdminOrderDetailPage({
 
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { emailLogs: { orderBy: { sentAt: "asc" } } },
+    include: {
+      emailLogs: { orderBy: { sentAt: "asc" } },
+      plan: { select: { id: true, months: true } },
+    },
   });
   if (!order) notFound();
 
@@ -49,7 +52,8 @@ export default async function AdminOrderDetailPage({
     getAdminSession(),
     prisma.shipment.count({ where: { orderId: order.id, status: "CREATED" } }),
   ]);
-  const actions = NEXT_ACTIONS[order.status] ?? [];
+  const isUpgradePayment = order.kind === "plan_upgrade";
+  const actions = isUpgradePayment ? [] : NEXT_ACTIONS[order.status] ?? [];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
@@ -100,6 +104,16 @@ export default async function AdminOrderDetailPage({
           )}
           {order.status === "delivered" && !order.deliveredAt && <> · delivered (date not known)</>}
         </p>
+        {order.plan && (
+          <p className="mt-1 text-sm text-ink-soft">
+            {order.planBox
+              ? `Plan box ${order.planBox} of ${order.plan.months}`
+              : "Plan upgrade payment: nothing to send"}{" "}
+            <Link href={`/admin/plans/${order.plan.id}`} className="link">
+              View plan
+            </Link>
+          </p>
+        )}
 
         {order.status === "paid" && order.labelError && (
           <p role="alert" className="card mt-6 border-red-200 bg-red-50 p-5 text-sm text-red-700">
@@ -152,13 +166,15 @@ export default async function AdminOrderDetailPage({
           )}
         </div>
 
-        <OrderFulfilment order={order} isPacker={session?.role === "PACKER"} />
+        {!isUpgradePayment && <OrderFulfilment order={order} isPacker={session?.role === "PACKER"} />}
       </div>
 
       {/* Packing slip — the only thing that prints */}
-      <div className="mt-8">
-        <PackingSlip order={order} />
-      </div>
+      {!isUpgradePayment && (
+        <div className="mt-8">
+          <PackingSlip order={order} />
+        </div>
+      )}
     </div>
   );
 }
