@@ -446,7 +446,7 @@ export function nextDayOffered(): boolean {
 const SINGLE_RATE_MINOR = 299;
 
 /** The delivery price the storefront quotes below the free threshold. */
-function quotedDeliveryMinor(): number {
+export function quotedDeliveryMinor(): number {
   return deliveryChoiceEnabled() ? STANDARD_DELIVERY.priceMinor : SINGLE_RATE_MINOR;
 }
 
