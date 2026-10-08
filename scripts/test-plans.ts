@@ -30,6 +30,9 @@ import { planPackOf, upgradeEligibility, upgradeOffers, upgradePriceMinor } from
 import { planBoxItems, planPurchaseItems, planRowData } from "@/lib/plans/items";
 import { soldLines } from "@/lib/inventory/demand";
 import { CheckoutSchema } from "@/lib/validation";
+import {
+  boxShippedCopy, nudgePlanOfferHtml, planScheduleSentences, planStartedCopy, renewalCopy, upgradeOfferHtml,
+} from "@/lib/plans/copy";
 
 let failures = 0;
 
@@ -252,6 +255,63 @@ check("months must be 3, 6 or 12", !parse({ method: "card", plan: { pack: "five"
 check("only 5, 10 and 20 have plans", !parse({ method: "card", plan: { pack: "fifty", months: 6 } }).success);
 check("plans are card only", !parse({ method: "btc", plan: { pack: "five", months: 6 } }).success);
 check("no amount can be sent", !parse({ ...planBody, plan: { pack: "five", months: 6, totalMinor: 1 } }).success);
+
+// ── Task 7: customer copy
+const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+const termsOf = (key: string, anchorDay: string | null = "2026-10-08", source: "checkout" | "upgrade" = "checkout") => {
+  const k = parsePlanKey(key)!;
+  return { ...planRowData(planPrice(k.pack, k.months), source), anchorDay };
+};
+const allCopy: string[] = [];
+for (const p of allPlans()) {
+  const s = planScheduleSentences(termsOf(p.key));
+  allCopy.push(...s);
+  check(`${p.key} schedule says it is paid once`, s.some((x) => x.includes("paid for once")));
+  check(`${p.key} schedule says cancel by replying`, s.some((x) => x.includes("reply to this email")));
+}
+const s12 = planScheduleSentences(termsOf("five-12")).join(" ");
+check("12 months: boxes 11 and 12 are free", s12.includes("Boxes 11 and 12 are free: you paid for 10."), s12);
+check("12 months: the free pack comes in box 1", s12.includes("Your free 5-vial pack comes in box 1."));
+check("monthly date and last box are stated", s12.includes("on the 8th of each month") && s12.includes("Wednesday 8 September 2027"), s12);
+check("the refund rule in words", s12.includes("less £25.89 for each box already sent") && s12.includes("less £21.99 once the free pack has gone out"), s12);
+check("an upgrade's bonus is in box 2", planScheduleSentences(termsOf("five-12", "2026-10-08", "upgrade")).join(" ").includes("comes in box 2"));
+check("a 31st plan mentions short months", planScheduleSentences(termsOf("ten-6", "2026-01-31")).join(" ").includes("or the last day of a shorter month"));
+check("20-vial boxes ship free", planScheduleSentences(termsOf("twenty-6")).join(" ").includes("Delivery is free on every box."));
+check("3 months has no free-box sentence", !planScheduleSentences(termsOf("five-3")).join(" ").includes("are free") && !planScheduleSentences(termsOf("five-3")).join(" ").includes("is free"));
+
+const shipped = boxShippedCopy({ boxNumber: 3, months: 6, nextBoxDay: "2027-01-08" });
+check("shipped subject says Box 3 of 6", shipped.subject.includes("Box 3 of 6"));
+check("shipped copy names the next box", shipped.next.includes("Friday 8 January 2027"));
+check("the last box says so", boxShippedCopy({ boxNumber: 6, months: 6, nextBoxDay: null }).next.includes("last box"));
+allCopy.push(shipped.subject, shipped.preheader, shipped.lead, shipped.next);
+
+const renewal = renewalCopy({ customerName: "Alex", plan: termsOf("five-6"), renewUrl: "https://baclab.co.uk/?plan=five-6#buy" });
+check("renewal links back to the picker, preselected", renewal.body.includes("/?plan=five-6#buy"));
+check("renewal says it never renews by itself", text(renewal.body).includes("never renew by themselves"));
+check("renewal quotes today's price for the same plan", text(renewal.body).includes("£133.35"));
+check("renewal names the last box day", renewal.subject.includes("Monday 8 March 2027"), renewal.subject);
+allCopy.push(renewal.subject, renewal.preheader, text(renewal.body));
+
+const nudge = nudgePlanOfferHtml("ten", "https://baclab.co.uk");
+check("nudge offers the pack's 6-month plan", nudge.includes("/?plan=ten-6#buy") && text(nudge).includes("£198.35"));
+check("nudge states per-box delivery", text(nudge).includes("includes £3.90 delivery per box"));
+check("nudge never quotes a per-vial price", !/a vial|per vial/.test(text(nudge)));
+allCopy.push(text(nudge));
+
+const offer = upgradeOfferHtml({ packId: "five", orderUrl: "https://baclab.co.uk/order-confirmation/abc", deadline: new Date("2026-10-15T09:00:00Z") });
+check("upgrade offer prices both terms", text(offer).includes("£107.46") && text(offer).includes("£240.81"));
+check("upgrade offer states its deadline", text(offer).includes("Thursday 15 October 2026"));
+check("upgrade offer links to the page's offer", offer.includes("/order-confirmation/abc#plan-upgrade"));
+allCopy.push(text(offer));
+
+const started = planStartedCopy({ customerName: "Alex", originalRef: "ABCD1234", plan: termsOf("five-12", "2026-10-06", "upgrade"), paidMinor: 24081 });
+check("plan started names the original order", text(started.body).includes("ABCD1234") && text(started.body).includes("£240.81"));
+allCopy.push(started.subject, started.preheader, text(started.body));
+
+{
+  const v = checkCompliance(allCopy);
+  check("all plan copy passes the house rules", v.length === 0, v.map((x) => `${x.match}: ${x.why}`).join("; "));
+}
 
 // ── Later tasks append sections here, above the report.
 
