@@ -307,8 +307,8 @@ export default function TermsPage() {
                 box 1.
               </p>
               <p>
-                About two weeks before your last box we email you to say the plan is ending. To carry on, you buy a new
-                plan at the price shown on the Site at that time.
+                Unless you have opted out of our emails, about two weeks before your last box we email you to say the
+                plan is ending. To carry on, you buy a new plan at the price shown on the Site at that time.
               </p>
             </>
           ),

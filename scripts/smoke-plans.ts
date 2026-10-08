@@ -9,8 +9,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/db";
 import { planPrice, type PlanMonths, type PlanPackId } from "../config/plans";
 import { planPurchaseItems, planRowData } from "../lib/plans/items";
-import { afterBox, boxDueAt, renewalWindow } from "../lib/plans/schedule";
-import { runPlanBoxes, runPlanRenewals } from "../lib/plans/boxes";
+import { afterBox, boxDueAt, renewalWindow, skipAMonth } from "../lib/plans/schedule";
+import { createPlanBox, runPlanBoxes, runPlanRenewals } from "../lib/plans/boxes";
 import { fulfillPaidOrder } from "../lib/payments/fulfillment";
 import { shopDayKey } from "../lib/saleTime";
 
@@ -198,6 +198,31 @@ async function boxes() {
   const done = await prisma.plan.findUniqueOrThrow({ where: { purchaseOrderId: short.id } });
   assert(done.status === "completed" && done.boxesSent === 3 && done.nextBoxAt === null, "a 3-month plan completes after box 3");
   assert((await prisma.order.count({ where: { planId: done.id } })) === 3, "…with exactly three box orders");
+
+  // Box 1 cancelled (and refunded) on the orders screen while the plan stays
+  // active: no box goes to that address, and the run reports it as failed.
+  const refunded = await pendingPlanPurchase(`plan-d${DOMAIN}`, "five", 3);
+  await fulfillPaidOrder(refunded.id, { provider: "stripe", paymentRef: "smoke_d" });
+  await settle();
+  await prisma.order.update({ where: { id: refunded.id }, data: { status: "cancelled" } });
+  const pd = await prisma.plan.findUniqueOrThrow({ where: { purchaseOrderId: refunded.id } });
+  const rd = await runPlanBoxes(new Date(pd.nextBoxAt!.getTime() + 60_000));
+  assert((await prisma.order.count({ where: { planId: pd.id, planBox: 2 } })) === 0, "a plan whose box 1 is cancelled makes no box");
+  const pdAfter = await prisma.plan.findUniqueOrThrow({ where: { id: pd.id } });
+  assert(rd.failed >= 1 && pdAfter.status === "active" && pdAfter.boxesSent === 1, "…counts it as failed and leaves the plan for the admin to cancel");
+
+  // A skip-a-month saved while a run is working on the plan: the run's stale
+  // copy must miss, not put the old schedule back.
+  const raced = await pendingPlanPurchase(`plan-e${DOMAIN}`, "five", 3);
+  await fulfillPaidOrder(raced.id, { provider: "stripe", paymentRef: "smoke_e" });
+  await settle();
+  const stale = await prisma.plan.findUniqueOrThrow({ where: { purchaseOrderId: raced.id } });
+  const moved = skipAMonth({ anchorDay: stale.anchorDay!, boxesSent: stale.boxesSent, months: stale.months });
+  await prisma.plan.update({ where: { id: stale.id }, data: { anchorDay: moved.anchorDay, nextBoxAt: moved.nextBoxAt } });
+  const outcome = await createPlanBox(stale, new Date(stale.nextBoxAt!.getTime() + 60_000));
+  assert(outcome === "skipped" && (await prisma.order.count({ where: { planId: stale.id, planBox: 2 } })) === 0, "a run racing a skip-a-month makes no box");
+  const kept = await prisma.plan.findUniqueOrThrow({ where: { id: stale.id } });
+  assert(kept.anchorDay === moved.anchorDay && kept.nextBoxAt?.getTime() === moved.nextBoxAt?.getTime() && kept.boxesSent === 1, "…and the skipped month stands");
   console.log("boxes: all good");
 }
 

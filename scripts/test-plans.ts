@@ -286,6 +286,14 @@ check("shipped subject says Box 3 of 6", shipped.subject.includes("Box 3 of 6"))
 check("shipped copy names the next box", shipped.next.includes("Friday 8 January 2027"));
 check("the last box says so", boxShippedCopy({ boxNumber: 6, months: 6, nextBoxDay: null }).next.includes("last box"));
 allCopy.push(shipped.subject, shipped.preheader, shipped.lead, shipped.next);
+{
+  // A box shipped after its plan was cancelled: no next date, and not "the last box of your plan" either.
+  const c = boxShippedCopy({ boxNumber: 2, months: 6, nextBoxDay: null, cancelled: true });
+  check("a cancelled plan's shipped box says no more boxes will be sent", c.next.includes("no more boxes will be sent") && !c.next.includes("next box") && !c.next.includes("last box"), c.next);
+  check("cancelled wins over a next date", boxShippedCopy({ boxNumber: 2, months: 6, nextBoxDay: "2027-01-08", cancelled: true }).next === c.next);
+  check("an active plan's box is unchanged by the option", boxShippedCopy({ boxNumber: 3, months: 6, nextBoxDay: "2027-01-08", cancelled: false }).next === shipped.next);
+  allCopy.push(c.next);
+}
 
 const renewal = renewalCopy({ customerName: "Alex", plan: termsOf("five-6"), renewUrl: "https://baclab.co.uk/?plan=five-6#buy" });
 check("renewal links back to the picker, preselected", renewal.body.includes("/?plan=five-6#buy"));

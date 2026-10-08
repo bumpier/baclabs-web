@@ -46,7 +46,9 @@ export async function runPlanBoxes(now = new Date()): Promise<PlanBoxRun> {
     }
     run.due++;
     try {
-      if ((await createPlanBox(plan, now)) === "created") run.created++;
+      const outcome = await createPlanBox(plan, now);
+      if (outcome === "created") run.created++;
+      else if (outcome === "blocked") run.failed++; // logged by createPlanBox; needs the admin
       else run.skipped++;
     } catch (err) {
       run.failed++;
@@ -56,7 +58,12 @@ export async function runPlanBoxes(now = new Date()): Promise<PlanBoxRun> {
   return run;
 }
 
-export async function createPlanBox(plan: Plan, now: Date): Promise<"created" | "skipped"> {
+/**
+ * "blocked": box 1's order was cancelled (and refunded) on the orders screen
+ * while the plan stayed active. No box is made until the admin cancels the
+ * plan; the run counts it as failed and logs it every day until then.
+ */
+export async function createPlanBox(plan: Plan, now: Date): Promise<"created" | "skipped" | "blocked"> {
   const boxNumber = plan.boxesSent + 1;
   // Box 1 holds the address, the email and the product row: the purchase
   // order for a checkout plan, the original order for an upgrade.
@@ -64,6 +71,10 @@ export async function createPlanBox(plan: Plan, now: Date): Promise<"created" | 
   if (!first || !plan.anchorDay) {
     console.error(`[internal] plan ${plan.id} has no box 1 order or no anchor day; no box made`);
     return "skipped";
+  }
+  if (first.status === "cancelled") {
+    console.error(`[internal] plan ${plan.id}: box 1 order ${first.id} is cancelled; cancel the plan on /admin/plans/${plan.id}`);
+    return "blocked";
   }
   const template = (JSON.parse(first.items) as { productId: string; slug: string }[])[0];
   if (!template) return "skipped";
@@ -86,10 +97,12 @@ export async function createPlanBox(plan: Plan, now: Date): Promise<"created" | 
   try {
     orderId = await prisma.$transaction(async (tx) => {
       const { count } = await tx.plan.updateMany({
-        where: { id: plan.id, status: "active", boxesSent: plan.boxesSent },
+        // anchorDay too: a skip-a-month saved while this run was working moves
+        // the anchor, and this update must then miss rather than overwrite it.
+        where: { id: plan.id, status: "active", boxesSent: plan.boxesSent, anchorDay: plan.anchorDay },
         data: { boxesSent: next.boxesSent, nextBoxAt: next.nextBoxAt, status: next.status },
       });
-      if (count === 0) return null; // another run made it, or the plan was cancelled
+      if (count === 0) return null; // another run made it, the plan was cancelled, or a month was skipped
       const order = await tx.order.create({
         data: {
           status: "paid",

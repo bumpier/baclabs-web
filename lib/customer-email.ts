@@ -35,6 +35,10 @@ interface OrderItem {
   welcome?: boolean;
   /** The free pack of a 12-month plan: shown as "Free". */
   planBonus?: boolean;
+  /** "5-vial monthly plan, 12 boxes" on a plan's purchase line (lib/plans/items.ts). */
+  bundleName?: string;
+  /** "plan": box 1's line, which carries the whole plan's price. */
+  planLine?: "plan" | "box" | "bonus";
 }
 
 // Order + nudge emails are sent from the payment webhook and the cron job —
@@ -153,8 +157,11 @@ function receiptTable(
   const rows = items
     .map((i) => {
       const amount = i.lineTotal ? parseFloat(i.lineTotal) : parseFloat(i.unitPrice) * i.qty;
+      // A plan's line carries the whole plan's price: name the plan, not "× 5".
+      const detail =
+        i.planLine === "plan" && i.bundleName ? `&middot; ${escapeHtml(i.bundleName)}` : `&times; ${i.qty}`;
       return `<tr>
-        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};color:${LITERAL.ink}">${escapeHtml(i.name)} <span style="color:${LITERAL.inkSoft}">&times; ${i.qty}</span></td>
+        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};color:${LITERAL.ink}">${escapeHtml(i.name)} <span style="color:${LITERAL.inkSoft}">${detail}</span></td>
         <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};text-align:right;color:${LITERAL.ink};white-space:nowrap">${i.welcome || i.planBonus ? "Free" : formatPrice(amount, currency)}</td>
       </tr>`;
     })
@@ -249,6 +256,21 @@ async function trustpilotBccFor(order: Order): Promise<string | null> {
   }
 }
 
+/**
+ * Whether the customer has unsubscribed (EmailOptOut, lowercased as every
+ * sender stores it). The plan upgrade offer is marketing, so it is left out
+ * of the receipt for them. Unknown state fails towards not offering.
+ */
+async function optedOutOfEmails(order: Order): Promise<boolean> {
+  if (!order.customerEmail) return true;
+  try {
+    return (await prisma.emailOptOut.findUnique({ where: { email: order.customerEmail.toLowerCase() } })) !== null;
+  } catch (err) {
+    console.error(`[email] opt-out check failed for order ${order.id}`, err);
+    return true;
+  }
+}
+
 export async function sendOrderConfirmationEmail(
   order: Order,
   opts?: { deliveryMinor?: number }
@@ -268,9 +290,10 @@ export async function sendOrderConfirmationEmail(
     ? `<p style="margin:24px 0 0;font-weight:600;color:${LITERAL.ink}">Your monthly plan</p>${planScheduleHtml(planTermsOf(plan))}`
     : "";
   const verdict = plan ? null : upgradeEligibility(order, new Date());
-  const upgradeBlock = verdict?.eligible
-    ? upgradeOfferHtml({ packId: verdict.packId, orderUrl, deadline: verdict.deadline })
-    : "";
+  const upgradeBlock =
+    verdict?.eligible && !(await optedOutOfEmails(order))
+      ? upgradeOfferHtml({ packId: verdict.packId, orderUrl, deadline: verdict.deadline })
+      : "";
   const placedOn = order.createdAt.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
@@ -288,7 +311,7 @@ export async function sendOrderConfirmationEmail(
     plan ? `Your ${brand.name} monthly plan is confirmed` : `Your ${brand.name} order is confirmed`,
     layout(
       `<p>Hi ${escapeHtml(order.customerName)},</p>
-      <p>Thanks for your order! Your payment has been received and we're getting it ready.</p>
+      <p>${plan ? "Thank you for your order." : "Thanks for your order!"} Your payment has been received and we're getting it ready.</p>
       ${welcomeVials > 0 ? `<p style="margin:0 0 12px">Your mailing-list welcome gift, ${welcomeVials === 1 ? "an extra 10ml vial" : `${welcomeVials} extra 10ml vials`}, is included in this order.</p>` : ""}
       <p style="margin:0 0 4px;font-size:12px;color:${LITERAL.inkSoft}">Order ${order.id} &middot; placed ${placedOn}</p>
       ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString())}
@@ -350,7 +373,12 @@ export async function sendOrderShippedEmail(order: Order, tracking?: ShippedTrac
       ? boxShippedCopy({
           boxNumber: order.planBox,
           months: plan.months,
-          nextBoxDay: plan.anchorDay && order.planBox < plan.months ? boxDueDay(plan.anchorDay, order.planBox + 1) : null,
+          // Only a running plan has a next box; a cancelled one says no more are coming.
+          nextBoxDay:
+            plan.status === "active" && plan.anchorDay && order.planBox < plan.months
+              ? boxDueDay(plan.anchorDay, order.planBox + 1)
+              : null,
+          cancelled: plan.status === "cancelled",
         })
       : null;
   await logAndSend(

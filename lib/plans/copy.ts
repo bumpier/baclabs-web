@@ -81,15 +81,18 @@ export function planScheduleHtml(plan: PlanTerms, opts: { boxOne?: string; reply
     .join("")}</ul>`;
 }
 
-export function boxShippedCopy(input: { boxNumber: number; months: number; nextBoxDay: string | null }) {
+/** `cancelled`: the plan has been cancelled, so no box comes after this one. */
+export function boxShippedCopy(input: { boxNumber: number; months: number; nextBoxDay: string | null; cancelled?: boolean }) {
   const box = `Box ${input.boxNumber} of ${input.months}`;
   return {
     subject: `${box} of your ${brand.name} plan is on its way`,
     preheader: `${box} has shipped.`,
     lead: `${box} of your monthly plan has been shipped and is on its way to you.`,
-    next: input.nextBoxDay
-      ? `Your next box goes out on ${formatShopDay(input.nextBoxDay)}.`
-      : "This is the last box of your plan. Thank you for being with us.",
+    next: input.cancelled
+      ? "Your plan has been cancelled, so no more boxes will be sent after this one."
+      : input.nextBoxDay
+        ? `Your next box goes out on ${formatShopDay(input.nextBoxDay)}.`
+        : "This is the last box of your plan. Thank you for being with us.",
   };
 }
 

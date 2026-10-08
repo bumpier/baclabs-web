@@ -54,6 +54,9 @@ export default async function AdminOrderDetailPage({
   ]);
   const isUpgradePayment = order.kind === "plan_upgrade";
   const actions = isUpgradePayment ? [] : NEXT_ACTIONS[order.status] ?? [];
+  // Box 1 of a plan (its purchase order, or an upgraded original): cancelling
+  // the order releases its stock but leaves the plan running.
+  const planBoxOne = order.plan && order.planBox === 1 && actions.some((a) => a.status === "cancelled") ? order.plan : null;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
@@ -81,6 +84,14 @@ export default async function AdminOrderDetailPage({
             </Link>
           </div>
         </div>
+        {planBoxOne && (
+          <p className="alert-note mt-3">
+            Cancelling this order does not cancel the plan.{" "}
+            <Link href={`/admin/plans/${planBoxOne.id}`} className="link">
+              Cancel the plan on its page
+            </Link>
+          </p>
+        )}
         <p className="mt-2 text-sm text-ink-soft">
           {order.paidAt ? (
             <>

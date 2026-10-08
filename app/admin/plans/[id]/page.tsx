@@ -219,6 +219,8 @@ export default async function AdminPlanDetailPage({ params }: { params: Promise<
             className="mt-4 space-y-4"
           >
             <input type="hidden" name="planId" value={plan.id} />
+            {/* The refund above was worked out for this many boxes; the action refuses if another has gone since. */}
+            <input type="hidden" name="boxesSent" value={plan.boxesSent} />
             <div>
               <label htmlFor="refund" className="label">
                 Refund (£)
@@ -236,6 +238,13 @@ export default async function AdminPlanDetailPage({ params }: { params: Promise<
               This stops the boxes and records the refund. It does not move money: refund the amount in Stripe
               (Payments → the payment → Refund).
             </p>
+            {plan.source === "upgrade" && (
+              <p className="text-sm text-ink-soft">
+                This plan was an upgrade, paid in two payments (listed under Payments): refund from the upgrade
+                payment and, if the refund is larger than that payment, the rest from the original order&rsquo;s
+                payment.
+              </p>
+            )}
           </ActionForm>
         </section>
       )}

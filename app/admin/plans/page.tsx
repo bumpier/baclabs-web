@@ -9,6 +9,12 @@ export const dynamic = "force-dynamic";
 const FILTERS = ["active", "completed", "cancelled", "pending", "all"] as const;
 type Filter = (typeof FILTERS)[number];
 
+/**
+ * The plan-boxes cron runs daily, so an active plan whose box is a day and a
+ * half late means the cron is not running (a missed crontab line fails silently).
+ */
+const OVERDUE_MS = 36 * 60 * 60 * 1000;
+
 const BADGE: Record<string, string> = {
   active: "bg-brand-tint text-brand-deep",
   completed: "bg-brand text-white",
@@ -25,16 +31,26 @@ export default async function AdminPlansPage({
   const { status } = await searchParams;
   const filter: Filter = FILTERS.includes(status as Filter) ? (status as Filter) : "active";
 
-  const plans = await prisma.plan.findMany({
-    where: filter === "all" ? { status: { not: "pending" } } : { status: filter },
-    orderBy: [{ nextBoxAt: "asc" }, { createdAt: "desc" }],
-    take: 200,
-  });
+  const overdueBefore = new Date(Date.now() - OVERDUE_MS);
+  const [plans, overdue] = await Promise.all([
+    prisma.plan.findMany({
+      where: filter === "all" ? { status: { not: "pending" } } : { status: filter },
+      orderBy: [{ nextBoxAt: "asc" }, { createdAt: "desc" }],
+      take: 200,
+    }),
+    prisma.plan.count({ where: { status: "active", nextBoxAt: { lt: overdueBefore } } }),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <p className="eyebrow">Fulfilment</p>
       <h1 className="mt-2 font-display text-3xl font-medium tracking-tight text-brand-deep">Monthly plans</h1>
+
+      {overdue > 0 && (
+        <p role="alert" className="alert-error mt-4">
+          Boxes are overdue: check the plan-boxes cron is running (deploy/README.md section 6)
+        </p>
+      )}
 
       <div className="mt-8 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
@@ -80,7 +96,14 @@ export default async function AdminPlansPage({
                     <td className="px-5 py-3 tabular">
                       {p.boxesSent}/{p.months}
                     </td>
-                    <td className="px-5 py-3 text-ink-soft">{p.nextBoxAt ? formatSaleDate(p.nextBoxAt) : "—"}</td>
+                    <td className="px-5 py-3 text-ink-soft">
+                      {p.nextBoxAt ? formatSaleDate(p.nextBoxAt) : "—"}
+                      {p.status === "active" && p.nextBoxAt && p.nextBoxAt < overdueBefore && (
+                        <span className={`ml-2 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${BADGE.cancelled}`}>
+                          Overdue
+                        </span>
+                      )}
+                    </td>
                     <td className="px-5 py-3">
                       <span
                         className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${BADGE[p.status] ?? ""}`}
