@@ -3,9 +3,11 @@ import { sendOrderConfirmationEmail, sendNewOrderAlert } from "@/lib/customer-em
 import type { PaymentProvider } from "@/lib/payments/config";
 import { sendMetaPurchase } from "@/lib/meta-capi";
 import { getInventoryMode } from "@/lib/inventory/mode";
-import { allocateOrder } from "@/lib/inventory/store";
 import { settleWelcomeVial } from "@/lib/mailing-list";
 import { autoBuyLabel } from "@/lib/shipping/shipments";
+import { allocateAfterPayment, takeStockInTransaction } from "@/lib/payments/stock";
+import { activatePlanForPaidOrder } from "@/lib/plans/activate";
+import { orderKind, shipsParcel } from "@/lib/plans/kinds";
 
 // Single post-payment code path shared by every provider's webhook.
 // Idempotent: only the pending → paid transition does work; retries are no-ops.
@@ -31,6 +33,13 @@ export async function fulfillPaidOrder(
 
   // Which stock count this sale comes off — see lib/inventory/mode.ts.
   const mode = await getInventoryMode();
+  // A plan upgrade is a payment, not a parcel: no welcome vial, no stock, no
+  // label (lib/plans/kinds.ts).
+  const parcel = shipsParcel(orderKind(order.kind));
+  // One moment and one amount, shared by the claim and the plan.
+  const paidAt = new Date();
+  const amountPaidMinor =
+    opts.amountPaidMinor ?? Math.round(Number(order.totalAmount) * 100) + (opts.deliveryMinor ?? 0);
 
   const claimed = await prisma.$transaction(async (tx) => {
     // Atomic claim: only the delivery that flips pending→paid proceeds. Without
@@ -39,45 +48,42 @@ export async function fulfillPaidOrder(
       where: { id: orderId, status: "pending" },
       data: {
         status: "paid",
-        paidAt: new Date(),
+        paidAt,
         paymentRef: opts.paymentRef ?? order.paymentRef,
         paymentProvider: opts.provider,
-        amountPaidMinor:
-          opts.amountPaidMinor ??
-          Math.round(Number(order.totalAmount) * 100) + (opts.deliveryMinor ?? 0),
+        amountPaidMinor,
         ...(opts.notes !== undefined ? { notes: opts.notes } : {}),
       },
     });
     if (count === 0) return false; // another concurrent delivery already claimed it
 
-    // The mailing-list welcome vial: claim the one checkout added, or add it
-    // now for a subscriber who signed up on another device. Before any stock
-    // is taken, so the vial is decremented, allocated and picked with the
-    // rest. See lib/mailing-list.ts.
-    const welcome = await settleWelcomeVial(tx, order, { legacyStockCheck: mode === "legacy" });
-    if (welcome.items !== order.items || welcome.subscriberId !== order.welcomeSubscriberId) {
-      const notes = opts.notes !== undefined ? opts.notes : order.notes;
-      await tx.order.update({
-        where: { id: orderId },
-        data: {
-          items: welcome.items,
-          welcomeSubscriberId: welcome.subscriberId,
-          ...(welcome.note ? { notes: notes ? `${notes}\n${welcome.note}` : welcome.note } : {}),
-        },
-      });
-    }
-
-    // Legacy: decrement the vial counter now that payment is confirmed. In
-    // warehouse mode stock is allocated to locations below instead.
-    if (mode === "legacy") {
-      const items = JSON.parse(welcome.items) as { productId: string; qty: number }[];
-      for (const item of items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.qty } },
+    if (parcel) {
+      // The mailing-list welcome vial: claim the one checkout added, or add it
+      // now for a subscriber who signed up on another device. Before any stock
+      // is taken, so the vial is decremented, allocated and picked with the
+      // rest. See lib/mailing-list.ts.
+      const welcome = await settleWelcomeVial(tx, order, { legacyStockCheck: mode === "legacy" });
+      if (welcome.items !== order.items || welcome.subscriberId !== order.welcomeSubscriberId) {
+        const notes = opts.notes !== undefined ? opts.notes : order.notes;
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            items: welcome.items,
+            welcomeSubscriberId: welcome.subscriberId,
+            ...(welcome.note ? { notes: notes ? `${notes}\n${welcome.note}` : welcome.note } : {}),
+          },
         });
       }
+
+      // Legacy: decrement the vial counter now that payment is confirmed. In
+      // warehouse mode stock is allocated to locations below instead
+      // (lib/payments/stock.ts).
+      await takeStockInTransaction(tx, mode, welcome.items);
     }
+
+    // Box 1 of a plan, or an upgrade's payment: the plan goes live in this
+    // same write, so a paid plan is never left pending.
+    await activatePlanForPaidOrder(tx, order, { at: paidAt, amountMinor: amountPaidMinor });
     return true;
   });
 
@@ -87,16 +93,7 @@ export async function fulfillPaidOrder(
   // deleted since checkout) must not roll back a payment that has been taken.
   // Only the delivery that won the claim gets here, so it runs once; if it
   // fails the order page shows the order unallocated, with a button to retry.
-  if (mode === "warehouse") {
-    try {
-      const { shortfall } = await allocateOrder(orderId, "system");
-      if (shortfall > 0) {
-        console.error(`[internal] order ${orderId} paid with ${shortfall} unit(s) short on the shelves`);
-      }
-    } catch (err) {
-      console.error(`[internal] stock allocation failed for order ${orderId}`, err);
-    }
-  }
+  if (parcel) await allocateAfterPayment(orderId, mode);
 
   // Order fulfilment hooks go here — accounting export, 3PL handoff; the
   // shipping label is the last one. Every payment provider funnels through this one function, so
@@ -120,6 +117,6 @@ export async function fulfillPaidOrder(
   // the warehouse the stock was picked from. Not awaited: SmartTrack can take
   // seconds and the payment provider is waiting on this webhook. Never
   // throws; a label it cannot buy shows in the admin warning.
-  void autoBuyLabel(orderId);
+  if (parcel) void autoBuyLabel(orderId);
   return { alreadyPaid: false };
 }
