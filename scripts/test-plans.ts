@@ -29,6 +29,7 @@ import { planRefundMinor, refundBreakdown } from "@/lib/plans/refund";
 import { planPackOf, upgradeEligibility, upgradeOffers, upgradePriceMinor } from "@/lib/plans/upgrade";
 import { planBoxItems, planPurchaseItems, planRowData } from "@/lib/plans/items";
 import { soldLines } from "@/lib/inventory/demand";
+import { CheckoutSchema } from "@/lib/validation";
 
 let failures = 0;
 
@@ -238,6 +239,19 @@ check("the bonus rides in box 1 of a checkout plan", planRowData(p12, "checkout"
 check("…and box 2 of an upgrade", planRowData(p12, "upgrade").bonusBox === 2);
 check("no bonus, no bonus box", planRowData(planPrice("five", 6), "checkout").bonusBox === 0);
 check("the row copies the price", planRowData(p12, "checkout").totalMinor === 26670 && planRowData(p12, "checkout").paidMonths === 10);
+
+// ── Task 5: checkout bodies
+const parse = (body: unknown) => CheckoutSchema.safeParse(body);
+const planBody = { method: "card", plan: { pack: "five", months: 6 } };
+const asPlan = parse(planBody);
+check("a plan body parses as a plan", asPlan.success && "plan" in asPlan.data);
+check("with consent too", parse({ ...planBody, trackingConsent: true }).success);
+check("a pack body still parses as a pack", (() => { const r = parse({ method: "card", tierId: "five", quantity: 1 }); return r.success && !("plan" in r.data); })());
+check("a plan body with a tier is refused", !parse({ ...planBody, tierId: "five", quantity: 1 }).success);
+check("months must be 3, 6 or 12", !parse({ method: "card", plan: { pack: "five", months: 4 } }).success && !parse({ method: "card", plan: { pack: "five", months: "6" } }).success);
+check("only 5, 10 and 20 have plans", !parse({ method: "card", plan: { pack: "fifty", months: 6 } }).success);
+check("plans are card only", !parse({ method: "btc", plan: { pack: "five", months: 6 } }).success);
+check("no amount can be sent", !parse({ ...planBody, plan: { pack: "five", months: 6, totalMinor: 1 } }).success);
 
 // ── Later tasks append sections here, above the report.
 

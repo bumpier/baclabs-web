@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { CheckoutSchema, verifyOrigin } from "@/lib/validation";
+import { CheckoutSchema, verifyOrigin, type PlanCheckoutInput } from "@/lib/validation";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { originFromHeaders } from "@/lib/site-url";
 import {
@@ -9,9 +9,12 @@ import {
   buildPendingNote,
   type CryptoPaymentMethod,
 } from "@/lib/crypto-gateway";
-import { createBundleCheckout, assertPriceMatchesConfig } from "@/lib/payments/stripe";
+import { createBundleCheckout, createPlanCheckout, assertPriceMatchesConfig } from "@/lib/payments/stripe";
+import { planPrice, BONUS_PACK_ID } from "@/config/plans";
+import { planPurchaseItems, planRowData } from "@/lib/plans/items";
+import type { Product, Subscriber } from "@prisma/client";
 import { cleanDeliveryInstructions } from "@/lib/smarttrack/payload";
-import { getPaymentConfig, providerForMethod } from "@/lib/payments/config";
+import { getPaymentConfig, providerForMethod, type PaymentProvider } from "@/lib/payments/config";
 import { attributionFor } from "@/lib/meta-capi-event";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { availableToSell } from "@/lib/inventory/store";
@@ -36,6 +39,8 @@ import {
   deliveryOptionsFor,
   SHIPPING_COUNTRIES,
   PRODUCT,
+  STANDARD_DELIVERY,
+  type Bundle,
   type BundleId,
   type DeliveryOptionId,
 } from "@/config/funnel";
@@ -45,6 +50,50 @@ export const dynamic = "force-dynamic";
 
 /** The single inventory SKU. Created by scripts/stripe-setup.ts. */
 const VIAL_SLUG = "baclab-10ml";
+
+/**
+ * The mailing-list welcome vial, when this browser (or, for crypto, this
+ * email) belongs to a subscriber who has not ordered yet. Only added when
+ * the shelves can cover it: a missing gift is better than a failed sale.
+ * `paidVials` sets the reminder bonus; `shelfVials` is what the order itself
+ * takes off the shelf.
+ */
+async function welcomeForOrder(
+  req: Request,
+  opts: { email?: string; bundle: Bundle; paidVials: number; shelfVials: number; product: Product }
+): Promise<{ welcome: Subscriber | null; welcomeQty: number }> {
+  const { bundle, product } = opts;
+  let welcome = await welcomeForCheckout({
+    cookieHeader: req.headers.get("cookie"),
+    email: opts.email,
+  });
+  // One vial, or more with the reminder bonus on a big enough order.
+  let welcomeQty = welcome ? welcomeVialCount(welcome, opts.paidVials) : 0;
+  if (welcome) {
+    // Vials on the shelf beyond the ones this order pays for.
+    let spare: number;
+    if ((await getInventoryMode()) === "warehouse") {
+      const vials = await availableToSell(VIAL_SKU_CODE);
+      // Loose vials the order itself already takes off the shelf: the
+      // single-vial tier, or a pack made up from vials at packing time.
+      const bundleSku = await prisma.sku.findUnique({
+        where: { code: normaliseCode(bundle.sku) },
+        select: { _count: { select: { components: true } } },
+      });
+      const fromShelf =
+        normaliseCode(bundle.sku) === VIAL_SKU_CODE || (bundleSku?._count.components ?? 0) > 0
+          ? opts.shelfVials
+          : 0;
+      spare = vials === null ? 0 : vials - fromShelf;
+    } else {
+      spare = product.stock - opts.shelfVials;
+    }
+    // Short of the bonus vials: the one vial. Short of that: none.
+    if (spare < welcomeQty) welcomeQty = spare >= 1 ? 1 : 0;
+    if (welcomeQty === 0) welcome = null;
+  }
+  return { welcome, welcomeQty };
+}
 
 export async function POST(req: Request) {
   try {
@@ -71,6 +120,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "That payment method is not available." }, { status: 400 });
     }
     const provider = providerForMethod(input.method);
+    if ("plan" in input) return await planCheckout(req, input, provider);
 
     // ── Pricing. The request carries a tier id and a count, never an amount.
     const bundle = bundleById(input.tierId);
@@ -117,38 +167,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Not enough stock for that quantity" }, { status: 409 });
     }
 
-    // The mailing-list welcome vial, when this browser (or, for crypto, this
-    // email) belongs to a subscriber who has not ordered yet. Only added when
-    // the shelves can cover it: a missing gift is better than a failed sale.
-    let welcome = await welcomeForCheckout({
-      cookieHeader: req.headers.get("cookie"),
+    // The mailing-list welcome vial: see welcomeForOrder.
+    const { welcome, welcomeQty } = await welcomeForOrder(req, {
       email: input.method === "card" ? undefined : input.email,
+      bundle,
+      paidVials: totalVials,
+      shelfVials: totalVials,
+      product,
     });
-    // One vial, or more with the reminder bonus on a big enough order.
-    let welcomeQty = welcome ? welcomeVialCount(welcome, totalVials) : 0;
-    if (welcome) {
-      // Vials on the shelf beyond the ones this order pays for.
-      let spare: number;
-      if ((await getInventoryMode()) === "warehouse") {
-        const vials = await availableToSell(VIAL_SKU_CODE);
-        // Loose vials the order itself already takes off the shelf: the
-        // single-vial tier, or a pack made up from vials at packing time.
-        const bundleSku = await prisma.sku.findUnique({
-          where: { code: normaliseCode(bundle.sku) },
-          select: { _count: { select: { components: true } } },
-        });
-        const fromShelf =
-          normaliseCode(bundle.sku) === VIAL_SKU_CODE || (bundleSku?._count.components ?? 0) > 0
-            ? totalVials
-            : 0;
-        spare = vials === null ? 0 : vials - fromShelf;
-      } else {
-        spare = product.stock - totalVials;
-      }
-      // Short of the bonus vials: the one vial. Short of that: none.
-      if (spare < welcomeQty) welcomeQty = spare >= 1 ? 1 : 0;
-      if (welcomeQty === 0) welcome = null;
-    }
 
     // Crypto orders choose delivery here; card orders choose it on Stripe's
     // page and the webhook records it. The price is always looked up, never
@@ -329,4 +355,98 @@ export async function POST(req: Request) {
     console.error("[internal] checkout failed", err);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
+}
+
+/**
+ * A prepaid monthly plan (config/plans.ts): box 1 is this order, the
+ * Plan row is created pending beside it, and both go live together when
+ * the payment lands (lib/plans/activate.ts via fulfillPaidOrder). Card
+ * only (PlanCheckoutSchema). Only box 1 is checked against stock: later
+ * boxes are a promise the cron keeps.
+ */
+async function planCheckout(req: Request, input: PlanCheckoutInput, provider: PaymentProvider) {
+  const plan = planPrice(input.plan.pack, input.plan.months);
+  const bonus = plan.bonusVials > 0 ? bundleById(BONUS_PACK_ID)! : null;
+
+  const product = await prisma.product.findUnique({ where: { slug: VIAL_SLUG } });
+  if (!product || !product.active) {
+    console.error(`[internal] plan checkout rejected: product "${VIAL_SLUG}" is missing or inactive. Run: npx tsx scripts/stripe-setup.ts`);
+    return NextResponse.json({ error: "This product is not available for purchase right now" }, { status: 400 });
+  }
+
+  // Box 1: the pack, and the bonus pack on a 12-month plan.
+  if ((await getInventoryMode()) === "warehouse") {
+    const need = new Map<string, number>([[plan.pack.sku, 1]]);
+    if (bonus) need.set(bonus.sku, (need.get(bonus.sku) ?? 0) + 1);
+    for (const [sku, n] of need) {
+      const available = await availableToSell(sku);
+      if (available === null) {
+        console.error(`[internal] plan checkout rejected: no active SKU "${sku}" in warehouse mode. Create it on /admin/inventory.`);
+        return NextResponse.json({ error: "This product is not available for purchase right now" }, { status: 400 });
+      }
+      if (available < n) return NextResponse.json({ error: "Not enough stock for that plan" }, { status: 409 });
+    }
+  } else if (product.stock < plan.pack.vials + plan.bonusVials) {
+    return NextResponse.json({ error: "Not enough stock for that plan" }, { status: 409 });
+  }
+
+  const { welcome, welcomeQty } = await welcomeForOrder(req, {
+    bundle: plan.pack,
+    paidVials: plan.pack.vials,
+    shelfVials: plan.pack.vials + plan.bonusVials,
+    product,
+  });
+
+  const total = new Prisma.Decimal((plan.totalMinor / 100).toFixed(2));
+  const rates = await fetchFxRates();
+  const subtotalUsd = new Prisma.Decimal(priceIn({ priceGbp: total.toFixed(2) }, "USD", rates).toFixed(2));
+  const items = [
+    ...planPurchaseItems({ productId: product.id, slug: product.slug, plan, totalUsd: subtotalUsd.toFixed(2) }),
+    ...(welcome ? [welcomeItem(product.id, product.slug, welcomeQty)] : []),
+  ];
+
+  const order = await prisma.$transaction(async (tx) => {
+    const created = await tx.order.create({
+      data: {
+        status: "pending",
+        kind: "sale",
+        items: JSON.stringify(items),
+        currency: "GBP",
+        totalAmount: total,
+        subtotalUsd,
+        paymentMethod: "card",
+        paymentProvider: provider,
+        // Every plan box goes Standard (Royal Mail Tracked 48), whatever the pack.
+        deliveryOption: STANDARD_DELIVERY.id,
+        ...(welcome ? { welcomeSubscriberId: welcome.id } : {}),
+        ...attributionFor(input.trackingConsent === true, {
+          cookie: req.headers.get("cookie"),
+          userAgent: req.headers.get("user-agent"),
+          ip: req.headers.get("cf-connecting-ip") ?? clientIp(req),
+        }),
+      },
+    });
+    const row = await tx.plan.create({ data: { ...planRowData(plan, "checkout"), purchaseOrderId: created.id } });
+    return tx.order.update({ where: { id: created.id }, data: { planId: row.id, planBox: 1 } });
+  });
+
+  const checkout = await createPlanCheckout({
+    orderId: order.id,
+    plan,
+    shippingCountries: SHIPPING_COUNTRIES,
+    origin: originFromHeaders(req.headers),
+    ...(welcome
+      ? {
+          welcome: {
+            qty: welcomeQty,
+            ...(isLinkToken(cookieFrom(req.headers.get("cookie"), SUBSCRIBER_COOKIE)) ? {} : { email: welcome.email }),
+          },
+        }
+      : {}),
+  });
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { paymentRef: checkout.paymentRef, notes: `Card payment (Stripe), ${plan.months}-month plan` },
+  });
+  return NextResponse.json({ paymentUrl: checkout.paymentUrl, orderId: order.id });
 }
