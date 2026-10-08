@@ -227,13 +227,29 @@ export default function ReturnsPage() {
           ),
         },
         {
+          heading: "Monthly plans",
+          body: (
+            <>
+              <p>
+                A monthly plan sends one box a month. For a plan, the 14-day period in clause 1 ends 14 days after the
+                day you receive the first box, and the exception for sealed goods in clause 2 applies to every box.
+              </p>
+              <p>
+                After that you can still cancel a plan at any time. We stop sending boxes and refund what you paid less
+                the boxes already sent. How that is worked out is in clause 8 of our{" "}
+                <Link href="/terms">terms and conditions</Link>.
+              </p>
+            </>
+          ),
+        },
+        {
           heading: "Complaints",
           body: (
             <p>
               If you are unhappy with how a return or refund has been handled, contact us at{" "}
               {contactLine} and we will look into it. Your statutory rights against{" "}
               {legalName()} are unaffected by anything in this policy. Our complaints process is set
-              out in clause 12 of our <Link href="/terms">terms and conditions</Link>.
+              out in clause 13 of our <Link href="/terms">terms and conditions</Link>.
             </p>
           ),
         },

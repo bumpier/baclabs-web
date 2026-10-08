@@ -136,7 +136,7 @@ export default function DisclaimerPage() {
                 injury caused by our negligence, for fraud, for defective products under Part I of
                 the Consumer Protection Act 1987, or for anything else that cannot lawfully be
                 limited. The full liability position, including your statutory rights as a consumer,
-                is in clause 10 of our <Link href="/terms">terms and conditions</Link>.
+                is in clause 11 of our <Link href="/terms">terms and conditions</Link>.
               </p>
             </>
           ),

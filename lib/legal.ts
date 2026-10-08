@@ -11,7 +11,7 @@ import { brand } from "@/config/brand";
  * every one of them, and a policy with a stale "last updated" date is worse
  * than one with none: it asserts a review that did not happen.
  */
-export const LEGAL_LAST_UPDATED = "4 September 2026";
+export const LEGAL_LAST_UPDATED = "8 October 2026";
 
 /**
  * Still outstanding before these pages are launch-ready. NOTHING below is
