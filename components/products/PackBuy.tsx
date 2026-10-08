@@ -1,42 +1,19 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import {
-  DELIVERY,
-  LOW_STOCK_THRESHOLD,
-  MAX_QUANTITY,
-  MIN_QUANTITY,
-  PRODUCT,
-  STOCK_LEVEL,
-  VAT,
-  deliveryMinorFor,
-  otherDeliveryOptionsLine,
-  deliveryChoiceEnabled,
-  freeDeliveryName,
-  quotedDeliveryOption,
-  formatMinor,
-  perVialMinor,
-  referencePriceMinor,
-  remainingForFreeDeliveryMinor,
-  saleLabel,
-  saleSavingMinor,
-  saleVisible,
-  shipsFree,
-  type Bundle,
-} from "@/config/funnel";
-import { trackEvent } from "@/lib/analytics";
-import { hasTrackingConsent } from "@/components/consent/consent-store";
+import { DELIVERY, bundleById, formatMinor, type Bundle } from "@/config/funnel";
+import { packByBundleId, packPath } from "@/config/products";
+import { formatCutoffHour } from "@/lib/delivery-date";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
-import { SaleTag } from "@/components/funnel/SaleTag";
 import { WelcomeVialPanel } from "@/components/mailing-list/WelcomeVialPanel";
+import { CheckMark, CheckoutRow, DeliveryLine, PriceLine } from "@/components/funnel/buy/parts";
 
 /**
  * The purchase panel on a pack page.
  *
- * DELIBERATELY NOT components/funnel/VialChooser, which is the home page's
- * block. That one offers every amount in a grid, which is right for the
+ * DELIBERATELY NOT components/funnel/buy/BuyBoxPills, which is the home
+ * page's block. That one offers every amount as a pill, which is right for the
  * page a visitor lands on and wrong here: a /products page that offers every
  * other tier inside it is every page selling the same things, which is
  * the duplication these pages exist to avoid. On a pack page the tier is the
@@ -44,6 +21,10 @@ import { WelcomeVialPanel } from "@/components/mailing-list/WelcomeVialPanel";
  * what gives the pack pages a reason to link to one another.
  *
  * So this panel sells exactly one tier. Quantity is a multiple of THIS pack.
+ * It is built from the home page's parts, so it says the same things the
+ * same way: the price once, the total on the button, one delivery line, the
+ * trust line, and the mailing-list signup open. No totals table and no
+ * tinted boxes: that was the "muddy" panel both pages used to carry.
  */
 export function PackBuy({
   bundle,
@@ -57,268 +38,64 @@ export function PackBuy({
 }) {
   // The provider is mounted with this pack's tier, so `bundle` here and the
   // context agree. Quantity is the only thing the customer changes.
-  const { quantity, totalMinor, setQuantity } = useFunnel();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { quantity } = useFunnel();
+  const five = bundleById("five");
+  const fivePage = five ? packByBundleId(five.id) : undefined;
 
-  async function checkout() {
-    setError(null);
-    setPending(true);
-    trackEvent("begin_checkout", {
-      currency: "GBP",
-      value: totalMinor / 100,
-      bundleId: bundle.id,
-      quantity,
-      items: [
-        {
-          item_id: bundle.sku,
-          item_name: `${PRODUCT.name} ${bundle.vials} × ${PRODUCT.size}`,
-          price: bundle.priceMinor / 100,
-          quantity,
-        },
-      ],
-    });
-
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tierId: bundle.id,
-          quantity,
-          method: "card",
-          trackingConsent: hasTrackingConsent(),
-        }),
-      });
-      const data = (await res.json()) as { paymentUrl?: string; error?: string };
-      if (!res.ok || !data.paymentUrl) {
-        setError(data.error ?? "Something went wrong. Please try again.");
-        setPending(false);
-        return;
-      }
-      // Left pending on purpose: the page is navigating away, and clearing it
-      // would flash the idle label during the redirect.
-      window.location.href = data.paymentUrl;
-    } catch {
-      setError("Something went wrong. Please try again.");
-      setPending(false);
-    }
-  }
-
-  // Every figure below comes from the same functions the Stripe session uses,
-  // so what is shown and what is charged cannot drift apart.
-  const deliveryMinor = deliveryMinorFor(totalMinor);
-  const deliveryFree = shipsFree(totalMinor);
-  const deliveryKnown = DELIVERY.mode !== "unknown";
-  const otherDelivery = otherDeliveryOptionsLine(totalMinor);
-  const toFreeDelivery = remainingForFreeDeliveryMinor(totalMinor);
-
-  const sale = saleVisible();
-  const referenceTotal = referencePriceMinor(bundle) * quantity;
-  const lowStock = STOCK_LEVEL !== null && STOCK_LEVEL <= LOW_STOCK_THRESHOLD;
-  const outOfStock = STOCK_LEVEL !== null && STOCK_LEVEL <= 0;
-  const totalVials = bundle.vials * quantity;
-  const unit = bundle.vials === 1 ? "vial" : "pack";
+  // No "Cheapest in the UK" here: that claim lives only on the home page,
+  // beside the guarantee that substantiates it.
+  const checks = [
+    DELIVERY.dispatchLine ? `Same working day dispatch, order by ${formatCutoffHour()}` : "",
+    "Secure checkout by Stripe",
+  ].filter(Boolean);
 
   return (
-    <div className="panel overflow-hidden">
-      {/* The pack, its price and its per-vial figure — the three things a
-          buyer checks before the button. Stated once, at the top, rather
-          than assembled from a selected row. */}
-      <div className="border-b border-line bg-surface px-5 py-5 sm:px-6">
-        <p className="font-display text-xl font-bold text-ink">
-          <span className="tabular">{bundle.vials}</span>{" "}
-          {bundle.vials === 1 ? "vial" : "vials"} &middot;{" "}
-          <span className="tabular">{PRODUCT.size}</span>
+    <div className="panel p-5 sm:p-6">
+      {bundle.id === "five" ? (
+        <p className="mb-3">
+          <span className="rounded-full bg-brand px-2.5 py-0.5 text-xs font-semibold text-white">Most popular</span>
         </p>
-        <p className="mt-1 flex flex-wrap items-baseline gap-x-2 text-ink-soft">
-          <span className="tabular text-2xl font-semibold text-ink">
-            {formatMinor(bundle.priceMinor)}
-          </span>
-          {sale ? (
-            <>
-              <span className="tabular text-sm line-through">
-                {formatMinor(referencePriceMinor(bundle))}
-              </span>
-              <SaleTag />
-            </>
-          ) : null}
-          <span className="text-sm">
-            <span className="tabular">{formatMinor(perVialMinor(bundle))}</span> per vial
-          </span>
-        </p>
-      </div>
+      ) : null}
+      <PriceLine />
 
-      <div className="px-5 py-5 sm:px-6">
-        <div className="flex items-center justify-between gap-4">
-          <label htmlFor="pack-qty" className="text-sm font-medium text-ink">
-            How many {unit}s?
-          </label>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setQuantity(quantity - 1)}
-              disabled={quantity <= MIN_QUANTITY}
-              className="btn-quiet !min-h-[44px] !w-11 !px-0 text-lg disabled:opacity-40"
-              aria-label={`Decrease number of ${unit}s`}
-            >
-              &minus;
-            </button>
-            <input
-              id="pack-qty"
-              type="number"
-              inputMode="numeric"
-              min={MIN_QUANTITY}
-              max={MAX_QUANTITY}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              className="tabular h-11 w-14 rounded-control border border-line-strong/60 bg-surface text-center text-base font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-            />
-            <button
-              type="button"
-              onClick={() => setQuantity(quantity + 1)}
-              disabled={quantity >= MAX_QUANTITY}
-              className="btn-quiet !min-h-[44px] !w-11 !px-0 text-lg disabled:opacity-40"
-              aria-label={`Increase number of ${unit}s`}
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        <dl className="mt-5 space-y-2 border-t border-line pt-5 text-sm" aria-live="polite">
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-soft">
-              <span className="tabular">{totalVials}</span> ×{" "}
-              {`${PRODUCT.name.toLowerCase()}, ${PRODUCT.size}`}
-            </dt>
-            <dd className="tabular text-ink">
-              {formatMinor(sale ? referenceTotal : totalMinor)}
-            </dd>
-          </div>
-          {sale ? (
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink-soft">{saleLabel()}</dt>
-              <dd className="tabular font-semibold text-brand-deep">
-                &minus;{formatMinor(referenceTotal - totalMinor)}
-              </dd>
-            </div>
-          ) : null}
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-soft">{deliveryKnown && deliveryChoiceEnabled() ? `Delivery (${quotedDeliveryOption(totalMinor).label})` : "Delivery"}</dt>
-            <dd className="text-ink">
-              {!deliveryKnown ? (
-                "Calculated at checkout"
-              ) : deliveryFree ? (
-                "Free"
-              ) : (
-                <span className="tabular">{formatMinor(deliveryMinor)}</span>
-              )}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4 border-t border-line pt-3 text-base font-semibold">
-            <dt>Total</dt>
-            <dd className="tabular">
-              {formatMinor(totalMinor + deliveryMinor)}
-              {!deliveryKnown ? (
-                <span className="ml-1 text-xs font-normal text-ink-soft">+ delivery</span>
-              ) : null}
-            </dd>
-          </div>
-        </dl>
-        {otherDelivery ? (
-          <p className="mt-2 text-xs text-ink-soft">Also at checkout: {otherDelivery}</p>
-        ) : null}
-
-        {/* The saving in pounds, restated under the total where the decision
-            is made. Same line as the home page's chooser. */}
-        {sale ? (
-          <p
-            aria-live="polite"
-            className="mt-3 rounded-control bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-deep"
-          >
-            You save{" "}
-            <span className="tabular">{formatMinor(saleSavingMinor(bundle, quantity))}</span> on
-            this order
-          </p>
-        ) : null}
-
-        {VAT.statement ? <p className="mt-2 text-xs text-ink-soft">{VAT.statement}</p> : null}
-
-        {/* A real shortfall against a threshold that is really applied at
-            checkout — not a countdown and not invented scarcity. It vanishes
-            the moment the basket qualifies. */}
-        <p aria-live="polite" className="mt-3">
-          {toFreeDelivery > 0 ? (
-            <span className="alert-note block">
-              Add <span className="tabular font-semibold">{formatMinor(toFreeDelivery)}</span> more
-              for free {freeDeliveryName()}.
-            </span>
-          ) : deliveryKnown && deliveryFree ? (
-            <span className="alert-note block">
-              This order qualifies for <span className="font-semibold">free {freeDeliveryName()}</span>.
-            </span>
-          ) : (
-            <span className="block text-xs text-ink-soft">{DELIVERY.note}</span>
-          )}
-        </p>
-
-        {/* Renders nothing while STOCK_LEVEL is null. */}
-        {lowStock ? (
-          <p className="mt-3 text-sm font-medium text-ink">
-            <span className="tabular">{STOCK_LEVEL}</span> vials currently in stock.
-          </p>
-        ) : null}
-
-        {/* The mailing-list welcome vial, or the offer. */}
-
-        <WelcomeVialPanel vials={totalVials} />
-
-
-        <button
-          type="button"
-          onClick={checkout}
-          disabled={pending || outOfStock}
-          className="btn-cta mt-5"
-          aria-busy={pending}
-        >
-          {outOfStock ? "Out of stock" : pending ? "Redirecting…" : "Checkout securely"}
-        </button>
-
-        {error ? (
-          <p role="alert" className="alert-error mt-3">
-            {error}
-          </p>
-        ) : null}
-
-        <p className="mt-3 text-center text-xs text-ink-soft">
-          You will be taken to Stripe to pay. Delivery address is collected there.
-        </p>
-
-        {/* The way to a different quantity is a link, not a control. */}
-        <p className="mt-2 text-center text-xs text-ink-soft">
-          <Link
-            href={otherPacksHref}
-            className="underline decoration-line underline-offset-4 hover:text-ink"
-          >
-            Need a different quantity?
+      {/* The step up from one vial to the best seller. A link, not a
+          switch: on a pack page the pack is the subject. */}
+      {bundle.vials === 1 && five && fivePage ? (
+        <p className="mt-4 rounded-control bg-brand-tint px-3 py-2 text-sm text-brand-deep">
+          <span className="tabular">{five.vials - bundle.vials}</span> more vials for{" "}
+          <span className="tabular font-semibold">{formatMinor(five.priceMinor - bundle.priceMinor)}</span> more.{" "}
+          <Link href={packPath(fivePage)} className="font-semibold underline underline-offset-4">
+            See the {five.vials}-vial pack
           </Link>
         </p>
+      ) : null}
 
-        {cryptoEnabled ? (
-          <p className="mt-3 text-center text-xs">
-            <Link
-              href={`/checkout?tier=${bundle.id}&qty=${quantity}`}
-              className="text-ink-soft underline decoration-line underline-offset-4 hover:text-ink"
-            >
-              or pay with cryptocurrency
-            </Link>
-          </p>
-        ) : null}
+      <div className="mt-5">
+        <CheckoutRow cryptoEnabled={cryptoEnabled} />
+      </div>
+      <DeliveryLine className="mt-4" />
 
-        <div className="mt-5 border-t border-line pt-4">
-          <PaymentMarks />
-        </div>
+      <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+        {checks.map((label) => (
+          <li key={label} className="flex items-center gap-2 text-sm text-ink-soft">
+            <CheckMark />
+            {label}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4">
+        <PaymentMarks />
+      </div>
+
+      {/* The way to a different quantity is a link, not a control. */}
+      <p className="mt-4 text-sm">
+        <Link href={otherPacksHref} className="link">
+          Need a different quantity?
+        </Link>
+      </p>
+
+      <div className="mt-5">
+        <WelcomeVialPanel vials={bundle.vials * quantity} compact />
       </div>
     </div>
   );

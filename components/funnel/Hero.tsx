@@ -136,7 +136,7 @@ export function Hero() {
               <a id={HERO_CTA_ID} href="#buy" className="btn-cta sm:w-auto">
                 Choose your pack &mdash; from {PRICE}
               </a>
-              <a href="#product" className="btn-quiet">
+              <a href="#specification" className="btn-quiet">
                 See the specification
               </a>
             </div>

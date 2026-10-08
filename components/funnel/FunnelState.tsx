@@ -29,12 +29,22 @@ import { trackEvent } from "@/lib/analytics";
  * a small convenience that risks charging someone for a tier they do not
  * remember picking.
  */
+/** A one-time pack, or a monthly plan (display only until plans are built). */
+export type PurchaseMode = "plan" | "once";
+
 interface FunnelState {
   bundle: Bundle;
   quantity: number;
   totalMinor: number;
   select: (id: BundleId) => void;
   setQuantity: (n: number) => void;
+  /**
+   * Which half of the buy box's switch is showing. Shared so the mobile buy
+   * bar never offers to charge the one-time pack while the customer is
+   * looking at a plan.
+   */
+  mode: PurchaseMode;
+  setMode: (m: PurchaseMode) => void;
 }
 
 const Ctx = createContext<FunnelState | null>(null);
@@ -55,6 +65,9 @@ export function FunnelStateProvider({
 }) {
   const [bundleId, setBundleId] = useState<BundleId>(initialBundleId);
   const [quantity, setQuantityState] = useState(1);
+  // One-time opens selected: a preselected prepaid plan would put a much
+  // larger charge in front of someone who came for one pack.
+  const [mode, setMode] = useState<PurchaseMode>("once");
 
   const bundle = bundleById(bundleId) ?? BUNDLES[0];
 
@@ -94,8 +107,10 @@ export function FunnelStateProvider({
       totalMinor: totalMinor(bundle, quantity),
       select,
       setQuantity,
+      mode,
+      setMode,
     }),
-    [bundle, quantity, select, setQuantity]
+    [bundle, quantity, select, setQuantity, mode]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

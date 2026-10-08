@@ -15,7 +15,14 @@ import { PRODUCT_IMAGES, PRODUCT, VIAL_ML } from "@/config/funnel";
  * The amber accent deliberately does not appear: it means "act here", and a
  * picture is not a call to action.
  */
-export function VialImage({ priority = false }: { priority?: boolean }) {
+export function VialImage({
+  priority = false,
+  sizes = "(min-width: 1024px) 36vw, (min-width: 640px) 24rem, 100vw",
+}: {
+  priority?: boolean;
+  /** The slot's width, for the srcset. The default is the hero's grid. */
+  sizes?: string;
+}) {
   const hero = PRODUCT_IMAGES[0];
 
   if (hero) {
@@ -36,7 +43,7 @@ export function VialImage({ priority = false }: { priority?: boolean }) {
         alt={hero.alt}
         width={hero.width}
         height={hero.height}
-        sizes="(min-width: 1024px) 36vw, (min-width: 640px) 24rem, 100vw"
+        sizes={sizes}
         priority={priority}
         style={{ aspectRatio: `${hero.width} / ${hero.height}` }}
         className="h-auto w-full rounded-panel object-cover"
