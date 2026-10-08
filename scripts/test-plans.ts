@@ -26,7 +26,7 @@ import {
   ordinalDay, renewalDue, renewalWindow, skipAMonth, type PlanClock,
 } from "@/lib/plans/schedule";
 import { planRefundMinor, refundBreakdown } from "@/lib/plans/refund";
-import { planPackOf, upgradeEligibility, upgradeOffers, upgradePriceMinor } from "@/lib/plans/upgrade";
+import { nudgePlanPack, planPackOf, upgradeEligibility, upgradeOffers, upgradePriceMinor } from "@/lib/plans/upgrade";
 import { planBoxItems, planPurchaseItems, planRowData } from "@/lib/plans/items";
 import { soldLines } from "@/lib/inventory/demand";
 import { CheckoutSchema } from "@/lib/validation";
@@ -311,6 +311,14 @@ allCopy.push(started.subject, started.preheader, text(started.body));
 {
   const v = checkCompliance(allCopy);
   check("all plan copy passes the house rules", v.length === 0, v.map((x) => `${x.match}: ${x.why}`).join("; "));
+}
+
+{
+  const items = JSON.stringify([{ bundleId: "five", bundleQty: 1 }]);
+  check("nudge offers a plan to a one-off pack buyer", nudgePlanPack({ kind: "sale", planId: null, items }) === "five");
+  check("nudge offers nothing to an order inside a plan", nudgePlanPack({ kind: "sale", planId: "p1", items }) === null);
+  check("nudge offers nothing on a plan box", nudgePlanPack({ kind: "plan_box", planId: null, items }) === null);
+  check("nudge offers nothing on a plan upgrade", nudgePlanPack({ kind: "plan_upgrade", planId: null, items }) === null);
 }
 
 // ── Later tasks append sections here, above the report.

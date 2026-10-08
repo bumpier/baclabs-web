@@ -86,3 +86,13 @@ export function upgradeOffers(packId: PlanPackId): { months: PlanMonths; priceMi
     plan: planPrice(packId, months),
   }));
 }
+
+/**
+ * The pack a repurchase nudge may offer a plan for: only a one-off sale that
+ * is not part of a plan. Plan purchases and boxes carry the pack's bundleId
+ * too, so they must be refused here.
+ */
+export function nudgePlanPack(order: { kind: string; planId: string | null; items: string }): PlanPackId | null {
+  if (order.planId || orderKind(order.kind) !== "sale") return null;
+  return planPackOf(order.items);
+}

@@ -9,7 +9,7 @@ import { brand, formatPrice, type Currency } from "@/config/brand";
 import { formatSaleDateTime, saleTime } from "@/lib/saleTime";
 import { orderKind } from "@/lib/plans/kinds";
 import { boxDueDay } from "@/lib/plans/schedule";
-import { planPackOf, upgradeEligibility } from "@/lib/plans/upgrade";
+import { nudgePlanPack, upgradeEligibility } from "@/lib/plans/upgrade";
 import {
   boxShippedCopy, nudgePlanOfferHtml, planScheduleHtml, planStartedCopy, planTermsOf, renewalCopy, upgradeOfferHtml,
 } from "@/lib/plans/copy";
@@ -415,7 +415,7 @@ export async function sendRepurchaseNudgeEmail(
         `<li style="margin:6px 0"><a href="${siteUrl()}/products/${i.slug}" style="color:${LITERAL.brand}">${i.name}</a></li>`
     )
     .join("");
-  const pack = planPackOf(order.items);
+  const pack = nudgePlanPack(order);
   const planBlock = pack ? nudgePlanOfferHtml(pack, siteUrl()) : "";
   return logAndSend(
     order,
