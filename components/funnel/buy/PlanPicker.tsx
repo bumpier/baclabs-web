@@ -1,7 +1,10 @@
 "use client";
 
-import { useId, useState } from "react";
-import { formatMinor } from "@/config/funnel";
+import { useEffect, useId, useState } from "react";
+import { STANDARD_DELIVERY, STOCK_LEVEL, formatMinor } from "@/config/funnel";
+import { parsePlanKey, planDeliveryNote } from "@/config/plans";
+import { usePlanCheckout } from "@/components/funnel/buy/useCheckout";
+import type { PurchaseMode } from "@/components/funnel/FunnelState";
 import { FACTS } from "@/content/facts";
 import { SaleTag } from "@/components/funnel/SaleTag";
 import {
@@ -17,8 +20,7 @@ import {
 } from "@/components/funnel/buy/plans";
 
 /**
- * DRAFT: the monthly-plan half of the buy boxes. Display only, there is no
- * plan checkout yet (see plans.ts).
+ * The monthly-plan half of the buy boxes.
  *
  * Plans lead with what is saved and what is free, never with a per-vial
  * figure: a plan's per-vial price set beside the bulk ladder would compare
@@ -38,6 +40,20 @@ export function usePlanChoice() {
   return { choice, setChoice, plan };
 }
 
+/**
+ * Honour /?plan=five-6#buy (the renewal email and the plan checkout's
+ * cancel link): open the plan half on that plan. Read after mount from
+ * window.location, NOT useSearchParams, so the home page stays static.
+ */
+export function usePlanQuery(setChoice: (c: PlanChoice) => void, setMode: (m: PurchaseMode) => void) {
+  useEffect(() => {
+    const wanted = parsePlanKey(new URLSearchParams(window.location.search).get("plan"));
+    if (!wanted) return;
+    setChoice(wanted);
+    setMode("plan");
+  }, [setChoice, setMode]);
+}
+
 export function PlanPicker({ choice, onChange }: { choice: PlanChoice; onChange: (c: PlanChoice) => void }) {
   const packName = useId();
   const termName = useId();
@@ -45,7 +61,7 @@ export function PlanPicker({ choice, onChange }: { choice: PlanChoice; onChange:
   const termLegend = useId();
 
   function pickPack(pack: PlanPackId) {
-    // A term the new pack does not offer (the 20-pack has no 3-month plan)
+    // A term the new pack does not offer (every pack offers every term, so this only guards a bad id)
     // falls back to the recommended one rather than to nothing.
     onChange({ pack, months: planFor(pack, choice.months) ? choice.months : LEAD_PLAN_MONTHS });
   }
@@ -141,8 +157,14 @@ export function PlanPicker({ choice, onChange }: { choice: PlanChoice; onChange:
                   </span>
                   <span className="block text-xs text-ink-soft">
                     {free ? <span className="font-semibold text-brand-deep">{free} · </span> : null}
-                    <span className="tabular">{p.vials}</span> vials · save{" "}
-                    <span className="tabular">{formatMinor(p.saveMinor)}</span>
+                    <span className="tabular">{p.vials}</span> vials ·{" "}
+                    {p.saveMinor > 0 ? (
+                      <>
+                        save <span className="tabular">{formatMinor(p.saveMinor)}</span>
+                      </>
+                    ) : (
+                      "no discount, we just send it monthly"
+                    )}
                   </span>
                 </span>
                 <span className="tabular shrink-0 text-base font-semibold text-ink">{formatMinor(p.totalMinor)}</span>
@@ -153,9 +175,9 @@ export function PlanPicker({ choice, onChange }: { choice: PlanChoice; onChange:
       </fieldset>
 
       <p className="mt-3 text-xs text-ink-soft">
-        Paid once, never renews. Your first box ships with this order, then one a month, with free tracked
-        delivery on every box. Opened vials keep {FACTS.openedLimit}, so a box a month means you always open
-        fresh stock. Cancel any time.
+        Paid once, never renews. Your first box ships with this order, then one a month on the same date, each by{" "}
+        {STANDARD_DELIVERY.carrier} with delivery included in the price. Opened vials keep {FACTS.openedLimit}, so a box
+        a month means you always open fresh stock. Cancel any time.
       </p>
     </div>
   );
@@ -172,25 +194,44 @@ export function PlanPriceLine({ plan }: { plan: Plan }) {
       </p>
       <p className="mt-1 text-sm text-ink-soft">
         <span className="tabular">{plan.months}</span> monthly boxes of <span className="tabular">{plan.pack.vials}</span>{" "}
-        vials &middot; save <span className="tabular">{formatMinor(plan.saveMinor)}</span>
+        vials &middot;{" "}
+        {plan.saveMinor > 0 ? (
+          <>
+            save <span className="tabular">{formatMinor(plan.saveMinor)}</span>
+          </>
+        ) : (
+          "no discount"
+        )}{" "}
+        &middot; {planDeliveryNote(plan)}
       </p>
     </div>
   );
 }
 
-/**
- * The plan's button. DISABLED in the drafts: /api/checkout sells packs, not
- * plans, and a plan must never be charged as a one-off pack.
- */
+/** The plan's button: one Stripe payment for the whole plan (/api/checkout, PlanCheckoutSchema). */
 export function PlanCheckoutRow({ plan }: { plan: Plan }) {
+  const { checkout, pending, error } = usePlanCheckout(plan);
+  const outOfStock = STOCK_LEVEL !== null && STOCK_LEVEL <= 0;
   return (
     <div>
-      <button type="button" disabled className="btn-cta">
-        <span>Start my plan</span>
-        <span aria-hidden="true">&middot;</span>
-        <span className="tabular">{formatMinor(plan.totalMinor)}</span>
+      <button type="button" onClick={checkout} disabled={pending || outOfStock} aria-busy={pending} className="btn-cta">
+        {outOfStock ? (
+          "Out of stock"
+        ) : pending ? (
+          "Redirecting…"
+        ) : (
+          <>
+            <span>Start my plan</span>
+            <span aria-hidden="true">&middot;</span>
+            <span className="tabular">{formatMinor(plan.totalMinor)}</span>
+          </>
+        )}
       </button>
-      <p className="mt-2 text-xs text-ink-soft">Draft: plan checkout is not built yet, so this button does nothing.</p>
+      {error ? (
+        <p role="alert" className="alert-error mt-3">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

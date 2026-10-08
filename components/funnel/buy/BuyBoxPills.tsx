@@ -34,8 +34,10 @@ import {
   PlanPriceLine,
   TopBadge,
   usePlanChoice,
+  usePlanQuery,
 } from "@/components/funnel/buy/PlanPicker";
 import { planHeadline } from "@/components/funnel/buy/plans";
+import { planDeliverySentence } from "@/config/plans";
 
 /**
  * The home page's buy box, Shopify style (chosen 8 Oct 2026 from three
@@ -49,6 +51,7 @@ import { planHeadline } from "@/components/funnel/buy/plans";
 export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
   const { bundle, quantity, select, mode, setMode } = useFunnel();
   const { choice, setChoice, plan } = usePlanChoice();
+  usePlanQuery(setChoice, setMode);
   const groupId = useId();
   const bestId = bestPerVialBundleId();
   const times = deliveryTimesSentence();
@@ -176,7 +179,7 @@ export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
               Below that, delivery is <span className="tabular">{formatMinor(DELIVERY.priceMinor)}</span>.
             </li>
           ) : null}
-          <li>Monthly plans ship free, every box.</li>
+          <li>{planDeliverySentence()}</li>
           {times ? <li>{times}</li> : null}
           {DELIVERY.dispatchLine ? <li>{DELIVERY.dispatchLine}</li> : null}
           <li>You pay on Stripe&rsquo;s secure page, which also takes your delivery address.</li>

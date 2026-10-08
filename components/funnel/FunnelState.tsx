@@ -29,7 +29,7 @@ import { trackEvent } from "@/lib/analytics";
  * a small convenience that risks charging someone for a tier they do not
  * remember picking.
  */
-/** A one-time pack, or a monthly plan (display only until plans are built). */
+/** A one-time pack, or a monthly plan. */
 export type PurchaseMode = "plan" | "once";
 
 interface FunnelState {

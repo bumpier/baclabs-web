@@ -62,3 +62,54 @@ export function useCheckout() {
 
   return { checkout, pending, error };
 }
+
+/**
+ * Pay for a monthly plan: one Stripe payment for the whole plan. Sends a pack
+ * and a term, never an amount (PlanCheckoutSchema); the route prices it.
+ */
+export function usePlanCheckout(plan: { key: string; pack: { id: string; sku: string; vials: number }; months: number; totalMinor: number }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function checkout() {
+    setError(null);
+    setPending(true);
+    trackEvent("begin_checkout", {
+      currency: "GBP",
+      value: plan.totalMinor / 100,
+      bundleId: plan.pack.id,
+      quantity: 1,
+      items: [
+        {
+          item_id: `${plan.pack.sku}-plan-${plan.months}`,
+          item_name: `${PRODUCT.name} ${plan.pack.vials} × ${PRODUCT.size}, ${plan.months}-month plan`,
+          price: plan.totalMinor / 100,
+          quantity: 1,
+        },
+      ],
+    });
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          method: "card",
+          plan: { pack: plan.pack.id, months: plan.months },
+          trackingConsent: hasTrackingConsent(),
+        }),
+      });
+      const data = (await res.json()) as { paymentUrl?: string; error?: string };
+      if (!res.ok || !data.paymentUrl) {
+        setError(data.error ?? "Something went wrong. Please try again.");
+        setPending(false);
+        return;
+      }
+      window.location.href = data.paymentUrl;
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setPending(false);
+    }
+  }
+
+  return { checkout, pending, error };
+}
