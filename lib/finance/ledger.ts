@@ -1,6 +1,7 @@
 import { BUNDLES } from "@/config/funnel";
 import { goodsMinor, optionRank, type TakingsOrder } from "@/lib/dailyTakings";
 import { paidMinor } from "@/lib/meta-capi-event";
+import { orderKind, type OrderKind } from "@/lib/plans/kinds";
 import {
   dayKeysBetween,
   formatMonth,
@@ -63,6 +64,8 @@ export type CustomerKind = "new" | "returning" | "unknown";
 
 export interface LedgerRow {
   id: string;
+  /** sale | plan_box | plan_upgrade (lib/plans/kinds.ts). */
+  kind: OrderKind;
   /** The UK day it was paid for. */
   day: string;
   saleTime: Date;
@@ -128,7 +131,8 @@ export function ledgerRow(order: LedgerOrder, ctx: LedgerContext): LedgerRow {
   const day = shopDayKey(at);
   const cancelled = order.status === "cancelled";
 
-  const takenMinor = paidMinor(order);
+  const kind = orderKind(order.kind);
+  const takenMinor = kind === "plan_box" ? 0 : paidMinor(order);
   const delivery = order.deliveryMinor ?? 0;
   const goods = goodsMinor(order);
 
@@ -162,7 +166,7 @@ export function ledgerRow(order: LedgerOrder, ctx: LedgerContext): LedgerRow {
         : "label";
 
   // One package per label; an order sent without a label still went out once.
-  const packages = cancelled ? 0 : Math.max(1, labels.length);
+  const packages = cancelled || kind === "plan_upgrade" ? 0 : Math.max(1, labels.length);
   const fulfilmentMinor = packages * fulfilmentRateOn(ctx.rates, day);
   const vatMinor = !cancelled && vatApplies(ctx.vatFrom, day) ? vatInside(goods) + vatInside(delivery) : 0;
 
@@ -176,7 +180,7 @@ export function ledgerRow(order: LedgerOrder, ctx: LedgerContext): LedgerRow {
   }
 
   const email = order.customerEmail.trim().toLowerCase();
-  const customer: CustomerKind = !email
+  const customer: CustomerKind = kind !== "sale" || !email
     ? "unknown"
     : ctx.firstOrderByEmail.get(email) === order.id
       ? "new"
@@ -184,6 +188,7 @@ export function ledgerRow(order: LedgerOrder, ctx: LedgerContext): LedgerRow {
 
   return {
     id: order.id,
+    kind,
     day,
     saleTime: at,
     status: order.status,
@@ -274,13 +279,13 @@ export function summarise(rows: readonly LedgerRow[]): FinanceTotals {
   };
   for (const r of rows) {
     if (r.cancelled) {
-      t.cancelledOrders += 1;
+      t.cancelledOrders += r.kind === "sale" ? 1 : 0;
       t.cancelledMinor += r.takenMinor;
       t.cancelledLabelMinor += r.postageMinor;
       t.afterCostsMinor -= r.postageMinor;
       continue;
     }
-    t.orders += 1;
+    if (r.kind === "sale") t.orders += 1;
     t.takenMinor += r.takenMinor;
     t.goodsMinor += r.goodsMinor;
     t.deliveryMinor += r.deliveryMinor;
@@ -364,7 +369,7 @@ export interface DeliveryMixLine {
 export function deliveryMix(rows: readonly LedgerRow[]): DeliveryMixLine[] {
   const lines = new Map<string, DeliveryMixLine>();
   for (const r of rows) {
-    if (r.cancelled) continue;
+    if (r.cancelled || r.kind !== "sale") continue;
     const key = `${r.deliveryOption ?? ""}:${r.deliveryMinor}`;
     const line = lines.get(key) ?? {
       option: r.deliveryOption,
@@ -411,7 +416,7 @@ export function packName(pack: string): string {
 export function packMix(rows: readonly LedgerRow[]): PackMixLine[] {
   const lines = new Map<string, PackMixLine>();
   for (const r of rows) {
-    if (r.cancelled) continue;
+    if (r.cancelled || r.kind !== "sale") continue;
     const line = lines.get(r.pack) ?? { pack: r.pack, label: packName(r.pack), orders: 0, vials: 0, goodsMinor: 0 };
     line.orders += 1;
     line.vials += r.vials;
@@ -431,7 +436,7 @@ export function customerMix(rows: readonly LedgerRow[]): CustomerMixLine[] {
   const order: CustomerKind[] = ["new", "returning", "unknown"];
   const lines = order.map((kind) => ({ kind, orders: 0, takenMinor: 0 }));
   for (const r of rows) {
-    if (r.cancelled) continue;
+    if (r.cancelled || r.kind !== "sale") continue;
     const line = lines[order.indexOf(r.customer)]!;
     line.orders += 1;
     line.takenMinor += r.takenMinor;
@@ -462,8 +467,8 @@ export function warnings(rows: readonly LedgerRow[]): FinanceWarnings {
     for (const code of new Set(r.unpricedServices)) unpriced.set(code, [...(unpriced.get(code) ?? []), r]);
   }
   return {
-    awaitingLabel: sold.filter((r) => r.postageStatus === "no_label" && r.status === "paid"),
-    sentWithoutLabel: sold.filter((r) => r.postageStatus === "no_label" && r.status !== "paid"),
+    awaitingLabel: sold.filter((r) => r.kind !== "plan_upgrade" && r.postageStatus === "no_label" && r.status === "paid"),
+    sentWithoutLabel: sold.filter((r) => r.kind !== "plan_upgrade" && r.postageStatus === "no_label" && r.status !== "paid"),
     pendingLabel: rows.filter((r) => r.postageStatus === "pending"),
     unpriced: [...unpriced].map(([serviceCode, rs]) => ({ serviceCode, rows: rs })),
     cancelledWithLabel: rows.filter(

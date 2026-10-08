@@ -8,6 +8,7 @@ import { PrintUnfulfilledMenu } from "@/components/admin/PrintUnfulfilledMenu";
 import { LabelWarning } from "@/components/admin/LabelWarning";
 import { TrackingWarning } from "@/components/admin/TrackingWarning";
 import { catchUpCount } from "@/lib/shipping/catch-up";
+import { PARCEL_KINDS } from "@/lib/plans/kinds";
 import { statusLabel } from "@/lib/order-status";
 import { SalesActivityChart } from "@/components/admin/SalesActivity";
 import { buildSalesActivity } from "@/lib/salesActivity";
@@ -42,7 +43,7 @@ export default async function AdminOverviewPage() {
     // shipped → delivered. Tracking moves them on (lib/shipping/tracking-sync.ts).
     prisma.order.groupBy({
       by: ["status"],
-      where: { status: { in: ["paid", "packed", "shipped", "delivered"] } },
+      where: { status: { in: ["paid", "packed", "shipped", "delivered"] }, kind: { in: PARCEL_KINDS } },
       _count: { id: true },
     }),
     catchUpCount(),
@@ -59,14 +60,15 @@ export default async function AdminOverviewPage() {
       where: { status: { in: SOLD_STATUSES }, amountPaidMinor: null },
       _sum: { totalAmount: true },
     }),
-    prisma.order.groupBy({ by: ["status"], where: { status: { not: "pending" } }, _count: { id: true } }),
+    prisma.order.groupBy({ by: ["status"], where: { status: { not: "pending" }, kind: { in: PARCEL_KINDS } }, _count: { id: true } }),
     prisma.order.findMany({
-      where: { status: { in: ["paid", "packed", "shipped", "delivered"] } },
+      where: { status: { in: ["paid", "packed", "shipped", "delivered"] }, kind: "sale" },
       select: { items: true },
     }),
     prisma.order.findMany({
       where: {
         status: { in: ["paid", "packed", "shipped", "delivered"] },
+        kind: "sale",
         paidAt: { not: null },
       },
       select: { paidAt: true },

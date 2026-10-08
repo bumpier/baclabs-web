@@ -231,6 +231,45 @@ check("an unpriced service is warned", w.unpriced[0]?.serviceCode === "NEW1");
 check("a cancelled order with a label is warned", w.cancelledWithLabel.length === 1);
 check("unreadable items are warned", w.unreadableItems.length === 1);
 
+// ── Monthly plans (lib/plans/kinds.ts)
+const planBox = ledgerRow(
+  order({
+    id: "pb1", kind: "plan_box", amountPaidMinor: 0, totalAmount: "0", deliveryMinor: 0, deliveryOption: "standard",
+    items: JSON.stringify([{ qty: 5, bundleId: "five", bundleName: "5-vial pack, plan box 2 of 6", bundleQty: 1, lineTotal: "0.00" }]),
+  }),
+  ctx()
+);
+check("a plan box brings no money", planBox.takenMinor === 0 && planBox.goodsMinor === 0 && planBox.kind === "plan_box");
+check("…but its postage and fulfilment are counted", planBox.postageMinor === 330 && planBox.packages === 1 && planBox.fulfilmentMinor === 120);
+check("…as a cost after shipping", planBox.afterCostsMinor === -450, String(planBox.afterCostsMinor));
+check("…and its vials went out", planBox.vials === 5);
+check("…and it is nobody's new or returning order", planBox.customer === "unknown");
+const boxDay = ledgerRow(
+  order({ id: "pb2", kind: "plan_box", amountPaidMinor: 0, totalAmount: "0", deliveryMinor: 0, paidAt: at("2026-11-08T07:00:00Z"), createdAt: at("2026-11-08T07:00:00Z"), shipments: [label({ createdAt: at("2026-11-08T07:01:00Z") })] }),
+  ctx()
+);
+check("a plan box's costs land on its own ship day", boxDay.day === "2026-11-08" && boxDay.postageMinor === 330);
+const upgradeRow = ledgerRow(
+  order({ id: "up1", kind: "plan_upgrade", amountPaidMinor: 10746, totalAmount: "107.46", deliveryMinor: 0, deliveryOption: null, items: "[]", shipments: [] }),
+  ctx()
+);
+check("an upgrade is money with nothing to send", upgradeRow.takenMinor === 10746 && upgradeRow.packages === 0 && upgradeRow.fulfilmentMinor === 0 && upgradeRow.afterCostsMinor === 10746);
+const planRows = [plain, planBox, upgradeRow];
+const planTotals = summarise(planRows);
+check("only sales count as orders", planTotals.orders === 1);
+check("taken includes the upgrade, not the box", planTotals.takenMinor === 2589 + 10746);
+check("the average is over sales", planTotals.averageMinor === 13335);
+check("postage and packages include the box", planTotals.postageMinor === 660 && planTotals.packages === 2 && planTotals.fulfilmentMinor === 240);
+check("after costs adds up", planTotals.afterCostsMinor === 2139 - 450 + 10746, String(planTotals.afterCostsMinor));
+check("pack mix counts sales only", packMix(planRows).map((l) => `${l.pack}:${l.orders}`).join(" ") === "five:1");
+check("new and returning counts sales only", customerMix(planRows).map((l) => `${l.kind}:${l.orders}`).join(" ") === "new:1");
+check(
+  "the delivery mix counts sales only",
+  deliveryMix(planRows).map((l) => `${l.option}:${l.priceMinor}:${l.orders}`).join(" ") === "standard:390:1"
+);
+const planWarnings = warnings([upgradeRow]);
+check("an upgrade never awaits a label", planWarnings.awaitingLabel.length === 0 && planWarnings.sentWithoutLabel.length === 0);
+
 // ── Weeks, months and ranges
 check("a week starts on Monday", weekKey("2026-10-07") === "2026-10-05" && weekKey("2026-10-05") === "2026-10-05");
 check("Sunday belongs to the week before", weekKey("2026-10-11") === "2026-10-05");

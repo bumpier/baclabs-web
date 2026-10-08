@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { OPEN_STATUSES } from "@/lib/order-status";
+import { PARCEL_KINDS } from "@/lib/plans/kinds";
 
 /**
  * The one-off clear-out behind /admin/shipping/catch-up.
@@ -36,7 +37,11 @@ function soldBefore(cutoff: Date): Prisma.OrderWhereInput {
 /** The conditions for each group, re-applied when it is closed, so a change since the page loaded is respected. */
 export function catchUpWhere(group: CatchUpGroup, now = new Date()): Prisma.OrderWhereInput {
   const cutoff = new Date(now.getTime() - CATCH_UP_AFTER_DAYS * DAY_MS);
-  const base: Prisma.OrderWhereInput = { status: { in: OPEN_STATUSES }, ...soldBefore(cutoff) };
+  const base: Prisma.OrderWhereInput = {
+    status: { in: OPEN_STATUSES },
+    kind: { in: PARCEL_KINDS },
+    ...soldBefore(cutoff),
+  };
   switch (group) {
     case "noLabel":
       return { ...base, labelError: null, shipments: { none: ACTIVE_SHIPMENT } };
@@ -67,7 +72,7 @@ export async function catchUpGroups(now = new Date()) {
     prisma.order.findMany({ where: catchUpWhere("noLabel", now), select: listSelect, orderBy }),
     prisma.order.findMany({ where: catchUpWhere("labelFailed", now), select: listSelect, orderBy }),
     prisma.order.findMany({ where: catchUpWhere("notScanned", now), select: listSelect, orderBy }),
-    prisma.order.count({ where: { status: { in: OPEN_STATUSES } } }),
+    prisma.order.count({ where: { status: { in: OPEN_STATUSES }, kind: { in: PARCEL_KINDS } } }),
     catchUpCount(now),
   ]);
   // Sold within the last few days: rightly still waiting.
@@ -77,7 +82,9 @@ export async function catchUpGroups(now = new Date()) {
 /** Open orders old enough for the catch-up page to offer, for the dashboard's link to it. */
 export function catchUpCount(now = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - CATCH_UP_AFTER_DAYS * DAY_MS);
-  return prisma.order.count({ where: { status: { in: OPEN_STATUSES }, ...soldBefore(cutoff) } });
+  return prisma.order.count({
+    where: { status: { in: OPEN_STATUSES }, kind: { in: PARCEL_KINDS }, ...soldBefore(cutoff) },
+  });
 }
 
 /** Close one group as delivered. Returns how many orders moved. */

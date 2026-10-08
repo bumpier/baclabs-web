@@ -142,6 +142,24 @@ check(
   withCancelled.cancelledOrders === 1 && withCancelled.cancelledMinor === 5999
 );
 
+// ── Monthly plans (lib/plans/kinds.ts)
+const box = order({ kind: "plan_box", amountPaidMinor: 0, totalAmount: "0", deliveryMinor: 0, deliveryOption: "standard" });
+const withBox = summariseTakings([order({ amountPaidMinor: 2589, totalAmount: "21.99", deliveryMinor: 390, deliveryOption: "standard" }), box]);
+check("a plan box is not an order and brings no money", withBox.orders === 1 && withBox.takenMinor === 2589);
+check(
+  "…nor a delivery line",
+  withBox.delivery.map((l) => `${l.option}:${l.priceMinor}:${l.orders}:${l.totalMinor}`).join(" ") === "standard:390:1:390"
+);
+const purchase = summariseTakings([order({ amountPaidMinor: 26670, totalAmount: "266.70", deliveryMinor: 0, deliveryOption: "standard" })]);
+check("a plan's purchase is one sale of the whole plan", purchase.orders === 1 && purchase.takenMinor === 26670 && purchase.goodsMinor === 26670);
+const upgraded = summariseTakings([
+  order({ amountPaidMinor: 2589, totalAmount: "21.99", deliveryMinor: 390, deliveryOption: "standard" }),
+  order({ kind: "plan_upgrade", amountPaidMinor: 10746, totalAmount: "107.46", deliveryMinor: 0 }),
+]);
+check("an upgrade is money taken but not another order", upgraded.orders === 1 && upgraded.takenMinor === 13335 && upgraded.averageMinor === 13335);
+check("…and has no delivery line", upgraded.delivery.length === 1 && upgraded.deliveryMinor === 390);
+check("a cancelled plan box is not a cancelled order", summariseTakings([{ ...box, status: "cancelled" }]).cancelledOrders === 0);
+
 if (failures > 0) {
   console.error(`\n${failures} takings check(s) failed.`);
   process.exit(1);
