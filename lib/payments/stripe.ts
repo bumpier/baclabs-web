@@ -327,28 +327,42 @@ export async function createPlanCheckout(params: PlanCheckoutParams): Promise<{ 
 /** A session from the keyless dev simulator: there is nothing at Stripe to read or close. */
 const simulated = (id: string) => !process.env.STRIPE_SECRET_KEY || id.startsWith("cs_sim_");
 
-/** The live URL of a Checkout Session that can still be paid, else null. */
-export async function openCheckoutUrl(sessionId: string): Promise<string | null> {
-  if (simulated(sessionId)) return null;
+export interface CheckoutSessionState {
+  /**
+   * "open": can still be paid, at `url`. "complete": already paid, though the
+   * webhook may not have landed yet. "gone": expired, unreadable, or a
+   * simulator session with nothing at Stripe.
+   */
+  status: "open" | "complete" | "gone";
+  url: string | null;
+}
+
+/** One read of a Checkout Session. Simulator-safe; never throws. */
+export async function checkoutSessionState(sessionId: string): Promise<CheckoutSessionState> {
+  if (simulated(sessionId)) return { status: "gone", url: null };
   try {
     const s = await getStripe().checkout.sessions.retrieve(sessionId);
-    return s.status === "open" ? s.url : null;
+    if (s.status === "complete") return { status: "complete", url: null };
+    if (s.status === "open") return { status: "open", url: s.url };
+    return { status: "gone", url: null };
   } catch (err) {
     console.error(`[stripe] could not read session ${sessionId}`, err);
-    return null;
+    return { status: "gone", url: null };
   }
 }
 
-/** Close a session nobody should pay any more. "complete" means it was paid first. */
+/** Close a session nobody should pay any more. "complete" means it was paid first. Never throws. */
 export async function expireOpenCheckout(sessionId: string): Promise<"expired" | "complete" | "gone"> {
-  if (simulated(sessionId)) return "gone";
+  const before = await checkoutSessionState(sessionId);
+  if (before.status !== "open") return before.status;
   try {
-    const s = await getStripe().checkout.sessions.retrieve(sessionId);
-    if (s.status === "complete") return "complete";
-    if (s.status !== "open") return "gone";
     await getStripe().checkout.sessions.expire(sessionId);
     return "expired";
   } catch (err) {
+    // Stripe refuses to expire a session that stopped being open, as one
+    // paid between the read above and now has. Find out which it was.
+    const after = await checkoutSessionState(sessionId);
+    if (after.status === "complete") return "complete";
     console.error(`[stripe] could not expire session ${sessionId}`, err);
     return "gone";
   }

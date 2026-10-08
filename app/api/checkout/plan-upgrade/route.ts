@@ -6,15 +6,18 @@ import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { originFromHeaders } from "@/lib/site-url";
 import { getPaymentConfig } from "@/lib/payments/config";
 import { attributionFor } from "@/lib/meta-capi-event";
-import { createPlanUpgradeCheckout, expireOpenCheckout, openCheckoutUrl } from "@/lib/payments/stripe";
+import { checkoutSessionState, createPlanUpgradeCheckout, expireOpenCheckout } from "@/lib/payments/stripe";
 import { planPrice } from "@/config/plans";
 import { planRowData } from "@/lib/plans/items";
-import { upgradeEligibility, upgradePriceMinor } from "@/lib/plans/upgrade";
+import { earlierUpgradeAction, upgradeEligibility, upgradePriceMinor, type EarlierUpgrade } from "@/lib/plans/upgrade";
 import { priceIn } from "@/lib/fx";
 import { fetchFxRates } from "@/lib/fx-rates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const JUST_PAID = () =>
+  NextResponse.json({ error: "That upgrade has just been paid. Refresh the page." }, { status: 409 });
 
 /**
  * Turn a paid one-off order into box 1 of a 6- or 12-month plan. The order id
@@ -22,10 +25,12 @@ export const dynamic = "force-dynamic";
  * credential. Eligibility is checked again here, from the database, before
  * any money is asked for.
  *
- * Idempotent per original order: a second click for the same term reuses the
- * open Stripe page; choosing the other term closes the first page so only one
- * can be paid. If two are paid anyway, activation lets only the first take
- * box 1 and records the second as a refund due (lib/plans/activate.ts).
+ * Idempotent per original order (earlierUpgradeAction): a second click for the
+ * same term reuses the open Stripe page; choosing the other term closes the
+ * first page so only one can be paid; and once any page has been paid, even
+ * before its webhook lands, no new page is made. If two are paid anyway,
+ * activation lets only the first take box 1 and records the second as a
+ * refund due (lib/plans/activate.ts).
  */
 export async function POST(req: Request) {
   try {
@@ -49,21 +54,29 @@ export async function POST(req: Request) {
     const plan = planPrice(verdict.packId, months);
     const priceMinor = upgradePriceMinor(verdict.packId, months);
 
-    // Upgrades already started for this order and not yet paid.
+    // Upgrades already started for this order whose payment has not landed,
+    // newest first, each with one read of its Stripe page.
     const earlier = await prisma.plan.findMany({
       where: { upgradeOfOrderId: original.id, status: "pending" },
       include: { purchaseOrder: { select: { id: true, status: true, paymentRef: true } } },
+      orderBy: { createdAt: "desc" },
     });
+    const sessions: EarlierUpgrade[] = [];
     for (const p of earlier) {
       const ref = p.purchaseOrder.paymentRef;
       if (p.purchaseOrder.status !== "pending" || !ref) continue;
-      if (p.months === months) {
-        const url = await openCheckoutUrl(ref);
-        if (url) return NextResponse.json({ paymentUrl: url, orderId: p.purchaseOrder.id });
-      } else if ((await expireOpenCheckout(ref)) === "complete") {
-        return NextResponse.json({ error: "That upgrade has just been paid. Refresh the page." }, { status: 409 });
-      }
+      const { status, url } = await checkoutSessionState(ref);
+      sessions.push({ orderId: p.purchaseOrder.id, months: p.months, sessionId: ref, state: status, url });
     }
+    // A page already paid (its webhook still on the way) blocks a second one,
+    // whichever term it was for. Other terms' pages are closed BEFORE a
+    // same-term page is reused, so only one can ever be paid.
+    const next = earlierUpgradeAction(sessions, months);
+    if (next.action === "paid") return JUST_PAID();
+    for (const sessionId of next.expire) {
+      if ((await expireOpenCheckout(sessionId)) === "complete") return JUST_PAID();
+    }
+    if (next.reuse) return NextResponse.json({ paymentUrl: next.reuse.url, orderId: next.reuse.orderId });
 
     const total = new Prisma.Decimal((priceMinor / 100).toFixed(2));
     const rates = await fetchFxRates();

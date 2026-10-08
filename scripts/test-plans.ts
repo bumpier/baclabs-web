@@ -26,7 +26,9 @@ import {
   ordinalDay, renewalDue, renewalWindow, skipAMonth, type PlanClock,
 } from "@/lib/plans/schedule";
 import { planRefundMinor, refundBreakdown } from "@/lib/plans/refund";
-import { nudgePlanPack, planPackOf, upgradeEligibility, upgradeOffers, upgradePriceMinor } from "@/lib/plans/upgrade";
+import {
+  earlierUpgradeAction, nudgePlanPack, planPackOf, upgradeEligibility, upgradeOffers, upgradePriceMinor, type EarlierUpgrade,
+} from "@/lib/plans/upgrade";
 import { planBoxItems, planPurchaseItems, planRowData } from "@/lib/plans/items";
 import { soldLines } from "@/lib/inventory/demand";
 import { CheckoutSchema, PlanUpgradeSchema } from "@/lib/validation";
@@ -329,6 +331,47 @@ allCopy.push(started.subject, started.preheader, text(started.body));
   check("3 months is not an upgrade", !PlanUpgradeSchema.safeParse({ orderId: uid, months: 3 }).success);
   check("the order id must be a uuid", !PlanUpgradeSchema.safeParse({ orderId: "abc", months: 6 }).success);
   check("no amount can be sent", !PlanUpgradeSchema.safeParse({ orderId: uid, months: 6, priceMinor: 1 }).success);
+}
+
+// ── Task 12 fix: an upgrade already paid is never offered a second payment page
+{
+  const s = (orderId: string, months: number, state: EarlierUpgrade["state"]): EarlierUpgrade => ({
+    orderId,
+    months,
+    sessionId: `cs_${orderId}`,
+    state,
+    url: state === "open" ? `https://checkout.stripe.com/${orderId}` : null,
+  });
+  const go = (a: ReturnType<typeof earlierUpgradeAction>) => (a.action === "go" ? a : null);
+
+  check("nothing started: a new page", JSON.stringify(earlierUpgradeAction([], 6)) === JSON.stringify({ action: "go", expire: [], reuse: null }));
+  check("same term already paid: blocked", earlierUpgradeAction([s("a", 6, "complete")], 6).action === "paid");
+  check("other term already paid: blocked", earlierUpgradeAction([s("a", 12, "complete")], 6).action === "paid");
+  check(
+    "a paid page anywhere blocks, even beside an open same-term page",
+    earlierUpgradeAction([s("a", 6, "open"), s("b", 12, "complete")], 6).action === "paid"
+  );
+  {
+    const a = go(earlierUpgradeAction([s("a", 6, "open")], 6));
+    check("an open same-term page is reused", a?.reuse?.orderId === "a" && a.reuse.url.endsWith("/a") && a.expire.length === 0);
+  }
+  {
+    // Same-term page listed FIRST: the other term's page must still be closed before reuse.
+    const a = go(earlierUpgradeAction([s("a", 6, "open"), s("b", 12, "open")], 6));
+    check("reusing a same-term page still closes the other term's", a?.reuse?.orderId === "a" && a.expire.join() === "cs_b");
+  }
+  {
+    const a = go(earlierUpgradeAction([s("b", 12, "open")], 6));
+    check("an open other-term page is closed and a new page made", a?.reuse === null && a.expire.join() === "cs_b");
+  }
+  {
+    const a = go(earlierUpgradeAction([s("a", 6, "open"), s("c", 6, "open")], 6));
+    check("only one same-term page survives", a?.reuse?.orderId === "a" && a.expire.join() === "cs_c");
+  }
+  {
+    const a = go(earlierUpgradeAction([s("a", 6, "gone"), s("b", 12, "gone")], 6));
+    check("expired or simulator pages are left alone", a?.reuse === null && a.expire.length === 0);
+  }
 }
 
 // ── Later tasks append sections here, above the report.

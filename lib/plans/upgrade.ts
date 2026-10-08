@@ -87,6 +87,44 @@ export function upgradeOffers(packId: PlanPackId): { months: PlanMonths; priceMi
   }));
 }
 
+/** An unpaid upgrade already started for the same order, and what Stripe says of its payment page. */
+export interface EarlierUpgrade {
+  /** The upgrade's own order id (kind "plan_upgrade"). */
+  orderId: string;
+  months: number;
+  /** Its Checkout Session id. */
+  sessionId: string;
+  /** "complete": paid, though the webhook may not have landed yet. */
+  state: "open" | "complete" | "gone";
+  url: string | null;
+}
+
+export type EarlierUpgradeAction =
+  | { action: "paid" }
+  | { action: "go"; expire: string[]; reuse: { orderId: string; url: string } | null };
+
+/**
+ * Before asking for an upgrade payment, what to do with the ones already
+ * started for this order (/api/checkout/plan-upgrade). Pure.
+ *
+ *  - Any page already paid blocks: while its webhook is slow the original
+ *    order is still offered the upgrade, and a new page would charge twice.
+ *  - Otherwise every open page is closed except one for the same term,
+ *    which is reused. All of this is decided before anything is reused, so
+ *    returning a reusable page never leaves another term's page payable.
+ */
+export function earlierUpgradeAction(earlier: EarlierUpgrade[], months: number): EarlierUpgradeAction {
+  if (earlier.some((e) => e.state === "complete")) return { action: "paid" };
+  let reuse: { orderId: string; url: string } | null = null;
+  const expire: string[] = [];
+  for (const e of earlier) {
+    if (e.state !== "open") continue;
+    if (!reuse && e.months === months && e.url) reuse = { orderId: e.orderId, url: e.url };
+    else expire.push(e.sessionId);
+  }
+  return { action: "go", expire, reuse };
+}
+
 /**
  * The pack a repurchase nudge may offer a plan for: only a one-off sale that
  * is not part of a plan. Plan purchases and boxes carry the pack's bundleId
