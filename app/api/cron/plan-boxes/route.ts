@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   }
   const boxes = await runPlanBoxes();
   const renewals = await runPlanRenewals();
-  console.log(`[cron] plan-boxes: ${boxes.created} made, ${boxes.failed} failed; ${renewals.sent} renewal email(s)`);
+  console.log(`[cron] plan-boxes: ${boxes.created} made, ${boxes.failed} failed; ${renewals.sent} renewal email(s), ${renewals.failed} failed`);
   return NextResponse.json({ ...boxes, renewals });
 }
 

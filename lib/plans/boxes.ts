@@ -133,6 +133,16 @@ export interface RenewalRun {
   due: number;
   sent: number;
   skipped: number;
+  failed: number;
+}
+
+/** Release a renewal claim; never throws, so a failed release cannot abort the loop. */
+async function releaseRenewalClaim(planId: string, claimedAt: Date): Promise<void> {
+  try {
+    await prisma.plan.updateMany({ where: { id: planId, renewalEmailSentAt: claimedAt }, data: { renewalEmailSentAt: null } });
+  } catch (err) {
+    console.error(`[plans] could not release the renewal claim on plan ${planId}`, err);
+  }
 }
 
 /** The renewal email, 14 days before the last box. Claimed before sending, released if the send fails. */
@@ -140,30 +150,41 @@ export async function runPlanRenewals(now = new Date()): Promise<RenewalRun> {
   const plans = await prisma.plan.findMany({
     where: { status: { in: ["active", "completed"] }, renewalEmailSentAt: null, anchorDay: { not: null } },
   });
-  const run: RenewalRun = { due: 0, sent: 0, skipped: 0 };
+  const run: RenewalRun = { due: 0, sent: 0, skipped: 0, failed: 0 };
   for (const plan of plans) {
     if (!renewalDue(plan, now)) continue;
     run.due++;
-    const { count } = await prisma.plan.updateMany({
-      where: { id: plan.id, renewalEmailSentAt: null },
-      data: { renewalEmailSentAt: now },
-    });
-    if (count === 0) {
-      run.skipped++;
-      continue;
-    }
-    const order = await prisma.order.findUnique({ where: { id: plan.purchaseOrderId } });
-    const optedOut = order?.customerEmail
-      ? await prisma.emailOptOut.findUnique({ where: { email: order.customerEmail.toLowerCase() } })
-      : null;
-    if (!order?.customerEmail || optedOut) {
-      run.skipped++; // stays claimed: an opted-out customer is not asked again tomorrow
-      continue;
-    }
-    if (await sendPlanRenewalEmail(plan, order)) run.sent++;
-    else {
-      await prisma.plan.updateMany({ where: { id: plan.id, renewalEmailSentAt: now }, data: { renewalEmailSentAt: null } });
-      run.skipped++;
+    try {
+      const { count } = await prisma.plan.updateMany({
+        where: { id: plan.id, renewalEmailSentAt: null },
+        data: { renewalEmailSentAt: now },
+      });
+      if (count === 0) {
+        run.skipped++;
+        continue;
+      }
+      try {
+        const order = await prisma.order.findUnique({ where: { id: plan.purchaseOrderId } });
+        const optedOut = order?.customerEmail
+          ? await prisma.emailOptOut.findUnique({ where: { email: order.customerEmail.toLowerCase() } })
+          : null;
+        if (!order?.customerEmail || optedOut) {
+          run.skipped++; // stays claimed: an opted-out customer is not asked again tomorrow
+          continue;
+        }
+        if (await sendPlanRenewalEmail(plan, order)) run.sent++;
+        else {
+          await releaseRenewalClaim(plan.id, now);
+          run.skipped++;
+        }
+      } catch (err) {
+        // Claimed but not sent: release it so tomorrow's run tries again.
+        await releaseRenewalClaim(plan.id, now);
+        throw err;
+      }
+    } catch (err) {
+      run.failed++;
+      console.error(`[plans] renewal email for plan ${plan.id} failed`, err);
     }
   }
   return run;
