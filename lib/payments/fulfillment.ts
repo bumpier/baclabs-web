@@ -1,10 +1,12 @@
+import type { Order } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { sendOrderConfirmationEmail, sendNewOrderAlert } from "@/lib/customer-email";
+import { sendOrderConfirmationEmail, sendNewOrderAlert, type ShippedTracking } from "@/lib/customer-email";
 import type { PaymentProvider } from "@/lib/payments/config";
 import { sendMetaPurchase } from "@/lib/meta-capi";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { settleWelcomeVial } from "@/lib/mailing-list";
 import { autoBuyLabel } from "@/lib/shipping/shipments";
+import { orderTracking } from "@/lib/shipping/tracking-sync";
 import { allocateAfterPayment, takeStockInTransaction } from "@/lib/payments/stock";
 import { activatePlanForPaidOrder } from "@/lib/plans/activate";
 import { orderKind, shipsParcel } from "@/lib/plans/kinds";
@@ -103,9 +105,8 @@ export async function fulfillPaidOrder(
   // no-op — losing the work silently.
 
   const paidOrder = await prisma.order.findUnique({ where: { id: orderId } });
+  const emailOpts = { deliveryMinor: opts.deliveryMinor ?? 0 };
   if (paidOrder) {
-    const emailOpts = { deliveryMinor: opts.deliveryMinor ?? 0 };
-    void sendOrderConfirmationEmail(paidOrder, emailOpts); // to the customer
     void sendNewOrderAlert(paidOrder, emailOpts); // to the shop owner (ORDER_NOTIFY_EMAIL)
     // Server-side Purchase for Meta, only if the customer consented. Never
     // throws; still counted if the customer never reaches the confirmation page.
@@ -117,6 +118,40 @@ export async function fulfillPaidOrder(
   // the warehouse the stock was picked from. Not awaited: SmartTrack can take
   // seconds and the payment provider is waiting on this webhook. Never
   // throws; a label it cannot buy shows in the admin warning.
-  if (parcel) void autoBuyLabel(orderId);
+  const label = parcel ? autoBuyLabel(orderId) : null;
+
+  // To the customer, once that label is bought, so it carries the tracking number.
+  if (paidOrder) void confirmToCustomer(paidOrder, emailOpts, label);
   return { alreadyPaid: false };
+}
+
+/**
+ * How long the customer's confirmation waits for the label. SmartTrack
+ * usually answers in a few seconds; a label not bought by then does not hold
+ * the email up any longer, and the shipped email carries the number later.
+ */
+const LABEL_WAIT_MS = 20_000;
+
+/**
+ * The confirmation email, with the parcel's tracking number and a link to
+ * the carrier's page when the label is bought in time. No label (switched
+ * off, UAT, refused, or slow) sends it without, as before.
+ */
+async function confirmToCustomer(order: Order, emailOpts: { deliveryMinor: number }, label: Promise<void> | null) {
+  let tracking: ShippedTracking | null = null;
+  try {
+    if (label && (await settlesWithin(label, LABEL_WAIT_MS))) tracking = await orderTracking(order);
+  } catch (err) {
+    console.error(`[email] tracking for the confirmation of order ${order.id} could not be read`, err);
+  }
+  await sendOrderConfirmationEmail(order, { ...emailOpts, tracking });
+}
+
+/** Whether the promise settles within `ms`. Its timer is cleared either way, so it never holds the process open. */
+function settlesWithin(promise: Promise<unknown>, ms: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<false>((resolve) => {
+    timer = setTimeout(() => resolve(false), ms);
+  });
+  return Promise.race([promise.then(() => true), timeout]).finally(() => clearTimeout(timer));
 }

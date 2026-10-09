@@ -9,7 +9,8 @@
  * shape is unconfirmed, which is why unreadable replies must come out null.
  */
 import { amazonStageOfCode, parseAmazonTracking } from "@/lib/shipping/amazon-tracking";
-import { carrierGroup, combineTracking, correctionFor } from "@/lib/shipping/order-recheck";
+import { combineTracking, correctionFor } from "@/lib/shipping/order-recheck";
+import { carrierGroup, carrierTrackingUrl, trackingLink } from "@/lib/shipping/carriers";
 import type { TrackingSummary } from "@/lib/shipping/tracking";
 
 let failures = 0;
@@ -177,6 +178,29 @@ check("SmartTrack's Amazon name", carrierGroup("NW Amazon", "", "") === "amazon"
 check("SmartTrack's Royal Mail name", carrierGroup("Royal Mail Nenix") === "royalmail");
 check("falls back to the service", carrierGroup("", "Royal Mail Tracked 48") === "royalmail");
 check("anything else", carrierGroup("", null, undefined) === "other");
+check("the first name that knows wins", carrierGroup("Royal Mail Nenix", "Amazon Shipping") === "royalmail");
+
+// ── The carrier's tracking link ─────────────────────────────────────
+
+{
+  const amazon = trackingLink("QA1234567890", "NW Amazon");
+  check("Amazon is named for customers", amazon.carrier === "Amazon", amazon.carrier);
+  check("Amazon links to its public page", amazon.url === "https://track.amazon.co.uk/tracking/QA1234567890", String(amazon.url));
+  const rm = trackingLink("wd 123456789 gb", "", "Royal Mail Tracked 48");
+  check("Royal Mail is named for customers", rm.carrier === "Royal Mail", rm.carrier);
+  check(
+    "Royal Mail links with its published URL, spaces dropped",
+    rm.url === "https://www.royalmail.com/portal/rm/track?trackNumber=WD123456789GB",
+    String(rm.url)
+  );
+  check("a Royal Mail number in another shape gets no link", trackingLink("LP00123456789012", "Royal Mail").url === null);
+  check("a Parcelforce prefix gets no Royal Mail link", carrierTrackingUrl("royalmail", "EA123456789GB") === null);
+  const other = trackingLink("X1", "", "  Evri ");
+  check("another carrier keeps its own name and gets no link", other.carrier === "Evri" && other.url === null);
+  check("no carrier at all", trackingLink("X1").carrier === "" && trackingLink("X1").url === null);
+  check("an empty number gets no link", carrierTrackingUrl("amazon", " ") === null);
+  check("an Amazon number is escaped into the path", carrierTrackingUrl("amazon", "A/B?c") === "https://track.amazon.co.uk/tracking/A%2FB%3Fc");
+}
 
 if (failures > 0) {
   console.error(`\n${failures} check${failures === 1 ? "" : "s"} failed.`);

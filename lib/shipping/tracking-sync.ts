@@ -5,6 +5,7 @@ import { smartTrackConfig } from "@/lib/smarttrack/config";
 import { getTracking, SmartTrackAuthError, SmartTrackError } from "@/lib/smarttrack/client";
 import { parseTrackingNumbers } from "@/lib/shipping/shipments";
 import { classifyTracking, parseTracking } from "@/lib/shipping/tracking";
+import { trackingLink } from "@/lib/shipping/carriers";
 import type { ShippedTracking } from "@/lib/customer-email";
 
 /**
@@ -68,16 +69,34 @@ export async function trackingUnavailableReason(): Promise<string | null> {
   return null;
 }
 
-/** The tracking number and carrier for an order's active label, for the shipped email. */
+/**
+ * The tracking number, carrier and carrier's link for an order's active
+ * label, for the confirmation and shipped emails. Straight after the label
+ * is bought, tracking has not named the carrier yet, so the service it was
+ * bought on, and then the delivery option paid for, stand in.
+ */
 export async function orderTracking(order: { id: string; deliveryOption: string | null }): Promise<ShippedTracking | null> {
   const shipment = await prisma.shipment.findFirst({
     where: { orderId: order.id, status: "CREATED" },
     orderBy: { createdAt: "desc" },
-    select: { trackingNumbers: true, carrierName: true },
+    select: { trackingNumbers: true, carrierName: true, serviceName: true, serviceCode: true },
   });
   const number = shipment ? parseTrackingNumbers(shipment.trackingNumbers)[0] : undefined;
   if (!shipment || !number) return null;
-  return { number, carrier: shipment.carrierName || deliveryOptionById(order.deliveryOption)?.carrier || "" };
+  const service = await prisma.postalService.findUnique({
+    where: { code: shipment.serviceCode },
+    select: { carrier: true },
+  });
+  return {
+    number,
+    ...trackingLink(
+      number,
+      shipment.carrierName,
+      shipment.serviceName,
+      service?.carrier,
+      deliveryOptionById(order.deliveryOption)?.carrier
+    ),
+  };
 }
 
 export function isNoTrackingYet(err: unknown): boolean {
@@ -134,6 +153,7 @@ export async function syncTracking(
       id: true,
       trackingNumbers: true,
       carrierName: true,
+      serviceName: true,
       order: { select: { id: true, status: true, paidAt: true, createdAt: true, shippedAt: true, deliveryOption: true } },
     },
   });
@@ -194,7 +214,10 @@ export async function syncTracking(
     if (summary.stage === "problem") result.problems++;
 
     const order = s.order;
-    const tracking = { number, carrier: carrierName || deliveryOptionById(order.deliveryOption)?.carrier || "" };
+    const tracking = {
+      number,
+      ...trackingLink(number, carrierName, s.serviceName, deliveryOptionById(order.deliveryOption)?.carrier),
+    };
 
     if (summary.stage === "delivered" && summary.deliveredAt) {
       const { count } = await prisma.order.updateMany({

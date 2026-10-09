@@ -271,9 +271,14 @@ async function optedOutOfEmails(order: Order): Promise<boolean> {
   }
 }
 
+/**
+ * The receipt, sent once payment lands. For a parcel it waits for the label
+ * (lib/payments/fulfillment.ts), so `tracking` is the number the carrier
+ * will use, which shows no movement until the carrier has the parcel.
+ */
 export async function sendOrderConfirmationEmail(
   order: Order,
-  opts?: { deliveryMinor?: number }
+  opts?: { deliveryMinor?: number; tracking?: ShippedTracking | null }
 ): Promise<void> {
   const kind = orderKind(order.kind);
   if (kind === "plan_box") return; // boxes are not sales; they get the shipped email only
@@ -304,6 +309,11 @@ export async function sendOrderConfirmationEmail(
   const bcc = await trustpilotBccFor(order);
   // More than one with the reminder bonus (lib/mailing-list.ts welcomeVialCount).
   const welcomeVials = items.reduce((n, i) => (i.welcome ? n + i.qty : n), 0);
+  const tracking = opts?.tracking?.number ? opts.tracking : null;
+  const trackingBlock = tracking
+    ? `<p style="margin:0 0 12px">Your ${tracking.carrier ? `${escapeHtml(tracking.carrier)} ` : ""}tracking number is
+      ${trackingNumberHtml(tracking)}. It starts showing updates once ${tracking.carrier ? escapeHtml(tracking.carrier) : "the carrier"} has your parcel.</p>`
+    : "";
 
   await logAndSend(
     order,
@@ -312,6 +322,7 @@ export async function sendOrderConfirmationEmail(
     layout(
       `<p>Hi ${escapeHtml(order.customerName)},</p>
       <p>${plan ? "Thank you for your order." : "Thanks for your order!"} Your payment has been received and we're getting it ready.</p>
+      ${trackingBlock}
       ${welcomeVials > 0 ? `<p style="margin:0 0 12px">Your mailing-list welcome gift, ${welcomeVials === 1 ? "an extra 10ml vial" : `${welcomeVials} extra 10ml vials`}, is included in this order.</p>` : ""}
       <p style="margin:0 0 4px;font-size:12px;color:${LITERAL.inkSoft}">Order ${order.id} &middot; placed ${placedOn}</p>
       ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString())}
@@ -350,22 +361,37 @@ async function sendPlanStartedEmail(order: Order, plan: Plan): Promise<void> {
   );
 }
 
-/** The parcel's tracking, when the order has a label: its first number and who carries it. */
+/**
+ * The parcel's tracking, when the order has a label: its first number, who
+ * carries it, and the carrier's tracking page when there is one to trust
+ * (lib/shipping/carriers.ts).
+ */
 export interface ShippedTracking {
   number: string;
   carrier: string;
+  url?: string | null;
+}
+
+/** The tracking number, linked to the carrier's own tracking page when there is one. */
+function trackingNumberHtml(tracking: ShippedTracking): string {
+  const style = "font-family:monospace;font-size:15px;font-weight:700";
+  return tracking.url
+    ? `<a href="${escapeHtml(tracking.url)}" style="${style};color:${LITERAL.brand}">${escapeHtml(tracking.number)}</a>`
+    : `<strong style="${style}">${escapeHtml(tracking.number)}</strong>`;
 }
 
 /**
  * Sent once, when the carrier first scans the parcel (lib/shipping/
- * tracking-sync.ts) or when someone marks the order shipped by hand. The
- * order page it links to shows the latest tracking.
+ * tracking-sync.ts) or when someone marks the order shipped by hand. Its
+ * button goes to the carrier's tracking page when there is one, else to the
+ * order page, which shows the latest tracking.
  */
 export async function sendOrderShippedEmail(order: Order, tracking?: ShippedTracking | null): Promise<void> {
   const orderUrl = `${siteUrl()}/order-confirmation/${order.id}`;
+  const carrierUrl = tracking?.number ? (tracking.url ?? null) : null;
   const trackingLine = tracking?.number
     ? `<p style="margin:0 0 20px">Your tracking number${tracking.carrier ? ` with ${escapeHtml(tracking.carrier)}` : ""} is
-      <strong style="font-family:monospace;font-size:15px">${escapeHtml(tracking.number)}</strong>. Your order page shows where it has got to.</p>`
+      ${trackingNumberHtml(tracking)}.${carrierUrl ? "" : " Your order page shows where it has got to."}</p>`
     : "";
   const plan = order.planId && order.planBox ? await prisma.plan.findUnique({ where: { id: order.planId } }) : null;
   const box =
@@ -390,8 +416,14 @@ export async function sendOrderShippedEmail(order: Order, tracking?: ShippedTrac
       <p>${box ? escapeHtml(box.lead) : "Good news — your order has been shipped and is on its way to you."}</p>
       ${trackingLine}
       ${box ? `<p style="margin:0 0 20px">${escapeHtml(box.next)}</p>` : ""}
-      <p style="margin:0 0 20px;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id}</p>
-      ${ctaButton(orderUrl, tracking?.number ? "Track your order" : "View your order")}`,
+      <p style="margin:0 0 20px;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id}${
+        carrierUrl ? ` &middot; <a href="${orderUrl}" style="color:${LITERAL.inkSoft}">View your order</a>` : ""
+      }</p>
+      ${
+        carrierUrl
+          ? ctaButton(escapeHtml(carrierUrl), "Track your parcel")
+          : ctaButton(orderUrl, tracking?.number ? "Track your order" : "View your order")
+      }`,
       { preheader: box ? box.preheader : tracking?.number ? `Tracking number ${tracking.number}` : `Order ${order.id} has shipped` }
     )
   );

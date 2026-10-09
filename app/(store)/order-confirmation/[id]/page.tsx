@@ -7,6 +7,7 @@ import { deliveryOptionById, formatMinor } from "@/config/funnel";
 import { formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
 import { paidMinor, purchaseContents, purchaseEventId } from "@/lib/meta-capi-event";
 import { parseTrackingNumbers } from "@/lib/shipping/shipments";
+import { trackingLink } from "@/lib/shipping/carriers";
 import { formatSaleDateTime, formatShopDay, shopDayKey } from "@/lib/saleTime";
 import { planDeliveryNote, planFreeLine } from "@/config/plans";
 import { orderKind } from "@/lib/plans/kinds";
@@ -117,18 +118,36 @@ export default async function OrderConfirmationPage({
   // server-side Purchase so the two reports agree.
   const contents = purchaseContents(order.items);
 
-  // Once it has gone out, the parcel and its latest tracking
-  // (lib/shipping/tracking-sync.ts) — what the shipped email points here for.
+  // The parcel and its latest tracking (lib/shipping/tracking-sync.ts) —
+  // what the shipped email points here for. Its number is known from the
+  // moment the label is bought (packed), which the confirmation email gives.
   const sent = order.status === "shipped" || order.status === "delivered";
-  const parcel = sent
-    ? await prisma.shipment.findFirst({
-        where: { orderId: order.id, status: "CREATED" },
-        orderBy: { createdAt: "desc" },
-        select: { trackingNumbers: true, carrierName: true, trackingEvent: true, trackingEventAt: true },
-      })
-    : null;
+  const parcel =
+    sent || order.status === "packed"
+      ? await prisma.shipment.findFirst({
+          where: { orderId: order.id, status: "CREATED" },
+          orderBy: { createdAt: "desc" },
+          select: {
+            trackingNumbers: true,
+            carrierName: true,
+            serviceName: true,
+            trackingEvent: true,
+            trackingEventAt: true,
+          },
+        })
+      : null;
   const trackingNumber = parcel ? parseTrackingNumbers(parcel.trackingNumbers)[0] : undefined;
-  const carrier = parcel?.carrierName || paidFor?.carrier || "";
+  const link = trackingNumber ? trackingLink(trackingNumber, parcel?.carrierName, parcel?.serviceName, paidFor?.carrier) : null;
+  const carrier = link?.carrier || paidFor?.carrier || "";
+  const trackingNumberEl = trackingNumber ? (
+    link?.url ? (
+      <a href={link.url} target="_blank" rel="noopener noreferrer" className="link tabular font-medium">
+        {trackingNumber}
+      </a>
+    ) : (
+      <span className="tabular font-medium text-ink">{trackingNumber}</span>
+    )
+  ) : null;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-14 sm:px-8 sm:py-20">
@@ -278,10 +297,10 @@ export default async function OrderConfirmationPage({
                 <dd className="inline text-ink">{carrier}</dd>
               </div>
             ) : null}
-            {trackingNumber ? (
+            {trackingNumberEl ? (
               <div>
                 <dt className="inline">Tracking number </dt>
-                <dd className="tabular inline font-medium text-ink">{trackingNumber}</dd>
+                <dd className="inline">{trackingNumberEl}</dd>
               </div>
             ) : null}
             {parcel?.trackingEvent ? (
@@ -351,7 +370,16 @@ export default async function OrderConfirmationPage({
             </li>
             <li className="flex gap-3">
               <span aria-hidden="true" className="mt-3 h-px w-4 shrink-0 bg-brand" />
-              <span>{kind === "plan_box" ? "You get an email when it ships." : "You get a second email when it ships."}</span>
+              <span>
+                {kind === "plan_box" ? "You get an email when it ships." : "You get a second email when it ships."}
+                {trackingNumberEl ? (
+                  <>
+                    {" "}
+                    Your {carrier ? `${carrier} ` : ""}tracking number is {trackingNumberEl}. It starts showing updates once{" "}
+                    {carrier || "the carrier"} has your parcel.
+                  </>
+                ) : null}
+              </span>
             </li>
           </ol>
         </section>

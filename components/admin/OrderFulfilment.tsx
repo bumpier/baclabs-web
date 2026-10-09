@@ -6,6 +6,7 @@ import { getInventoryMode } from "@/lib/inventory/mode";
 import { planOrderShipment } from "@/lib/shipping/order-parcel";
 import { formatDimensions, formatWeight } from "@/lib/shipping/parcel";
 import { getDeliveryInstructions, parseTrackingNumbers } from "@/lib/shipping/shipments";
+import { trackingLink } from "@/lib/shipping/carriers";
 import { LIMITS } from "@/lib/smarttrack/payload";
 import { smartTrackConfig } from "@/lib/smarttrack/config";
 import { deliveryChoiceEnabled, deliveryOptionById, formatMinor } from "@/config/funnel";
@@ -189,7 +190,28 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
                     <span className="font-medium">{s.serviceName || s.serviceCode}</span>
                     <span className="text-xs text-ink-soft">({s.serviceChoice})</span>
                   </div>
-                  {tracking.length > 0 && <p className="mt-1 font-mono text-xs">{tracking.join(", ")}</p>}
+                  {tracking.length > 0 && (
+                    <p className="mt-1 font-mono text-xs">
+                      {tracking.map((t, i) => {
+                        const url =
+                          s.environment === "live"
+                            ? trackingLink(t, s.carrierName, s.serviceName, paidFor?.carrier).url
+                            : null;
+                        return (
+                          <span key={t}>
+                            {i > 0 && ", "}
+                            {url ? (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="underline">
+                                {t}
+                              </a>
+                            ) : (
+                              t
+                            )}
+                          </span>
+                        );
+                      })}
+                    </p>
+                  )}
                   {s.status === "CREATED" && s.environment === "live" && tracking.length > 0 && (
                     <p className="mt-1 text-xs text-ink-soft">
                       {s.trackingCheckedAt ? (

@@ -43,14 +43,8 @@ import { parseTrackingNumbers } from "@/lib/shipping/shipments";
 import { classifyTracking, parseTracking, TRACKING_STAGE_LABELS, type TrackingSummary } from "@/lib/shipping/tracking";
 import { isNoTrackingYet } from "@/lib/shipping/tracking-sync";
 import { fetchAmazonTracking, parseAmazonTracking } from "@/lib/shipping/amazon-tracking";
-import {
-  BACKWARD,
-  carrierGroup,
-  combineTracking,
-  correctionFor,
-  type CarrierGroup,
-  type RecheckAction,
-} from "@/lib/shipping/order-recheck";
+import { BACKWARD, combineTracking, correctionFor, type RecheckAction } from "@/lib/shipping/order-recheck";
+import { carrierGroup, type CarrierGroup } from "@/lib/shipping/carriers";
 
 // ── Options ─────────────────────────────────────────────────────────
 

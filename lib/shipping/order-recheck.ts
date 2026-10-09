@@ -91,13 +91,3 @@ export function correctionFor(
   }
   return { action: "toLabel", data: { status: "packed", shippedAt: null, deliveredAt: null } };
 }
-
-export type CarrierGroup = "amazon" | "royalmail" | "other";
-
-/** Which carrier a label is with, from what SmartTrack and our services call it. */
-export function carrierGroup(...names: (string | null | undefined)[]): CarrierGroup {
-  const text = names.filter(Boolean).join(" ");
-  if (/amazon/i.test(text)) return "amazon";
-  if (/royal ?mail/i.test(text)) return "royalmail";
-  return "other";
-}
