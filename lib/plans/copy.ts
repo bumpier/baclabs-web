@@ -121,11 +121,9 @@ const BOX = `border:1px solid ${LITERAL.line};border-radius:12px;padding:16px 20
 
 export function nudgePlanOfferHtml(packId: PlanPackId, siteUrl: string): string {
   const p = planPrice(packId, 6);
-  return `<div style="${BOX}">
-    <p style="margin:0 0 8px;font-weight:600;color:${LITERAL.ink}">Rather have it arrive every month?</p>
-    <p style="margin:0 0 16px">Our monthly plan sends your ${p.pack.vials}-vial pack on the same date each month. ${p.months} months is ${formatMinor(p.totalMinor)}, paid once: ${planFreeLine(p)}, save ${formatMinor(p.saveMinor)}, ${planDeliveryNote(p)}. It never renews by itself, and you can cancel any time.</p>
-    ${ctaButton(`${siteUrl}/?plan=${p.key}#buy`, "See monthly plans")}
-  </div>`;
+  // One line and a text link, not a second boxed button: in the reorder
+  // email the reorder button is the one to press.
+  return `<p style="margin:24px 0 0">Rather not have to remember? Our monthly plan sends your ${p.pack.vials}-vial pack on the same date each month. ${p.months} months is ${formatMinor(p.totalMinor)}, paid once: ${planFreeLine(p)}, save ${formatMinor(p.saveMinor)}, ${planDeliveryNote(p)}. It never renews by itself, and you can cancel any time. <a href="${siteUrl}/?plan=${p.key}#buy" style="color:${LITERAL.brand}">See monthly plans</a></p>`;
 }
 
 export function upgradeOfferHtml(input: { packId: PlanPackId; orderUrl: string; deadline: Date }): string {

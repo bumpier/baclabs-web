@@ -20,7 +20,7 @@ import {
   type BundleId,
 } from "@/config/funnel";
 import { formatCutoffHour } from "@/lib/delivery-date";
-import { useFunnel } from "@/components/funnel/FunnelState";
+import { useFunnel, usePackQuery } from "@/components/funnel/FunnelState";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
 import { WelcomeVialPanel } from "@/components/mailing-list/WelcomeVialPanel";
 import {
@@ -57,6 +57,7 @@ import { planDeliverySentence } from "@/config/plans";
 export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
   const { bundle, vials, select, mode, setMode } = useFunnel();
   const { choice, setChoice, plan } = usePlanChoice();
+  usePackQuery();
   usePlanQuery(setChoice, setMode);
   const groupId = useId();
   const bestId = bestPerVialBundleId();

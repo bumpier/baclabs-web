@@ -22,6 +22,7 @@ import {
   type BundleId,
 } from "@/config/funnel";
 import { trackEvent } from "@/lib/analytics";
+import { parsePackQuery } from "@/lib/pack-link";
 
 /**
  * The selected tier and quantity, shared by the purchase block and the sticky
@@ -154,4 +155,25 @@ export function useFunnel(): FunnelState {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error("useFunnel must be used inside <FunnelStateProvider>");
   return ctx;
+}
+
+/**
+ * Honour /?pack=ten&qty=1&extra=1#buy (the reorder email and the
+ * checkout-recovery fallback, lib/pack-link.ts): open the one-time half on
+ * that order. Read after mount from window.location, NOT useSearchParams, so
+ * the home page stays static. Call it before usePlanQuery, so a link naming
+ * a plan as well still opens on the plan.
+ */
+export function usePackQuery() {
+  const { select, setQuantity, setExtraVials, setMode } = useFunnel();
+  useEffect(() => {
+    const wanted = parsePackQuery(window.location.search);
+    if (!wanted) return;
+    // In this order: choosing the pack and the quantity each drop loose
+    // vials, so they go last.
+    setMode("once");
+    select(wanted.bundleId);
+    setQuantity(wanted.quantity);
+    setExtraVials(wanted.extraVials);
+  }, [select, setQuantity, setExtraVials, setMode]);
 }

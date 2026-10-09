@@ -14,6 +14,8 @@ import {
   boxShippedCopy, nudgePlanOfferHtml, planScheduleHtml, planStartedCopy, planTermsOf, renewalCopy, upgradeOfferHtml,
 } from "@/lib/plans/copy";
 import { isPlanMonths, isPlanPackId, planKey } from "@/config/plans";
+import { DELIVERY, formatMinor, formatMinorShort, freeDeliveryName } from "@/config/funnel";
+import { reorderOffer } from "@/lib/reorder";
 
 // Customer-facing order emails. Every send is recorded in EmailLog first;
 // the @@unique([orderId, type]) constraint makes double-sends impossible.
@@ -464,30 +466,70 @@ export async function sendPlanRenewalEmail(plan: Plan, order: Order): Promise<bo
   );
 }
 
-/** items here are only the nudgeable ones (supplyDays > 0). */
-export async function sendRepurchaseNudgeEmail(
-  order: Order,
-  items: OrderItem[]
-): Promise<boolean> {
-  const list = items
-    .map(
-      (i) =>
-        `<li style="margin:6px 0"><a href="${siteUrl()}/products/${i.slug}" style="color:${LITERAL.brand}">${i.name}</a></li>`
-    )
-    .join("");
+/**
+ * "Running low?": sent by the nudges cron a few days before the vials from
+ * an order are due to run out. It offers that same order again at today's
+ * price, one button straight to a buy box already set to it, and the step
+ * the buy box would offer from there (lib/reorder.ts). A marketing email, so
+ * it carries the unsubscribe headers and footer.
+ *
+ * `items` are only the nudgeable ones (supplyDays > 0), used when the order
+ * names no pack we still sell.
+ */
+export async function sendRepurchaseNudgeEmail(order: Order, items: OrderItem[]): Promise<boolean> {
+  const site = siteUrl();
+  const email = order.customerEmail;
+  const hi = order.customerName ? `Hi ${escapeHtml(order.customerName)},` : "Hi,";
   const pack = nudgePlanPack(order);
-  const planBlock = pack ? nudgePlanOfferHtml(pack, siteUrl()) : "";
+  const planLine = pack ? nudgePlanOfferHtml(pack, site) : "";
+  const offer = reorderOffer(order.items);
+
+  if (!offer) {
+    const list = items
+      .map((i) => `<li style="margin:6px 0">${escapeHtml(i.name)}</li>`)
+      .join("");
+    return logAndSend(
+      order,
+      "nudge",
+      `Running low? Time to restock your ${brand.name} order`,
+      layout(
+        `<p>${hi}</p>
+        <p>By our count, the vials from your last order may be running low. Reorder before you run out:</p>
+        <ul style="padding-left:18px">${list}</ul>
+        <p style="margin:24px 0 0">${ctaButton(`${site}/#buy`, "Choose your pack")}</p>
+        ${planLine}
+        ${marketingFooter(email)}`,
+        { preheader: "Reorder before you run out." }
+      ),
+      { headers: marketingHeaders(email) }
+    );
+  }
+
+  const vials = `${offer.vials} ${offer.vials === 1 ? "vial" : "vials"}`;
+  const delivery = offer.shipsFree
+    ? `Free ${freeDeliveryName()} on this order.`
+    : DELIVERY.mode === "threshold" && DELIVERY.freeFromMinor !== null
+      ? `Delivery ${formatMinor(offer.deliveryMinor)}, free on orders of ${formatMinorShort(DELIVERY.freeFromMinor)} or more.`
+      : "";
+  const step = offer.upsell
+    ? `<p style="margin:24px 0 0">Or: ${escapeHtml(offer.upsell.line)} <a href="${site}${offer.upsell.link}" style="color:${LITERAL.brand}">${escapeHtml(offer.upsell.linkText)}</a></p>`
+    : "";
+
   return logAndSend(
     order,
     "nudge",
-    `Running low? Time to restock your ${brand.name} favourites`,
-    layout(`<p>Hi ${order.customerName},</p>
-      <p>By our count, the products from your last order may be running low. Reorder before you run out:</p>
-      <ul style="padding-left:18px">${list}</ul>
-      ${planBlock}
-      <p><a href="${siteUrl()}/products" style="background:${LITERAL.brand};color:#fff;padding:12px 24px;border-radius:24px;text-decoration:none">Shop again</a></p>
-      <p style="font-size:11px;color:#6b7a72;margin-top:24px">Don't want reminders like this?
-        <a href="${unsubscribeUrl(order.customerEmail)}" style="color:#6b7a72">Unsubscribe</a></p>`)
+    `Running low? Reorder your ${vials}`,
+    layout(
+      `<p>${hi}</p>
+      <p>By our count, the ${vials} from your last order will run low in a few days. The same order again is one click away:</p>
+      <p style="margin:24px 0 0">${ctaButton(`${site}${offer.link}`, `Reorder ${vials} · ${formatMinor(offer.goodsMinor)}`)}</p>
+      ${delivery ? `<p style="font-size:13px;color:${LITERAL.inkSoft};margin:12px 0 0">${delivery}</p>` : ""}
+      ${step}
+      ${planLine}
+      ${marketingFooter(email)}`,
+      { preheader: `Reorder your ${vials} in one click.` }
+    ),
+    { headers: marketingHeaders(email) }
   );
 }
 
