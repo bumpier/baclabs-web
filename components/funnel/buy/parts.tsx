@@ -120,7 +120,8 @@ export function UpsellNudge() {
 /**
  * The selected pack's price: the figure, the struck pre-sale figure and the
  * tag while the sale shows, then the per-vial price. The only place the
- * pack price and the saving appear.
+ * pack's total and the sale saving appear; the pack tiles carry the
+ * per-vial price and the saving on buying singly, for comparing packs.
  */
 export function PriceLine() {
   const { bundle } = useFunnel();

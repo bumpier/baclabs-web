@@ -127,9 +127,9 @@ export function Hero() {
 
             <div className="animate-rise stagger-4 mt-8 flex flex-col gap-3 sm:flex-row">
               {/* "Choose your pack", not "Buy now": this scrolls to the pack
-                  selector, where DEFAULT_BUNDLE_ID preselects the 5-vial tier
+                  selector, where DEFAULT_BUNDLE_ID preselects the 10-vial tier
                   at a different price. A button that named the single-vial
-                  price and then opened a £21.99 selection was stating one
+                  price and then opened a £34.99 selection was stating one
                   price and delivering another. "from" is the accurate word
                   and keeps the figure that the title and meta description
                   brought the visitor here on. */}

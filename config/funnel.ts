@@ -89,7 +89,10 @@ export const BUNDLES: readonly Bundle[] = [
   // Prices (STRIPE_PRICE_SEVEN / _EIGHT) are no longer read and can be
   // archived in Stripe; the SKUs baclab-10ml-x7 and -x8 survive only in
   // historical order rows, which is exactly where they should stay.
-  { id: "ten", vials: 10, priceMinor: 3499, label: "Stock up", sku: "baclab-10ml-x10" },
+  // "Recommended", not "Most popular": the 5-pack is the best seller (9 Oct
+  // 2026), and a popularity badge is a factual claim. "Recommended" is the
+  // shop's own advice, which needs no sales figure behind it.
+  { id: "ten", vials: 10, priceMinor: 3499, label: "Recommended", sku: "baclab-10ml-x10" },
   { id: "twenty", vials: 20, priceMinor: 6499, label: "", sku: "baclab-10ml-x20" },
   { id: "fifty", vials: 50, priceMinor: 14999, label: "", sku: "baclab-10ml-x50" },
   { id: "hundred", vials: 100, priceMinor: 27499, label: "Wholesale", sku: "baclab-10ml-x100" },
@@ -103,8 +106,12 @@ export const BUNDLES: readonly Bundle[] = [
  */
 export const PRICES_UPDATED = "2026-09-07";
 
-/** Pre-selected tier in the purchase block. */
-export const DEFAULT_BUNDLE_ID: BundleId = "five";
+/**
+ * Pre-selected tier in the purchase block: the recommended 10-pack (9 Oct
+ * 2026). It is £5.01 short of free delivery on its own, which is exactly the
+ * gap the one-vial top-up (lib/upsell.ts) closes.
+ */
+export const DEFAULT_BUNDLE_ID: BundleId = "ten";
 
 /** Bundle quantity a single order may contain. Enforced server-side. */
 export const MIN_QUANTITY = 1;

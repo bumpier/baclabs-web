@@ -4,6 +4,7 @@ import { useId } from "react";
 import Link from "next/link";
 import {
   BUNDLES,
+  DEFAULT_BUNDLE_ID,
   DELIVERY,
   LOWEST_PRICE_BADGE,
   PRODUCT,
@@ -13,6 +14,9 @@ import {
   deliveryTimesSentence,
   drawsPerVial,
   formatMinor,
+  perVialMinor,
+  savingPercent,
+  shipsFree,
   type BundleId,
 } from "@/config/funnel";
 import { formatCutoffHour } from "@/lib/delivery-date";
@@ -42,8 +46,9 @@ import { planDeliverySentence } from "@/config/plans";
 /**
  * The home page's buy box, Shopify style (chosen 8 Oct 2026 from three
  * drafts). Title and price, then the switch between a monthly plan and a
- * one-time purchase. One-time shows every pack as a pill, the 5-pack badged
- * as the best seller, then how far the order is from free delivery and the
+ * one-time purchase. One-time shows every pack as a tile with its per-vial
+ * price, saving and free delivery, the recommended 10-pack preselected and
+ * the 5-pack badged as the best seller, then how far the order is from free delivery and the
  * step up to the next pack; the plan shows the plan picker. Then the
  * button (which offers that step once more before Stripe), the trust line,
  * the payment marks and the mailing-list signup. The delivery detail that used to sit open in the panel is one
@@ -89,15 +94,25 @@ export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
             <legend id={groupId} className="text-sm font-semibold text-ink">
               Pack size
             </legend>
+            {/* Each tile carries what a pack is worth against the others:
+                the price of one vial in it, the saving on buying singly, and
+                whether it ships free on its own. The pack's total stays in
+                the price line above, once. */}
             <div role="radiogroup" aria-labelledby={groupId} className="mt-4 grid grid-cols-3 gap-x-2 gap-y-4">
               {BUNDLES.map((b) => {
                 const selected = b.id === bundle.id;
+                const saving = savingPercent(b);
+                const free = shipsFree(b.priceMinor);
+                // The derived value claim first; otherwise the pack's own
+                // label ("Most popular", "Recommended"). The recommended
+                // pack's badge is filled, the rest outlined.
+                const badge = b.id === bestId ? "Best value" : b.label;
                 return (
                   <label
                     key={b.id}
                     className={[
-                      "relative flex min-h-[48px] cursor-pointer items-center justify-center rounded-full border px-3",
-                      "text-sm font-semibold text-ink transition-colors duration-150",
+                      "relative flex min-h-[76px] cursor-pointer flex-col items-center justify-center rounded-control border px-2 py-2.5 text-center",
+                      "transition-colors duration-150",
                       "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand",
                       selected
                         ? "border-brand bg-cta-tint ring-1 ring-brand"
@@ -113,15 +128,20 @@ export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
                       onChange={() => select(b.id as BundleId)}
                       className="sr-only"
                     />
-                    <span>
+                    <span className="text-sm font-semibold text-ink">
                       <span className="tabular">{b.vials}</span> {b.vials === 1 ? "vial" : "vials"}
                     </span>
-                    {b.id === "five" ? (
-                      <TopBadge>Most popular</TopBadge>
-                    ) : b.id === bestId ? (
-                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-brand/25 bg-paper px-2 text-[10px] font-semibold leading-4 text-brand-deep">
-                        Best value
-                      </span>
+                    <span className="tabular text-xs text-ink-soft">{formatMinor(perVialMinor(b))} each</span>
+                    {saving > 0 ? <span className="tabular text-[11px] text-ink-soft">Save {saving}%</span> : null}
+                    {free ? <span className="text-[11px] font-semibold text-brand-deep">Free delivery</span> : null}
+                    {badge ? (
+                      b.id === DEFAULT_BUNDLE_ID ? (
+                        <TopBadge>{badge}</TopBadge>
+                      ) : (
+                        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-brand/25 bg-paper px-2 text-[10px] font-semibold leading-4 text-brand-deep">
+                          {badge}
+                        </span>
+                      )
                     ) : null}
                   </label>
                 );
