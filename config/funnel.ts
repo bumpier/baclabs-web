@@ -788,6 +788,18 @@ export function trustBadges(): TrustBadge[] {
 }
 
 /**
+ * The step up to the next pack: a line under the pack choice, and a dialog
+ * between the checkout button and Stripe (lib/upsell.ts). It only ever
+ * offers a pack from BUNDLES at its own price, so it makes no claim the
+ * ladder does not already make. `enabled: false` removes both; `popup: false`
+ * keeps the line and checks out without the dialog.
+ */
+export const UPSELL = {
+  enabled: true,
+  popup: true,
+} as const;
+
+/**
  * Desktop-only, dismissible exit-intent offer. Disabled by default.
  * Never enable this with an invented discount — wire `promoCode` to a real
  * Stripe promotion code, which `allow_promotion_codes` will accept.

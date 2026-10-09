@@ -40,7 +40,14 @@ export interface EventParams {
   contentIds?: string[];
 }
 
-type EventName = "view_item" | "select_bundle" | "begin_checkout" | "purchase";
+type EventName =
+  | "view_item"
+  | "select_bundle"
+  | "begin_checkout"
+  | "purchase"
+  | "upsell_view"
+  | "upsell_accept"
+  | "upsell_decline";
 
 /** GA4 name and Meta name for each of our events. */
 const MAP: Record<EventName, { ga4: string; meta: string; metaStandard: boolean }> = {
@@ -50,6 +57,11 @@ const MAP: Record<EventName, { ga4: string; meta: string; metaStandard: boolean 
   select_bundle: { ga4: "select_item", meta: "SelectBundle", metaStandard: false },
   begin_checkout: { ga4: "begin_checkout", meta: "InitiateCheckout", metaStandard: true },
   purchase: { ga4: "purchase", meta: "Purchase", metaStandard: true },
+  // The pack step-up shown before checkout (lib/upsell.ts). GA4's promotion
+  // events fit it; Meta has none, so they go out custom.
+  upsell_view: { ga4: "view_promotion", meta: "UpsellView", metaStandard: false },
+  upsell_accept: { ga4: "select_promotion", meta: "UpsellAccept", metaStandard: false },
+  upsell_decline: { ga4: "upsell_decline", meta: "UpsellDecline", metaStandard: false },
 };
 
 /**

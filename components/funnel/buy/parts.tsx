@@ -1,11 +1,10 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useId } from "react";
 import Link from "next/link";
 import {
   BUNDLES,
   DELIVERY,
-  bundleById,
   MAX_QUANTITY,
   MIN_QUANTITY,
   STOCK_LEVEL,
@@ -17,13 +16,14 @@ import {
   otherDeliveryOptionsLine,
   perVialMinor,
   referencePriceMinor,
-  remainingForFreeDeliveryMinor,
   saleVisible,
   shipsFree,
 } from "@/config/funnel";
+import { upsellCopy, upsellFor } from "@/lib/upsell";
 import { useFunnel, type PurchaseMode } from "@/components/funnel/FunnelState";
 import { SaleTag } from "@/components/funnel/SaleTag";
-import { useCheckout } from "@/components/funnel/buy/useCheckout";
+import { useUpsellCheckout } from "@/components/funnel/buy/UpsellDialog";
+import { FreeDeliveryMeter } from "@/components/funnel/buy/FreeDeliveryMeter";
 
 /**
  * The pieces the compact buy boxes are built from. Each states ONE thing
@@ -91,20 +91,27 @@ export function ModeSwitch({
 }
 
 /**
- * Shown while the single vial is selected: the step up to the 5-pack, the
- * best seller, as the difference in price. Only ever points UP from one
- * vial; nobody buying 10 or more is steered down to 5.
+ * The step up from the current selection to the next pack (lib/upsell.ts):
+ * 1 vial to 5, 5 to 10, and on up the ladder, or several packs to the one
+ * pack that holds the same for less. Only ever points UP the ladder or to a
+ * cheaper way to the same vials; the same offer the checkout dialog makes.
  */
-export function FivePackNudge() {
-  const { bundle, select } = useFunnel();
-  const five = bundleById("five");
-  if (bundle.vials !== 1 || !five) return null;
+export function UpsellNudge() {
+  const { bundle, quantity, select, setQuantity } = useFunnel();
+  const offer = upsellFor(bundle, quantity);
+  if (!offer) return null;
   return (
     <p className="rounded-control bg-brand-tint px-3 py-2 text-sm text-brand-deep">
-      <span className="tabular">{five.vials - 1}</span> more vials for{" "}
-      <span className="tabular font-semibold">{formatMinor(five.priceMinor - bundle.priceMinor)}</span> more.{" "}
-      <button type="button" onClick={() => select("five")} className="font-semibold underline underline-offset-4">
-        Switch to {five.vials} vials
+      {upsellCopy(offer).line}{" "}
+      <button
+        type="button"
+        onClick={() => {
+          select(offer.to.bundle.id);
+          setQuantity(1);
+        }}
+        className="font-semibold underline underline-offset-4"
+      >
+        Switch to {offer.to.vials} vials
       </button>
     </p>
   );
@@ -146,47 +153,37 @@ export function PriceLine() {
 }
 
 /**
- * Delivery in one plain line: what it costs on this order and how far it is
- * from free. The same functions the Stripe session calls, so the line and
- * the charge cannot drift apart.
+ * Delivery for this order: how far it is from free, as a line and a bar
+ * (FreeDeliveryMeter), then what it costs and the other options. The same
+ * functions the Stripe session calls, so the line and the charge cannot
+ * drift apart.
  */
 export function DeliveryLine({ className = "" }: { className?: string }) {
   const { totalMinor } = useFunnel();
-  const toFree = remainingForFreeDeliveryMinor(totalMinor);
   const fee = deliveryMinorFor(totalMinor);
   const other = otherDeliveryOptionsLine(totalMinor);
 
-  let line: ReactNode;
   if (DELIVERY.mode === "unknown") {
-    line = "Delivery calculated at checkout.";
-  } else if (shipsFree(totalMinor)) {
-    line = (
-      <>
-        <span className="font-semibold text-ink">Free {freeDeliveryName()}</span> on this order.
-      </>
-    );
-  } else if (toFree > 0) {
-    line = (
-      <>
-        Delivery <span className="tabular">{formatMinor(fee)}</span>. Add{" "}
-        <span className="tabular font-semibold text-ink">{formatMinor(toFree)}</span> more for free{" "}
-        {freeDeliveryName()}.
-      </>
-    );
-  } else {
-    line = (
-      <>
-        Delivery <span className="tabular">{formatMinor(fee)}</span>.
-      </>
-    );
+    return <p className={`text-sm text-ink-soft ${className}`}>Delivery calculated at checkout.</p>;
   }
 
+  const notes = [
+    !shipsFree(totalMinor) && fee > 0 ? `Delivery ${formatMinor(fee)} on this order.` : "",
+    other ? `Also at checkout: ${other}.` : "",
+    VAT.statement,
+  ].filter(Boolean);
+
   return (
-    <p aria-live="polite" className={`text-sm text-ink-soft ${className}`}>
-      {line}
-      {other ? ` Also at checkout: ${other}.` : null}
-      {VAT.statement ? ` ${VAT.statement}` : null}
-    </p>
+    <div className={className}>
+      {DELIVERY.mode === "threshold" ? (
+        <FreeDeliveryMeter goodsMinor={totalMinor} />
+      ) : shipsFree(totalMinor) ? (
+        <p className="text-sm text-ink">
+          <span className="font-semibold">Free {freeDeliveryName()}</span> on this order.
+        </p>
+      ) : null}
+      {notes.length > 0 ? <p className="mt-2 text-xs text-ink-soft">{notes.join(" ")}</p> : null}
+    </div>
   );
 }
 
@@ -238,7 +235,7 @@ export function QuantityStepper() {
  */
 export function CheckoutRow({ cryptoEnabled, stepper = true }: { cryptoEnabled: boolean; stepper?: boolean }) {
   const { bundle, quantity, totalMinor } = useFunnel();
-  const { checkout, pending, error } = useCheckout();
+  const { start, pending, error, dialog } = useUpsellCheckout();
   const known = DELIVERY.mode !== "unknown";
   const payable = totalMinor + deliveryMinorFor(totalMinor);
   const outOfStock = STOCK_LEVEL !== null && STOCK_LEVEL <= 0;
@@ -254,7 +251,7 @@ export function CheckoutRow({ cryptoEnabled, stepper = true }: { cryptoEnabled: 
         {stepper ? <QuantityStepper /> : null}
         <button
           type="button"
-          onClick={checkout}
+          onClick={start}
           disabled={pending || outOfStock}
           aria-busy={pending}
           className="btn-cta min-w-0 flex-1 whitespace-nowrap"
@@ -298,6 +295,8 @@ export function CheckoutRow({ cryptoEnabled, stepper = true }: { cryptoEnabled: 
           {error}
         </p>
       ) : null}
+
+      {dialog}
 
       {cryptoEnabled ? (
         <p className="mt-2 text-xs">

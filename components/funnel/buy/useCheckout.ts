@@ -1,22 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { PRODUCT } from "@/config/funnel";
+import { useCallback, useEffect, useState } from "react";
+import { PRODUCT, totalMinor as packsTotalMinor, type Bundle } from "@/config/funnel";
 import { trackEvent } from "@/lib/analytics";
 import { hasTrackingConsent } from "@/components/consent/consent-store";
 import { useFunnel } from "@/components/funnel/FunnelState";
 
 /**
+ * Back from Stripe, a page restored from the back/forward cache would still
+ * say "Redirecting…" with its button disabled. Clear it when that happens.
+ */
+export function useResetOnRestore(reset: () => void) {
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) reset();
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, [reset]);
+}
+
+/**
  * Pay for the current selection: the analytics event, the POST to
  * /api/checkout and the redirect to Stripe. Lifted out of the old
  * VialChooser so the buy box keeps charging exactly as it did.
+ *
+ * `checkoutPack` pays for a pack other than the selection: the upsell
+ * dialog's offer, which the buy box never switches to.
  */
 export function useCheckout() {
-  const { bundle, quantity, totalMinor } = useFunnel();
+  const funnel = useFunnel();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useResetOnRestore(useCallback(() => setPending(false), []));
 
-  async function checkout() {
+  async function checkoutPack(bundle: Bundle, quantity: number) {
+    const totalMinor = packsTotalMinor(bundle, quantity);
     setError(null);
     setPending(true);
     trackEvent("begin_checkout", {
@@ -60,7 +79,12 @@ export function useCheckout() {
     }
   }
 
-  return { checkout, pending, error };
+  // Takes no arguments, so it can be an onClick handler as it stands.
+  function checkout() {
+    return checkoutPack(funnel.bundle, funnel.quantity);
+  }
+
+  return { checkout, checkoutPack, pending, error };
 }
 
 /**
@@ -70,6 +94,7 @@ export function useCheckout() {
 export function usePlanCheckout(plan: { key: string; pack: { id: string; sku: string; vials: number }; months: number; totalMinor: number }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useResetOnRestore(useCallback(() => setPending(false), []));
 
   async function checkout() {
     setError(null);

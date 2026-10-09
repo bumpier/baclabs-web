@@ -15,7 +15,7 @@ import {
 } from "@/config/funnel";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { SaleTag } from "@/components/funnel/SaleTag";
-import { useCheckout } from "@/components/funnel/buy/useCheckout";
+import { useUpsellCheckout } from "@/components/funnel/buy/UpsellDialog";
 import { planHeadline } from "@/components/funnel/buy/plans";
 import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
 
@@ -23,8 +23,9 @@ import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
  * Mobile-only bottom bar: what is currently selected, and the button that
  * pays for it.
  *
- * "Buy now" goes STRAIGHT to Stripe with the pack and quantity the bar
- * states, through the same useCheckout the buy box uses. It used to scroll
+ * "Buy now" goes to Stripe with the pack and quantity the bar states,
+ * through the same checkout the buy box uses, step-up offer included
+ * (useUpsellCheckout). It used to scroll
  * back up to the buy box, which put a second tap and a screen of scrolling
  * between a decided customer and the payment page. While the customer is
  * looking at a monthly plan it does the opposite: it names the plan and
@@ -48,7 +49,9 @@ import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
  */
 export function StickyBuyBar() {
   const { bundle, quantity, totalMinor, mode } = useFunnel();
-  const { checkout, pending, error } = useCheckout();
+  // The pack step-up comes up first, as from the buy box's own button. Its
+  // dialog goes to <body>, outside this bar's hidden/shown state.
+  const { start, pending, error, dialog } = useUpsellCheckout();
   const heroCtaPassed = useHeroCtaPassed();
   const [buyBlockVisible, setBuyBlockVisible] = useState(false);
 
@@ -154,7 +157,7 @@ export function StickyBuyBar() {
         ) : (
           <button
             type="button"
-            onClick={checkout}
+            onClick={start}
             disabled={pending || outOfStock}
             aria-busy={pending}
             className="btn-cta !min-h-[48px] !w-auto shrink-0 !px-6"
@@ -164,6 +167,7 @@ export function StickyBuyBar() {
           </button>
         )}
       </div>
+      {dialog}
     </div>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { DELIVERY, bundleById, formatMinor, type Bundle } from "@/config/funnel";
+import { DELIVERY, type Bundle } from "@/config/funnel";
 import { packByBundleId, packPath } from "@/config/products";
 import { formatCutoffHour } from "@/lib/delivery-date";
+import { upsellCopy, upsellFor } from "@/lib/upsell";
 import { useFunnel } from "@/components/funnel/FunnelState";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
 import { WelcomeVialPanel } from "@/components/mailing-list/WelcomeVialPanel";
@@ -22,8 +23,9 @@ import { CheckMark, CheckoutRow, DeliveryLine, PriceLine } from "@/components/fu
  *
  * So this panel sells exactly one tier. Quantity is a multiple of THIS pack.
  * It is built from the home page's parts, so it says the same things the
- * same way: the price once, the total on the button, one delivery line, the
- * trust line, and the mailing-list signup open. No totals table and no
+ * same way: the price once, how far it is from free delivery, the step up
+ * to the next pack, the total on the button, the trust line, and the
+ * mailing-list signup open. No totals table and no
  * tinted boxes: that was the "muddy" panel both pages used to carry.
  */
 export function PackBuy({
@@ -39,8 +41,9 @@ export function PackBuy({
   // The provider is mounted with this pack's tier, so `bundle` here and the
   // context agree. Quantity is the only thing the customer changes.
   const { quantity } = useFunnel();
-  const five = bundleById("five");
-  const fivePage = five ? packByBundleId(five.id) : undefined;
+  // The step up to the next pack, as the home page offers it (lib/upsell.ts).
+  const offer = upsellFor(bundle, quantity);
+  const offerPage = offer ? packByBundleId(offer.to.bundle.id) : undefined;
 
   // No "Cheapest in the UK" here: that claim lives only on the home page,
   // beside the guarantee that substantiates it.
@@ -57,15 +60,16 @@ export function PackBuy({
         </p>
       ) : null}
       <PriceLine />
+      <DeliveryLine className="mt-5" />
 
-      {/* The step up from one vial to the best seller. A link, not a
-          switch: on a pack page the pack is the subject. */}
-      {bundle.vials === 1 && five && fivePage ? (
+      {/* The step up to the next pack. A link, not a switch: on a pack page
+          the pack is the subject. The checkout button offers the same step
+          once more, and pays for it directly. */}
+      {offer && offerPage ? (
         <p className="mt-4 rounded-control bg-brand-tint px-3 py-2 text-sm text-brand-deep">
-          <span className="tabular">{five.vials - bundle.vials}</span> more vials for{" "}
-          <span className="tabular font-semibold">{formatMinor(five.priceMinor - bundle.priceMinor)}</span> more.{" "}
-          <Link href={packPath(fivePage)} className="font-semibold underline underline-offset-4">
-            See the {five.vials}-vial pack
+          {upsellCopy(offer).line}{" "}
+          <Link href={packPath(offerPage)} className="font-semibold underline underline-offset-4">
+            See the {offer.to.vials}-vial pack
           </Link>
         </p>
       ) : null}
@@ -73,7 +77,6 @@ export function PackBuy({
       <div className="mt-5">
         <CheckoutRow cryptoEnabled={cryptoEnabled} />
       </div>
-      <DeliveryLine className="mt-4" />
 
       <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
         {checks.map((label) => (

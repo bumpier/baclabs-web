@@ -23,10 +23,10 @@ import {
   CheckMark,
   CheckoutRow,
   DeliveryLine,
-  FivePackNudge,
   ModeSwitch,
   PlusMark,
   PriceLine,
+  UpsellNudge,
 } from "@/components/funnel/buy/parts";
 import {
   PlanCheckoutRow,
@@ -43,9 +43,10 @@ import { planDeliverySentence } from "@/config/plans";
  * The home page's buy box, Shopify style (chosen 8 Oct 2026 from three
  * drafts). Title and price, then the switch between a monthly plan and a
  * one-time purchase. One-time shows every pack as a pill, the 5-pack badged
- * as the best seller; the plan shows the plan picker. Then the button, one
- * delivery line, the trust line, the payment marks and the mailing-list
- * signup. The delivery detail that used to sit open in the panel is one
+ * as the best seller, then how far the order is from free delivery and the
+ * step up to the next pack; the plan shows the plan picker. Then the
+ * button (which offers that step once more before Stripe), the trust line,
+ * the payment marks and the mailing-list signup. The delivery detail that used to sit open in the panel is one
  * collapsed row at the foot.
  */
 export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
@@ -127,13 +128,15 @@ export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
               })}
             </div>
           </fieldset>
+          {/* How close the order is to free delivery, then the step up
+              that gets it there, then the button. */}
+          <DeliveryLine className="mt-5" />
           <div className="mt-4 empty:hidden">
-            <FivePackNudge />
+            <UpsellNudge />
           </div>
-          <div className="mt-6">
+          <div className="mt-5">
             <CheckoutRow cryptoEnabled={cryptoEnabled} />
           </div>
-          <DeliveryLine className="mt-4" />
         </>
       ) : (
         <>

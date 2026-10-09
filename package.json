@@ -18,6 +18,7 @@
     "export:wxr": "tsx scripts/export-wxr.ts",
     "test:consent": "tsx scripts/test-consent.ts",
     "test:sale": "tsx scripts/test-sale.ts",
+    "test:upsell": "tsx scripts/test-upsell.ts",
     "test:meta": "tsx scripts/test-meta-capi.ts",
     "test:inventory": "tsx scripts/test-inventory.ts",
     "test:shipping": "tsx scripts/test-shipping.ts",
