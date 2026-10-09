@@ -11,9 +11,12 @@ crypto methods simply do not appear at checkout.
 
 1. In the Stripe Dashboard, copy your **Secret key** (`sk_live_…`).
 2. Add a webhook endpoint pointing at
-   `https://baclab.co.uk/api/webhooks/stripe`, subscribed to the single
-   event **`checkout.session.completed`**. Copy its **Signing secret**
-   (`whsec_…`).
+   `https://baclab.co.uk/api/webhooks/stripe`, subscribed to two events:
+   **`checkout.session.completed`** (marks orders paid) and
+   **`checkout.session.expired`** (emails a mailing-list subscriber who left
+   Stripe's page without paying, once, with a link back to their basket:
+   lib/payments/recovery.ts). Copy its **Signing secret** (`whsec_…`).
+   Without the second event nothing breaks; the reminders just never go.
 3. On the server, edit `/srv/baclab/.env.local`:
 
    ```

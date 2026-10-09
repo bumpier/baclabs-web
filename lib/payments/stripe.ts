@@ -100,7 +100,18 @@ export interface BundleCheckoutParams {
    * is charged.
    */
   welcome?: { qty: number; email?: string };
+  /**
+   * A mailing-list subscriber started this checkout (lib/payments/recovery.ts),
+   * so it can be recovered if they leave: the session carries Stripe's
+   * recovery link and expires after RECOVERABLE_SESSION_MINUTES, when the
+   * reminder goes. Every other session keeps Stripe's 24 hours, since nobody
+   * could be reminded sooner.
+   */
+  recoverable?: boolean;
 }
+
+/** How long a recoverable Checkout Session stays open (Stripe's minimum is 30). */
+export const RECOVERABLE_SESSION_MINUTES = 60;
 
 /**
  * Create a Checkout Session for one bundle tier.
@@ -184,6 +195,12 @@ export async function createBundleCheckout(
           : []),
       ],
       ...(params.welcome?.email ? { customer_email: params.welcome.email } : {}),
+      ...(params.recoverable
+        ? {
+            expires_at: Math.floor(Date.now() / 1000) + RECOVERABLE_SESSION_MINUTES * 60,
+            after_expiration: { recovery: { enabled: true, allow_promotion_codes: true } },
+          }
+        : {}),
       client_reference_id: orderId,
       metadata: { orderId, bundleId: params.bundleId, extraVials: String(params.extras?.quantity ?? 0) },
       // Also on the PaymentIntent, where refunds and disputes are worked.

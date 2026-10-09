@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { formatPrice, type Currency } from "@/config/brand";
 import { getPaymentConfig } from "@/lib/payments/config";
 import { fulfillPaidOrder } from "@/lib/payments/fulfillment";
+import { handleExpiredCheckout } from "@/lib/payments/recovery";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,30 @@ async function complete(orderId: string, sessionRef: string, confirmed: boolean)
   redirect("/checkout?cancelled=1");
 }
 
+/**
+ * The session expires unpaid, as checkout.session.expired would report it.
+ * The recovery link points back at this simulator, so the email, the resume
+ * route and the clear-up can all be tried without Stripe keys.
+ */
+async function abandon(orderId: string, sessionRef: string) {
+  "use server";
+  if (!simulatorEnabled()) notFound();
+  const recoveredRef = `${sessionRef}_r`;
+  const outcome = await handleExpiredCheckout({
+    id: sessionRef,
+    metadata: { orderId },
+    client_reference_id: orderId,
+    after_expiration: {
+      recovery: {
+        url: `/dev/stripe?session=${recoveredRef}&order=${orderId}`,
+        expires_at: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+      },
+    },
+  });
+  console.log(`[dev stripe] session ${sessionRef} abandoned: ${outcome}`);
+  redirect("/#buy");
+}
+
 export default async function StripeSimulatorPage({
   searchParams,
 }: {
@@ -38,6 +63,7 @@ export default async function StripeSimulatorPage({
 
   const payAction = complete.bind(null, orderId, session, true);
   const failAction = complete.bind(null, orderId, session, false);
+  const abandonAction = abandon.bind(null, orderId, session);
 
   return (
     <div className="mx-auto max-w-md px-4 py-20 sm:px-6">
@@ -80,6 +106,11 @@ export default async function StripeSimulatorPage({
               className="w-full rounded-full border border-red-200 px-6 py-3 text-sm font-semibold text-red-700 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
             >
               Simulate failed payment
+            </button>
+          </form>
+          <form action={abandonAction}>
+            <button type="submit" className="btn-quiet w-full">
+              Simulate leaving without paying (session expires)
             </button>
           </form>
         </div>

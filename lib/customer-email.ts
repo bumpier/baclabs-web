@@ -6,7 +6,7 @@ import { welcomeLink } from "@/lib/mailing-list";
 import { canonicalOrigin } from "@/lib/site-url";
 import { LITERAL } from "@/lib/theme";
 import { brand, formatPrice, type Currency } from "@/config/brand";
-import { formatSaleDateTime, saleTime } from "@/lib/saleTime";
+import { formatSaleDateTime, formatShopDay, saleTime, shopDayKey } from "@/lib/saleTime";
 import { orderKind } from "@/lib/plans/kinds";
 import { boxDueDay } from "@/lib/plans/schedule";
 import { nudgePlanPack, upgradeEligibility } from "@/lib/plans/upgrade";
@@ -531,6 +531,47 @@ export async function sendRepurchaseNudgeEmail(order: Order, items: OrderItem[])
     ),
     { headers: marketingHeaders(email) }
   );
+}
+
+/**
+ * The one email to a mailing-list subscriber who left Stripe's page without
+ * paying (lib/payments/recovery.ts decides who and when). Its button goes
+ * through /api/checkout/resume, which picks Stripe's recovery link or a
+ * fresh checkout. No discount: a code for walking away teaches walking away.
+ * Sent with send(), not logAndSend: the order has no customer email until it
+ * is paid, and the claim on the order (recoveryEmailSentAt) is the record.
+ * Never throws.
+ */
+export async function sendCheckoutRecoveryEmail(order: Order, to: string, linkExpiresAt: Date): Promise<boolean> {
+  try {
+    const offer = reorderOffer(order.items);
+    const vials = offer ? `${offer.vials} ${offer.vials === 1 ? "vial" : "vials"}` : "";
+    const packs = offer
+      ? `${offer.quantity > 1 ? `${offer.quantity} × ` : ""}${offer.bundle.vials}-vial pack${offer.extraVials > 0 ? ` + ${offer.extraVials} single ${offer.extraVials === 1 ? "vial" : "vials"}` : ""}`
+      : "";
+    const gift = order.items.includes('"welcome":true') ? ", and your free welcome vial" : "";
+    const basket = offer
+      ? `<p style="margin:16px 0 0"><strong>${escapeHtml(packs)}</strong>, ${formatMinor(Math.round(Number(order.totalAmount) * 100))}${gift}</p>`
+      : "";
+    await send(
+      to,
+      offer ? `Your ${vials} are still in your basket` : `Your ${brand.name} basket is still here`,
+      layout(
+        `<p>Hi,</p>
+        <p>You started an order earlier but didn't finish checking out, so nothing has been charged. We've kept your basket:</p>
+        ${basket}
+        <p style="margin:24px 0 0">${ctaButton(`${siteUrl()}/api/checkout/resume?o=${encodeURIComponent(order.id)}`, "Complete my order")}</p>
+        <p style="font-size:13px;color:${LITERAL.inkSoft};margin:12px 0 0">The button takes you back to Stripe's secure payment page as you left it, and works until ${formatShopDay(shopDayKey(linkExpiresAt))}. If something went wrong, or you have a question first, just reply to this email.</p>
+        ${marketingFooter(to)}`,
+        { preheader: "Nothing has been charged." }
+      ),
+      { headers: marketingHeaders(to) }
+    );
+    return true;
+  } catch (err) {
+    console.error(`[email] checkout recovery email failed for order ${order.id}`, err);
+    return false;
+  }
 }
 
 /**

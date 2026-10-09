@@ -101,6 +101,12 @@ export default async function AdminOrderDetailPage({
           ) : (
             <>Not paid · checkout started {formatSaleDateTime(order.createdAt)} UK time</>
           )}
+          {/* Checkout recovery (lib/payments/recovery.ts). */}
+          {order.recoveredAt ? (
+            <> · <span className="font-semibold text-ink">recovered by email</span></>
+          ) : order.recoveryEmailSentAt ? (
+            <> · reminder emailed {formatSaleDateTime(order.recoveryEmailSentAt)}</>
+          ) : null}
           {order.shippedAt && (
             <>
               {" "}

@@ -124,6 +124,22 @@ model Order {
   // The plan this order paid for, when it paid for one (Plan.purchaseOrderId).
   planPurchase Plan? @relation("PlanPurchase")
 
+  // Abandoned-checkout recovery (lib/payments/recovery.ts). A UK customer
+  // who leaves Stripe's page can only be emailed if we already know them:
+  // Stripe returns no email for an expired session without its consent box,
+  // which is US-only. So: the mailing-list subscriber recognised by their
+  // cookie when this card checkout began; Stripe's recovery link for the
+  // expired session and when it stops working; who was emailed and when
+  // (claimed before sending, so once per order); and when a recovered
+  // session was paid. A pending order with a link out stays until it expires
+  // (lib/payments/abandoned.ts).
+  checkoutSubscriberId String?
+  recoveryUrl          String?
+  recoveryExpiresAt    DateTime?
+  recoveryEmail        String?
+  recoveryEmailSentAt  DateTime?
+  recoveredAt          DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -135,6 +151,11 @@ model Order {
   // by email.
   @@index([customerEmail])
   @@index([kind])
+  // A recovered Stripe session is found by the expired one it copies, which
+  // is the order's paymentRef until payment; recovery emails are rate-limited
+  // per address.
+  @@index([paymentRef])
+  @@index([recoveryEmail, recoveryEmailSentAt])
   @@unique([planId, planBox])
 }
 

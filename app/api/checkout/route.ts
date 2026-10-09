@@ -20,6 +20,7 @@ import { getInventoryMode } from "@/lib/inventory/mode";
 import { canSupply } from "@/lib/inventory/store";
 import { VIAL_SKU_CODE } from "@/lib/inventory/demand";
 import { buildOrderItems } from "@/lib/order-items";
+import { recoverySubscriber } from "@/lib/payments/recovery";
 import {
   SUBSCRIBER_COOKIE,
   cookieFrom,
@@ -218,6 +219,9 @@ export async function POST(req: Request) {
     ];
 
     const isCard = input.method === "card";
+    // A subscriber leaving Stripe's page can be reminded (recovery.ts); for
+    // anyone else Stripe hands back no email, so there is no one to remind.
+    const recoverFor = isCard ? await recoverySubscriber(req.headers.get("cookie")) : null;
     // Card orders give theirs on Stripe's page; the webhook records it.
     const instructions =
       input.method !== "card" && deliveryChoiceEnabled() ? cleanDeliveryInstructions(input.deliveryInstructions) : null;
@@ -246,6 +250,7 @@ export async function POST(req: Request) {
         paymentMethod: input.method,
         paymentProvider: provider,
         ...(welcome ? { welcomeSubscriberId: welcome.id } : {}),
+        ...(recoverFor ? { checkoutSubscriberId: recoverFor.id } : {}),
         ...(delivery ? { deliveryOption: delivery.option, deliveryMinor: delivery.minor } : {}),
         ...(instructions ? { deliveryInstructions: instructions } : {}),
         // Read now: the payment webhook comes from the provider's servers and
@@ -304,6 +309,7 @@ export async function POST(req: Request) {
         orderValueMinor: grandTotalMinor,
         shippingCountries: SHIPPING_COUNTRIES,
         origin,
+        recoverable: recoverFor !== null,
         ...(welcome
           ? {
               welcome: {

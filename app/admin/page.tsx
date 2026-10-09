@@ -89,10 +89,29 @@ export default async function AdminOverviewPage() {
     { status: "delivered", label: statusLabel("delivered"), highlight: false },
   ];
 
-  const cards = [
+  // Checkout recovery (lib/payments/recovery.ts) over the last 30 days: the
+  // reminders sent, and the orders paid through their link (every recovered
+  // session came from one of those emails, so each is credited to it).
+  const recoverySince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [remindersSent, recovered] = await Promise.all([
+    prisma.order.count({ where: { recoveryEmailSentAt: { gte: recoverySince } } }),
+    prisma.order.aggregate({
+      where: { recoveredAt: { gte: recoverySince }, status: { in: SOLD_STATUSES } },
+      _count: { id: true },
+      _sum: { amountPaidMinor: true },
+    }),
+  ]);
+
+  const cards: { label: string; value: string; href: string; note?: string }[] = [
     { label: "Taken today", value: formatPrice(takingsToday.summary.takenMinor / 100, "GBP"), href: "/admin/takings" },
     { label: "Taken, all time", value: formatPrice(takenAllTimeMinor / 100, "GBP"), href: "/admin/finance?range=this-year" },
     { label: "Active products", value: String(productCount), href: "/admin/products" },
+    {
+      label: "Recovered checkouts, 30 days",
+      value: formatPrice((recovered._sum.amountPaidMinor ?? 0) / 100, "GBP"),
+      href: "/admin/orders",
+      note: `${recovered._count.id} of ${remindersSent} reminder${remindersSent === 1 ? "" : "s"} paid`,
+    },
   ];
 
   // ── Analytics data
@@ -168,7 +187,7 @@ export default async function AdminOverviewPage() {
         ))}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((c) => (
           <Link
             key={c.label}
@@ -179,6 +198,7 @@ export default async function AdminOverviewPage() {
               {c.label}
             </p>
             <p className="mt-2 font-display text-3xl font-medium text-brand-deep">{c.value}</p>
+            {c.note ? <p className="mt-1 text-xs text-ink-soft">{c.note}</p> : null}
           </Link>
         ))}
       </div>

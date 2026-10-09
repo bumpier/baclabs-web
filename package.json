@@ -21,6 +21,7 @@
     "test:upsell": "tsx scripts/test-upsell.ts",
     "test:pricing": "tsx scripts/test-order-pricing.ts",
     "test:reorder": "tsx scripts/test-reorder.ts",
+    "test:recovery": "tsx scripts/test-recovery.ts",
     "test:meta": "tsx scripts/test-meta-capi.ts",
     "test:inventory": "tsx scripts/test-inventory.ts",
     "test:shipping": "tsx scripts/test-shipping.ts",

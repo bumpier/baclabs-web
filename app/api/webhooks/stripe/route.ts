@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { chosenDeliveryOption, deliveryInstructionsFrom, verifyStripeEvent } from "@/lib/payments/stripe";
 import { cleanDeliveryInstructions } from "@/lib/smarttrack/payload";
 import { fulfillPaidOrder } from "@/lib/payments/fulfillment";
+import { handleExpiredCheckout, orderForSession } from "@/lib/payments/recovery";
 
 // Stripe SDK (crypto) + Prisma (DB) — Edge can't run these.
 export const runtime = "nodejs";
@@ -71,6 +72,17 @@ export async function POST(req: Request) {
   }
 
   try {
+    // A session left unpaid until it expired: remind the subscriber behind
+    // it, once (lib/payments/recovery.ts). Only sessions made recoverable at
+    // checkout carry a recovery link; the rest are acknowledged and left to
+    // the nightly clear-up.
+    if (event.type === "checkout.session.expired") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const outcome = await handleExpiredCheckout(session);
+      console.log(`[stripe] session ${session.id} expired: ${outcome}`);
+      return NextResponse.json({ received: true, recovery: outcome });
+    }
+
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
 
@@ -79,17 +91,16 @@ export async function POST(req: Request) {
         return NextResponse.json({ received: true, ignored: "not-paid" });
       }
 
-      const orderId = session.metadata?.orderId ?? session.client_reference_id ?? undefined;
-      if (!orderId) {
-        console.warn(`[stripe] session ${session.id} carried no orderId — acknowledging`);
-        return NextResponse.json({ received: true, ignored: "no-order-id" });
-      }
-
-      const order = await prisma.order.findUnique({ where: { id: orderId } });
+      // The order id the session carries, or, for a session recovered from
+      // an expired one, the order that one belonged to (orderForSession).
+      const order = await orderForSession(session);
       if (!order) {
-        console.warn(`[stripe] unknown order ${orderId} — acknowledging`);
+        console.warn(
+          `[stripe] session ${session.id} names no known order (${session.metadata?.orderId ?? session.client_reference_id ?? "no orderId"}) — acknowledging`
+        );
         return NextResponse.json({ received: true, ignored: "unknown-order" });
       }
+      const orderId = order.id;
 
       // Reconcile what Stripe actually captured against what we recorded.
       // This does not block fulfilment — the money is already taken, and
@@ -129,6 +140,9 @@ export async function POST(req: Request) {
           ...(deliveryInstructions ? { deliveryInstructions } : {}),
           ...(email ? { customerEmail: email } : {}),
           ...(name ? { customerName: name } : {}),
+          // Paid through the link in a recovery email: credited to it on the
+          // dashboard. Only those emails carry the link.
+          ...(session.recovered_from ? { recoveredAt: new Date() } : {}),
           ...(phone ? { customerPhone: phone } : {}),
           ...(address
             ? {

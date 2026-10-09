@@ -23,6 +23,10 @@ import { GATEWAY_PROVIDER, parsePendingNote } from "@/lib/crypto-gateway";
  *   an hour, long enough that the checkout is not still in progress.
  * - Anything else that cannot be asked (the dev Stripe simulator, a crypto
  *   order with no window recorded): after three days.
+ * - Whatever the above says: an order whose recovery email has gone out
+ *   (lib/payments/recovery.ts) is kept until its link stops working, plus a
+ *   day, because Stripe's link opens a copy of the expired session that
+ *   pays this order, and that copy can be opened on the link's last day.
  *
  * Run nightly by /api/cron/clear-pending, and on demand from the orders page.
  */
@@ -31,6 +35,8 @@ const HOUR_MS = 60 * 60 * 1000;
 const NO_PAYMENT_GRACE_MS = HOUR_MS;
 const CRYPTO_GRACE_MS = 24 * HOUR_MS;
 const FALLBACK_AGE_MS = 72 * HOUR_MS;
+/** A recovered session opened on the link's last day stays open 24 hours, then the webhook. */
+const RECOVERY_GRACE_MS = 25 * HOUR_MS;
 
 export type StripeSessionStatus = "open" | "complete" | "expired" | null;
 
@@ -45,6 +51,9 @@ export interface PendingOrder {
   paymentRef: string | null;
   notes: string | null;
   createdAt: Date;
+  /** Set when a recovery email went out, with when its link stops working. */
+  recoveryEmailSentAt?: Date | null;
+  recoveryExpiresAt?: Date | null;
 }
 
 /** Whether one pending order can be cleared. `stripeStatus` looks up a Checkout Session. */
@@ -54,6 +63,14 @@ export async function abandonedVerdict(
   stripeStatus: (sessionId: string) => Promise<StripeSessionStatus>
 ): Promise<Verdict> {
   const age = now.getTime() - order.createdAt.getTime();
+
+  if (
+    order.recoveryEmailSentAt &&
+    order.recoveryExpiresAt &&
+    now.getTime() < order.recoveryExpiresAt.getTime() + RECOVERY_GRACE_MS
+  ) {
+    return keep("recovery link still open");
+  }
 
   if (!order.paymentRef) {
     return age > NO_PAYMENT_GRACE_MS ? CLEAR : keep("checkout still in progress");
@@ -101,7 +118,15 @@ export interface ClearResult {
 export async function clearAbandonedCheckouts(now = new Date()): Promise<ClearResult> {
   const pending = await prisma.order.findMany({
     where: { status: "pending" },
-    select: { id: true, paymentProvider: true, paymentRef: true, notes: true, createdAt: true },
+    select: {
+      id: true,
+      paymentProvider: true,
+      paymentRef: true,
+      notes: true,
+      createdAt: true,
+      recoveryEmailSentAt: true,
+      recoveryExpiresAt: true,
+    },
     orderBy: { createdAt: "asc" },
   });
 

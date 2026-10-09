@@ -242,8 +242,9 @@ unless the Price is GBP and its amount matches the bundle exactly.
 ### 5b. Webhook
 
 Point a Stripe webhook endpoint at `https://YOUR_DOMAIN/api/webhooks/stripe`,
-subscribed to `checkout.session.completed`, and put its signing secret in
-`STRIPE_WEBHOOK_SECRET`. Restart afterwards
+subscribed to `checkout.session.completed` and `checkout.session.expired`
+(the second sends the abandoned-checkout reminder to mailing-list
+subscribers), and put its signing secret in `STRIPE_WEBHOOK_SECRET`. Restart afterwards
 (`docker compose --env-file .env.local up -d`). Without it, payments succeed at
 Stripe and **no order is ever marked paid** — you hold money with no record of
 what to ship.
