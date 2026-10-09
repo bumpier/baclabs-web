@@ -26,7 +26,7 @@
     "test:takings": "tsx scripts/test-takings.ts",
     "test:finance": "tsx scripts/test-finance.ts",
     "test:tracking": "tsx scripts/test-tracking.ts",
-    "test:recheck": "tsx scripts/test-recheck-delivered.ts",
+    "test:recheck": "tsx scripts/test-recheck-orders.ts",
     "test:plans": "NEXT_PUBLIC_DELIVERY_CHOICE=on tsx scripts/test-plans.ts",
     "preview:smarttrack": "tsx scripts/preview-smarttrack.ts",
     "preview:reminders": "tsx scripts/preview-welcome-reminders.ts",

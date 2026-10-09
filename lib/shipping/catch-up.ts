@@ -25,7 +25,7 @@ import { PARCEL_KINDS } from "@/lib/plans/kinds";
  * notScanned is listed but can never be closed: its labels are known to
  * the carrier, and the carrier has never had the parcel. Closing it marked
  * orders delivered whose label had only been made (put right by
- * scripts/recheck-delivered.ts), so only tracking moves those on now.
+ * scripts/recheck-orders.ts), so only tracking moves those on now.
  */
 
 export const CATCH_UP_AFTER_DAYS = 3;

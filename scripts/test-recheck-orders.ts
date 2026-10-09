@@ -1,6 +1,6 @@
 /**
- * Test suite for putting right orders wrongly marked delivered
- * (lib/shipping/delivered-recheck.ts) and for reading Amazon's own tracker
+ * Test suite for checking orders against their parcels' tracking
+ * (lib/shipping/order-recheck.ts) and for reading Amazon's own tracker
  * (lib/shipping/amazon-tracking.ts). Run with `npm run test:recheck`.
  * Exits non-zero on any failure, like scripts/test-tracking.ts.
  *
@@ -9,7 +9,7 @@
  * shape is unconfirmed, which is why unreadable replies must come out null.
  */
 import { amazonStageOfCode, parseAmazonTracking } from "@/lib/shipping/amazon-tracking";
-import { carrierGroup, combineTracking, correctionFor } from "@/lib/shipping/delivered-recheck";
+import { carrierGroup, combineTracking, correctionFor } from "@/lib/shipping/order-recheck";
 import type { TrackingSummary } from "@/lib/shipping/tracking";
 
 let failures = 0;
@@ -125,25 +125,41 @@ check("no answers combine to no answer", combineTracking(null, null) === null);
 }
 check("one answer alone stands", combineTracking(summary("awaiting"), null)?.stage === "awaiting");
 
-// ── What each wrongly delivered order becomes ───────────────────────
+// ── What each order becomes ─────────────────────────────────────────
 
 {
-  const catchUp = { shippedAt: null, deliveredAt: null };
-  const byHand = { shippedAt: at("2026-10-02T10:00:00Z"), deliveredAt: at("2026-10-06T15:00:00Z") };
+  const catchUp = { status: "delivered", shippedAt: null, deliveredAt: null };
+  const byHand = { status: "delivered", shippedAt: at("2026-10-02T10:00:00Z"), deliveredAt: at("2026-10-06T15:00:00Z") };
+  const shippedByHand = { status: "shipped", shippedAt: at("2026-10-02T10:00:00Z"), deliveredAt: null };
+  const labelled = { status: "packed", shippedAt: null, deliveredAt: null };
+  const labelFailed = { status: "paid", shippedAt: null, deliveredAt: null };
 
   const none = correctionFor(catchUp, null);
   check("no answer changes nothing", none.action === "unchecked" && none.data === null);
 
   const label = correctionFor(catchUp, summary("awaiting"));
-  check("never scanned goes back to label created", label.action === "packed" && label.data?.status === "packed");
+  check("delivered but never scanned goes back to label created", label.action === "toLabel" && label.data?.status === "packed");
   check("…with no dates", label.data?.shippedAt === null && label.data?.deliveredAt === null);
   const labelByHand = correctionFor(byHand, summary("awaiting"));
   check("a hand-made date is cleared too", labelByHand.data?.shippedAt === null && labelByHand.data?.deliveredAt === null);
+  const shippedNoScan = correctionFor(shippedByHand, summary("awaiting"));
+  check("shipped by hand but never scanned goes back too", shippedNoScan.action === "toLabel" && shippedNoScan.data?.shippedAt === null);
 
   const moving = correctionFor(catchUp, summary("in_transit", "2026-10-03T08:00:00Z"));
-  check("scanned but not delivered becomes shipped", moving.action === "shipped" && moving.data?.status === "shipped");
+  check("delivered but still with the carrier becomes shipped", moving.action === "toShipped" && moving.data?.status === "shipped");
   check("…shipped at the scan, not delivered", iso(moving.data?.shippedAt) === "2026-10-03T08:00:00.000Z" && moving.data?.deliveredAt === null);
   check("a problem parcel is shipped too", correctionFor(catchUp, summary("problem", "2026-10-03T08:00:00Z")).data?.status === "shipped");
+
+  // Where the order already says what tracking says, nothing changes.
+  check("label created and never scanned is left as it is", correctionFor(labelled, summary("awaiting")).action === "agrees");
+  check("a failed-label order with an unscanned label is left as it is", correctionFor(labelFailed, summary("awaiting")).data === null);
+  check("shipped and with the carrier agrees", correctionFor(shippedByHand, summary("in_transit", "2026-10-02T09:00:00Z")).action === "agrees");
+
+  // Tracking further on is the cron's to move: it emails the customers still waiting.
+  const ahead = correctionFor(labelled, summary("delivered", "2026-10-02T09:00:00Z", "2026-10-03T12:00:00Z"));
+  check("a label-created order the carrier delivered is left for the cron", ahead.action === "behind" && ahead.data === null);
+  check("a shipped order the carrier delivered is left for the cron", correctionFor(shippedByHand, summary("delivered")).action === "behind");
+  check("a label-created order the carrier has is left for the cron", correctionFor(labelled, summary("in_transit")).action === "behind");
 
   const done = correctionFor(catchUp, summary("delivered", "2026-10-02T09:00:00Z", "2026-10-03T12:00:00Z"));
   check("really delivered stays delivered", done.action === "confirmed" && done.data?.status === "delivered");
@@ -166,4 +182,4 @@ if (failures > 0) {
   console.error(`\n${failures} check${failures === 1 ? "" : "s"} failed.`);
   process.exit(1);
 }
-console.log("All recheck-delivered checks passed.");
+console.log("All recheck-orders checks passed.");
