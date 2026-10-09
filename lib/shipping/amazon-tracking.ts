@@ -24,8 +24,10 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
 const BEFORE_CARRIER =
   /^(pretransit|ready(for(receive|pickup|collection))?$|creat|label|shipmentcreated|pickupsched|pickupcancel|pickuprequest|manifest|inforeceived|notpickedup)/;
 const PROBLEM = /^(lost|rejected|undeliverable|returninitiated|returning|returned|returntosender|damaged|destroyed|addressproblem)/;
+// "Received" alone (not "ReadyForReceive"): seen on 9 Oct 2026 only in
+// parcels Amazon had collected, never in ones still waiting at our door.
 const WITH_CARRIER =
-  /^(pickupdone|pickedup|collected|departed|depart|arriv|intransit|outfordelivery|deliveryattempt|attempt|availableforpickup|readyforcustomerpickup|carrierreceived|sorted|hub|delayed|customs)/;
+  /^(pickupdone|pickedup|collected|departed|depart|arriv|intransit|outfordelivery|deliveryattempt|attempt|availableforpickup|readyforcustomerpickup|carrierreceived|received$|sorted|hub|delayed|customs)/;
 
 const asRecord = (v: unknown): Record<string, unknown> | null =>
   v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;

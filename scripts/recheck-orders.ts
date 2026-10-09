@@ -10,6 +10,10 @@
  * Royal Mail cannot be asked directly (see that file). Orders with no label
  * are listed, since nothing can check them.
  *
+ * Orders sold before 1 Oct 2026 went out by hand, outside SmartTrack, even
+ * where a label was bought for them, so their tracking says nothing: they
+ * are listed as sent by hand and never asked about or changed.
+ *
  * With --apply it also puts back orders marked further on than their parcel
  * (lib/shipping/order-recheck.ts): shipped or delivered with no carrier scan
  * → Label created, delivered while the carrier still has it → Shipped. An
@@ -27,7 +31,10 @@
  *                        is enough. Repeat for more.
  *   --limit N            ask about at most N labels
  *   --all                also re-ask about orders tracking already saw delivered
- *   --skip-amazon        decide on SmartTrack alone, if Amazon's tracker is
+ *   --by-hand-before 2026-10-01
+ *                        orders sold before this UK day were sent by hand
+ *                        (default 2026-10-01)
+ *   --skip-amazon       decide on SmartTrack alone, if Amazon's tracker is
  *                        refusing this server
  *   --csv                print the report as CSV on stdout, one row per order
  *                        (progress goes to stderr), e.g. `... --csv > orders.csv`
@@ -36,7 +43,7 @@
 import { prisma } from "@/lib/db";
 import { PARCEL_KINDS } from "@/lib/plans/kinds";
 import { statusLabel } from "@/lib/order-status";
-import { formatSaleDate, saleTime } from "@/lib/saleTime";
+import { formatSaleDate, saleTime, shopWallClockToDate } from "@/lib/saleTime";
 import { smartTrackConfig } from "@/lib/smarttrack/config";
 import { getTracking, SmartTrackAuthError, SmartTrackError } from "@/lib/smarttrack/client";
 import { parseTrackingNumbers } from "@/lib/shipping/shipments";
@@ -72,6 +79,14 @@ if (statuses.some((s) => !SOLD.includes(s))) {
   process.exit(1);
 }
 const inStatuses = statuses.length ? statuses : SOLD;
+const byHandDay = values("--by-hand-before")[0]?.trim() || "2026-10-01";
+const byHandMidnight = shopWallClockToDate(`${byHandDay} 00:00`);
+if (!byHandMidnight) {
+  console.error("--by-hand-before takes a date, 2026-10-01.");
+  process.exit(1);
+}
+/** Orders sold before this went out by hand, outside SmartTrack. */
+const byHandBefore: Date = byHandMidnight;
 
 /** With --csv, stdout is the report alone. */
 const say = (line = "") => (csv ? console.error(line) : console.log(line));
@@ -84,7 +99,7 @@ const short = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…
 const CARRIER_NAMES: Record<CarrierGroup, string> = { amazon: "Amazon", royalmail: "Royal Mail", other: "Other" };
 
 /** Where tracking puts an order, as the report's columns. */
-type Column = "awaiting" | "in_transit" | "problem" | "delivered" | "noAnswer" | "noLabel";
+type Column = "awaiting" | "in_transit" | "problem" | "delivered" | "noAnswer" | "noLabel" | "byHand";
 const COLUMNS: [Column, string][] = [
   ["awaiting", "Never scanned"],
   ["in_transit", "With carrier"],
@@ -92,6 +107,7 @@ const COLUMNS: [Column, string][] = [
   ["delivered", "Delivered"],
   ["noAnswer", "No answer"],
   ["noLabel", "No label"],
+  ["byHand", "Sent by hand"],
 ];
 const COLUMN_NAMES = Object.fromEntries(COLUMNS) as Record<Column, string>;
 
@@ -198,6 +214,18 @@ async function main() {
     };
     const s = o.shipments[0];
     const number = s?.environment === "live" ? parseTrackingNumbers(s.trackingNumbers)[0] : undefined;
+    if (base.soldAt < byHandBefore) {
+      // Sent by hand, outside SmartTrack: a label bought for it was never used.
+      const carrier = s ? carrierGroup(s.carrierName, s.serviceName, s.serviceCode, o.deliveryOption) : "";
+      if (carrierOnly && carrier !== carrierOnly) continue;
+      rows.push({
+        ...base,
+        column: "byHand",
+        ...(s && number ? { carrier, number, labelMade: day(s.createdAt), labelAt: s.createdAt } : {}),
+        note: s && number ? "sent by hand; this label was not used" : "sent by hand",
+      });
+      continue;
+    }
     if (!s || !number) {
       if (carrierOnly) continue;
       base.note = !s ? "" : s.environment !== "live" ? "test (UAT) label only" : "label has no tracking number";
@@ -226,6 +254,7 @@ async function main() {
       (notAsked.size ? ` (${notAsked.size} more left out by --limit)` : "") +
       "."
   );
+  say(`Orders sold before ${day(byHandBefore)} count as sent by hand, outside SmartTrack, and are left alone.`);
   say();
 
   let changed = 0;
@@ -368,6 +397,14 @@ function report(rows: Row[], labelsSince: Date | null) {
   if (problems.length) {
     say(`\nThe carrier reports a problem (${problems.length}):`);
     for (const r of problems) say(line(r, `   ${r.smartTrack}`));
+  }
+
+  const byHand = rows.filter((r) => r.column === "byHand");
+  if (byHand.length) {
+    say(
+      `\n${byHand.length} order${byHand.length === 1 ? "" : "s"} sold before ${day(byHandBefore)} went out by hand, outside` +
+        ` SmartTrack (${byHand.filter((r) => r.number).length} with a label that was not used): left alone.`
+    );
   }
 
   const noLabel = rows.filter((r) => r.column === "noLabel");
