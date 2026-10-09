@@ -80,7 +80,7 @@ export async function orderTracking(order: { id: string; deliveryOption: string 
   return { number, carrier: shipment.carrierName || deliveryOptionById(order.deliveryOption)?.carrier || "" };
 }
 
-function isNoTrackingYet(err: unknown): boolean {
+export function isNoTrackingYet(err: unknown): boolean {
   return err instanceof SmartTrackError && /no tracking data/i.test(err.detail);
 }
 

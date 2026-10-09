@@ -21,11 +21,18 @@ import { PARCEL_KINDS } from "@/lib/plans/kinds";
  * Only orders sold more than CATCH_UP_AFTER_DAYS ago are offered. Closing
  * them marks them delivered with no dates (nobody knows them) and emails no
  * one; without a delivered date they never get a review request either.
+ *
+ * notScanned is listed but can never be closed: its labels are known to
+ * the carrier, and the carrier has never had the parcel. Closing it marked
+ * orders delivered whose label had only been made (put right by
+ * scripts/recheck-delivered.ts), so only tracking moves those on now.
  */
 
 export const CATCH_UP_AFTER_DAYS = 3;
 
 export type CatchUpGroup = "noLabel" | "labelFailed" | "notScanned";
+/** The groups that may be closed as delivered. */
+export type ClosableCatchUpGroup = Exclude<CatchUpGroup, "notScanned">;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_SHIPMENT = { status: { in: ["PENDING", "CREATED"] } };
@@ -88,7 +95,7 @@ export function catchUpCount(now = new Date()): Promise<number> {
 }
 
 /** Close one group as delivered. Returns how many orders moved. */
-export async function closeCatchUpGroup(group: CatchUpGroup, now = new Date()): Promise<number> {
+export async function closeCatchUpGroup(group: ClosableCatchUpGroup, now = new Date()): Promise<number> {
   const { count } = await prisma.order.updateMany({
     where: catchUpWhere(group, now),
     data: { status: "delivered", labelError: null },

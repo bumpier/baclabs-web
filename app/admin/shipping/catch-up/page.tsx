@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireAdminRole } from "@/lib/adminAuth";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { catchUpTrackingAction, closeCatchUpGroupAction } from "@/app/admin/shipping/actions";
-import { CATCH_UP_AFTER_DAYS, catchUpCount, catchUpGroups, type CatchUpGroup } from "@/lib/shipping/catch-up";
+import { CATCH_UP_AFTER_DAYS, catchUpCount, catchUpGroups, type ClosableCatchUpGroup } from "@/lib/shipping/catch-up";
 import { trackingUnavailableReason } from "@/lib/shipping/tracking-sync";
 import { TRACKING_STAGE_LABELS, type TrackingStage } from "@/lib/shipping/tracking";
 import { statusLabel } from "@/lib/order-status";
@@ -45,7 +45,8 @@ function Group({
   rows,
   detail,
 }: {
-  group: CatchUpGroup;
+  /** Absent for a group that may not be marked delivered. */
+  group?: ClosableCatchUpGroup;
   title: string;
   explain: string;
   rows: Row[];
@@ -60,7 +61,7 @@ function Group({
           </h2>
           <p className="mt-1 text-sm text-ink-soft">{explain}</p>
         </div>
-        {rows.length > 0 && (
+        {group && rows.length > 0 && (
           <ActionForm
             action={closeCatchUpGroupAction}
             submitLabel={`Mark ${rows.length} delivered`}
@@ -132,9 +133,8 @@ export default async function CatchUpPage() {
         detail={(r) => r.labelError}
       />
       <Group
-        group="notScanned"
         title="4. Labelled, but never scanned"
-        explain="A label was bought, but the carrier has not scanned the parcel. Run step 1 first. Anything left here may really still be on the shelf — check before marking it delivered."
+        explain="A label was bought, but the carrier has never scanned the parcel, so it may still be on the shelf. These are not marked delivered: tracking moves each one on when the carrier scans it. If one went out on a different label, open it and mark it shipped."
         rows={groups.notScanned}
         detail={(r) => {
           const s = r.shipments[0];

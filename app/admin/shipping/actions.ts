@@ -17,7 +17,7 @@ import { getServices, SmartTrackError, testConnection } from "@/lib/smarttrack/c
 import { cleanDeliveryInstructions, LIMITS } from "@/lib/smarttrack/payload";
 import { SETTING_KEYS, writeSetting } from "@/lib/settings";
 import { syncTracking, type TrackingSyncResult } from "@/lib/shipping/tracking-sync";
-import { closeCatchUpGroup, type CatchUpGroup } from "@/lib/shipping/catch-up";
+import { closeCatchUpGroup } from "@/lib/shipping/catch-up";
 import { deliveryOptionById } from "@/config/funnel";
 
 function message(err: unknown, what: string): FormState {
@@ -306,14 +306,15 @@ export async function catchUpTrackingAction(_prev: FormState): Promise<FormState
   }
 }
 
-const catchUpGroupField = z.enum(["noLabel", "labelFailed", "notScanned"]);
+// Not "notScanned": a label the carrier never scanned is not a delivery (lib/shipping/catch-up.ts).
+const catchUpGroupField = z.enum(["noLabel", "labelFailed"]);
 
 export async function closeCatchUpGroupAction(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireAdminRole("ADMIN");
   const group = catchUpGroupField.safeParse(formData.get("group"));
   if (!group.success) return { error: "Unknown group" };
   try {
-    const moved = await closeCatchUpGroup(group.data as CatchUpGroup);
+    const moved = await closeCatchUpGroup(group.data);
     revalidatePath("/admin/shipping/catch-up");
     revalidatePath("/admin/orders");
     revalidatePath("/admin");
