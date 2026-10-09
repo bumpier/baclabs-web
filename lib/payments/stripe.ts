@@ -77,8 +77,14 @@ export interface BundleCheckoutParams {
   priceId: string;
   quantity: number;
   /**
-   * Value of the whole order, in pence (bundle.priceMinor x quantity, post-
-   * sale if a sale is live). Decides the delivery prices — passed
+   * Loose single vials on top of the packs (priceOrder), charged at the
+   * single tier's Price, which the caller has reconciled like the pack's.
+   */
+  extras?: { priceId: string; quantity: number };
+  /**
+   * Value of the whole order, in pence: the packs plus any loose vials
+   * (priceOrder's goodsMinor, post-sale if a sale is live). Decides the
+   * delivery prices — passed
    * in rather than recomputed so the route and the session agree on one
    * figure.
    */
@@ -159,6 +165,9 @@ export async function createBundleCheckout(
       payment_method_types: ["card"],
       line_items: [
         { price: priceId, quantity },
+        ...(params.extras && params.extras.quantity > 0
+          ? [{ price: params.extras.priceId, quantity: params.extras.quantity }]
+          : []),
         // Stripe supports no-cost line items when the session total is above
         // zero (docs.stripe.com/payments/checkout/no-cost-orders).
         ...(params.welcome
@@ -176,9 +185,11 @@ export async function createBundleCheckout(
       ],
       ...(params.welcome?.email ? { customer_email: params.welcome.email } : {}),
       client_reference_id: orderId,
-      metadata: { orderId, bundleId: params.bundleId },
+      metadata: { orderId, bundleId: params.bundleId, extraVials: String(params.extras?.quantity ?? 0) },
       // Also on the PaymentIntent, where refunds and disputes are worked.
-      payment_intent_data: { metadata: { orderId, bundleId: params.bundleId } },
+      payment_intent_data: {
+        metadata: { orderId, bundleId: params.bundleId, extraVials: String(params.extras?.quantity ?? 0) },
+      },
 
       // Stripe collects the delivery address — the funnel deliberately does
       // not ask for one before the customer has decided to buy.

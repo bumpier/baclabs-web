@@ -18,6 +18,7 @@ import {
   referencePriceMinor,
   saleVisible,
   shipsFree,
+  SINGLE_BUNDLE,
 } from "@/config/funnel";
 import { upsellCopy, upsellFor } from "@/lib/upsell";
 import { useFunnel, type PurchaseMode } from "@/components/funnel/FunnelState";
@@ -97,21 +98,59 @@ export function ModeSwitch({
  * cheaper way to the same vials; the same offer the checkout dialog makes.
  */
 export function UpsellNudge() {
-  const { bundle, quantity, select, setQuantity } = useFunnel();
-  const offer = upsellFor(bundle, quantity);
+  const { bundle, quantity, extraVials, select, setQuantity, setExtraVials } = useFunnel();
+  const offer = upsellFor(bundle, quantity, extraVials);
   if (!offer) return null;
+  const copy = upsellCopy(offer);
   return (
     <p className="rounded-control bg-brand-tint px-3 py-2 text-sm text-brand-deep">
-      {upsellCopy(offer).line}{" "}
+      {copy.line}{" "}
+      {offer.kind === "top-up" ? (
+        <button
+          type="button"
+          onClick={() => setExtraVials(offer.to.extraVials)}
+          className="font-semibold underline underline-offset-4"
+        >
+          {copy.accept}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            select(offer.to.bundle.id);
+            setQuantity(1);
+          }}
+          className="font-semibold underline underline-offset-4"
+        >
+          Switch to {offer.to.vials} vials
+        </button>
+      )}
+    </p>
+  );
+}
+
+/**
+ * The loose vials added to the packs, with the way to take them off again:
+ * "+ 1 single vial £5.99 · Remove". Nothing while there are none.
+ */
+export function ExtraVialsLine({ className = "" }: { className?: string }) {
+  const { extraVials, setExtraVials } = useFunnel();
+  if (extraVials === 0) return null;
+  return (
+    <p className={`flex flex-wrap items-center gap-x-2 text-sm text-ink ${className}`}>
+      <span>
+        + <span className="tabular">{extraVials}</span> single {extraVials === 1 ? "vial" : "vials"}{" "}
+        <span className="tabular text-ink-soft">{formatMinor(SINGLE_BUNDLE.priceMinor * extraVials)}</span>
+      </span>
+      <span aria-hidden="true" className="text-ink-soft">
+        &middot;
+      </span>
       <button
         type="button"
-        onClick={() => {
-          select(offer.to.bundle.id);
-          setQuantity(1);
-        }}
-        className="font-semibold underline underline-offset-4"
+        onClick={() => setExtraVials(0)}
+        className="text-ink-soft underline decoration-line underline-offset-4 hover:text-ink"
       >
-        Switch to {offer.to.vials} vials
+        Remove
       </button>
     </p>
   );
@@ -235,12 +274,11 @@ export function QuantityStepper() {
  * buy box places it elsewhere.
  */
 export function CheckoutRow({ cryptoEnabled, stepper = true }: { cryptoEnabled: boolean; stepper?: boolean }) {
-  const { bundle, quantity, totalMinor } = useFunnel();
+  const { bundle, quantity, extraVials, vials: totalVials, totalMinor } = useFunnel();
   const { start, pending, error, dialog } = useUpsellCheckout();
   const known = DELIVERY.mode !== "unknown";
   const payable = totalMinor + deliveryMinorFor(totalMinor);
   const outOfStock = STOCK_LEVEL !== null && STOCK_LEVEL <= 0;
-  const totalVials = bundle.vials * quantity;
 
   // A container, so the button's label follows the width the buy box
   // actually has (the home page column, a pack page's narrower panel, a
@@ -274,13 +312,20 @@ export function CheckoutRow({ cryptoEnabled, stepper = true }: { cryptoEnabled: 
         </button>
       </div>
 
-      {/* The vial count is never left to multiplication once there is more
-          than one pack. */}
-      {quantity > 1 ? (
+      <ExtraVialsLine className="mt-3" />
+
+      {/* The vial count is never left to arithmetic once there is more than
+          one pack, or loose vials beside it. */}
+      {quantity > 1 || extraVials > 0 ? (
         <p className="mt-2 text-xs text-ink-soft">
           {bundle.vials === 1 ? (
             <>
               <span className="tabular">{quantity}</span> vials
+            </>
+          ) : extraVials > 0 ? (
+            <>
+              <span className="tabular">{bundle.vials * quantity}</span> +{" "}
+              <span className="tabular">{extraVials}</span> vials, <span className="tabular">{totalVials}</span> in total
             </>
           ) : (
             <>
@@ -302,7 +347,7 @@ export function CheckoutRow({ cryptoEnabled, stepper = true }: { cryptoEnabled: 
       {cryptoEnabled ? (
         <p className="mt-2 text-xs">
           <Link
-            href={`/checkout?tier=${bundle.id}&qty=${quantity}`}
+            href={`/checkout?tier=${bundle.id}&qty=${quantity}${extraVials > 0 ? `&extra=${extraVials}` : ""}`}
             className="text-ink-soft underline decoration-line underline-offset-4 hover:text-ink"
           >
             or pay with cryptocurrency

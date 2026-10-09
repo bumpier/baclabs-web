@@ -1,14 +1,16 @@
 import {
   BUNDLES,
   DELIVERY,
+  SINGLE_BUNDLE,
+  TOP_UP_MAX_VIALS,
   UPSELL,
   deliveryMinorFor,
   formatMinor,
   freeDeliveryName,
   perVialMinor,
+  priceOrder,
   remainingForFreeDeliveryMinor,
   shipsFree,
-  totalMinor,
   type Bundle,
 } from "@/config/funnel";
 
@@ -18,18 +20,27 @@ import {
  * charge it (deliveryMinorFor, the function the session calls), so the
  * difference the offer states is the difference they would pay.
  *
- * Two kinds:
+ * Three kinds, tried in this order:
  *  - "same-for-less": several packs that add up to a pack we sell (2 × 10
  *    vials), when that one pack costs less. Offered first, because steering
  *    someone past a cheaper way to the same vials is not an upsell.
+ *  - "top-up": the same packs plus one or two loose vials, when that takes
+ *    the order to free delivery and no pack holding as many vials is cheaper
+ *    to pay for. The 10-pack is £5.01 short; one £5.99 vial clears it.
  *  - "step-up": the smallest pack holding more vials than the order. It can
  *    cost less too (4 single vials against the 5-pack); the copy says so.
+ *
+ * An order that already carries loose vials gets no offer: the customer has
+ * just acted on one.
  */
 
 export interface PricedChoice {
   bundle: Bundle;
-  /** Packs of `bundle`. Always 1 on the offered side. */
+  /** Packs of `bundle`. 1 on the offered side, except for a top-up. */
   quantity: number;
+  /** Loose vials on top of the packs. Only a top-up offer has any. */
+  extraVials: number;
+  /** Vials in all, loose ones included. */
   vials: number;
   goodsMinor: number;
   /** Delivery this order would be charged, 0 when it ships free. */
@@ -38,7 +49,7 @@ export interface PricedChoice {
 }
 
 export interface Upsell {
-  kind: "same-for-less" | "step-up";
+  kind: "same-for-less" | "top-up" | "step-up";
   from: PricedChoice;
   to: PricedChoice;
   /** to.payable less from.payable. Negative when the offer costs less. */
@@ -52,16 +63,18 @@ export interface Upsell {
   toFreeMinor: number;
 }
 
-function priced(bundle: Bundle, quantity: number): PricedChoice {
-  const goodsMinor = totalMinor(bundle, quantity);
-  const deliveryMinor = deliveryMinorFor(goodsMinor);
+function priced(bundle: Bundle, quantity: number, extraVials = 0): PricedChoice | null {
+  const order = priceOrder(bundle, quantity, extraVials);
+  if (!order) return null;
+  const deliveryMinor = deliveryMinorFor(order.goodsMinor);
   return {
     bundle,
     quantity,
-    vials: bundle.vials * quantity,
-    goodsMinor,
+    extraVials,
+    vials: order.vials,
+    goodsMinor: order.goodsMinor,
     deliveryMinor,
-    payableMinor: goodsMinor + deliveryMinor,
+    payableMinor: order.goodsMinor + deliveryMinor,
   };
 }
 
@@ -78,26 +91,48 @@ function offer(kind: Upsell["kind"], from: PricedChoice, to: PricedChoice): Upse
   };
 }
 
-/** The one offer for this selection, or null (switched off, or nothing bigger). */
-export function upsellFor(bundle: Bundle, quantity: number): Upsell | null {
-  if (!UPSELL.enabled) return null;
+/**
+ * Loose vials that take this order to free delivery: the fewest that do,
+ * up to TOP_UP_MAX_VIALS, and only when no single pack holding at least as
+ * many vials is as cheap or cheaper to pay for. Null otherwise.
+ */
+function topUpFor(from: PricedChoice): PricedChoice | null {
+  if (from.bundle.id === SINGLE_BUNDLE.id || DELIVERY.mode !== "threshold" || shipsFree(from.goodsMinor)) return null;
+  for (let k = 1; k <= TOP_UP_MAX_VIALS; k++) {
+    const to = priced(from.bundle, from.quantity, k);
+    if (!to || !shipsFree(to.goodsMinor)) continue;
+    const packBeatsIt = BUNDLES.some((b) => {
+      const pack = priced(b, 1);
+      return pack !== null && b.vials >= to.vials && pack.payableMinor <= to.payableMinor;
+    });
+    return packBeatsIt ? null : to;
+  }
+  return null;
+}
+
+/** The one offer for this selection, or null (switched off, topped up, or nothing bigger). */
+export function upsellFor(bundle: Bundle, quantity: number, extraVials = 0): Upsell | null {
+  if (!UPSELL.enabled || extraVials > 0) return null;
   const from = priced(bundle, quantity);
+  if (!from) return null;
 
   if (quantity > 1) {
     const same = BUNDLES.find((b) => b.vials === from.vials);
-    if (same) {
-      const to = priced(same, 1);
-      if (to.payableMinor < from.payableMinor) return offer("same-for-less", from, to);
-    }
+    const to = same ? priced(same, 1) : null;
+    if (to && to.payableMinor < from.payableMinor) return offer("same-for-less", from, to);
   }
 
+  const topUp = topUpFor(from);
+  if (topUp) return offer("top-up", from, topUp);
+
   const next = BUNDLES.filter((b) => b.vials > from.vials).sort((a, b) => a.vials - b.vials)[0];
-  return next ? offer("step-up", from, priced(next, 1)) : null;
+  const to = next ? priced(next, 1) : null;
+  return to ? offer("step-up", from, to) : null;
 }
 
 /** What one vial costs in this choice, in pence. */
 export function perVialOf(c: PricedChoice): number {
-  return c.quantity === 1 ? perVialMinor(c.bundle) : Math.round(c.goodsMinor / c.vials);
+  return c.quantity === 1 && c.extraVials === 0 ? perVialMinor(c.bundle) : Math.round(c.goodsMinor / c.vials);
 }
 
 const vials = (n: number) => `${n} ${n === 1 ? "vial" : "vials"}`;
@@ -136,6 +171,24 @@ export function upsellCopy(u: Upsell): {
       line: `The same ${vials(to.vials)} cost ${saving} less as one ${to.vials}-vial pack.`,
       accept: `Switch to one ${to.vials}-vial pack`,
       decline: `Keep ${from.quantity} packs`,
+    };
+  }
+
+  if (u.kind === "top-up") {
+    const k = to.extraVials;
+    const added = formatMinor(to.goodsMinor - from.goodsMinor);
+    const net =
+      u.extraMinor > 0
+        ? `That's ${extra} more than you'd pay now, delivery included.`
+        : u.extraMinor === 0
+          ? "That's no more than you'd pay now, delivery included."
+          : `That's ${saving} less than you'd pay now, delivery included.`;
+    return {
+      heading: `You're ${formatMinor(u.toFreeMinor)} away from free ${free}`,
+      body: `Add ${vials(k)} for ${added} and your order ships free. ${net}`,
+      line: `Add ${vials(k)} for ${added} and ${free} is free${u.extraMinor > 0 ? `: ${extra} more, delivery included` : ""}.`,
+      accept: `Add ${vials(k)}`,
+      decline,
     };
   }
 

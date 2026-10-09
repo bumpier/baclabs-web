@@ -83,8 +83,13 @@ async function runNudges() {
         continue;
       }
 
+      // Vials summed per product first: a pack and the loose vials added to
+      // it (lib/order-items.ts) are one supply, and the 1-vial line taken on
+      // its own would bring the reminder forward to one vial's worth.
+      const vialsByProduct = new Map<string, number>();
+      for (const i of nudgeable) vialsByProduct.set(i.productId, (vialsByProduct.get(i.productId) ?? 0) + i.qty);
       const daysUntilEmpty = Math.min(
-        ...nudgeable.map((i) => i.qty * (supplyDays.get(i.productId) ?? 0))
+        ...[...vialsByProduct].map(([productId, qty]) => qty * (supplyDays.get(productId) ?? 0))
       );
       const dueAt =
         order.createdAt.getTime() + (daysUntilEmpty - LEAD_DAYS) * 24 * 60 * 60 * 1000;

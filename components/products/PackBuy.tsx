@@ -40,10 +40,11 @@ export function PackBuy({
 }) {
   // The provider is mounted with this pack's tier, so `bundle` here and the
   // context agree. Quantity is the only thing the customer changes.
-  const { quantity } = useFunnel();
+  const { quantity, extraVials, vials, setExtraVials } = useFunnel();
   // The step up to the next pack, as the home page offers it (lib/upsell.ts).
-  const offer = upsellFor(bundle, quantity);
-  const offerPage = offer ? packByBundleId(offer.to.bundle.id) : undefined;
+  // A top-up keeps this pack, so it is a button rather than a link away.
+  const offer = upsellFor(bundle, quantity, extraVials);
+  const offerPage = offer && offer.kind !== "top-up" ? packByBundleId(offer.to.bundle.id) : undefined;
 
   // No "Cheapest in the UK" here: that claim lives only on the home page,
   // beside the guarantee that substantiates it.
@@ -65,12 +66,22 @@ export function PackBuy({
       {/* The step up to the next pack. A link, not a switch: on a pack page
           the pack is the subject. The checkout button offers the same step
           once more, and pays for it directly. */}
-      {offer && offerPage ? (
+      {offer && (offerPage || offer.kind === "top-up") ? (
         <p className="mt-4 rounded-control bg-brand-tint px-3 py-2 text-sm text-brand-deep">
           {upsellCopy(offer).line}{" "}
-          <Link href={packPath(offerPage)} className="font-semibold underline underline-offset-4">
-            See the {offer.to.vials}-vial pack
-          </Link>
+          {offerPage ? (
+            <Link href={packPath(offerPage)} className="font-semibold underline underline-offset-4">
+              See the {offer.to.vials}-vial pack
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setExtraVials(offer.to.extraVials)}
+              className="font-semibold underline underline-offset-4"
+            >
+              {upsellCopy(offer).accept}
+            </button>
+          )}
         </p>
       ) : null}
 
@@ -98,7 +109,7 @@ export function PackBuy({
       </p>
 
       <div className="mt-5">
-        <WelcomeVialPanel vials={bundle.vials * quantity} compact />
+        <WelcomeVialPanel vials={vials} compact />
       </div>
     </div>
   );

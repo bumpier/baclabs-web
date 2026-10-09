@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { CheckoutForm } from "./CheckoutForm";
 import { getPaymentConfig } from "@/lib/payments/config";
-import { bundleById, DEFAULT_BUNDLE_ID, MAX_QUANTITY, MIN_QUANTITY } from "@/config/funnel";
+import { bundleById, DEFAULT_BUNDLE_ID, MAX_QUANTITY, MIN_QUANTITY, priceOrder } from "@/config/funnel";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +14,14 @@ export const dynamic = "force-dynamic";
  * a wallet and a QR, so this path has to gather an address before it can
  * create a payment.
  *
- * The tier and quantity arrive as query parameters from the purchase block
- * and are re-resolved from config here; nothing about the price is trusted
- * from the URL.
+ * The tier, quantity and any loose vials arrive as query parameters from
+ * the purchase block and are re-resolved from config here; nothing about the
+ * price is trusted from the URL.
  */
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tier?: string; qty?: string }>;
+  searchParams: Promise<{ tier?: string; qty?: string; extra?: string }>;
 }) {
   const { methods } = getPaymentConfig();
   const coins = methods.filter((m) => m !== "card");
@@ -32,6 +32,9 @@ export default async function CheckoutPage({
   const quantity = Number.isFinite(parsedQty)
     ? Math.min(MAX_QUANTITY, Math.max(MIN_QUANTITY, parsedQty))
     : MIN_QUANTITY;
+  // Loose vials the shop would sell with this pack (priceOrder), else none.
+  const parsedExtra = Number.parseInt(sp.extra ?? "0", 10);
+  const extraVials = Number.isFinite(parsedExtra) && priceOrder(bundle, quantity, parsedExtra) ? parsedExtra : 0;
 
   if (coins.length === 0) {
     return (
@@ -51,7 +54,7 @@ export default async function CheckoutPage({
 
   return (
     <Suspense>
-      <CheckoutForm coins={coins} bundleId={bundle.id} quantity={quantity} nowMs={Date.now()} />
+      <CheckoutForm coins={coins} bundleId={bundle.id} quantity={quantity} extraVials={extraVials} nowMs={Date.now()} />
     </Suspense>
   );
 }

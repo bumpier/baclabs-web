@@ -85,3 +85,16 @@ export function kitsAvailable(components: readonly { quantity: number; available
     ...components.map((c) => (c.quantity > 0 ? Math.floor(Math.max(0, c.available) / c.quantity) : 0))
   );
 }
+
+/**
+ * Whether the shelves hold everything `demand` (expandDemand's output) asks
+ * for. Checking each item sold on its own is not enough: a 10-pack made up
+ * from loose vials and an extra single vial both draw on the same shelf, so
+ * with ten vials there each looks sellable while the order needs eleven.
+ */
+export function coversDemand(demand: ReadonlyMap<string, number>, onHand: ReadonlyMap<string, number>): boolean {
+  for (const [skuId, quantity] of demand) {
+    if ((onHand.get(skuId) ?? 0) < quantity) return false;
+  }
+  return true;
+}

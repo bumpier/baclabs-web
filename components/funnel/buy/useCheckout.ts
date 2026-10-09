@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PRODUCT, totalMinor as packsTotalMinor, type Bundle } from "@/config/funnel";
+import { PRODUCT, SINGLE_BUNDLE, priceOrder, type Bundle } from "@/config/funnel";
 import { trackEvent } from "@/lib/analytics";
 import { hasTrackingConsent } from "@/components/consent/consent-store";
 import { useFunnel } from "@/components/funnel/FunnelState";
@@ -34,13 +34,13 @@ export function useCheckout() {
   const [error, setError] = useState<string | null>(null);
   useResetOnRestore(useCallback(() => setPending(false), []));
 
-  async function checkoutPack(bundle: Bundle, quantity: number) {
-    const totalMinor = packsTotalMinor(bundle, quantity);
+  async function checkoutPack(bundle: Bundle, quantity: number, extraVials = 0) {
+    const priced = priceOrder(bundle, quantity, extraVials) ?? priceOrder(bundle, quantity)!;
     setError(null);
     setPending(true);
     trackEvent("begin_checkout", {
       currency: "GBP",
-      value: totalMinor / 100,
+      value: priced.goodsMinor / 100,
       bundleId: bundle.id,
       quantity,
       items: [
@@ -50,6 +50,16 @@ export function useCheckout() {
           price: bundle.priceMinor / 100,
           quantity,
         },
+        ...(priced.extraVials > 0
+          ? [
+              {
+                item_id: SINGLE_BUNDLE.sku,
+                item_name: `${PRODUCT.name} 1 × ${PRODUCT.size}`,
+                price: SINGLE_BUNDLE.priceMinor / 100,
+                quantity: priced.extraVials,
+              },
+            ]
+          : []),
       ],
     });
 
@@ -60,6 +70,7 @@ export function useCheckout() {
         body: JSON.stringify({
           tierId: bundle.id,
           quantity,
+          ...(priced.extraVials > 0 ? { extraVials: priced.extraVials } : {}),
           method: "card",
           trackingConsent: hasTrackingConsent(),
         }),
@@ -81,7 +92,7 @@ export function useCheckout() {
 
   // Takes no arguments, so it can be an onClick handler as it stands.
   function checkout() {
-    return checkoutPack(funnel.bundle, funnel.quantity);
+    return checkoutPack(funnel.bundle, funnel.quantity, funnel.extraVials);
   }
 
   return { checkout, checkoutPack, pending, error };

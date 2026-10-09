@@ -17,9 +17,9 @@ import { cleanDeliveryInstructions } from "@/lib/smarttrack/payload";
 import { getPaymentConfig, providerForMethod, type PaymentProvider } from "@/lib/payments/config";
 import { attributionFor } from "@/lib/meta-capi-event";
 import { getInventoryMode } from "@/lib/inventory/mode";
-import { availableToSell } from "@/lib/inventory/store";
+import { canSupply } from "@/lib/inventory/store";
 import { VIAL_SKU_CODE } from "@/lib/inventory/demand";
-import { normaliseCode } from "@/lib/inventory/codes";
+import { buildOrderItems } from "@/lib/order-items";
 import {
   SUBSCRIBER_COOKIE,
   cookieFrom,
@@ -34,13 +34,13 @@ import {
   bundleById,
   allowedPriceIds,
   priceIdFor,
-  totalMinor,
+  priceOrder,
+  SINGLE_BUNDLE,
   deliveryChoiceEnabled,
   deliveryOptionsFor,
   SHIPPING_COUNTRIES,
   PRODUCT,
   STANDARD_DELIVERY,
-  type Bundle,
   type BundleId,
   type DeliveryOptionId,
 } from "@/config/funnel";
@@ -51,18 +51,21 @@ export const dynamic = "force-dynamic";
 /** The single inventory SKU. Created by scripts/stripe-setup.ts. */
 const VIAL_SLUG = "baclab-10ml";
 
+/** An item the order takes off the shelves, by SKU code. */
+type ShelfLine = { code: string; quantity: number };
+
 /**
  * The mailing-list welcome vial, when this browser (or, for crypto, this
  * email) belongs to a subscriber who has not ordered yet. Only added when
- * the shelves can cover it: a missing gift is better than a failed sale.
- * `paidVials` sets the reminder bonus; `shelfVials` is what the order itself
- * takes off the shelf.
+ * the shelves can cover it on top of the order: a missing gift is better
+ * than a failed sale. `paidVials` sets the reminder bonus; `shelfVials` is
+ * what the order itself takes off the shelf (legacy stock); `paidLines` is
+ * the same in warehouse terms.
  */
 async function welcomeForOrder(
   req: Request,
-  opts: { email?: string; bundle: Bundle; paidVials: number; shelfVials: number; product: Product }
+  opts: { email?: string; paidLines: ShelfLine[]; paidVials: number; shelfVials: number; product: Product }
 ): Promise<{ welcome: Subscriber | null; welcomeQty: number }> {
-  const { bundle, product } = opts;
   let welcome = await welcomeForCheckout({
     cookieHeader: req.headers.get("cookie"),
     email: opts.email,
@@ -70,26 +73,17 @@ async function welcomeForOrder(
   // One vial, or more with the reminder bonus on a big enough order.
   let welcomeQty = welcome ? welcomeVialCount(welcome, opts.paidVials) : 0;
   if (welcome) {
-    // Vials on the shelf beyond the ones this order pays for.
-    let spare: number;
     if ((await getInventoryMode()) === "warehouse") {
-      const vials = await availableToSell(VIAL_SKU_CODE);
-      // Loose vials the order itself already takes off the shelf: the
-      // single-vial tier, or a pack made up from vials at packing time.
-      const bundleSku = await prisma.sku.findUnique({
-        where: { code: normaliseCode(bundle.sku) },
-        select: { _count: { select: { components: true } } },
-      });
-      const fromShelf =
-        normaliseCode(bundle.sku) === VIAL_SKU_CODE || (bundleSku?._count.components ?? 0) > 0
-          ? opts.shelfVials
-          : 0;
-      spare = vials === null ? 0 : vials - fromShelf;
+      // The order and the gift together, off the same shelves: a pack made
+      // up from loose vials draws on the vial the gift would be.
+      const fits = async (n: number) =>
+        (await canSupply([...opts.paidLines, { code: VIAL_SKU_CODE, quantity: n }])) === "ok";
+      // Short of the bonus vials: the one vial. Short of that: none.
+      if (!(await fits(welcomeQty))) welcomeQty = welcomeQty > 1 && (await fits(1)) ? 1 : 0;
     } else {
-      spare = product.stock - opts.shelfVials;
+      const spare = opts.product.stock - opts.shelfVials;
+      if (spare < welcomeQty) welcomeQty = spare >= 1 ? 1 : 0;
     }
-    // Short of the bonus vials: the one vial. Short of that: none.
-    if (spare < welcomeQty) welcomeQty = spare >= 1 ? 1 : 0;
     if (welcomeQty === 0) welcome = null;
   }
   return { welcome, welcomeQty };
@@ -127,14 +121,19 @@ export async function POST(req: Request) {
     if (!bundle) {
       return NextResponse.json({ error: "Invalid order details" }, { status: 400 });
     }
-    const totalVials = bundle.vials * input.quantity;
-    const grandTotalMinor = totalMinor(bundle, input.quantity);
-
-    // Bundle prices do NOT divide evenly into whole pence per vial (e.g.
-    // 2199/5 = 439.8p), so the packing slip prices by the BUNDLE, not the
-    // vial: unitPrice × bundleQty reconciles exactly to the amount charged.
-    // `qty` (vials) stays separate — it is what fulfilment packs, not what
-    // is priced.
+    // The packs plus any loose vials (priceOrder): null for loose vials on
+    // the single tier, which a bigger quantity already covers.
+    const extraVials = input.extraVials ?? 0;
+    const priced = priceOrder(bundle, input.quantity, extraVials);
+    if (!priced) {
+      return NextResponse.json({ error: "Invalid order details" }, { status: 400 });
+    }
+    const totalVials = priced.vials;
+    const grandTotalMinor = priced.goodsMinor;
+    const paidLines: ShelfLine[] = [
+      { code: bundle.sku, quantity: input.quantity },
+      ...(extraVials > 0 ? [{ code: SINGLE_BUNDLE.sku, quantity: extraVials }] : []),
+    ];
 
     const product = await prisma.product.findUnique({ where: { slug: VIAL_SLUG } });
     if (!product || !product.active) {
@@ -149,18 +148,20 @@ export async function POST(req: Request) {
     // Which stock count to sell against — see lib/inventory/mode.ts. In
     // warehouse mode a pack is sellable as far as the shelves can make it
     // up: its own stock if pre-packed, its components' if it is a kit.
+    // The pack and the loose vials are checked together (canSupply): both
+    // can draw on the same shelf of vials.
     if ((await getInventoryMode()) === "warehouse") {
-      const available = await availableToSell(bundle.sku);
-      if (available === null) {
+      const supply = await canSupply(paidLines);
+      if (supply === "unavailable") {
         console.error(
-          `[internal] checkout rejected — no active SKU "${bundle.sku}" in warehouse mode. Create it on /admin/inventory.`
+          `[internal] checkout rejected — no active SKU for ${paidLines.map((l) => `"${l.code}"`).join(" or ")} in warehouse mode. Create it on /admin/inventory.`
         );
         return NextResponse.json(
           { error: "This product is not available for purchase right now" },
           { status: 400 }
         );
       }
-      if (available < input.quantity) {
+      if (supply === "short") {
         return NextResponse.json({ error: "Not enough stock for that quantity" }, { status: 409 });
       }
     } else if (product.stock < totalVials) {
@@ -170,7 +171,7 @@ export async function POST(req: Request) {
     // The mailing-list welcome vial: see welcomeForOrder.
     const { welcome, welcomeQty } = await welcomeForOrder(req, {
       email: input.method === "card" ? undefined : input.email,
-      bundle,
+      paidLines,
       paidVials: totalVials,
       shelfVials: totalVials,
       product,
@@ -204,26 +205,14 @@ export async function POST(req: Request) {
     );
 
     const orderItems = [
-      {
+      ...buildOrderItems({
         productId: product.id,
         slug: product.slug,
-        name: `${PRODUCT.name} ${PRODUCT.size}`,
-        qty: totalVials,
-        // Priced per BUNDLE, not per vial — see comment above. Multiply by
-        // bundleQty, not qty, to get back to the order total.
-        unitPrice: (bundle.priceMinor / 100).toFixed(2),
-        unitPriceUsd: subtotalUsd.div(input.quantity).toFixed(2),
-        // The exact line total, stored rather than re-derived, so every
-        // reader (admin, confirmation page, emails) reconciles perfectly
-        // even though unitPrice × qty no longer does.
-        lineTotal: (grandTotalMinor / 100).toFixed(2),
-        lineTotalUsd: subtotalUsd.toFixed(2),
-        // Kept so the admin and the packing slip can show what was actually
-        // bought, rather than an undifferentiated vial count.
-        bundleId: bundle.id,
-        bundleName: `${bundle.vials}-vial pack`,
-        bundleQty: input.quantity,
-      },
+        bundle,
+        quantity: input.quantity,
+        priced,
+        goodsUsd: subtotalUsd.toFixed(2),
+      }),
       // £0, so every total that sums lineTotal still matches the charge.
       ...(welcome ? [welcomeItem(product.id, product.slug, welcomeQty)] : []),
     ];
@@ -289,10 +278,21 @@ export async function POST(req: Request) {
         );
       }
 
+      // Loose vials are charged at the single tier's Price, checked the same
+      // way. Only an order that has some needs it.
+      const extrasPriceId = extraVials > 0 ? priceIdFor(SINGLE_BUNDLE.id) : null;
+      if (extraVials > 0 && (!extrasPriceId || !allowedPriceIds().includes(extrasPriceId))) {
+        console.error(
+          `[internal] no Stripe Price configured for the single tier, needed for loose vials. Run: npx tsx scripts/stripe-setup.ts`
+        );
+        return NextResponse.json({ error: "Card payment is not available right now" }, { status: 503 });
+      }
+
       // Confirm Stripe will charge exactly what the page advertised. Skipped
       // only in the keyless dev simulator, which never charges anything.
       if (process.env.STRIPE_SECRET_KEY) {
         await assertPriceMatchesConfig(bundle.id as BundleId, priceId);
+        if (extrasPriceId) await assertPriceMatchesConfig(SINGLE_BUNDLE.id, extrasPriceId);
       }
 
       const checkout = await createBundleCheckout({
@@ -300,6 +300,7 @@ export async function POST(req: Request) {
         bundleId: bundle.id as BundleId,
         priceId,
         quantity: input.quantity,
+        ...(extrasPriceId ? { extras: { priceId: extrasPriceId, quantity: extraVials } } : {}),
         orderValueMinor: grandTotalMinor,
         shippingCountries: SHIPPING_COUNTRIES,
         origin,
@@ -375,23 +376,24 @@ async function planCheckout(req: Request, input: PlanCheckoutInput, provider: Pa
   }
 
   // Box 1: the pack, and the bonus pack on a 12-month plan.
+  // Checked together (canSupply): the pack and the bonus pack can both be
+  // made up from the same shelf of vials.
+  const paidLines: ShelfLine[] = [{ code: plan.pack.sku, quantity: 1 }, ...(bonus ? [{ code: bonus.sku, quantity: 1 }] : [])];
   if ((await getInventoryMode()) === "warehouse") {
-    const need = new Map<string, number>([[plan.pack.sku, 1]]);
-    if (bonus) need.set(bonus.sku, (need.get(bonus.sku) ?? 0) + 1);
-    for (const [sku, n] of need) {
-      const available = await availableToSell(sku);
-      if (available === null) {
-        console.error(`[internal] plan checkout rejected: no active SKU "${sku}" in warehouse mode. Create it on /admin/inventory.`);
-        return NextResponse.json({ error: "This product is not available for purchase right now" }, { status: 400 });
-      }
-      if (available < n) return NextResponse.json({ error: "Not enough stock for that plan" }, { status: 409 });
+    const supply = await canSupply(paidLines);
+    if (supply === "unavailable") {
+      console.error(
+        `[internal] plan checkout rejected: no active SKU for ${paidLines.map((l) => `"${l.code}"`).join(" or ")} in warehouse mode. Create it on /admin/inventory.`
+      );
+      return NextResponse.json({ error: "This product is not available for purchase right now" }, { status: 400 });
     }
+    if (supply === "short") return NextResponse.json({ error: "Not enough stock for that plan" }, { status: 409 });
   } else if (product.stock < plan.pack.vials + plan.bonusVials) {
     return NextResponse.json({ error: "Not enough stock for that plan" }, { status: 409 });
   }
 
   const { welcome, welcomeQty } = await welcomeForOrder(req, {
-    bundle: plan.pack,
+    paidLines,
     paidVials: plan.pack.vials,
     shelfVials: plan.pack.vials + plan.bonusVials,
     product,

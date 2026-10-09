@@ -55,7 +55,7 @@ import { planDeliverySentence } from "@/config/plans";
  * collapsed row at the foot.
  */
 export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
-  const { bundle, quantity, select, mode, setMode } = useFunnel();
+  const { bundle, vials, select, mode, setMode } = useFunnel();
   const { choice, setChoice, plan } = usePlanChoice();
   usePlanQuery(setChoice, setMode);
   const groupId = useId();
@@ -187,7 +187,7 @@ export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
         <PaymentMarks />
       </div>
       <div className="mt-6">
-        <WelcomeVialPanel vials={once ? bundle.vials * quantity : plan.pack.vials} compact />
+        <WelcomeVialPanel vials={once ? vials : plan.pack.vials} compact />
       </div>
 
       <details className="group mt-6 border-y border-line">

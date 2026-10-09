@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { PRODUCT } from "@/config/funnel";
-import { expandDemand, kitsAvailable, planAllocation } from "@/lib/inventory/allocation";
+import { coversDemand, expandDemand, kitsAvailable, planAllocation } from "@/lib/inventory/allocation";
 import { normaliseCode } from "@/lib/inventory/codes";
 import { soldLines, storefrontSkuCodes, VIAL_SKU_CODE } from "@/lib/inventory/demand";
 
@@ -238,6 +238,34 @@ export async function availableToSell(code: string): Promise<number | null> {
   return kitsAvailable(
     sku.components.map((c) => ({ quantity: c.quantity, available: onHand.get(c.componentId) ?? 0 }))
   );
+}
+
+/**
+ * Whether an order of several items can be supplied as a whole: every item
+ * expanded to the shelf SKUs it draws on (kits to their components), summed,
+ * then compared with what is on hand. What availableToSell answers for one
+ * item, for an order (a pack plus loose vials, a plan's pack plus its bonus
+ * pack, any of them plus the welcome vial).
+ *
+ * "unavailable" when an item has no active SKU, which the caller treats as
+ * not for sale, as availableToSell's null; "short" when the shelves cannot
+ * cover it, including a kit whose component is switched off.
+ */
+export async function canSupply(
+  lines: readonly { code: string; quantity: number }[]
+): Promise<"ok" | "short" | "unavailable"> {
+  const codes = [...new Set(lines.map((l) => normaliseCode(l.code)))];
+  const skus = await prisma.sku.findMany({
+    where: { code: { in: codes } },
+    include: { components: { include: { component: true } } },
+  });
+  const byCode = new Map(skus.map((s) => [s.code, s]));
+  if (codes.some((c) => !byCode.get(c)?.active)) return "unavailable";
+  if (skus.some((s) => s.components.some((c) => !c.component.active))) return "short";
+  const demand = expandDemand(
+    lines.filter((l) => l.quantity > 0).map((l) => ({ sku: byCode.get(normaliseCode(l.code))!, quantity: l.quantity }))
+  );
+  return coversDemand(demand, await onHandBySku()) ? "ok" : "short";
 }
 
 // ── Orders ────────────────────────────────────────────────────────

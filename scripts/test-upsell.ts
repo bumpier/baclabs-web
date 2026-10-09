@@ -10,8 +10,10 @@
  */
 import {
   BUNDLES,
+  MAX_EXTRA_VIALS,
   MAX_QUANTITY,
   MIN_QUANTITY,
+  TOP_UP_MAX_VIALS,
   bundleById,
   deliveryMinorFor,
   formatMinor,
@@ -49,16 +51,32 @@ for (const choice of ["on", "off"]) {
 
       const goods = totalMinor(b, q);
       check(`${at}: from is priced as Stripe charges`, u.from.payableMinor === payable(goods));
-      check(`${at}: offer is one pack`, u.to.quantity === 1);
-      check(`${at}: to is priced as Stripe charges`, u.to.payableMinor === payable(u.to.bundle.priceMinor));
+      check(`${at}: to is priced as Stripe charges`, u.to.payableMinor === payable(u.to.goodsMinor));
       check(`${at}: extra is the difference in payable`, u.extraMinor === u.to.payableMinor - u.from.payableMinor);
 
       if (u.kind === "same-for-less") {
+        check(`${at}: same-for-less is one pack`, u.to.quantity === 1 && u.to.extraVials === 0);
         check(`${at}: same-for-less holds the same vials`, u.to.vials === vials);
         check(`${at}: same-for-less costs less`, u.extraMinor < 0, String(u.extraMinor));
+      } else if (u.kind === "top-up") {
+        const k = u.to.extraVials;
+        check(`${at}: top-up keeps the packs`, u.to.bundle.id === b.id && u.to.quantity === q);
+        check(`${at}: top-up adds 1..${TOP_UP_MAX_VIALS} vials`, k >= 1 && k <= TOP_UP_MAX_VIALS, String(k));
+        check(`${at}: top-up goods are packs plus singles`, u.to.goodsMinor === goods + k * bundleById("single")!.priceMinor);
+        check(`${at}: top-up unlocks free delivery`, u.unlocksFreeDelivery);
+        check(`${at}: top-up is the fewest vials that do`, k === 1 || !shipsFree(goods + (k - 1) * bundleById("single")!.priceMinor));
+        check(`${at}: never a top-up on single vials`, b.id !== "single");
+        const beaten = BUNDLES.find((x) => x.vials >= u.to.vials && payable(x.priceMinor) <= u.to.payableMinor);
+        check(`${at}: no pack holds as many vials for less`, !beaten, beaten?.id ?? "");
       } else {
+        check(`${at}: step-up is one pack`, u.to.quantity === 1 && u.to.extraVials === 0);
         const smallest = Math.min(...bigger.map((x) => x.vials));
         check(`${at}: step-up is the next pack up`, u.to.vials === smallest, `${u.to.vials} vs ${smallest}`);
+      }
+
+      // Loose vials already added: no further offer.
+      for (let e = 1; e <= MAX_EXTRA_VIALS; e++) {
+        check(`${at} + ${e}: no offer once topped up`, upsellFor(b, q, e) === null);
       }
 
       check(
@@ -94,16 +112,21 @@ for (const choice of ["on", "off"]) {
   }
 
   // The ladder the funnel was asked for, one pack at a time.
-  const ladder: [string, string][] = [
-    ["single", "five"],
-    ["five", "ten"],
-    ["ten", "twenty"],
-    ["twenty", "fifty"],
-    ["fifty", "hundred"],
+  // The 10-pack is the one pack a loose vial takes to free delivery.
+  const ladder: [string, string, string][] = [
+    ["single", "five", "step-up"],
+    ["five", "ten", "step-up"],
+    ["ten", "ten", "top-up"],
+    ["twenty", "fifty", "step-up"],
+    ["fifty", "hundred", "step-up"],
   ];
-  for (const [from, to] of ladder) {
+  for (const [from, to, kind] of ladder) {
     const u = upsellFor(bundleById(from)!, 1);
-    check(`[${choice}] 1 × ${from} offers ${to}`, u?.to.bundle.id === to, u?.to.bundle.id ?? "none");
+    check(
+      `[${choice}] 1 × ${from} offers ${kind} to ${to}`,
+      u?.to.bundle.id === to && u?.kind === kind,
+      `${u?.kind ?? "none"} ${u?.to.bundle.id ?? ""}`
+    );
   }
   check(`[${choice}] 1 × hundred offers nothing`, upsellFor(bundleById("hundred")!, 1) === null);
 }
@@ -120,9 +143,16 @@ process.env.NEXT_PUBLIC_DELIVERY_CHOICE = "on";
 {
   const u = upsellFor(bundleById("ten")!, 1)!;
   const c = upsellCopy(u);
-  check("10 → 20 unlocks free delivery", u.unlocksFreeDelivery);
-  check("10 → 20: £5.01 away", c.heading === "You're £5.01 away from free next-day delivery", c.heading);
-  check("10 → 20: £26.10 more with delivery", u.extraMinor === 2610, String(u.extraMinor));
+  check("10 + 1 vial unlocks free delivery", u.kind === "top-up" && u.to.extraVials === 1 && u.unlocksFreeDelivery);
+  check("10 + 1 vial: £5.01 away", c.heading === "You're £5.01 away from free next-day delivery", c.heading);
+  check("10 + 1 vial: £2.09 more with delivery", u.extraMinor === 209, String(u.extraMinor));
+  check("10 + 1 vial: button", c.accept === "Add 1 vial", c.accept);
+}
+{
+  process.env.NEXT_PUBLIC_DELIVERY_CHOICE = "off";
+  const u = upsellFor(bundleById("ten")!, 1)!;
+  check("10 + 1 vial, choice off: £3.00 more with delivery", u.extraMinor === 300, String(u.extraMinor));
+  process.env.NEXT_PUBLIC_DELIVERY_CHOICE = "on";
 }
 {
   const u = upsellFor(bundleById("five")!, 2)!;

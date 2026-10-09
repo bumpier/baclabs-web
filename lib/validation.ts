@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { PLAN_PACK_IDS } from "@/config/plans";
-import { BUNDLES, DELIVERY_OPTIONS, MAX_QUANTITY, MIN_QUANTITY, type DeliveryOptionId } from "@/config/funnel";
+import {
+  BUNDLES,
+  DELIVERY_OPTIONS,
+  MAX_EXTRA_VIALS,
+  MAX_QUANTITY,
+  MIN_QUANTITY,
+  type DeliveryOptionId,
+} from "@/config/funnel";
 
 // Every form input and API body is validated with these schemas
 // server-side before touching the database. All .strict().
@@ -12,6 +19,11 @@ const bundleOrderFields = {
   tierId: bundleIdEnum,
   /** Number of BUNDLES, not vials. 2 × starter = 6 vials. */
   quantity: z.number().int().min(MIN_QUANTITY).max(MAX_QUANTITY),
+  /**
+   * Loose single vials on top of the packs. Absent means none. The route
+   * prices them (priceOrder) and refuses them on the single tier.
+   */
+  extraVials: z.number().int().min(0).max(MAX_EXTRA_VIALS).optional(),
   /**
    * Whether the visitor had accepted tracking on the cookie banner. Decides
    * whether the purchase is reported to Meta from the server

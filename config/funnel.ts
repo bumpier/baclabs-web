@@ -117,6 +117,20 @@ export const DEFAULT_BUNDLE_ID: BundleId = "ten";
 export const MIN_QUANTITY = 1;
 export const MAX_QUANTITY = 10;
 
+/**
+ * Loose single vials an order may carry on top of its packs (9 Oct 2026):
+ * the 10-pack is £5.01 short of free delivery, and one loose vial takes it
+ * over. Priced as the `single` bundle, because that is the Stripe Price the
+ * session charges for them. Enforced server-side.
+ */
+export const MAX_EXTRA_VIALS = 4;
+
+/**
+ * Most loose vials the upsell will suggest adding to reach free delivery
+ * (lib/upsell.ts). Past two, a bigger pack is the better buy.
+ */
+export const TOP_UP_MAX_VIALS = 2;
+
 // ── Derived figures — computed, never typed by hand ───────────────
 
 export function bundleById(id: string): Bundle | undefined {
@@ -147,6 +161,42 @@ export function savingPercent(b: Bundle): number {
 /** Order total for `quantity` units of a bundle, in pence. */
 export function totalMinor(b: Bundle, quantity: number): number {
   return b.priceMinor * quantity;
+}
+
+/** The single-vial tier: what a loose vial added to a pack costs. */
+export const SINGLE_BUNDLE: Bundle = BUNDLES.find((b) => b.id === "single")!;
+
+export interface PricedOrder {
+  /** `quantity` packs of the bundle, in pence. */
+  packsMinor: number;
+  /** The loose vials, in pence. */
+  extrasMinor: number;
+  /** Everything but delivery: the figure shipsFree() and Stripe compare. */
+  goodsMinor: number;
+  /** Vials in the order, loose ones included. */
+  vials: number;
+  extraVials: number;
+}
+
+/**
+ * An order's goods: `quantity` packs plus `extraVials` loose vials. THE
+ * pricing the checkout route, the buy box and the tests share, so the page
+ * and the charge cannot disagree. Null for an order the shop doesn't sell:
+ * loose vials beyond MAX_EXTRA_VIALS, or loose vials on the single tier
+ * (more singles is just a bigger quantity).
+ */
+export function priceOrder(b: Bundle, quantity: number, extraVials = 0): PricedOrder | null {
+  if (!Number.isInteger(extraVials) || extraVials < 0 || extraVials > MAX_EXTRA_VIALS) return null;
+  if (extraVials > 0 && b.id === SINGLE_BUNDLE.id) return null;
+  const packsMinor = totalMinor(b, quantity);
+  const extrasMinor = SINGLE_BUNDLE.priceMinor * extraVials;
+  return {
+    packsMinor,
+    extrasMinor,
+    goodsMinor: packsMinor + extrasMinor,
+    vials: b.vials * quantity + extraVials,
+    extraVials,
+  };
 }
 
 /** £7.50 — the canonical way to render pence. Used in copy and CTAs. */

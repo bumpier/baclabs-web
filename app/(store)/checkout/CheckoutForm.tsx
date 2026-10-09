@@ -10,7 +10,7 @@ import {
   deliveryDetailAt,
   deliveryOptionsFor,
   formatMinor,
-  totalMinor,
+  priceOrder,
   type BundleId,
   type DeliveryOptionId,
 } from "@/config/funnel";
@@ -36,11 +36,14 @@ export function CheckoutForm({
   coins,
   bundleId,
   quantity,
+  extraVials,
   nowMs,
 }: {
   coins: string[];
   bundleId: string;
   quantity: number;
+  /** Loose single vials on top of the packs, already checked by the page. */
+  extraVials: number;
   /** When the page was rendered: next day's date is worked out from it, the same on server and client. */
   nowMs: number;
 }) {
@@ -48,8 +51,9 @@ export function CheckoutForm({
   const cancelled = searchParams.get("cancelled") === "1";
 
   const bundle = bundleById(bundleId)!;
-  const total = totalMinor(bundle, quantity);
-  const totalVials = bundle.vials * quantity;
+  const priced = priceOrder(bundle, quantity, extraVials) ?? priceOrder(bundle, quantity)!;
+  const total = priced.goodsMinor;
+  const totalVials = priced.vials;
   // The same function the server prices the order with.
   const deliveryOptions = deliveryOptionsFor(total);
 
@@ -72,6 +76,7 @@ export function CheckoutForm({
         body: JSON.stringify({
           tierId: bundle.id as BundleId,
           quantity,
+          ...(priced.extraVials > 0 ? { extraVials: priced.extraVials } : {}),
           method: coin,
           name: form.get("name"),
           email: form.get("email"),

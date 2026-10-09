@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { DELIVERY, PRODUCT, UPSELL, formatMinor, freeDeliveryName, shipsFree } from "@/config/funnel";
+import { DELIVERY, PRODUCT, SINGLE_BUNDLE, UPSELL, formatMinor, freeDeliveryName, shipsFree } from "@/config/funnel";
 import { trackEvent } from "@/lib/analytics";
 import { perVialOf, upsellCopy, upsellFor, type PricedChoice, type Upsell } from "@/lib/upsell";
 import { useFunnel } from "@/components/funnel/FunnelState";
@@ -23,7 +23,7 @@ import { FreeDeliveryMeter } from "@/components/funnel/buy/FreeDeliveryMeter";
 const SEEN_KEY = "baclab-upsell-seen";
 
 function seenKey(u: Upsell): string {
-  return `${u.from.bundle.id}x${u.from.quantity}`;
+  return `${u.from.bundle.id}x${u.from.quantity}+${u.from.extraVials}`;
 }
 
 function wasSeen(key: string): boolean {
@@ -44,18 +44,21 @@ function markSeen(key: string) {
 }
 
 function offerEvent(u: Upsell) {
+  // What the offer adds: the loose vials for a top-up, the pack otherwise.
+  const topUp = u.kind === "top-up";
+  const item = topUp ? SINGLE_BUNDLE : u.to.bundle;
   return {
     currency: "GBP",
     value: u.to.goodsMinor / 100,
-    bundleId: u.to.bundle.id,
+    bundleId: item.id,
     vials: u.to.vials,
-    contentIds: [u.from.bundle.id, u.to.bundle.id],
+    contentIds: [u.from.bundle.id, item.id],
     items: [
       {
-        item_id: u.to.bundle.sku,
-        item_name: `${PRODUCT.name} ${u.to.vials} × ${PRODUCT.size}`,
-        price: u.to.bundle.priceMinor / 100,
-        quantity: 1,
+        item_id: item.sku,
+        item_name: `${PRODUCT.name} ${item.vials} × ${PRODUCT.size}`,
+        price: item.priceMinor / 100,
+        quantity: topUp ? u.to.extraVials : 1,
       },
     ],
   };
@@ -66,7 +69,7 @@ function offerEvent(u: Upsell) {
  * onClick; render `dialog` anywhere, it goes to <body>.
  */
 export function useUpsellCheckout() {
-  const { bundle, quantity } = useFunnel();
+  const { bundle, quantity, extraVials } = useFunnel();
   const { checkout, checkoutPack, pending, error } = useCheckout();
   const [offer, setOffer] = useState<Upsell | null>(null);
   const [taken, setTaken] = useState<"accept" | "decline" | null>(null);
@@ -78,7 +81,7 @@ export function useUpsellCheckout() {
   );
 
   function start() {
-    const u = UPSELL.popup ? upsellFor(bundle, quantity) : null;
+    const u = UPSELL.popup ? upsellFor(bundle, quantity, extraVials) : null;
     if (u && !wasSeen(seenKey(u))) {
       markSeen(seenKey(u));
       setOffer(u);
@@ -93,14 +96,14 @@ export function useUpsellCheckout() {
     if (!offer) return;
     setTaken("accept");
     trackEvent("upsell_accept", offerEvent(offer));
-    void checkoutPack(offer.to.bundle, 1);
+    void checkoutPack(offer.to.bundle, offer.to.quantity, offer.to.extraVials);
   }
 
   function decline() {
     if (!offer) return;
     setTaken("decline");
     trackEvent("upsell_decline", offerEvent(offer));
-    void checkoutPack(offer.from.bundle, offer.from.quantity);
+    void checkoutPack(offer.from.bundle, offer.from.quantity, offer.from.extraVials);
   }
 
   const dialog = offer ? (
@@ -186,7 +189,11 @@ function UpsellDialog({
 
         <div className="mt-5 grid grid-cols-2 gap-2">
           <ChoiceCard title="You chose" choice={offer.from} />
-          <ChoiceCard title={offer.kind === "same-for-less" ? "One pack" : "Upgrade"} choice={offer.to} offered />
+          <ChoiceCard
+            title={offer.kind === "same-for-less" ? "One pack" : offer.kind === "top-up" ? "Free delivery" : "Upgrade"}
+            choice={offer.to}
+            offered
+          />
         </div>
 
         <div className="mt-6 flex flex-col gap-2">
@@ -238,7 +245,12 @@ function ChoiceCard({ title, choice, offered = false }: { title: string; choice:
     >
       <p className={offered ? "text-xs font-semibold text-brand-deep" : "text-xs text-ink-soft"}>{title}</p>
       <p className="mt-1 text-base font-semibold text-ink">
-        {choice.quantity > 1 ? (
+        {choice.extraVials > 0 ? (
+          <>
+            <span className="tabular">{choice.bundle.vials * choice.quantity}</span> +{" "}
+            <span className="tabular">{choice.extraVials}</span> vials
+          </>
+        ) : choice.quantity > 1 ? (
           <>
             <span className="tabular">{choice.quantity}</span> × <span className="tabular">{choice.bundle.vials}</span>{" "}
             {choice.bundle.vials === 1 ? "vial" : "vials"}
@@ -249,8 +261,18 @@ function ChoiceCard({ title, choice, offered = false }: { title: string; choice:
           </>
         )}
       </p>
+      {/* A top-up's per-vial figure (£40.98 over 11) reads worse than the
+          pack's own, when what it buys is the free delivery. Say what it is. */}
       <p className="text-xs text-ink-soft">
-        <span className="tabular">{formatMinor(perVialOf(choice))}</span> a vial
+        {choice.extraVials > 0 ? (
+          <>
+            {choice.bundle.vials}-vial pack + {choice.extraVials} single
+          </>
+        ) : (
+          <>
+            <span className="tabular">{formatMinor(perVialOf(choice))}</span> a vial
+          </>
+        )}
       </p>
       <p className="mt-2 tabular text-lg font-semibold text-ink">{formatMinor(choice.payableMinor)}</p>
       <p className="text-xs text-ink-soft">
