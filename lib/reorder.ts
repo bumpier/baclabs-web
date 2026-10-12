@@ -38,6 +38,7 @@ interface StoredLine {
   bundleQty?: unknown;
   qty?: unknown;
   welcome?: unknown;
+  gift?: unknown;
   addOn?: unknown;
 }
 
@@ -51,9 +52,9 @@ export function reorderOffer(itemsJson: string): ReorderOffer | null {
     return null;
   }
 
-  // The pack: the last paid line that is neither the welcome gift nor the
-  // loose vials beside it.
-  const pack = [...lines].reverse().find((l) => l.welcome !== true && l.addOn !== true);
+  // The pack: the last paid line that is not a free line (the welcome gift,
+  // free vials staff promised) nor the loose vials beside it.
+  const pack = [...lines].reverse().find((l) => l.welcome !== true && l.gift !== true && l.addOn !== true);
   const bundle = typeof pack?.bundleId === "string" ? bundleById(pack.bundleId) : undefined;
   const quantity = typeof pack?.bundleQty === "number" && pack.bundleQty > 0 ? pack.bundleQty : 0;
   if (!bundle || quantity === 0) return null;

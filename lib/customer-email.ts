@@ -35,6 +35,8 @@ interface OrderItem {
   lineTotal?: string;
   /** The mailing-list welcome vial (lib/mailing-list.ts): shown as "Free". */
   welcome?: boolean;
+  /** Free vials staff promised this customer (lib/vial-gifts.ts): shown as "Free". */
+  gift?: boolean;
   /** The free pack of a 12-month plan: shown as "Free". */
   planBonus?: boolean;
   /** "5-vial monthly plan, 12 boxes" on a plan's purchase line (lib/plans/items.ts). */
@@ -164,7 +166,7 @@ function receiptTable(
         i.planLine === "plan" && i.bundleName ? `&middot; ${escapeHtml(i.bundleName)}` : `&times; ${i.qty}`;
       return `<tr>
         <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};color:${LITERAL.ink}">${escapeHtml(i.name)} <span style="color:${LITERAL.inkSoft}">${detail}</span></td>
-        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};text-align:right;color:${LITERAL.ink};white-space:nowrap">${i.welcome || i.planBonus ? "Free" : formatPrice(amount, currency)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};text-align:right;color:${LITERAL.ink};white-space:nowrap">${i.welcome || i.gift || i.planBonus ? "Free" : formatPrice(amount, currency)}</td>
       </tr>`;
     })
     .join("");
@@ -311,6 +313,7 @@ export async function sendOrderConfirmationEmail(
   const bcc = await trustpilotBccFor(order);
   // More than one with the reminder bonus (lib/mailing-list.ts welcomeVialCount).
   const welcomeVials = items.reduce((n, i) => (i.welcome ? n + i.qty : n), 0);
+  const giftVials = items.reduce((n, i) => (i.gift ? n + i.qty : n), 0);
   const tracking = opts?.tracking?.number ? opts.tracking : null;
   const trackingBlock = tracking
     ? `<p style="margin:0 0 12px">Your ${tracking.carrier ? `${escapeHtml(tracking.carrier)} ` : ""}tracking number is
@@ -326,6 +329,7 @@ export async function sendOrderConfirmationEmail(
       <p>${plan ? "Thank you for your order." : "Thanks for your order!"} Your payment has been received and we're getting it ready.</p>
       ${trackingBlock}
       ${welcomeVials > 0 ? `<p style="margin:0 0 12px">Your mailing-list welcome gift, ${welcomeVials === 1 ? "an extra 10ml vial" : `${welcomeVials} extra 10ml vials`}, is included in this order.</p>` : ""}
+      ${giftVials > 0 ? `<p style="margin:0 0 12px">The ${giftVials === 1 ? "free 10ml vial" : `${giftVials} free 10ml vials`} we promised you ${giftVials === 1 ? "is" : "are"} included in this order.</p>` : ""}
       <p style="margin:0 0 4px;font-size:12px;color:${LITERAL.inkSoft}">Order ${order.id} &middot; placed ${placedOn}</p>
       ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString())}
       ${planBlock}

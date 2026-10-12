@@ -27,6 +27,7 @@
     "test:shipping": "tsx scripts/test-shipping.ts",
     "test:barcode": "tsx scripts/test-barcode.ts",
     "test:mailing": "tsx scripts/test-mailing-list.ts",
+    "test:gifts": "tsx scripts/test-vial-gifts.ts",
     "test:takings": "tsx scripts/test-takings.ts",
     "test:vialstock": "tsx scripts/test-vial-stock.ts",
     "test:finance": "tsx scripts/test-finance.ts",

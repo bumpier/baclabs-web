@@ -5,6 +5,7 @@ import type { PaymentProvider } from "@/lib/payments/config";
 import { sendMetaPurchase } from "@/lib/meta-capi";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { settleWelcomeVial } from "@/lib/mailing-list";
+import { settleVialGifts } from "@/lib/vial-gifts";
 import { autoBuyLabel } from "@/lib/shipping/shipments";
 import { orderTracking } from "@/lib/shipping/tracking-sync";
 import { allocateAfterPayment, takeStockInTransaction } from "@/lib/payments/stock";
@@ -65,14 +66,19 @@ export async function fulfillPaidOrder(
       // is taken, so the vial is decremented, allocated and picked with the
       // rest. See lib/mailing-list.ts.
       const welcome = await settleWelcomeVial(tx, order, { legacyStockCheck: mode === "legacy" });
-      if (welcome.items !== order.items || welcome.subscriberId !== order.welcomeSubscriberId) {
+      // Free vials staff promised this email, usually as an apology
+      // (lib/vial-gifts.ts). After the welcome vial, so its stock check
+      // counts that vial too.
+      const gifts = await settleVialGifts(tx, { ...order, items: welcome.items }, { legacyStockCheck: mode === "legacy" });
+      const added = [welcome.note, gifts.note].filter(Boolean).join("\n");
+      if (gifts.items !== order.items || welcome.subscriberId !== order.welcomeSubscriberId || added) {
         const notes = opts.notes !== undefined ? opts.notes : order.notes;
         await tx.order.update({
           where: { id: orderId },
           data: {
-            items: welcome.items,
+            items: gifts.items,
             welcomeSubscriberId: welcome.subscriberId,
-            ...(welcome.note ? { notes: notes ? `${notes}\n${welcome.note}` : welcome.note } : {}),
+            ...(added ? { notes: notes ? `${notes}\n${added}` : added } : {}),
           },
         });
       }
@@ -80,7 +86,7 @@ export async function fulfillPaidOrder(
       // Legacy: decrement the vial counter now that payment is confirmed. In
       // warehouse mode stock is allocated to locations below instead
       // (lib/payments/stock.ts).
-      await takeStockInTransaction(tx, mode, welcome.items);
+      await takeStockInTransaction(tx, mode, gifts.items);
     }
 
     // Box 1 of a plan, or an upgrade's payment: the plan goes live in this

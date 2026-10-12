@@ -21,6 +21,7 @@ const DAY_MS = 86_400_000;
 
 interface ItemLike {
   welcome?: unknown;
+  gift?: unknown;
   bundleId?: unknown;
   bundleQty?: unknown;
 }
@@ -34,9 +35,14 @@ function readItems(itemsJson: string): ItemLike[] | null {
   }
 }
 
+/** Not a free line: the welcome vial, or free vials staff promised (lib/vial-gifts.ts). */
+function isPaidLine(l: ItemLike): boolean {
+  return l.welcome !== true && l.gift !== true;
+}
+
 /** The plan pack an order bought: its first paid line, when that is a 5-, 10- or 20-vial pack. */
 export function planPackOf(itemsJson: string): PlanPackId | null {
-  const first = (readItems(itemsJson) ?? []).find((l) => l.welcome !== true);
+  const first = (readItems(itemsJson) ?? []).find(isPaidLine);
   return first && typeof first.bundleId === "string" && isPlanPackId(first.bundleId) ? first.bundleId : null;
 }
 
@@ -55,7 +61,7 @@ export type UpgradeVerdict =
 const no = (reason: string): UpgradeVerdict => ({ eligible: false, reason });
 
 /**
- * A one-off order of exactly one 5/10/20 pack (the welcome vial aside), paid
+ * A one-off order of exactly one 5/10/20 pack (free lines aside), paid
  * within the last 7 days, standing, and not already part of a plan.
  */
 export function upgradeEligibility(order: UpgradeCandidate, now: Date): UpgradeVerdict {
@@ -65,7 +71,7 @@ export function upgradeEligibility(order: UpgradeCandidate, now: Date): UpgradeV
   if (!order.paidAt) return no("no payment date");
   const deadline = new Date(order.paidAt.getTime() + PLAN_UPGRADE_WINDOW_DAYS * DAY_MS);
   if (now.getTime() > deadline.getTime()) return no(`paid more than ${PLAN_UPGRADE_WINDOW_DAYS} days ago`);
-  const paid = (readItems(order.items) ?? []).filter((l) => l.welcome !== true);
+  const paid = (readItems(order.items) ?? []).filter(isPaidLine);
   if (paid.length !== 1) return no("not exactly one pack");
   const line = paid[0]!;
   if (typeof line.bundleId !== "string" || !isPlanPackId(line.bundleId)) return no("not a 5-, 10- or 20-vial pack");

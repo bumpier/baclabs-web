@@ -92,6 +92,8 @@ export interface LedgerRow {
   afterCostsMinor: number;
   vials: number;
   welcomeVials: number;
+  /** Free vials staff promised (lib/vial-gifts.ts); like welcomeVials, part of vials. */
+  giftVials: number;
   /** BUNDLES id, a retired pack's name, or "loose" (orders from before packs). */
   pack: string;
   customer: CustomerKind;
@@ -103,6 +105,7 @@ export interface LedgerRow {
 export interface ItemLine {
   qty?: unknown;
   welcome?: unknown;
+  gift?: unknown;
   bundleId?: unknown;
   bundleName?: unknown;
 }
@@ -117,9 +120,9 @@ function readItems(json: string): { lines: ItemLine[]; unreadable: boolean } {
   return { lines: [], unreadable: true };
 }
 
-/** Which pack an order bought: its first line that is not the free welcome vial. */
+/** Which pack an order bought: its first line that is not free (the welcome vial, promised free vials). */
 export function packOf(lines: ItemLine[]): string {
-  const line = lines.find((l) => l.welcome !== true);
+  const line = lines.find((l) => l.welcome !== true && l.gift !== true);
   if (!line) return "loose";
   if (typeof line.bundleId === "string" && line.bundleId) return line.bundleId;
   if (typeof line.bundleName === "string" && line.bundleName) return line.bundleName;
@@ -173,10 +176,12 @@ export function ledgerRow(order: LedgerOrder, ctx: LedgerContext): LedgerRow {
   const { lines, unreadable } = readItems(order.items);
   let vials = 0;
   let welcomeVials = 0;
+  let giftVials = 0;
   for (const l of lines) {
     const qty = typeof l.qty === "number" ? l.qty : 0;
     vials += qty;
     if (l.welcome === true) welcomeVials += qty;
+    if (l.gift === true) giftVials += qty;
   }
 
   const email = order.customerEmail.trim().toLowerCase();
@@ -209,6 +214,7 @@ export function ledgerRow(order: LedgerOrder, ctx: LedgerContext): LedgerRow {
     afterCostsMinor: cancelled ? -postageMinor : takenMinor - vatMinor - postageMinor - fulfilmentMinor,
     vials,
     welcomeVials,
+    giftVials,
     pack: packOf(lines),
     customer,
     itemsUnreadable: unreadable,
@@ -254,6 +260,7 @@ export interface FinanceTotals {
   averageMinor: number;
   vials: number;
   welcomeVials: number;
+  giftVials: number;
   cancelledOrders: number;
   cancelledMinor: number;
 }
@@ -274,6 +281,7 @@ export function summarise(rows: readonly LedgerRow[]): FinanceTotals {
     averageMinor: 0,
     vials: 0,
     welcomeVials: 0,
+    giftVials: 0,
     cancelledOrders: 0,
     cancelledMinor: 0,
   };
@@ -297,6 +305,7 @@ export function summarise(rows: readonly LedgerRow[]): FinanceTotals {
     t.afterCostsMinor += r.afterCostsMinor;
     t.vials += r.vials;
     t.welcomeVials += r.welcomeVials;
+    t.giftVials += r.giftVials;
   }
   if (t.orders > 0) t.averageMinor = Math.round(t.takenMinor / t.orders);
   return t;

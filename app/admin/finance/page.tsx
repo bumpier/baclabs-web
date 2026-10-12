@@ -79,7 +79,15 @@ export default async function AdminFinancePage({
     {
       label: "Vials sold",
       value: String(t.vials),
-      note: t.welcomeVials > 0 ? `Incl. ${t.welcomeVials} free welcome` : vs((x) => x.vials),
+      note:
+        t.welcomeVials + t.giftVials > 0
+          ? `Incl. ${[
+              t.welcomeVials > 0 ? `${t.welcomeVials} free welcome` : "",
+              t.giftVials > 0 ? `${t.giftVials} free apology` : "",
+            ]
+              .filter(Boolean)
+              .join(", ")}`
+          : vs((x) => x.vials),
     },
     { label: "Discounts given", value: gbp(t.discountMinor), note: "Promotion codes, already off takings" },
   ];
@@ -302,7 +310,7 @@ export default async function AdminFinancePage({
               </tbody>
             </table>
           )}
-          <p className="mt-3 text-xs text-ink-soft">Vials include free welcome vials sent with an order.</p>
+          <p className="mt-3 text-xs text-ink-soft">Vials include free welcome vials and free vials promised as an apology, sent with an order.</p>
         </section>
 
         <section className="card overflow-x-auto p-6">

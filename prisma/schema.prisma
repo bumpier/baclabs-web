@@ -582,6 +582,27 @@ model VialDelivery {
   @@index([receivedOn])
 }
 
+// Free vials promised to a customer, usually to say sorry: added at £0 to
+// the next parcel order paid with this email, inside fulfilment's
+// transaction (lib/vial-gifts.ts settleVialGifts). Used, cancelled and
+// expired are read from the columns; a row with none of them is waiting.
+model VialGift {
+  id          String    @id @default(cuid())
+  email       String // lower-cased and trimmed (lib/mailing-list.ts normEmail)
+  vials       Int
+  note        String    @default("") // why, for the admin list; never shown to the customer
+  actor       String    @default("") // AdminUser.id or "admin"
+  expiresAt   DateTime  @map("expires_at")
+  emailedAt   DateTime? @map("emailed_at") // null: Resend never took the email
+  orderId     String?   @map("order_id") // the order it was added to
+  claimedAt   DateTime? @map("claimed_at")
+  cancelledAt DateTime? @map("cancelled_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([orderId])
+}
+
 // ── Postage ───────────────────────────────────────────────────────
 
 // A postal service and the limits that decide whether a parcel fits it.

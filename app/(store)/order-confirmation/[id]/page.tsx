@@ -65,6 +65,8 @@ export default async function OrderConfirmationPage({
     bundleQty?: number;
     /** The mailing-list welcome vial. */
     welcome?: boolean;
+    /** Free vials staff promised this customer (lib/vial-gifts.ts). */
+    gift?: boolean;
     /** A plan's free bonus pack (lib/plans/items.ts). */
     planBonus?: boolean;
     /** "box": a later plan box, already paid for by its plan. */
@@ -163,7 +165,7 @@ export default async function OrderConfirmationPage({
           valueMinor={paidMinor(order)}
           contentIds={contents.map((c) => c.id)}
           numItems={contents.reduce((sum, c) => sum + c.quantity, 0)}
-          items={items.map((i) => ({
+          items={items.filter((i) => !i.gift).map((i) => ({
             item_id: i.bundleName ?? "baclab-10ml",
             item_name: i.name,
             // One "item" per line at its exact total, so per-item revenue
@@ -252,7 +254,7 @@ export default async function OrderConfirmationPage({
                 ) : null}
               </dt>
               <dd className="tabular shrink-0 text-ink">
-                {item.welcome || item.planBonus
+                {item.welcome || item.gift || item.planBonus
                   ? "Free"
                   : item.planLine === "box"
                     ? "Included"

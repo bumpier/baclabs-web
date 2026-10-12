@@ -45,7 +45,10 @@ export function paidMinor(order: {
   return order.amountPaidMinor ?? Math.round(Number(order.totalAmount.toString()) * 100);
 }
 
-/** One content entry per order line, keyed by the bundle's SKU. */
+/**
+ * One content entry per order line, keyed by the bundle's SKU. Free vials
+ * staff promised (lib/vial-gifts.ts) are left out: nothing was bought.
+ */
 export function purchaseContents(itemsJson: string): { id: string; quantity: number }[] {
   let items: unknown;
   try {
@@ -54,7 +57,7 @@ export function purchaseContents(itemsJson: string): { id: string; quantity: num
     return [];
   }
   if (!Array.isArray(items)) return [];
-  return items.map((raw) => {
+  return items.filter((raw) => (raw as { gift?: unknown })?.gift !== true).map((raw) => {
     const item = raw as { bundleId?: string; bundleQty?: number };
     const bundle = item.bundleId ? bundleById(item.bundleId) : undefined;
     return {

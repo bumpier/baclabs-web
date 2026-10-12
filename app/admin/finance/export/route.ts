@@ -45,7 +45,7 @@ export async function GET(req: Request) {
   let header: string[];
   let lines: string[][];
   if (level === "period") {
-    header = ["period", "from", "to", "orders", "vials", "welcome_vials", "order_value", "delivery", "taken", "discounts", "vat", "postage", "postage_cancelled_orders", "packages", "fulfilment", "after_shipping_costs", "cancelled_orders", "cancelled_value"];
+    header = ["period", "from", "to", "orders", "vials", "welcome_vials", "gift_vials", "order_value", "delivery", "taken", "discounts", "vat", "postage", "postage_cancelled_orders", "packages", "fulfilment", "after_shipping_costs", "cancelled_orders", "cancelled_value"];
     lines = f.buckets.map((b) => {
       const t = b.totals;
       return [
@@ -55,6 +55,7 @@ export async function GET(req: Request) {
         String(t.orders),
         String(t.vials),
         String(t.welcomeVials),
+        String(t.giftVials),
         money(t.goodsMinor),
         money(t.deliveryMinor),
         money(t.takenMinor),
@@ -70,7 +71,7 @@ export async function GET(req: Request) {
       ];
     });
   } else {
-    header = ["order_id", "kind", "paid_at", "day", "status", "customer_name", "customer_email", "customer", "pack", "vials", "welcome_vials", "delivery_option", "order_value", "delivery", "taken", "discount", "vat", "postage", "postage_status", "packages", "fulfilment", "after_shipping_costs"];
+    header = ["order_id", "kind", "paid_at", "day", "status", "customer_name", "customer_email", "customer", "pack", "vials", "welcome_vials", "gift_vials", "delivery_option", "order_value", "delivery", "taken", "discount", "vat", "postage", "postage_status", "packages", "fulfilment", "after_shipping_costs"];
     lines = f.rows.map((r) => [
       r.id,
       r.kind,
@@ -83,6 +84,7 @@ export async function GET(req: Request) {
       packName(r.pack),
       String(r.vials),
       String(r.welcomeVials),
+      String(r.giftVials),
       r.deliveryOption ?? "",
       money(r.goodsMinor),
       money(r.deliveryMinor),

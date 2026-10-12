@@ -20,6 +20,7 @@ const ALL_NAV: Gated<NavLink | { label: string; items: Gated<NavLink>[] }>[] = [
       { href: "/admin/orders", label: "All orders", hint: "Pick, pack and dispatch" },
       { href: "/admin/orders/scan", label: "Scan station", hint: "Check a parcel against its order" },
       { href: "/admin/plans", label: "Monthly plans", hint: "Prepaid boxes, cancellations and refunds", adminOnly: true },
+      { href: "/admin/free-vials", label: "Free vials", hint: "Added to a customer's next order", adminOnly: true },
     ],
   },
   {

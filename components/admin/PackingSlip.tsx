@@ -10,6 +10,8 @@ interface OrderItem {
   lineTotal?: string;
   /** The mailing-list welcome vial: packed like any vial, priced as Free. */
   welcome?: boolean;
+  /** Free vials staff promised this customer (lib/vial-gifts.ts): priced as Free. */
+  gift?: boolean;
 }
 
 /** The A4 sheet that goes in the box. Shared by the order page and the batch print. */
@@ -86,9 +88,9 @@ export function PackingSlip({ order }: { order: Order }) {
             <tr key={idx}>
               <td className="py-3">{item.name}</td>
               <td className="py-3 text-center">{item.qty}</td>
-              <td className="py-3 text-right">{item.welcome ? "Free" : formatPrice(item.unitPrice, currency)}</td>
+              <td className="py-3 text-right">{item.welcome || item.gift ? "Free" : formatPrice(item.unitPrice, currency)}</td>
               <td className="py-3 text-right font-medium">
-                {item.welcome
+                {item.welcome || item.gift
                   ? "Free"
                   : formatPrice(
                       item.lineTotal ? parseFloat(item.lineTotal) : parseFloat(item.unitPrice) * item.qty,
