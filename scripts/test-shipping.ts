@@ -18,12 +18,13 @@ import {
   deliveryOptionById,
   deliveryOptionsFor,
   deliveryOptionsSentence,
+  dispatchNoticeAt,
   freeDeliveryName,
   nextDayOffered,
   otherDeliveryOptionsLine,
   quotedDeliveryOption,
 } from "@/config/funnel";
-import { formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
+import { dispatchDelay, formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
 import { buildShipmentRequest, cleanDeliveryInstructions, labelReference, LIMITS, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
 
 let failures = 0;
@@ -293,10 +294,39 @@ check("instructions are one line with single spaces", cleanDeliveryInstructions(
   const after = deliveryDetailAt(nextDayOption, new Date("2026-10-06T15:00:00Z"));
   check("after it, next day is still offered with the later date", after === "Amazon Shipping. Delivery Thu 8 Oct", after);
   check(
-    "Standard's line has no date",
-    deliveryDetailAt(STANDARD_DELIVERY, new Date()) === "Royal Mail Tracked 48, 2–3 working days",
-    deliveryDetailAt(STANDARD_DELIVERY, new Date())
+    "on a weekday Standard's line has no date",
+    deliveryDetailAt(STANDARD_DELIVERY, new Date("2026-10-06T15:00:00Z")) === "Royal Mail Tracked 48, 2–3 working days",
+    deliveryDetailAt(STANDARD_DELIVERY, new Date("2026-10-06T15:00:00Z"))
   );
+
+  // ── From 3pm Friday until Monday, and over bank holidays ──
+  const delayed = (iso: string) => dispatchDelay(new Date(iso));
+  check("Tuesday morning: no delay", delayed("2026-10-06T10:00:00Z") === null);
+  check("Tuesday after 3pm, out Wednesday: no delay", delayed("2026-10-06T15:00:00Z") === null);
+  check("Friday before 3pm: no delay", delayed("2026-10-09T13:59:00Z") === null);
+  const friday = delayed("2026-10-09T14:00:00Z");
+  check("Friday at 3pm waits for Monday", friday?.dispatchDayKey === "2026-10-12" && !friday.bankHoliday, JSON.stringify(friday));
+  check("Saturday waits for Monday", delayed("2026-10-10T09:00:00Z")?.dispatchDayKey === "2026-10-12");
+  check("Sunday night still waits for Monday", delayed("2026-10-11T22:30:00Z")?.dispatchDayKey === "2026-10-12");
+  check("Monday after midnight UK: no delay", delayed("2026-10-11T23:30:00Z") === null);
+  const xmas = delayed("2026-12-24T16:00:00Z");
+  check("Christmas Eve afternoon is a bank-holiday wait", xmas?.dispatchDayKey === "2026-12-29" && xmas.bankHoliday, JSON.stringify(xmas));
+  check("Easter Monday is a bank-holiday wait", delayed("2027-03-29T10:00:00Z")?.bankHoliday === true);
+
+  const weekend = dispatchNoticeAt(new Date("2026-10-10T09:00:00Z"));
+  check("the weekend notice names Monday", weekend?.title === "Weekend orders ship on Monday", weekend?.title);
+  check(
+    "…and says why",
+    weekend?.detail === "We don't dispatch from 3pm on Friday until Monday.",
+    weekend?.detail
+  );
+  const holiday = dispatchNoticeAt(new Date("2026-12-24T16:00:00Z"));
+  check("the bank-holiday notice gives the date", holiday?.title === "Orders placed now ship on Tue 29 Dec", holiday?.title);
+  check("no notice on a weekday", dispatchNoticeAt(new Date("2026-10-07T12:00:00Z")) === null);
+  const satStandard = deliveryDetailAt(STANDARD_DELIVERY, new Date("2026-10-10T09:00:00Z"));
+  check("at the weekend Standard says when it ships", satStandard === "Royal Mail Tracked 48, 2–3 working days. Ships Mon 12 Oct", satStandard);
+  const satNextDay = deliveryDetailAt(nextDayOption, new Date("2026-10-10T09:00:00Z"));
+  check("at the weekend next day ships Monday, arrives Tuesday", satNextDay === "Amazon Shipping. Ships Mon 12 Oct, delivery Tue 13 Oct", satNextDay);
 }
 
 // ── Address wrapping ─────────────────────────────────────────────

@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { brand } from "@/config/brand";
-import { deliveryOptionById, formatMinor } from "@/config/funnel";
-import { formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
+import { deliveryOptionById, dispatchNoticeAt, formatMinor } from "@/config/funnel";
+import { formatDeliveryDay, nextDayDeadline, ukDayKey } from "@/lib/delivery-date";
 import { paidMinor, purchaseContents, purchaseEventId } from "@/lib/meta-capi-event";
 import { parseTrackingNumbers } from "@/lib/shipping/shipments";
 import { trackingLink } from "@/lib/shipping/carriers";
@@ -116,6 +116,14 @@ export default async function OrderConfirmationPage({
     paidFor?.id === "next_day" && order.paidAt
       ? formatDeliveryDay(nextDayDeadline(order.paidAt).deliveryDayKey)
       : null;
+  // Paid from 3pm Friday until Monday, or over a bank holiday: the day it
+  // ships, so an order waiting for Monday reads as expected, not late. Only
+  // until it goes, and no later than that day.
+  const paidNotice =
+    order.paidAt && order.status !== "shipped" && order.status !== "delivered"
+      ? dispatchNoticeAt(order.paidAt)
+      : null;
+  const shipsOn = paidNotice && ukDayKey(new Date()) <= paidNotice.dispatchDayKey ? paidNotice : null;
   // Meta's content ids and item count, built by the same helper as the
   // server-side Purchase so the two reports agree.
   const contents = purchaseContents(order.items);
@@ -368,6 +376,13 @@ export default async function OrderConfirmationPage({
                 ) : (
                   "We pack your order and dispatch it to the address you gave at checkout."
                 )}
+                {shipsOn ? (
+                  <>
+                    {" "}
+                    {shipsOn.detail} It ships on{" "}
+                    <span className="font-medium text-ink">{formatDeliveryDay(shipsOn.dispatchDayKey)}</span>.
+                  </>
+                ) : null}
               </span>
             </li>
             <li className="flex gap-3">

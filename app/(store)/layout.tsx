@@ -26,10 +26,11 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
       </a>
       <Header guidesHref={contentHref("/guides")} />
       {/* Outside <main>: the skip link jumps past it with the header. The
-          sale line, the next-day countdown and free delivery in one strip;
+          sale line, the next-day countdown (or, from 3pm Friday to Monday,
+          the weekend dispatch notice) and free delivery in one strip;
           each part renders nothing while its source is off (see the
           component). */}
-      <AnnouncementBanner sale={saleVisible()} />
+      <AnnouncementBanner sale={saleVisible()} renderedAt={Date.now()} />
       <main id="main" className="flex-1">
         {children}
       </main>

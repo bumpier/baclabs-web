@@ -6,6 +6,7 @@ import { packByBundleId, packPath } from "@/config/products";
 import { formatCutoffHour } from "@/lib/delivery-date";
 import { upsellCopy, upsellFor } from "@/lib/upsell";
 import { useFunnel } from "@/components/funnel/FunnelState";
+import { useDispatchNotice } from "@/components/funnel/useDispatchNotice";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
 import { WelcomeVialPanel } from "@/components/mailing-list/WelcomeVialPanel";
 import { CheckMark, CheckoutRow, DeliveryLine, PriceLine } from "@/components/funnel/buy/parts";
@@ -48,8 +49,14 @@ export function PackBuy({
 
   // No "Cheapest in the UK" here: that claim lives only on the home page,
   // beside the guarantee that substantiates it.
+  // From 3pm Friday until Monday, when the order ships (useDispatchNotice).
+  const dispatchNotice = useDispatchNotice();
   const checks = [
-    DELIVERY.dispatchLine ? `Same working day dispatch, order by ${formatCutoffHour()}` : "",
+    !DELIVERY.dispatchLine
+      ? ""
+      : dispatchNotice
+        ? dispatchNotice.title
+        : `Same working day dispatch, order by ${formatCutoffHour()}`,
     "Secure checkout by Stripe",
   ].filter(Boolean);
 

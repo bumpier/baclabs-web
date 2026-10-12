@@ -9,6 +9,7 @@ import {
   deliveryChoiceEnabled,
   deliveryDetailAt,
   deliveryOptionsFor,
+  dispatchNoticeAt,
   formatMinor,
   priceOrder,
   type BundleId,
@@ -56,6 +57,9 @@ export function CheckoutForm({
   const totalVials = priced.vials;
   // The same function the server prices the order with.
   const deliveryOptions = deliveryOptionsFor(total);
+  // From 3pm Friday until Monday, when the order ships, as of the same render
+  // time the delivery lines use.
+  const dispatchNotice = dispatchNoticeAt(new Date(nowMs));
 
   const [coin, setCoin] = useState<Coin>((coins[0] as Coin) ?? "btc");
   const [deliveryId, setDeliveryId] = useState<DeliveryOptionId | null>(deliveryOptions[0]?.option.id ?? null);
@@ -140,6 +144,11 @@ export function CheckoutForm({
           <dt>Total</dt>
           <dd className="tabular">{formatMinor(total + (delivery?.priceMinor ?? 0))}</dd>
         </div>
+        {dispatchNotice ? (
+          <p className="pt-1 text-xs text-ink-soft">
+            {dispatchNotice.title}. {dispatchNotice.detail}
+          </p>
+        ) : null}
         <p className="pt-1 text-xs text-ink-soft">
           Converted to your chosen coin at the live rate on the next screen.
         </p>

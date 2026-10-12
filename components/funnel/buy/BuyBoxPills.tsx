@@ -21,6 +21,7 @@ import {
 } from "@/config/funnel";
 import { formatCutoffHour } from "@/lib/delivery-date";
 import { useFunnel, usePackQuery } from "@/components/funnel/FunnelState";
+import { useDispatchNotice } from "@/components/funnel/useDispatchNotice";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
 import { WelcomeVialPanel } from "@/components/mailing-list/WelcomeVialPanel";
 import {
@@ -63,6 +64,9 @@ export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
   const bestId = bestPerVialBundleId();
   const times = deliveryTimesSentence();
   const once = mode === "once";
+  // From 3pm Friday until Monday "order by 3pm" would read as today, so the
+  // dispatch check says when the order actually ships.
+  const dispatchNotice = useDispatchNotice();
 
   // The three reasons to buy here and now, beside the button where the
   // decision is made. The price claim only ever appears with the link to
@@ -70,7 +74,13 @@ export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
   // drop out, so a withdrawn one disappears here too.
   const checks: { label: string; href?: string }[] = [
     { label: LOWEST_PRICE_BADGE, href: "#guarantee" },
-    { label: DELIVERY.dispatchLine ? `Same working day dispatch, order by ${formatCutoffHour()}` : "" },
+    {
+      label: !DELIVERY.dispatchLine
+        ? ""
+        : dispatchNotice
+          ? dispatchNotice.title
+          : `Same working day dispatch, order by ${formatCutoffHour()}`,
+    },
     { label: "Secure checkout by Stripe" },
   ].filter((c) => c.label);
 

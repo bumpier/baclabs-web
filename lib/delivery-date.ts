@@ -59,6 +59,7 @@ const dayFmt = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
 });
+const weekdayFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "long" });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -120,6 +121,35 @@ export function nextDayDeadline(now: Date): NextDayDeadline {
     deliveryDayKey: nextWorkingDay(dispatchDayKey),
     dispatchedToday,
   };
+}
+
+export interface DispatchDelay {
+  /** The UK day an order placed now is dispatched. */
+  dispatchDayKey: string;
+  /** A bank holiday falls between now and dispatch, not only a weekend. */
+  bankHoliday: boolean;
+}
+
+/**
+ * Whether an order placed now waits more than a night to go out: from the
+ * cutoff on a Friday until Sunday night, when it is dispatched on Monday,
+ * and the same over a bank holiday. null on an ordinary day, when an order
+ * goes out today or, placed after the cutoff, tomorrow.
+ */
+export function dispatchDelay(now: Date): DispatchDelay | null {
+  const today = ukDayKey(now);
+  const { dispatchDayKey, dispatchedToday } = nextDayDeadline(now);
+  if (dispatchedToday || (isWorkingDay(today) && dispatchDayKey === dayAfter(today))) return null;
+  let bankHoliday = false;
+  for (let day = today; day !== dispatchDayKey; day = dayAfter(day)) {
+    if (BANK_HOLIDAYS.includes(day)) bankHoliday = true;
+  }
+  return { dispatchDayKey, bankHoliday };
+}
+
+/** "Monday" */
+export function formatWeekday(dayKey: string): string {
+  return weekdayFmt.format(new Date(`${dayKey}T12:00:00Z`));
 }
 
 /** "Wed 7 Oct" */

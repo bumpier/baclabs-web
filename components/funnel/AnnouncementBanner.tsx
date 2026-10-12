@@ -7,6 +7,7 @@ import {
   ANNOUNCEMENT,
   PRICE_MATCH_BADGE,
   SALE,
+  dispatchNoticeAt,
   freeDeliveryBadge,
   nextDayOffered,
   saleLabel,
@@ -59,6 +60,15 @@ import { dayAfter, formatCutoffHour, formatDeliveryDay, nextDayDeadline, ukDayKe
  * WHY THE DAY IS NAMED. After the cutoff, at weekends and over bank holidays
  * the next delivery is not tomorrow, and "next-day delivery" alone would
  * imply it is. The headline names the day the order actually arrives.
+ *
+ * WHY THE WEEKEND NOTICE. Nothing is dispatched from 3pm on Friday until
+ * Monday, or over a bank holiday (dispatchNoticeAt). While that is true the
+ * countdown gives way to the notice, "Weekend orders ship on Monday", with
+ * the day in a tile where the clock was: a clock running down to Monday 3pm
+ * says less than the day itself. It shows whether or not next day is on
+ * sale, since it is about every order. Unlike the clock it is worked out on
+ * the server too, from `renderedAt`, so the band is the right height from
+ * the first paint; the shopper's own clock takes over after hydration.
  */
 
 // One tick a second, shared by every subscriber. useSyncExternalStore rather
@@ -134,7 +144,7 @@ function spokenDuration(secondsLeft: number): string {
  * prices the hero and the packs, so the band can never announce a sale the
  * page below it is not showing.
  */
-export function AnnouncementBanner({ sale }: { sale: boolean }) {
+export function AnnouncementBanner({ sale, renderedAt }: { sale: boolean; renderedAt: number }) {
   const pathname = usePathname();
   const now = useSyncExternalStore(subscribe, nowSeconds, serverSeconds);
 
@@ -143,10 +153,12 @@ export function AnnouncementBanner({ sale }: { sale: boolean }) {
   const offer = sale ? SALE.bannerText || saleLabel() : ANNOUNCEMENT;
   const nextDay = nextDayOffered();
   const perks = [freeDeliveryBadge({ named: nextDay }), nextDay ? "" : PRICE_MATCH_BADGE].filter(Boolean);
-  if (!offer && !nextDay && perks.length === 0) return null;
-
   const at = now === null ? null : new Date(now * 1000);
-  const deadline = nextDay && at ? nextDayDeadline(at) : null;
+  // Hydration renders `renderedAt`, as the server did, then the real time.
+  const notice = dispatchNoticeAt(at ?? new Date(renderedAt));
+  if (!offer && !nextDay && !notice && perks.length === 0) return null;
+
+  const deadline = nextDay && at && !notice ? nextDayDeadline(at) : null;
   const secondsLeft = deadline ? Math.max(0, Math.floor(deadline.cutoff.getTime() / 1000) - now!) : 0;
   const deliveryDate = deadline ? formatDeliveryDay(deadline.deliveryDayKey) : null;
   const when = !deadline
@@ -155,6 +167,9 @@ export function AnnouncementBanner({ sale }: { sale: boolean }) {
       ? "tomorrow"
       : weekdayOf(deadline.deliveryDayKey);
   const tiles = deadline ? tilesFor(secondsLeft) : serverTiles;
+  // "Mon" over "19 Oct": the day a weekend order ships, where the clock was.
+  const shipDay = notice ? formatDeliveryDay(notice.dispatchDayKey).split(" ") : null;
+  const noticeTiles: Tile[] = shipDay ? [{ value: shipDay[0], unit: shipDay.slice(1).join(" ") }] : [];
   const headline = deadline ? `Want it ${when}?` : "Next-day delivery";
 
   // "30% off" set large and "every bundle" beside it, when the banner text
@@ -189,7 +204,15 @@ export function AnnouncementBanner({ sale }: { sale: boolean }) {
           </div>
         </div>
 
-        {nextDay ? (
+        {notice ? (
+          <div className="flex shrink-0 items-center gap-5 border-l border-white/25 pl-8">
+            <div className="whitespace-nowrap text-right">
+              <p className="text-base font-semibold">{notice.title}</p>
+              <p className="text-sm text-white/85">{notice.detail}</p>
+            </div>
+            <Tiles tiles={noticeTiles} size="lg" />
+          </div>
+        ) : nextDay ? (
           <div className="flex shrink-0 items-center gap-5 border-l border-white/25 pl-8">
             <div className="whitespace-nowrap text-right">
               {offer ? <p className="text-base font-semibold">{headline}</p> : null}
@@ -203,7 +226,7 @@ export function AnnouncementBanner({ sale }: { sale: boolean }) {
 
         <CtaLink
           href={ctaHref}
-          className={`${nextDay ? "hidden xl:inline-flex" : "inline-flex"} min-h-[50px] px-6 text-base`}
+          className={`${nextDay || notice ? "hidden xl:inline-flex" : "inline-flex"} min-h-[50px] px-6 text-base`}
         >
           {cta}
         </CtaLink>
@@ -230,7 +253,18 @@ export function AnnouncementBanner({ sale }: { sale: boolean }) {
             </CtaLink>
           </div>
 
-          {nextDay ? (
+          {notice ? (
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/25 pt-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">{notice.title}</p>
+                <p className="text-xs text-white/85">{notice.detail}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="mb-1 text-[0.6875rem] font-medium uppercase tracking-wide text-white/85">Ships</p>
+                <Tiles tiles={noticeTiles} size="sm" />
+              </div>
+            </div>
+          ) : nextDay ? (
             <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/25 pt-3">
               <div className="min-w-0">
                 {offer ? <p className="text-sm font-semibold">{headline}</p> : null}
@@ -262,7 +296,11 @@ export function AnnouncementBanner({ sale }: { sale: boolean }) {
         </div>
       </div>
 
-      {deadline ? (
+      {notice ? (
+        <p className="sr-only">
+          {notice.title}. {notice.detail}
+        </p>
+      ) : deadline ? (
         <p className="sr-only">
           Order within {spokenDuration(secondsLeft)} and choose Next day at checkout for delivery{" "}
           {when === "tomorrow" ? `tomorrow, ${deliveryDate}` : `on ${deliveryDate}`}.

@@ -6,6 +6,7 @@ import {
   deliveryDetailAt,
   deliveryOptionById,
   deliveryOptionsFor,
+  dispatchNoticeAt,
   shipsFree,
   MAILING_LIST,
   PRODUCT,
@@ -137,6 +138,7 @@ export async function createBundleCheckout(
 
   const allowedCountries =
     shippingCountries as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[];
+  const dispatchNotice = dispatchNoticeAt(new Date());
 
   // The customer picks a delivery option on Stripe's page. The options and
   // their prices come from deliveryOptionsFor(), the same function the
@@ -213,6 +215,12 @@ export async function createBundleCheckout(
       shipping_address_collection: { allowed_countries: allowedCountries },
       // Delivery: see shippingOptions above.
       ...(shippingOptions.length > 0 ? { shipping_options: shippingOptions } : {}),
+      // From 3pm Friday until Monday, and over bank holidays, a line under the
+      // address form saying when the order ships. Shown whether or not the
+      // delivery choice is on: it is true of every order.
+      ...(dispatchNotice
+        ? { custom_text: { shipping_address: { message: `${dispatchNotice.title}. ${dispatchNotice.detail}` } } }
+        : {}),
       // The customer's note for the carrier, onto the label. 30 characters is
       // SmartTrack's limit for it. Tested alongside the delivery choice.
       ...(deliveryChoiceEnabled()

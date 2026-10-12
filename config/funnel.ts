@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────────
 
 import { brand } from "@/config/brand";
-import { formatCutoffHour, formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
+import { dispatchDelay, formatCutoffHour, formatDeliveryDay, formatWeekday, nextDayDeadline } from "@/lib/delivery-date";
 
 /** Money is held in integer pence everywhere. Never use floats for totals. */
 export const CURRENCY = "GBP" as const;
@@ -475,15 +475,51 @@ export function deliveryOptionById(id: string | null | undefined): DeliveryOptio
  * An option's line at checkout at this moment. Next day carries the day it
  * arrives: "Amazon Shipping. Order by 3pm for delivery Wed 7 Oct" before the
  * cutoff, "Amazon Shipping. Delivery Thu 8 Oct" after it. Every other option
- * shows its detail.
+ * shows its detail. From the cutoff on Friday until Monday, and over a bank
+ * holiday, both name the day the order ships (dispatchDelay), so a weekend
+ * order never reads as one that leaves tomorrow.
  */
 export function deliveryDetailAt(option: DeliveryOption, now: Date): string {
-  if (option.id !== "next_day") return option.detail;
+  const delay = dispatchDelay(now);
+  const ships = delay ? `Ships ${formatDeliveryDay(delay.dispatchDayKey)}` : "";
+  if (option.id !== "next_day") return ships ? `${option.detail}. ${ships}` : option.detail;
   const { deliveryDayKey, dispatchedToday } = nextDayDeadline(now);
   const day = formatDeliveryDay(deliveryDayKey);
-  return dispatchedToday
-    ? `${option.carrier}. Order by ${formatCutoffHour()} for delivery ${day}`
-    : `${option.carrier}. Delivery ${day}`;
+  if (dispatchedToday) return `${option.carrier}. Order by ${formatCutoffHour()} for delivery ${day}`;
+  return ships ? `${option.carrier}. ${ships}, delivery ${day}` : `${option.carrier}. Delivery ${day}`;
+}
+
+export interface DispatchNotice {
+  /** "Weekend orders ship on Monday" */
+  title: string;
+  /** "We don't dispatch from 3pm on Friday until Monday." */
+  detail: string;
+  /** The UK day an order placed now ships: "2026-10-19". */
+  dispatchDayKey: string;
+}
+
+/**
+ * The warning that an order placed now will not ship tomorrow, for while
+ * that is true: from the cutoff on Friday until Sunday night, and over bank
+ * holidays (lib/delivery-date.ts dispatchDelay). null the rest of the week,
+ * when the usual "order by 3pm" lines are right.
+ */
+export function dispatchNoticeAt(now: Date): DispatchNotice | null {
+  const delay = dispatchDelay(now);
+  if (!delay) return null;
+  const { dispatchDayKey } = delay;
+  if (delay.bankHoliday) {
+    return {
+      title: `Orders placed now ship on ${formatDeliveryDay(dispatchDayKey)}`,
+      detail: "We don't dispatch over bank holidays.",
+      dispatchDayKey,
+    };
+  }
+  return {
+    title: `Weekend orders ship on ${formatWeekday(dispatchDayKey)}`,
+    detail: `We don't dispatch from ${formatCutoffHour()} on Friday until Monday.`,
+    dispatchDayKey,
+  };
 }
 
 /**
@@ -540,7 +576,9 @@ export const DELIVERY: {
       : "Free UK delivery on orders of £40 or more.",
   // Every order, standard and next day alike, leaves the same day when it is
   // placed before the cutoff on a working day (lib/delivery-date.ts).
-  dispatchLine: `Orders placed by ${formatCutoffHour()} on a working day are dispatched the same day.`,
+  // Nothing leaves at weekends: an order placed after the cutoff on Friday
+  // waits for Monday (dispatchNoticeAt says so while it is happening).
+  dispatchLine: `Orders placed by ${formatCutoffHour()} on a working day are dispatched the same day. Orders placed after ${formatCutoffHour()} on Friday or at the weekend are dispatched on Monday.`,
   /**
    * Working days from order to dispatch, and from dispatch to arrival, as
    * `[min, max]`. Feed Product `shippingDetails.deliveryTime`; null omits the
