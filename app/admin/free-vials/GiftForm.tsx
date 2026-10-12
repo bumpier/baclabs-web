@@ -9,10 +9,20 @@ import { addVialGiftAction, type GiftFormState } from "./actions";
  * warning ("no orders under this email") keeps what was typed while
  * "Send anyway" is ticked, and they clear once the gift is saved.
  */
-export function GiftForm({ email: initialEmail, maxVials }: { email: string; maxVials: number }) {
+export function GiftForm({
+  email: initialEmail,
+  maxVials,
+  reasons,
+}: {
+  email: string;
+  maxVials: number;
+  /** From lib/vial-gifts.ts GIFT_REASONS, passed in so this client file never imports it. */
+  reasons: { key: string; label: string }[];
+}) {
   const [state, formAction] = useActionState<GiftFormState, FormData>(addVialGiftAction, {});
   const [email, setEmail] = useState(initialEmail);
   const [vials, setVials] = useState("");
+  const [reason, setReason] = useState(reasons[0]?.key ?? "");
   const [note, setNote] = useState("");
   const [anyway, setAnyway] = useState(false);
   const [seen, setSeen] = useState(state);
@@ -25,6 +35,7 @@ export function GiftForm({ email: initialEmail, maxVials }: { email: string; max
     if (state.success) {
       setEmail("");
       setVials("");
+      setReason(reasons[0]?.key ?? "");
       setNote("");
     }
   }
@@ -64,9 +75,28 @@ export function GiftForm({ email: initialEmail, maxVials }: { email: string; max
             className="field w-24"
           />
         </div>
+        <div>
+          <label htmlFor="gift-reason" className="label">
+            Reason
+          </label>
+          <select
+            id="gift-reason"
+            name="reason"
+            required
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="field"
+          >
+            {reasons.map((r) => (
+              <option key={r.key} value={r.key}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="min-w-[16rem] flex-1">
           <label htmlFor="gift-note" className="label">
-            Reason (only you see this)
+            Note (only you see this)
           </label>
           <input
             id="gift-note"

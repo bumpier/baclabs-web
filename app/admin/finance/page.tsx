@@ -83,7 +83,7 @@ export default async function AdminFinancePage({
         t.welcomeVials + t.giftVials > 0
           ? `Incl. ${[
               t.welcomeVials > 0 ? `${t.welcomeVials} free welcome` : "",
-              t.giftVials > 0 ? `${t.giftVials} free apology` : "",
+              t.giftVials > 0 ? `${t.giftVials} gifted` : "",
             ]
               .filter(Boolean)
               .join(", ")}`
@@ -310,7 +310,7 @@ export default async function AdminFinancePage({
               </tbody>
             </table>
           )}
-          <p className="mt-3 text-xs text-ink-soft">Vials include free welcome vials and free vials promised as an apology, sent with an order.</p>
+          <p className="mt-3 text-xs text-ink-soft">Vials include free welcome vials and free vials given on the Free vials page, sent with an order.</p>
         </section>
 
         <section className="card overflow-x-auto p-6">

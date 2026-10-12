@@ -2,7 +2,15 @@ import Link from "next/link";
 import { requireAdminRole } from "@/lib/adminAuth";
 import { prisma } from "@/lib/db";
 import { formatSaleDate, formatSaleDateTime } from "@/lib/saleTime";
-import { GIFT_EXPIRY_DAYS, MAX_GIFT_VIALS, giftStatus, lastGiftDay } from "@/lib/vial-gifts";
+import {
+  GIFT_EXPIRY_DAYS,
+  GIFT_REASONS,
+  GIFT_REASON_KEYS,
+  MAX_GIFT_VIALS,
+  giftReason,
+  giftStatus,
+  lastGiftDay,
+} from "@/lib/vial-gifts";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { plural, shortDay } from "@/components/admin/finance/parts";
 import { cancelVialGiftAction, resendVialGiftEmailAction } from "./actions";
@@ -26,14 +34,19 @@ export default async function AdminFreeVialsPage({ searchParams }: { searchParam
       <p className="eyebrow">Orders</p>
       <h1 className="mt-2 font-display text-3xl font-medium tracking-tight text-brand-deep">Free vials</h1>
       <p className="mt-4 max-w-3xl text-sm text-ink-soft">
-        Say sorry with free vials. They go on the next order paid with that email address, at £0, and are packed with
-        it; the customer is emailed as soon as you add them. Unused vials expire after {GIFT_EXPIRY_DAYS} days. They
-        don&apos;t show on Stripe&apos;s payment page, only on the order once it is paid.
+        Give a customer free vials, to say sorry or to say thank you. They go on the next order paid with that email
+        address, at £0, and are packed with it; the customer is emailed as soon as you add them, in the wording of the
+        reason you pick. Unused vials expire after {GIFT_EXPIRY_DAYS} days. They don&apos;t show on Stripe&apos;s
+        payment page, only on the order once it is paid.
       </p>
 
       <section className="card mt-8 p-6">
         <h2 className="font-display text-lg font-medium text-brand-deep">Add free vials</h2>
-        <GiftForm email={email.slice(0, 254)} maxVials={MAX_GIFT_VIALS} />
+        <GiftForm
+          email={email.slice(0, 254)}
+          maxVials={MAX_GIFT_VIALS}
+          reasons={GIFT_REASON_KEYS.map((key) => ({ key, label: GIFT_REASONS[key].label }))}
+        />
       </section>
 
       {gifts.length === 0 ? (
@@ -65,7 +78,10 @@ export default async function AdminFreeVialsPage({ searchParams }: { searchParam
                       <td className="whitespace-nowrap px-5 py-3 text-ink-soft">{formatSaleDateTime(g.createdAt)}</td>
                       <td className="px-5 py-3">{g.email}</td>
                       <td className="px-5 py-3 text-right tabular-nums">{g.vials}</td>
-                      <td className="px-5 py-3 text-ink-soft">{g.note}</td>
+                      <td className="px-5 py-3">
+                        {GIFT_REASONS[giftReason(g.reason)].label}
+                        {g.note ? <span className="block text-xs text-ink-soft">{g.note}</span> : null}
+                      </td>
                       <td className="whitespace-nowrap px-5 py-3">
                         {status === "waiting" && (
                           <>

@@ -66,8 +66,10 @@ async function pay(email: string, opts: { kind?: string; createdAt?: Date } = {}
   return { order: paid, items, gift: items.filter(isGiftItem), welcome: items.filter(isWelcomeItem) };
 }
 
-const gift = (email: string, vials: number, over: { expiresAt?: Date; cancelledAt?: Date } = {}) =>
-  prisma.vialGift.create({ data: { email, vials, expiresAt: over.expiresAt ?? giftExpiresAt(new Date()), cancelledAt: over.cancelledAt } });
+const gift = (email: string, vials: number, over: { expiresAt?: Date; cancelledAt?: Date; reason?: string } = {}) =>
+  prisma.vialGift.create({
+    data: { email, vials, reason: over.reason, expiresAt: over.expiresAt ?? giftExpiresAt(new Date()), cancelledAt: over.cancelledAt },
+  });
 
 const stock = async () => (await prisma.product.findUniqueOrThrow({ where: { id: productId } })).stock;
 
@@ -137,6 +139,16 @@ async function main() {
   const upgrade = await pay("upgrade@smoke-gifts.test", { kind: "plan_upgrade" });
   assert(upgrade.gift.length === 0, "a plan upgrade payment gets no gift");
   assert((await prisma.vialGift.findUniqueOrThrow({ where: { id: kept.id } })).orderId === null, "…and the gift keeps waiting");
+
+  // ── The reason names the line ───────────────────────────────────────
+  await gift("thanks@smoke-gifts.test", 2, { reason: "thanks" });
+  const thanked = await pay("thanks@smoke-gifts.test");
+  assert(thanked.gift[0] !== undefined && (thanked.gift[0] as { name?: string }).name === "Free vials, with our thanks", "a thank-you gift is named as one");
+  await gift("mixed@smoke-gifts.test", 1, { reason: "thanks" });
+  await gift("mixed@smoke-gifts.test", 1);
+  const mixed = await pay("mixed@smoke-gifts.test");
+  assert((mixed.gift[0] as { name?: string; qty: number }).name === "Free vials" && mixed.gift[0]!.qty === 2, "mixed reasons merge under a plain name");
+  assert((first.gift[0] as { name?: string }).name === "Free vials, with our apologies", "gifts added without a reason are apologies");
 
   // ── Paying twice does nothing twice ─────────────────────────────────
   await gift("twice@smoke-gifts.test", 1);

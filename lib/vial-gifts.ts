@@ -1,6 +1,6 @@
-// Free vials promised to a customer by email address, usually to say sorry
-// for a bad experience. Staff add them on /admin/free-vials, which emails
-// the customer straight away. The next parcel order paid with that email
+// Free vials promised to a customer by email address, to say sorry for a bad
+// experience or to say thank you (GIFT_REASONS). Staff add them on
+// /admin/free-vials, which emails the customer straight away. The next parcel order paid with that email
 // gets them as one £0 line, added inside fulfilment's transaction
 // (lib/payments/fulfillment.ts), so they are taken from stock, picked,
 // labelled and shown on the receipt like any vial.
@@ -25,10 +25,50 @@ import { LITERAL } from "@/lib/theme";
 export const GIFT_EXPIRY_DAYS = 90;
 export const MAX_GIFT_VIALS = 20;
 
+// ── Why they were given ────────────────────────────────────────────
+
+/**
+ * Each reason's wording, fixed here: nothing typed in the admin reaches the
+ * customer. VialGift.reason holds the key.
+ */
+export const GIFT_REASONS = {
+  apology: {
+    label: "Poor experience (sorry)",
+    lineSuffix: "with our apologies",
+    subjectSuffix: "with our apologies",
+    opening: "We're sorry your recent experience with us wasn't what it should have been.",
+    lead: "To make up for it, we've added",
+    signOff: "Thank you for bearing with us,",
+  },
+  thanks: {
+    label: "Thank you",
+    lineSuffix: "with our thanks",
+    subjectSuffix: "as a thank you",
+    opening: "Thank you for being a loyal customer.",
+    lead: "As a thank you, we've added",
+    signOff: "Thanks again,",
+  },
+} as const;
+
+export type GiftReason = keyof typeof GIFT_REASONS;
+export const GIFT_REASON_KEYS = Object.keys(GIFT_REASONS) as GiftReason[];
+
+export function isGiftReason(raw: unknown): raw is GiftReason {
+  return typeof raw === "string" && Object.prototype.hasOwnProperty.call(GIFT_REASONS, raw);
+}
+
+/** A stored reason, read safely: anything unknown reads as an apology, the original wording. */
+export function giftReason(raw: string): GiftReason {
+  return isGiftReason(raw) ? raw : "apology";
+}
+
 // ── The order line ─────────────────────────────────────────────────
 
-export function giftLineName(qty: number): string {
-  return qty === 1 ? "Free vial, with our apologies" : "Free vials, with our apologies";
+/** Named for its reason; gifts given for different reasons share a plain name. */
+export function giftLineName(qty: number, reasons: readonly GiftReason[] = ["apology"]): string {
+  const base = qty === 1 ? "Free vial" : "Free vials";
+  const unique = [...new Set(reasons)];
+  return unique.length === 1 ? `${base}, ${GIFT_REASONS[unique[0]!].lineSuffix}` : base;
 }
 
 /**
@@ -37,11 +77,16 @@ export function giftLineName(qty: number): string {
  * single-vial SKU, and priced at zero so every total that sums lineTotal
  * still reconciles to what was charged.
  */
-export function giftItem(productId: string, slug: string, qty: number): OrderItemLike {
+export function giftItem(
+  productId: string,
+  slug: string,
+  qty: number,
+  reasons: readonly GiftReason[] = ["apology"]
+): OrderItemLike {
   return {
     productId,
     slug,
-    name: giftLineName(qty),
+    name: giftLineName(qty, reasons),
     qty,
     unitPrice: "0.00",
     unitPriceUsd: "0.00",
@@ -127,15 +172,19 @@ export async function settleVialGifts(
 
   const now = new Date();
   let qty = 0;
+  const reasons: GiftReason[] = [];
   for (const g of gifts) {
     const { count } = await tx.vialGift.updateMany({
       where: { id: g.id, orderId: null, cancelledAt: null },
       data: { orderId: order.id, claimedAt: now },
     });
-    if (count === 1) qty += g.vials;
+    if (count === 1) {
+      qty += g.vials;
+      reasons.push(giftReason(g.reason));
+    }
   }
   if (qty === 0) return unchanged;
-  return { items: JSON.stringify([...items, giftItem(vial.productId, vial.slug, qty)]), note: null };
+  return { items: JSON.stringify([...items, giftItem(vial.productId, vial.slug, qty, reasons)]), note: null };
 }
 
 // ── Admin reads ────────────────────────────────────────────────────
@@ -161,15 +210,17 @@ async function firstNameFor(email: string): Promise<string> {
 }
 
 /**
- * Pure, so scripts/test-vial-gifts.ts can read it. A note to one customer
- * about their own complaint, sent by hand: a service message, so it carries
- * no unsubscribe footer. The admin form warns before sending to an address
- * that has left the mailing list.
+ * Pure, so scripts/test-vial-gifts.ts can read it. A note to one customer,
+ * sent by hand, in the wording of the reason chosen (GIFT_REASONS). It
+ * carries no unsubscribe footer; the admin form warns before sending to an
+ * address that has opted out, and more firmly for a thank-you, which is
+ * closer to marketing than an apology is.
  */
 export function giftEmail(
-  gift: Pick<VialGift, "vials" | "expiresAt">,
+  gift: Pick<VialGift, "vials" | "expiresAt" | "reason">,
   firstName = ""
 ): { subject: string; html: string } {
+  const words = GIFT_REASONS[giftReason(gift.reason)];
   const what = gift.vials === 1 ? "a free vial" : `${gift.vials} free vials`;
   const What = `${what[0]!.toUpperCase()}${what.slice(1)}`;
   const contact = brand.contact.email;
@@ -177,15 +228,15 @@ export function giftEmail(
     ? `<p>If you have any questions, email us at <a href="mailto:${escapeHtml(contact)}" style="color:${LITERAL.brand}">${escapeHtml(contact)}</a>.</p>`
     : "";
   return {
-    subject: `${What} on your next ${brand.name} order, with our apologies`,
+    subject: `${What} on your next ${brand.name} order, ${words.subjectSuffix}`,
     html: layout(
       `<p>Hi ${escapeHtml(firstName || "there")},</p>
-      <p>We're sorry your recent experience with us wasn't what it should have been.</p>
-      <p>To make up for it, we've added <strong>${gift.vials === 1 ? "a free 10ml vial" : `${gift.vials} free 10ml vials`}</strong> to your next order. There's nothing you need to do: order as usual with this email address and ${gift.vials === 1 ? "it will" : "they'll"} be packed with it.</p>
+      <p>${words.opening}</p>
+      <p>${words.lead} <strong>${gift.vials === 1 ? "a free 10ml vial" : `${gift.vials} free 10ml vials`}</strong> to your next order. There's nothing you need to do: order as usual with this email address and ${gift.vials === 1 ? "it will" : "they'll"} be packed with it.</p>
       <p>We'll hold ${gift.vials === 1 ? "it" : "them"} for you until ${formatShopDay(lastGiftDay(gift.expiresAt))}.</p>
       <p style="margin:24px 0">${ctaButton(`${canonicalOrigin()}/#buy`, "Order now")}</p>
       ${contactLine}
-      <p style="margin:0">Thank you for bearing with us,<br />The ${escapeHtml(brand.name)} team</p>`,
+      <p style="margin:0">${words.signOff}<br />The ${escapeHtml(brand.name)} team</p>`,
       { preheader: `${What}, added to your next order automatically.` }
     ),
   };

@@ -590,6 +590,7 @@ model VialGift {
   id          String    @id @default(cuid())
   email       String // lower-cased and trimmed (lib/mailing-list.ts normEmail)
   vials       Int
+  reason      String    @default("apology") // apology | thanks: picks the email and order line wording (GIFT_REASONS)
   note        String    @default("") // why, for the admin list; never shown to the customer
   actor       String    @default("") // AdminUser.id or "admin"
   expiresAt   DateTime  @map("expires_at")

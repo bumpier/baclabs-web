@@ -6,7 +6,14 @@ import { prisma } from "@/lib/db";
 import { getAdminSession, requireAdminRole } from "@/lib/adminAuth";
 import { normEmail, previousOrderCount } from "@/lib/mailing-list";
 import type { FormState } from "@/lib/form-state";
-import { MAX_GIFT_VIALS, giftExpiresAt, giftStatus, sendGiftEmail, waitingVials } from "@/lib/vial-gifts";
+import {
+  MAX_GIFT_VIALS,
+  giftExpiresAt,
+  giftStatus,
+  isGiftReason,
+  sendGiftEmail,
+  waitingVials,
+} from "@/lib/vial-gifts";
 
 /** `confirm`: the error is a warning, and ticking "Send anyway" gets past it. */
 export type GiftFormState = FormState & { confirm?: boolean };
@@ -29,6 +36,8 @@ export async function addVialGiftAction(_prev: GiftFormState, formData: FormData
   const raw = String(formData.get("vials") ?? "").trim();
   const vials = /^\d+$/.test(raw) ? Number(raw) : 0;
   if (vials < 1 || vials > MAX_GIFT_VIALS) return { error: `Enter a whole number of vials from 1 to ${MAX_GIFT_VIALS}` };
+  const reason = formData.get("reason");
+  if (!isGiftReason(reason)) return { error: "Choose a reason" };
   const note = String(formData.get("note") ?? "").trim().slice(0, 200);
 
   if (formData.get("anyway") !== "on") {
@@ -40,7 +49,11 @@ export async function addVialGiftAction(_prev: GiftFormState, formData: FormData
     const warnings: string[] = [];
     if (orders === 0) warnings.push(`No paid orders have been placed with ${email}. Check the spelling.`);
     if (optOut || subscriber?.status === "unsubscribed") {
-      warnings.push(`${email} has unsubscribed from our emails, and this one would still go to them.`);
+      warnings.push(
+        reason === "thanks"
+          ? `${email} has unsubscribed from our emails. A thank-you offer counts as marketing, so it shouldn't normally go to them.`
+          : `${email} has unsubscribed from our emails, and this one would still go to them.`
+      );
     }
     if (warnings.length > 0) {
       return { error: `${warnings.join(" ")} Tick “Send anyway” to add the vials and email them.`, confirm: true };
@@ -49,7 +62,7 @@ export async function addVialGiftAction(_prev: GiftFormState, formData: FormData
 
   const session = await getAdminSession();
   const gift = await prisma.vialGift.create({
-    data: { email, vials, note, actor: session?.adminUserId ?? "admin", expiresAt: giftExpiresAt(new Date()) },
+    data: { email, vials, reason, note, actor: session?.adminUserId ?? "admin", expiresAt: giftExpiresAt(new Date()) },
   });
   const emailed = await sendGiftEmail(gift);
   revalidatePath("/admin/free-vials");

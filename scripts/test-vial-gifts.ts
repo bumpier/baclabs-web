@@ -10,8 +10,11 @@ import {
   giftEmail,
   giftExpiresAt,
   giftItem,
+  giftLineName,
+  giftReason,
   giftStatus,
   isGiftItem,
+  isGiftReason,
   lastGiftDay,
 } from "@/lib/vial-gifts";
 import { isWelcomeItem, welcomeItem } from "@/lib/mailing-list";
@@ -52,6 +55,11 @@ check("gift line costs nothing", gift.unitPrice === "0.00" && gift.lineTotal ===
 check("gift line has no bundle", gift.bundleId === undefined);
 check("one vial reads singular", giftItem("p1", "s", 1).name === "Free vial, with our apologies");
 check("several read plural", gift.name === "Free vials, with our apologies");
+check("a thank-you line says so", giftItem("p1", "s", 2, ["thanks"]).name === "Free vials, with our thanks");
+check("two thank-yous keep the thank-you name", giftLineName(1, ["thanks", "thanks"]) === "Free vial, with our thanks");
+check("mixed reasons share a plain name", giftLineName(5, ["apology", "thanks"]) === "Free vials");
+check("reasons are checked", isGiftReason("thanks") && isGiftReason("apology") && !isGiftReason("toString") && !isGiftReason(""));
+check("an unknown stored reason reads as an apology", giftReason("nope") === "apology" && giftReason("thanks") === "thanks");
 const sold = soldLines(JSON.stringify([...tenPack, gift]));
 check(
   "gift is picked as the single vial, 3 of them",
@@ -79,18 +87,26 @@ check("cancelled", giftStatus({ ...row, cancelledAt: added }, added) === "cancel
 check("the expiry day falls on the UK calendar", shopDayKey(new Date(expires.getTime() - 1)) === "2027-01-10");
 
 // ── The email ───────────────────────────────────────────────────────
-const email = giftEmail({ vials: 3, expiresAt: expires }, "Sam");
+const email = giftEmail({ vials: 3, expiresAt: expires, reason: "apology" }, "Sam");
 check("subject names the vials", email.subject.startsWith("3 free vials on your next "), email.subject);
 check("greets by first name", email.html.includes("Hi Sam,"));
 check("says how many", email.html.includes("3 free 10ml vials"));
 check("names the last day", email.html.includes("Sunday 10 January 2027"));
-const one = giftEmail({ vials: 1, expiresAt: expires });
+check("an apology says sorry", email.subject.endsWith("with our apologies") && email.html.includes("We're sorry your recent experience"));
+const one = giftEmail({ vials: 1, expiresAt: expires, reason: "apology" });
 check("one vial reads singular", one.subject.startsWith("A free vial on your next") && one.html.includes("a free 10ml vial"), one.subject);
 check("no name: Hi there", one.html.includes("Hi there,"));
-check("a name is escaped", giftEmail({ vials: 2, expiresAt: expires }, "<b>").html.includes("Hi &lt;b&gt;,"));
+check("a name is escaped", giftEmail({ vials: 2, expiresAt: expires, reason: "apology" }, "<b>").html.includes("Hi &lt;b&gt;,"));
+const thanks = giftEmail({ vials: 2, expiresAt: expires, reason: "thanks" }, "Sam");
+check("a thank-you subject", thanks.subject === "2 free vials on your next BacLab order, as a thank you", thanks.subject);
+check("a thank-you thanks, and does not apologise", thanks.html.includes("Thank you for being a loyal customer.") && thanks.html.includes("As a thank you, we've added") && !/sorry|apolog/i.test(thanks.html), thanks.html.slice(0, 0));
+check("both keep the shared parts", thanks.html.includes("2 free 10ml vials") && thanks.html.includes("Sunday 10 January 2027") && thanks.html.includes("Order now"));
+check("an unknown reason gets the apology wording", giftEmail({ vials: 1, expiresAt: expires, reason: "?" }).subject.endsWith("with our apologies"));
 // The words only: the shared layout's <!doctype> would trip the "!" rule.
-const violations = checkCompliance([email.subject, email.html.replace(/<[^>]*>/g, " ")]);
-check("copy passes the content rules", violations.length === 0, JSON.stringify(violations));
+for (const [name, e] of [["apology", email], ["thank-you", thanks]] as const) {
+  const violations = checkCompliance([e.subject, e.html.replace(/<[^>]*>/g, " ")]);
+  check(`${name} copy passes the content rules`, violations.length === 0, JSON.stringify(violations));
+}
 
 // ── Readers of Order.items ignore the free line ─────────────────────
 const withGift = JSON.stringify([...tenPack, gift]);
