@@ -9,8 +9,8 @@ import { packLink } from "@/lib/pack-link";
 import { upsellCopy, upsellFor } from "@/lib/upsell";
 
 /**
- * What the "Running low?" email offers (lib/customer-email.ts
- * sendRepurchaseNudgeEmail): the same order again at today's price, and the
+ * What the "Running low?" and delivered emails offer (lib/customer-email.ts
+ * sendRepurchaseNudgeEmail, deliveredEmail): the same order again at today's price, and the
  * step the buy box would offer from it (lib/upsell.ts), whose wording
  * scripts/test-upsell.ts already holds to what Stripe charges. Pure, so
  * scripts/test-reorder.ts covers it. Null for an order whose lines name no

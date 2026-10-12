@@ -15,7 +15,8 @@ import {
 } from "@/lib/plans/copy";
 import { isPlanMonths, isPlanPackId, planKey } from "@/config/plans";
 import { DELIVERY, formatMinor, formatMinorShort, freeDeliveryName } from "@/config/funnel";
-import { reorderOffer } from "@/lib/reorder";
+import { reorderOffer, type ReorderOffer } from "@/lib/reorder";
+import { waitingVials } from "@/lib/vial-gifts";
 
 // Customer-facing order emails. Every send is recorded in EmailLog first;
 // the @@unique([orderId, type]) constraint makes double-sends impossible.
@@ -435,20 +436,102 @@ export async function sendOrderShippedEmail(order: Order, tracking?: ShippedTrac
   );
 }
 
+/**
+ * Sent once, on the carrier's delivery scan (lib/shipping/tracking-sync.ts)
+ * or when someone marks the order delivered by hand. The parcel arriving is
+ * when a reorder is easiest to make, so for a one-off sale its button
+ * reorders the same pack at today's price, as "Running low?" does
+ * (lib/reorder.ts). Plan boxes, plan purchases and customers who have
+ * unsubscribed get the plain notice.
+ */
 export async function sendOrderDeliveredEmail(order: Order): Promise<void> {
-  const orderUrl = `${siteUrl()}/order-confirmation/${order.id}`;
-  await logAndSend(
-    order,
-    "delivered",
-    `Your ${brand.name} order has been delivered`,
-    layout(
-      `<p>Hi ${escapeHtml(order.customerName)},</p>
-      <p>Your order has been delivered. We hope you enjoy it!</p>
+  const offers = orderKind(order.kind) === "sale" && !order.planId && !(await optedOutOfEmails(order));
+  let giftVials = 0;
+  if (offers) {
+    try {
+      giftVials = await waitingVials(order.customerEmail);
+    } catch (err) {
+      console.error(`[email] waiting gift check failed for order ${order.id}`, err);
+    }
+  }
+  const { subject, html } = deliveredEmail(order, { offers, giftVials });
+  await logAndSend(order, "delivered", subject, html);
+}
+
+/**
+ * The delivered email itself, pure so scripts/test-reorder.ts can read it.
+ * With `offers`, the reorder is the one button, with the step up from it and
+ * any free vials still waiting for this customer's next order
+ * (lib/vial-gifts.ts). That part is marketing, so it carries an unsubscribe
+ * link. An order that names no pack we still sell gets a plain button to the
+ * buy box instead.
+ */
+export function deliveredEmail(
+  order: Pick<Order, "id" | "customerName" | "customerEmail" | "items">,
+  opts: { offers: boolean; giftVials: number }
+): { subject: string; html: string } {
+  const site = siteUrl();
+  const orderUrl = `${site}/order-confirmation/${order.id}`;
+  const subject = `Your ${brand.name} order has been delivered`;
+  const opening = `<p>${order.customerName ? `Hi ${escapeHtml(order.customerName)},` : "Hi,"}</p>
+      <p>Your order has been delivered. We hope you enjoy it.</p>`;
+
+  if (!opts.offers) {
+    return {
+      subject,
+      html: layout(
+        `${opening}
       <p style="margin:0 0 20px;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id}</p>
       ${ctaButton(orderUrl, "View your order")}`,
-      { preheader: `Order ${order.id} has been delivered` }
-    )
-  );
+        { preheader: `Order ${order.id} has been delivered` }
+      ),
+    };
+  }
+
+  const offer = reorderOffer(order.items);
+  const vials = offer ? `${offer.vials} ${offer.vials === 1 ? "vial" : "vials"}` : "";
+  const gifts = opts.giftVials;
+  const giftLine =
+    gifts > 0
+      ? `<p style="margin:0 0 12px">${gifts === 1 ? "The free 10ml vial" : `The ${gifts} free 10ml vials`} we promised you ${gifts === 1 ? "is" : "are"} still waiting, and ${gifts === 1 ? "goes" : "go"} in your next order automatically.</p>`
+      : "";
+  const delivery = offer ? reorderDeliveryLine(offer) : "";
+
+  return {
+    subject,
+    html: layout(
+      `${opening}
+      ${giftLine}
+      <p>${offer ? "When you need more, the same order again is one click away:" : "When you need more, you can order again here:"}</p>
+      <p style="margin:24px 0 0">${
+        offer
+          ? ctaButton(`${site}${offer.link}`, `Reorder ${vials} · ${formatMinor(offer.goodsMinor)}`)
+          : ctaButton(`${site}/#buy`, "Choose your pack")
+      }</p>
+      ${delivery ? `<p style="font-size:13px;color:${LITERAL.inkSoft};margin:12px 0 0">${delivery}</p>` : ""}
+      ${offer ? reorderStepHtml(offer, site) : ""}
+      <p style="margin:28px 0 0;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id} &middot; <a href="${orderUrl}" style="color:${LITERAL.inkSoft}">View your order</a></p>
+      <p style="font-size:11px;color:${LITERAL.inkSoft};margin-top:24px">Don't want offers like this?
+        <a href="${unsubscribeUrl(order.customerEmail)}" style="color:${LITERAL.inkSoft}">Unsubscribe</a></p>`,
+      { preheader: offer ? `Your parcel has arrived. Reorder your ${vials} in one click.` : "Your parcel has arrived." }
+    ),
+  };
+}
+
+/** What delivery on a reorder costs, or "" when the shop shows no delivery line. */
+function reorderDeliveryLine(offer: ReorderOffer): string {
+  return offer.shipsFree
+    ? `Free ${freeDeliveryName()} on this order.`
+    : DELIVERY.mode === "threshold" && DELIVERY.freeFromMinor !== null
+      ? `Delivery ${formatMinor(offer.deliveryMinor)}, free on orders of ${formatMinorShort(DELIVERY.freeFromMinor)} or more.`
+      : "";
+}
+
+/** The step up from a reorder, as a line and a text link: the reorder button stays the one to press. */
+function reorderStepHtml(offer: ReorderOffer, site: string): string {
+  return offer.upsell
+    ? `<p style="margin:24px 0 0">Or: ${escapeHtml(offer.upsell.line)} <a href="${site}${offer.upsell.link}" style="color:${LITERAL.brand}">${escapeHtml(offer.upsell.linkText)}</a></p>`
+    : "";
 }
 
 /**
@@ -510,14 +593,8 @@ export async function sendRepurchaseNudgeEmail(order: Order, items: OrderItem[])
   }
 
   const vials = `${offer.vials} ${offer.vials === 1 ? "vial" : "vials"}`;
-  const delivery = offer.shipsFree
-    ? `Free ${freeDeliveryName()} on this order.`
-    : DELIVERY.mode === "threshold" && DELIVERY.freeFromMinor !== null
-      ? `Delivery ${formatMinor(offer.deliveryMinor)}, free on orders of ${formatMinorShort(DELIVERY.freeFromMinor)} or more.`
-      : "";
-  const step = offer.upsell
-    ? `<p style="margin:24px 0 0">Or: ${escapeHtml(offer.upsell.line)} <a href="${site}${offer.upsell.link}" style="color:${LITERAL.brand}">${escapeHtml(offer.upsell.linkText)}</a></p>`
-    : "";
+  const delivery = reorderDeliveryLine(offer);
+  const step = reorderStepHtml(offer, site);
 
   return logAndSend(
     order,

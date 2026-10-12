@@ -11,8 +11,10 @@ import {
   MIN_QUANTITY,
   bundleById,
   deliveryMinorFor,
+  formatMinor,
   priceOrder,
 } from "@/config/funnel";
+import { deliveredEmail } from "@/lib/customer-email";
 import { packLink, parsePackQuery } from "@/lib/pack-link";
 import { reorderOffer } from "@/lib/reorder";
 import { buildOrderItems } from "@/lib/order-items";
@@ -97,6 +99,42 @@ check("loose vials on singles dropped", parsePackQuery("?pack=single&extra=1")?.
 check("vial-only legacy order: no offer", reorderOffer(JSON.stringify([{ productId: "p", slug: "s", name: "x", qty: 3 }])) === null);
 check("unreadable items: no offer", reorderOffer("not json") === null);
 check("only a welcome vial: no offer", reorderOffer(JSON.stringify([welcomeItem("p", "s", 1)])) === null);
+
+// The delivered email: the reorder button for a one-off sale, the plain notice otherwise.
+{
+  const ten = bundleById("ten")!;
+  const items = JSON.stringify(buildOrderItems({ productId: "p", slug: "s", bundle: ten, quantity: 1, priced: priceOrder(ten, 1)!, goodsUsd: "1" }));
+  const order = { id: "ord-9", customerName: "Sam", customerEmail: "sam@example.test", items };
+  const offer = reorderOffer(items)!;
+  const textOf = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+  const sold = deliveredEmail(order, { offers: true, giftVials: 0 });
+  const soldText = textOf(sold.html);
+  check("delivered: same subject", sold.subject.endsWith("order has been delivered"), sold.subject);
+  check("delivered: button opens the buy box on the same order", sold.html.includes(`${offer.link}"`), offer.link);
+  check("delivered: button names the vials and today's price", soldText.includes(`Reorder 10 vials · ${formatMinor(offer.goodsMinor)}`), soldText);
+  check("delivered: the step up", soldText.includes(offer.upsell!.line) && sold.html.includes(offer.upsell!.link));
+  check("delivered: order page still linked", sold.html.includes("/order-confirmation/ord-9"));
+  check("delivered: unsubscribe link", sold.html.includes("/api/email/unsubscribe?email=sam%40example.test"));
+  check("delivered: no gift line without a gift", !soldText.includes("we promised you"));
+  check("delivered: no discount offered", !/\b(code|discount|% off)\b/i.test(soldText));
+  copy.push(soldText);
+
+  const gifted = textOf(deliveredEmail(order, { offers: true, giftVials: 2 }).html);
+  check("delivered: waiting gift vials named", gifted.includes("The 2 free 10ml vials we promised you are still waiting"), gifted);
+  copy.push(gifted);
+
+  const plain = deliveredEmail(order, { offers: false, giftVials: 0 }).html;
+  check("delivered, no offers: no reorder button", !plain.includes("Reorder") && !plain.includes("#buy"));
+  check("delivered, no offers: no unsubscribe line", !plain.includes("/api/email/unsubscribe"));
+  check("delivered, no offers: view your order", plain.includes("/order-confirmation/ord-9") && plain.includes("View your order"));
+
+  const legacy = deliveredEmail(
+    { ...order, items: JSON.stringify([{ productId: "p", slug: "s", name: "x", qty: 3 }]) },
+    { offers: true, giftVials: 0 }
+  ).html;
+  check("delivered, legacy order: the buy box", legacy.includes('/#buy"') && legacy.includes("Choose your pack"));
+}
 
 // The words the email adds obey the site's content rules.
 const violations = checkCompliance(copy);
