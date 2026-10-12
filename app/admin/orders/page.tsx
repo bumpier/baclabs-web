@@ -66,7 +66,7 @@ export default async function AdminOrdersPage({
       </div>
 
       <LabelWarning />
-      <TrackingWarning showCatchUpLink={!isPacker} />
+      <TrackingWarning />
 
       <div className="mt-8 flex flex-wrap gap-2">
         {STATUSES.map((s) => (
