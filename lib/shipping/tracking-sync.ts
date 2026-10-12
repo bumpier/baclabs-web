@@ -6,6 +6,7 @@ import { getTracking, SmartTrackAuthError, SmartTrackError } from "@/lib/smarttr
 import { parseTrackingNumbers } from "@/lib/shipping/shipments";
 import { classifyTracking, parseTracking } from "@/lib/shipping/tracking";
 import { trackingLink } from "@/lib/shipping/carriers";
+import { shopDayBounds } from "@/lib/saleTime";
 import type { ShippedTracking } from "@/lib/customer-email";
 
 /**
@@ -269,13 +270,20 @@ async function sendEmail(orderId: string, type: "shipped" | "delivered", trackin
 // ── The warning on the dashboard and the orders page ──────────────
 
 /** A label made this long ago with no carrier scan is worth a look. */
-export const NO_SCAN_WARNING_DAYS = 3;
+export const NO_SCAN_WARNING_DAYS = 7;
+
+/**
+ * Labels made before this are never warned about. Until fulfilment was
+ * sorted out, parcels often went out on some other label, so the ones
+ * from then are not news, and the catch-up page cannot close them.
+ */
+export const NO_SCAN_WARNING_FROM = shopDayBounds("2026-10-12").start;
 
 /**
  * Parcels that need a look: tracking reports a problem, or the label was
- * made days ago and the carrier has still not scanned it. LIVE labels only.
+ * made a week ago and the carrier has still not scanned it. LIVE labels only.
  */
-export async function trackingProblems(now = new Date()) {
+export async function trackingProblems(now = new Date(), from = NO_SCAN_WARNING_FROM) {
   const select = {
     id: true,
     trackingEvent: true,
@@ -294,7 +302,7 @@ export async function trackingProblems(now = new Date()) {
       where: {
         status: "CREATED",
         environment: "live",
-        createdAt: { lt: new Date(now.getTime() - NO_SCAN_WARNING_DAYS * DAY_MS) },
+        createdAt: { gte: from, lt: new Date(now.getTime() - NO_SCAN_WARNING_DAYS * DAY_MS) },
         OR: [{ trackingStage: null }, { trackingStage: "awaiting" }],
         order: { status: { in: ["paid", "packed"] } },
       },

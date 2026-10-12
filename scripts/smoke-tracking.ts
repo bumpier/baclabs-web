@@ -16,7 +16,7 @@ delete process.env.RESEND_API_KEY;
 import { prisma } from "../lib/db";
 import { SETTING_KEYS, writeSetting } from "../lib/settings";
 import { orderTracking, syncTracking, trackingProblems } from "../lib/shipping/tracking-sync";
-import { catchUpGroups, closeCatchUpGroup } from "../lib/shipping/catch-up";
+import { catchUpCount, catchUpGroups, closeCatchUpGroup } from "../lib/shipping/catch-up";
 import { MANUAL_MOVES } from "../lib/order-status";
 
 if (!process.env.DATABASE_URL || /data\/baclab\.db/.test(process.env.DATABASE_URL)) {
@@ -193,9 +193,9 @@ async function main() {
   await makeLabel(j.id, "J1", { madeAgo: 2 * DAY });
   tracking.J1 = [["133", "Picked Up", ago(30 * HOUR)], ["112", "Address Problem", ago(2 * HOUR)]];
 
-  const k = await makeOrder("packed", 5 * DAY); // labelled days ago, never scanned
-  await makeLabel(k.id, "K1", { madeAgo: 5 * DAY });
-  tracking.K1 = [["144", "Data Received", ago(5 * DAY)]];
+  const k = await makeOrder("packed", 8 * DAY); // labelled over a week ago, never scanned
+  await makeLabel(k.id, "K1", { madeAgo: 8 * DAY });
+  tracking.K1 = [["144", "Data Received", ago(8 * DAY)]];
 
   // ── Switched off, or not LIVE: nothing happens ────────────────────
   await writeSetting(SETTING_KEYS.trackingUpdates, "off");
@@ -248,9 +248,14 @@ async function main() {
   o = await orderOf(j.id);
   const lj = await labelOf(j.id);
   assert(o.status === "shipped" && lj.trackingStage === "problem" && lj.trackingEvent === "Address Problem", "a delivery problem: shipped, with the problem recorded");
-  const { problems, notScanned } = await trackingProblems();
+  // From the start of time, so the fixtures are not before the warning's start date.
+  const { problems, notScanned } = await trackingProblems(new Date(), new Date(0));
   assert(problems.length === 1 && problems[0]!.order.id === j.id, "…and listed in the tracking warning");
-  assert(notScanned.some((x) => x.order.id === k.id) && !notScanned.some((x) => x.order.id === e.id), "a label made 5 days ago with no scan is listed; one made today is not");
+  assert(notScanned.some((x) => x.order.id === k.id) && !notScanned.some((x) => x.order.id === e.id), "a label made 8 days ago with no scan is listed; one made today is not");
+  const threeDaysAgo = await trackingProblems(ago(3 * DAY), new Date(0));
+  assert(!threeDaysAgo.notScanned.some((x) => x.order.id === k.id), "…but not while it is under 7 days old");
+  const fromNow = await trackingProblems(new Date(), new Date());
+  assert(!fromNow.notScanned.some((x) => x.order.id === k.id), "a label made before the warning's start date is never listed");
 
   // ── Again: nothing new ────────────────────────────────────────────
   const askedBefore = asked.length;
@@ -297,6 +302,10 @@ async function main() {
   assert(!all.includes(p.id), "an order whose label is still being bought is in no group");
   assert(!all.includes(q.id) && !all.includes(i.id), "orders sold in the last 3 days are in no group");
   assert(groups.recent >= 2, "…and are counted as rightly waiting");
+  assert(
+    groups.notScanned.length > 0 && (await catchUpCount()) === groups.noLabel.length + groups.labelFailed.length,
+    "the dashboard's count is only what the page can close, never the unscanned labels"
+  );
 
   const moved = await closeCatchUpGroup("noLabel");
   o = await orderOf(l.id);

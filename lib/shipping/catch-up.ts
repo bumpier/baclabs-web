@@ -75,22 +75,28 @@ const listSelect = {
 
 export async function catchUpGroups(now = new Date()) {
   const orderBy = [{ paidAt: "asc" as const }, { createdAt: "asc" as const }];
+  const cutoff = new Date(now.getTime() - CATCH_UP_AFTER_DAYS * DAY_MS);
   const [noLabel, labelFailed, notScanned, open, old] = await Promise.all([
     prisma.order.findMany({ where: catchUpWhere("noLabel", now), select: listSelect, orderBy }),
     prisma.order.findMany({ where: catchUpWhere("labelFailed", now), select: listSelect, orderBy }),
     prisma.order.findMany({ where: catchUpWhere("notScanned", now), select: listSelect, orderBy }),
     prisma.order.count({ where: { status: { in: OPEN_STATUSES }, kind: { in: PARCEL_KINDS } } }),
-    catchUpCount(now),
+    prisma.order.count({
+      where: { status: { in: OPEN_STATUSES }, kind: { in: PARCEL_KINDS }, ...soldBefore(cutoff) },
+    }),
   ]);
   // Sold within the last few days: rightly still waiting.
   return { noLabel, labelFailed, notScanned, recent: open - old };
 }
 
-/** Open orders old enough for the catch-up page to offer, for the dashboard's link to it. */
+/**
+ * Old open orders the catch-up page can close, for the dashboard's link to
+ * it. notScanned is left out: the page cannot close it, so counting it
+ * would keep the link up for good.
+ */
 export function catchUpCount(now = new Date()): Promise<number> {
-  const cutoff = new Date(now.getTime() - CATCH_UP_AFTER_DAYS * DAY_MS);
   return prisma.order.count({
-    where: { status: { in: OPEN_STATUSES }, kind: { in: PARCEL_KINDS }, ...soldBefore(cutoff) },
+    where: { OR: [catchUpWhere("noLabel", now), catchUpWhere("labelFailed", now)] },
   });
 }
 

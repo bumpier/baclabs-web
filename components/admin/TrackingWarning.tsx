@@ -6,12 +6,13 @@ const SHOWN = 8;
 
 /**
  * Parcels that need a look, from tracking (lib/shipping/tracking-sync.ts):
- * a delivery problem the carrier reported, or a label made days ago that
+ * a delivery problem the carrier reported, or a label made a week ago that
  * the carrier has never scanned. Renders nothing when there are none. On
  * the dashboard and the orders page, beside LabelWarning, for the same
- * reason it is not in the layout.
+ * reason it is not in the layout. No link to the catch-up page: it cannot
+ * close an order whose label was never scanned.
  */
-export async function TrackingWarning({ showCatchUpLink = true }: { showCatchUpLink?: boolean }) {
+export async function TrackingWarning() {
   const { problems, notScanned } = await trackingProblems().catch((err: unknown) => {
     console.error("[internal] listing tracking problems failed", err);
     return { problems: [], notScanned: [] };
@@ -50,16 +51,6 @@ export async function TrackingWarning({ showCatchUpLink = true }: { showCatchUpL
           </p>
           <p className="mt-1 opacity-80">
             Either the parcel has not gone out, or tracking has not caught up with it yet.
-            {showCatchUpLink && (
-              <>
-                {" "}
-                Old orders can be cleared on the{" "}
-                <Link href="/admin/shipping/catch-up" className="font-semibold underline hover:text-amber-950">
-                  catch-up page
-                </Link>
-                .
-              </>
-            )}
           </p>
           <ul className="mt-2 divide-y divide-amber-200">
             {notScanned.slice(0, SHOWN).map((s) => (

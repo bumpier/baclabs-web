@@ -172,7 +172,7 @@ async function release(r: Recipient): Promise<void> {
 
 /** send() never throws and returns Resend's id only when Resend took the email. */
 async function deliver(to: string, email: { subject: string; html: string }): Promise<boolean> {
-  const sent = await send(to, email.subject, email.html, { replyTo: CONTACT });
+  const sent = await send(to, email.subject, email.html);
   return Boolean(sent?.id);
 }
 
