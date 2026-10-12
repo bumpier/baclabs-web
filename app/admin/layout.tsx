@@ -44,6 +44,7 @@ const ALL_NAV: Gated<NavLink | { label: string; items: Gated<NavLink>[] }>[] = [
     label: "Warehouse",
     adminOnly: true,
     items: [
+      { href: "/admin/stock", label: "Vial stock", hint: "Left, sent out and deliveries" },
       { href: "/admin/inventory", label: "Inventory", hint: "Stock levels by SKU" },
       { href: "/admin/inventory/stock", label: "Book stock in / adjust" },
       { href: "/admin/inventory/warehouses", label: "Warehouses & locations" },

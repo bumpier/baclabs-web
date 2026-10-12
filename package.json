@@ -28,6 +28,7 @@
     "test:barcode": "tsx scripts/test-barcode.ts",
     "test:mailing": "tsx scripts/test-mailing-list.ts",
     "test:takings": "tsx scripts/test-takings.ts",
+    "test:vialstock": "tsx scripts/test-vial-stock.ts",
     "test:finance": "tsx scripts/test-finance.ts",
     "test:tracking": "tsx scripts/test-tracking.ts",
     "test:recheck": "tsx scripts/test-recheck-orders.ts",

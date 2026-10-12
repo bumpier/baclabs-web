@@ -5,6 +5,7 @@ import { formatPrice, type Currency } from "@/config/brand";
 import { setOrderStatusAction } from "@/app/admin/actions";
 import { LabelWarning } from "@/components/admin/LabelWarning";
 import { TrackingWarning } from "@/components/admin/TrackingWarning";
+import { LowStockWarning } from "@/components/admin/LowStockWarning";
 import { STATUS_BADGE, STATUS_TABS, statusLabel } from "@/lib/order-status";
 import { formatSaleClock, formatSaleDate, saleTime } from "@/lib/saleTime";
 import { getInventoryMode } from "@/lib/inventory/mode";
@@ -67,6 +68,7 @@ export default async function AdminOrdersPage({
 
       <LabelWarning />
       <TrackingWarning />
+      {!isPacker && <LowStockWarning />}
 
       <div className="mt-8 flex flex-wrap gap-2">
         {STATUSES.map((s) => (

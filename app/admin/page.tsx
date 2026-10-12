@@ -7,6 +7,7 @@ import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import { PrintUnfulfilledMenu } from "@/components/admin/PrintUnfulfilledMenu";
 import { LabelWarning } from "@/components/admin/LabelWarning";
 import { TrackingWarning } from "@/components/admin/TrackingWarning";
+import { LowStockWarning } from "@/components/admin/LowStockWarning";
 import { catchUpCount } from "@/lib/shipping/catch-up";
 import { PARCEL_KINDS } from "@/lib/plans/kinds";
 import { statusLabel } from "@/lib/order-status";
@@ -15,6 +16,8 @@ import { buildSalesActivity } from "@/lib/salesActivity";
 import { dailyTakings, SOLD_STATUSES } from "@/lib/dailyTakings";
 import { loadFinance } from "@/lib/finance/query";
 import { shiftDayKey, shopDayKey } from "@/lib/saleTime";
+import { loadVialStock, summariseVialStock } from "@/lib/vial-stock";
+import { shortDay } from "@/components/admin/finance/parts";
 import type { DailyRevenue, StatusCount, ProductCount } from "@/components/admin/AnalyticsDashboard";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +33,7 @@ export default async function AdminOverviewPage() {
   const [
     stageGroups,
     oldOpenOrders,
-    productCount,
+    vialStock,
     lastThirtyDays,
     takenWithAmount,
     takenBeforeAmounts,
@@ -47,7 +50,11 @@ export default async function AdminOverviewPage() {
       _count: { id: true },
     }),
     catchUpCount(),
-    prisma.product.count({ where: { active: true } }),
+    // A failure here shows "—", not a broken dashboard.
+    loadVialStock().catch((err: unknown) => {
+      console.error("[internal] working out the vial count failed", err);
+      return summariseVialStock([], [], new Date());
+    }),
     // Takings as /admin/finance counts them: what customers were charged, by
     // the UK day they paid.
     loadFinance(shiftDayKey(today, -29), today, { compare: false }),
@@ -105,7 +112,14 @@ export default async function AdminOverviewPage() {
   const cards: { label: string; value: string; href: string; note?: string }[] = [
     { label: "Taken today", value: formatPrice(takingsToday.summary.takenMinor / 100, "GBP"), href: "/admin/takings" },
     { label: "Taken, all time", value: formatPrice(takenAllTimeMinor / 100, "GBP"), href: "/admin/finance?range=this-year" },
-    { label: "Active products", value: String(productCount), href: "/admin/products" },
+    {
+      label: "Vials left",
+      value: vialStock.since ? vialStock.left.toLocaleString("en-GB") : "—",
+      href: "/admin/stock",
+      note: vialStock.since
+        ? `${vialStock.sent.toLocaleString("en-GB")} sent out since ${shortDay(vialStock.since)}`
+        : "Book stock in to start the count",
+    },
     {
       label: "Recovered checkouts, 30 days",
       value: formatPrice((recovered._sum.amountPaidMinor ?? 0) / 100, "GBP"),
@@ -162,6 +176,7 @@ export default async function AdminOverviewPage() {
 
       <LabelWarning />
       <TrackingWarning />
+      <LowStockWarning stock={vialStock} />
 
       {oldOpenOrders > 0 && (
         <p className="card mt-6 p-5 text-sm">

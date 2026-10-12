@@ -565,6 +565,23 @@ model PickLine {
   @@index([orderId])
 }
 
+// Vials that arrived at fulfilment, for the running count on /admin/stock
+// (lib/vial-stock.ts): what is left is everything received less every vial
+// on an order paid since the EARLIEST row's day, so that row is the opening
+// count. A negative row corrects the count (a stock-take, breakages).
+// Separate from Product.stock, which checkout sells against, and from the
+// warehouse ledger above, which is not switched on.
+model VialDelivery {
+  id         String   @id @default(cuid())
+  vials      Int // signed: a correction can take vials off
+  receivedOn String   @map("received_on") // UK day, "2026-10-08"
+  note       String   @default("")
+  actor      String   @default("") // AdminUser.id, "admin" or "system"
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([receivedOn])
+}
+
 // ── Postage ───────────────────────────────────────────────────────
 
 // A postal service and the limits that decide whether a parcel fits it.
