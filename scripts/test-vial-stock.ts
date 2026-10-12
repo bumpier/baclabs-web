@@ -15,7 +15,13 @@ function check(name: string, condition: boolean, detail = "") {
 }
 
 const lines = (...qtys: unknown[]) => JSON.stringify(qtys.map((qty) => ({ productId: "p", qty })));
-const order = (paidAt: string, ...qtys: number[]): SentOrder => ({ paidAt: new Date(paidAt), items: lines(...qtys) });
+const order = (paidAt: string, ...qtys: number[]): SentOrder => ({ paidAt: new Date(paidAt), items: lines(...qtys), kind: "sale" });
+/** An order as checkout writes it: the pack line, then any free or loose lines. */
+const packOrder = (paidAt: string, bundleId: string, vials: number, extra: object[] = [], kind = "sale"): SentOrder => ({
+  paidAt: new Date(paidAt),
+  items: JSON.stringify([...extra.filter((l) => "welcome" in l), { qty: vials, bundleId }, ...extra.filter((l) => !("welcome" in l))]),
+  kind,
+});
 const DELIVERIES = [
   { vials: 250, receivedOn: "2026-09-20" },
   { vials: 1000, receivedOn: "2026-10-08" },
@@ -106,6 +112,32 @@ check("the first hours average over a whole day, not a rush", firstHour.perDay =
 
 const quiet = summariseVialStock(DELIVERIES, [order("2026-09-21T10:00:00Z", 5)], NOW);
 check("nothing sold lately: no days-left guess", quiet.daysLeft === null && quiet.perDay === 0);
+
+// ── Which packs sell
+const mix = summariseVialStock(
+  DELIVERIES,
+  [
+    packOrder("2026-09-25T10:00:00Z", "five", 5),
+    packOrder("2026-10-01T10:00:00Z", "five", 5, [{ qty: 1, welcome: true }]), // welcome vial listed first
+    packOrder("2026-10-11T10:00:00Z", "ten", 10, [{ qty: 2, addOn: true }]), // loose vials on top
+    packOrder("2026-10-11T11:00:00Z", "ten", 10),
+    packOrder("2026-10-11T12:00:00Z", "ten", 10),
+    packOrder("2026-10-11T13:00:00Z", "twenty", 20, [], "plan_box"), // a later box: not a pack choice
+    packOrder("2026-09-10T10:00:00Z", "fifty", 50), // before the count
+  ],
+  NOW
+);
+check(
+  "packs are counted per order, most orders first, without plan boxes or orders before the count",
+  JSON.stringify(mix.packs.map((p) => [p.pack, p.orders, p.recentOrders, p.vials])) ===
+    JSON.stringify([
+      ["ten", 3, 3, 32],
+      ["five", 2, 1, 11],
+    ]),
+  JSON.stringify(mix.packs)
+);
+check("packs are named as finance names them", mix.packs[0]?.label === "10-vial pack", String(mix.packs[0]?.label));
+check("a plan box still takes its vials", mix.sent === 5 + 6 + 12 + 10 + 10 + 20, String(mix.sent));
 
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed`);

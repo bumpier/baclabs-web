@@ -11,11 +11,14 @@ export const dynamic = "force-dynamic";
 
 const n = (v: number) => v.toLocaleString("en-GB");
 const signed = (v: number) => (v > 0 ? `+${n(v)}` : `−${n(-v)}`);
+const share = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : "—");
 
 export default async function AdminVialStockPage() {
   await requireAdminRole("ADMIN");
   const today = shopDayKey(new Date());
   const [stock, deliveries] = await Promise.all([loadVialStock(), listVialDeliveries()]);
+  const packOrders = stock.packs.reduce((sum, p) => sum + p.orders, 0);
+  const recentPackOrders = stock.packs.reduce((sum, p) => sum + p.recentOrders, 0);
 
   const figures = stock.since
     ? [
@@ -123,6 +126,43 @@ export default async function AdminVialStockPage() {
           </table>
         )}
       </section>
+
+      {stock.packs.length > 0 && (
+        <section className="card mt-4 p-6">
+          <h2 className="font-display text-lg font-medium text-brand-deep">Packs bought</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Each order counted once, by the pack it bought, since {shortDay(stock.since!)}. A plan&apos;s later boxes
+            aren&apos;t counted; its first order is.
+          </p>
+          <table className="mt-4 w-full text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
+                <th className="py-2 font-semibold">Pack</th>
+                <th className="py-2 pl-4 text-right font-semibold">Orders</th>
+                <th className="py-2 pl-4 text-right font-semibold">Last {RATE_DAYS} days</th>
+                <th className="py-2 pl-4 text-right font-semibold">Vials</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {stock.packs.map((p, i) => (
+                <tr key={p.pack}>
+                  <td className="py-2">
+                    {p.label}
+                    {i === 0 && <span className="ml-2 text-xs font-semibold text-brand">Most popular</span>}
+                  </td>
+                  <td className="py-2 pl-4 text-right tabular-nums">
+                    {n(p.orders)} <span className="text-ink-soft">· {share(p.orders, packOrders)}</span>
+                  </td>
+                  <td className="py-2 pl-4 text-right tabular-nums">
+                    {n(p.recentOrders)} <span className="text-ink-soft">· {share(p.recentOrders, recentPackOrders)}</span>
+                  </td>
+                  <td className="py-2 pl-4 text-right tabular-nums">{n(p.vials)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {stock.byWeek.length > 0 && (
         <section className="card mt-4 p-6">

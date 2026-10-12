@@ -100,7 +100,7 @@ export interface LedgerRow {
   discountOdd: boolean;
 }
 
-interface ItemLine {
+export interface ItemLine {
   qty?: unknown;
   welcome?: unknown;
   bundleId?: unknown;
@@ -118,7 +118,7 @@ function readItems(json: string): { lines: ItemLine[]; unreadable: boolean } {
 }
 
 /** Which pack an order bought: its first line that is not the free welcome vial. */
-function packOf(lines: ItemLine[]): string {
+export function packOf(lines: ItemLine[]): string {
   const line = lines.find((l) => l.welcome !== true);
   if (!line) return "loose";
   if (typeof line.bundleId === "string" && line.bundleId) return line.bundleId;

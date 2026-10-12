@@ -1,7 +1,8 @@
 import type { VialDelivery } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { SOLD_STATUSES } from "@/lib/dailyTakings";
-import { PARCEL_KINDS } from "@/lib/plans/kinds";
+import { packName, packOf, type ItemLine } from "@/lib/finance/ledger";
+import { PARCEL_KINDS, orderKind } from "@/lib/plans/kinds";
 import { shopDayBounds, shopDayKey, weekKey } from "@/lib/saleTime";
 
 /**
@@ -31,6 +32,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export interface SentOrder {
   paidAt: Date;
   items: string;
+  kind: string;
+}
+
+/** One pack's sales since the count started. */
+export interface PackLine {
+  /** BUNDLES id, as /admin/finance's pack mix names it (lib/finance/ledger.ts packOf). */
+  pack: string;
+  label: string;
+  orders: number;
+  /** Orders in the last RATE_DAYS days, the window the rate uses. */
+  recentOrders: number;
+  vials: number;
 }
 
 export interface VialStock {
@@ -47,20 +60,31 @@ export interface VialStock {
   daysLeft: number | null;
   /** Monday-started UK weeks, newest first. */
   byWeek: { week: string; orders: number; vials: number }[];
+  /**
+   * The pack each sale bought, most orders first. Sales only: a plan's later
+   * boxes are deliveries, not a choice made at checkout, as in finance.
+   */
+  packs: PackLine[];
+}
+
+function readLines(itemsJson: string): ItemLine[] {
+  try {
+    const items: unknown = JSON.parse(itemsJson);
+    return Array.isArray(items) ? (items as ItemLine[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 /** The vials on one order: every line's qty, packs and free lines alike. */
 export function vialsOnOrder(itemsJson: string): number {
-  let items: unknown;
-  try {
-    items = JSON.parse(itemsJson);
-  } catch {
-    return 0;
-  }
-  if (!Array.isArray(items)) return 0;
+  return vialsOnLines(readLines(itemsJson));
+}
+
+function vialsOnLines(lines: ItemLine[]): number {
   let vials = 0;
-  for (const item of items) {
-    const qty = (item as { qty?: unknown } | null)?.qty;
+  for (const line of lines) {
+    const qty = line?.qty;
     if (typeof qty === "number" && Number.isInteger(qty) && qty > 0) vials += qty;
   }
   return vials;
@@ -73,7 +97,7 @@ export function summariseVialStock(
   now: Date
 ): VialStock {
   if (deliveries.length === 0) {
-    return { since: null, received: 0, sent: 0, left: 0, low: false, perDay: 0, daysLeft: null, byWeek: [] };
+    return { since: null, received: 0, sent: 0, left: 0, low: false, perDay: 0, daysLeft: null, byWeek: [], packs: [] };
   }
 
   const since = deliveries.reduce((min, d) => (d.receivedOn < min ? d.receivedOn : min), deliveries[0]!.receivedOn);
@@ -84,11 +108,21 @@ export function summariseVialStock(
   let sent = 0;
   let recent = 0;
   const weeks = new Map<string, { orders: number; vials: number }>();
+  const packs = new Map<string, PackLine>();
   for (const o of orders) {
     if (o.paidAt < start) continue;
-    const vials = vialsOnOrder(o.items);
+    const lines = readLines(o.items);
+    const vials = vialsOnLines(lines);
     sent += vials;
     if (o.paidAt >= rateStart) recent += vials;
+    if (orderKind(o.kind) === "sale" && lines.length > 0) {
+      const pack = packOf(lines);
+      const line = packs.get(pack) ?? { pack, label: packName(pack), orders: 0, recentOrders: 0, vials: 0 };
+      line.orders += 1;
+      if (o.paidAt >= rateStart) line.recentOrders += 1;
+      line.vials += vials;
+      packs.set(pack, line);
+    }
     const week = weekKey(shopDayKey(o.paidAt));
     const row = weeks.get(week) ?? { orders: 0, vials: 0 };
     row.orders += 1;
@@ -111,6 +145,7 @@ export function summariseVialStock(
     byWeek: [...weeks]
       .sort(([a], [b]) => (a < b ? 1 : -1))
       .map(([week, row]) => ({ week, ...row })),
+    packs: [...packs.values()].sort((a, b) => b.orders - a.orders || b.vials - a.vials),
   };
 }
 
@@ -129,11 +164,11 @@ export async function loadVialStock(now = new Date()): Promise<VialStock> {
       kind: { in: PARCEL_KINDS },
       paidAt: { gte: shopDayBounds(since).start },
     },
-    select: { paidAt: true, items: true },
+    select: { paidAt: true, items: true, kind: true },
   });
   return summariseVialStock(
     deliveries,
-    orders.flatMap((o) => (o.paidAt ? [{ paidAt: o.paidAt, items: o.items }] : [])),
+    orders.flatMap((o) => (o.paidAt ? [{ paidAt: o.paidAt, items: o.items, kind: o.kind }] : [])),
     now
   );
 }
