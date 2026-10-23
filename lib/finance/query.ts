@@ -12,11 +12,26 @@ import {
 } from "@/lib/finance/ledger";
 import { granularityFor, previousRange, type DayRange } from "@/lib/finance/range";
 import { readSetting, SETTING_KEYS } from "@/lib/settings";
-import { daysInRange, parseDayKey, shopRangeBounds } from "@/lib/saleTime";
+import { daysInRange, parseDayKey, shopDayKey, shopRangeBounds } from "@/lib/saleTime";
 
 /** The VAT registration day, or null while the shop is not registered. */
 export async function vatRegisteredFrom(): Promise<string | null> {
   return parseDayKey((await readSetting(SETTING_KEYS.vatRegisteredFrom)) ?? undefined);
+}
+
+/**
+ * The UK day of the shop's first sale, where an "all time" export starts, or
+ * null before there is one. The earlier of both columns, so an order whose
+ * paidAt somehow predates its createdAt still falls inside the range.
+ */
+export async function firstSaleDay(): Promise<string | null> {
+  const { _min } = await prisma.order.aggregate({
+    where: takingsWhere(new Date(0), new Date()),
+    _min: { paidAt: true, createdAt: true },
+  });
+  const times = [_min.paidAt, _min.createdAt].filter((d): d is Date => d !== null);
+  if (times.length === 0) return null;
+  return shopDayKey(new Date(Math.min(...times.map((d) => d.getTime()))));
 }
 
 /**

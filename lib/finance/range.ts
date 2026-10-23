@@ -73,6 +73,38 @@ export function resolveRange(
   return { ...presetRange(id, today), preset: id };
 }
 
+/** The ranges /admin/export offers. Separate from PRESETS: the page has no "all time". */
+export type ExportRangeId = "7d" | "30d" | "365d" | "all";
+
+export const EXPORT_RANGES: readonly { id: ExportRangeId; label: string }[] = [
+  { id: "7d", label: "Last 7 days" },
+  { id: "30d", label: "Last 30 days" },
+  { id: "365d", label: "Last year" },
+  { id: "all", label: "All time" },
+];
+
+export function parseExportRange(raw: string | null | undefined): ExportRangeId | null {
+  return EXPORT_RANGES.find((r) => r.id === raw)?.id ?? null;
+}
+
+/**
+ * The days an export covers, ending today. "Last year" is the last 365 days;
+ * "all time" starts on the shop's first sale (today when there is none) and,
+ * unlike resolveRange, is never capped at MAX_RANGE_DAYS.
+ */
+export function exportRange(id: ExportRangeId, today: string, firstSaleDay: string | null): DayRange {
+  switch (id) {
+    case "7d":
+      return { from: shiftDayKey(today, -6), to: today };
+    case "30d":
+      return { from: shiftDayKey(today, -29), to: today };
+    case "365d":
+      return { from: shiftDayKey(today, -364), to: today };
+    case "all":
+      return { from: firstSaleDay && firstSaleDay < today ? firstSaleDay : today, to: today };
+  }
+}
+
 /** The same number of days immediately before, for "vs previous period". */
 export function previousRange({ from, to }: DayRange): DayRange {
   const days = daysInRange(from, to);

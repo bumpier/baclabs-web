@@ -17,7 +17,7 @@ import {
   type LedgerOrder,
   type LedgerShipment,
 } from "@/lib/finance/ledger";
-import { granularityFor, presetRange, previousRange, resolveRange } from "@/lib/finance/range";
+import { exportRange, granularityFor, parseExportRange, presetRange, previousRange, resolveRange } from "@/lib/finance/range";
 import { DEFAULT_FULFILMENT_MINOR, parsePounds, rateOn, vatInside, type Rate } from "@/lib/finance/rates";
 import { dayKeysBetween, daysInRange, formatMonth, monthKey, shopRangeBounds, weekKey } from "@/lib/saleTime";
 
@@ -338,6 +338,22 @@ check(
 check(
   "granularity: days, then weeks, then months",
   granularityFor(31) === "day" && granularityFor(90) === "week" && granularityFor(365) === "month"
+);
+
+// ── Export ranges (/admin/export)
+check("export: last 7 days matches the page preset", same(exportRange("7d", today, null), presetRange("7d", today)));
+check("export: last 30 days matches the page preset", same(exportRange("30d", today, null), presetRange("30d", today)));
+const lastYear = exportRange("365d", today, null);
+check("export: last year is 365 days to today", lastYear.to === today && daysInRange(lastYear.from, today) === 365, lastYear.from);
+check(
+  "export: all time starts on the first sale, past the two-year cap",
+  same(exportRange("all", today, "2020-01-01"), { from: "2020-01-01", to: today })
+);
+check("export: all time with no sales is just today", same(exportRange("all", today, null), { from: today, to: today }));
+check("export: a first sale after today never runs backwards", exportRange("all", today, "2026-10-09").from === today);
+check(
+  "export: only the four named ranges parse",
+  parseExportRange("365d") === "365d" && parseExportRange("all") === "all" && parseExportRange("this-year") === null && parseExportRange(null) === null
 );
 
 if (failures > 0) {

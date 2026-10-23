@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/adminAuth";
 import { packName } from "@/lib/finance/ledger";
-import { loadFinance } from "@/lib/finance/query";
-import { resolveRange } from "@/lib/finance/range";
+import { firstSaleDay, loadFinance } from "@/lib/finance/query";
+import { exportRange, parseExportRange, resolveRange } from "@/lib/finance/range";
 import { formatSaleDateTime, shopDayKey } from "@/lib/saleTime";
 
 export const runtime = "nodejs";
@@ -31,14 +31,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
   const url = new URL(req.url);
-  const range = resolveRange(
-    {
-      from: url.searchParams.get("from") ?? undefined,
-      to: url.searchParams.get("to") ?? undefined,
-      range: url.searchParams.get("range") ?? undefined,
-    },
-    shopDayKey(new Date())
-  );
+  const today = shopDayKey(new Date());
+  const from = url.searchParams.get("from") ?? undefined;
+  const to = url.searchParams.get("to") ?? undefined;
+  // /admin/export asks for a range by name, and "all" may run past the
+  // two-year cap resolveRange applies to the finance page.
+  const exportId = from || to ? null : parseExportRange(url.searchParams.get("range"));
+  const range = exportId
+    ? exportRange(exportId, today, exportId === "all" ? await firstSaleDay() : null)
+    : resolveRange({ from, to, range: url.searchParams.get("range") ?? undefined }, today);
   const level = url.searchParams.get("level") === "order" ? "order" : "period";
   const f = await loadFinance(range.from, range.to, { compare: false });
 
