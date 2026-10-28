@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { canonicalOrigin } from "@/lib/site-url";
 import { SHOP_TIME_ZONE } from "@/lib/saleTime";
 import { MAILING_LIST, type BundleId } from "@/config/funnel";
+import { isKitLine } from "@/lib/order-items";
 
 // The mailing list and its welcome gift: one free vial on a subscriber's
 // first order.
@@ -336,7 +337,8 @@ export async function settleWelcomeVial(
   const vial = items[0];
   if (!vial) return unchanged;
 
-  const paidVials = items.reduce((n, i) => n + i.qty, 0);
+  // Lab Kits are not vials: they neither earn the bonus nor draw on the vial stock.
+  const paidVials = items.reduce((n, i) => n + (isKitLine(i) ? 0 : i.qty), 0);
   let qty = welcomeVialCount(sub, paidVials, order.createdAt);
   if (opts.legacyStockCheck) {
     const product = await tx.product.findUnique({ where: { id: vial.productId } });

@@ -25,6 +25,17 @@ const bundleOrderFields = {
    */
   extraVials: z.number().int().min(0).max(MAX_EXTRA_VIALS).optional(),
   /**
+   * Lab Kits (config/funnel.ts LAB_KIT). Absent means none. The bound here is
+   * only the biggest order's vial count; the route holds it to this order's
+   * vials (priceOrder) and refuses kits while they are switched off.
+   */
+  kits: z
+    .number()
+    .int()
+    .min(0)
+    .max(Math.max(...BUNDLES.map((b) => b.vials)) * MAX_QUANTITY + MAX_EXTRA_VIALS)
+    .optional(),
+  /**
    * Whether the visitor had accepted tracking on the cookie banner. Decides
    * whether the purchase is reported to Meta from the server
    * (lib/meta-capi.ts). Absent means no.
@@ -83,7 +94,25 @@ export const PlanCheckoutSchema = z
   })
   .strict();
 
-export const CheckoutSchema = z.union([CardCheckoutSchema, CryptoCheckoutSchema, PlanCheckoutSchema]);
+/**
+ * The Starter Kit (config/funnel.ts STARTER_KIT): one vial and one Lab Kit
+ * at one price, from its landing page. Card only, and nothing to choose, so
+ * nothing to send but that it is this.
+ */
+export const StarterKitCheckoutSchema = z
+  .object({
+    method: z.literal("card"),
+    starterKit: z.literal(true),
+    trackingConsent: z.boolean().optional(),
+  })
+  .strict();
+
+export const CheckoutSchema = z.union([
+  CardCheckoutSchema,
+  CryptoCheckoutSchema,
+  PlanCheckoutSchema,
+  StarterKitCheckoutSchema,
+]);
 
 /** Turning a paid one-off order into box 1 of a plan (lib/plans/upgrade.ts). Never an amount. */
 export const PlanUpgradeSchema = z

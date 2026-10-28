@@ -1,6 +1,8 @@
+import { Fragment } from "react";
 import type { Order } from "@prisma/client";
 import { brand, formatPrice, type Currency } from "@/config/brand";
 import { parseAddress, type Address } from "@/lib/orderAddress";
+import { isKitLine, kitPartsFor } from "@/lib/order-items";
 
 interface OrderItem {
   name: string;
@@ -12,6 +14,8 @@ interface OrderItem {
   welcome?: boolean;
   /** Free vials staff promised this customer (lib/vial-gifts.ts): priced as Free. */
   gift?: boolean;
+  /** Lab Kits: qty is kits, and the parts are listed under it for the packer. */
+  kit?: boolean;
 }
 
 /** The A4 sheet that goes in the box. Shared by the order page and the batch print. */
@@ -85,19 +89,30 @@ export function PackingSlip({ order }: { order: Order }) {
         </thead>
         <tbody className="divide-y divide-line">
           {items.map((item, idx) => (
-            <tr key={idx}>
-              <td className="py-3">{item.name}</td>
-              <td className="py-3 text-center">{item.qty}</td>
-              <td className="py-3 text-right">{item.welcome || item.gift ? "Free" : formatPrice(item.unitPrice, currency)}</td>
-              <td className="py-3 text-right font-medium">
-                {item.welcome || item.gift
-                  ? "Free"
-                  : formatPrice(
-                      item.lineTotal ? parseFloat(item.lineTotal) : parseFloat(item.unitPrice) * item.qty,
-                      currency
-                    )}
-              </td>
-            </tr>
+            <Fragment key={idx}>
+              <tr className={isKitLine(item) ? "border-b-0" : undefined}>
+                <td className="py-3">{item.name}</td>
+                <td className="py-3 text-center">{item.qty}</td>
+                <td className="py-3 text-right">{item.welcome || item.gift ? "Free" : formatPrice(item.unitPrice, currency)}</td>
+                <td className="py-3 text-right font-medium">
+                  {item.welcome || item.gift
+                    ? "Free"
+                    : formatPrice(
+                        item.lineTotal ? parseFloat(item.lineTotal) : parseFloat(item.unitPrice) * item.qty,
+                        currency
+                      )}
+                </td>
+              </tr>
+              {/* What the packer counts into the box: each part, multiplied out. */}
+              {isKitLine(item) &&
+                kitPartsFor(item.qty).map((part, i, parts) => (
+                  <tr key={part.sku} className={i < parts.length - 1 ? "border-b-0 text-ink-soft" : "text-ink-soft"}>
+                    <td className="py-1 pl-6">{part.name}</td>
+                    <td className="py-1 text-center tabular">{part.quantity}</td>
+                    <td colSpan={2} />
+                  </tr>
+                ))}
+            </Fragment>
           ))}
         </tbody>
         <tfoot>

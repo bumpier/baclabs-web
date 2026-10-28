@@ -131,6 +131,98 @@ export const MAX_EXTRA_VIALS = 4;
  */
 export const TOP_UP_MAX_VIALS = 2;
 
+// ── Lab Kit ───────────────────────────────────────────────────────
+// The consumables for one vial, sold as ONE product (26 Oct 2026). The
+// customer buys "5 × Lab Kit"; the packer is given the parts it is made of,
+// multiplied out (components/admin/PackingSlip.tsx, and in warehouse mode
+// the kit SKU's components on the pick list). Change the contents HERE: the
+// slip, the SKU setup and the tests all read this list.
+//
+// "Insulin needle" is the supplier's name and is allowed on the site
+// (Liam, 26 Oct 2026). Nothing else about the kit may suggest the water is
+// for injection: see the house rules.
+export const LAB_KIT = {
+  name: "Lab Kit",
+  /** Product row slug, Stripe/Meta id and (upper-cased) warehouse SKU code. */
+  sku: "baclab-lab-kit",
+  parts: [
+    { sku: "baclab-kit-syringe", name: "Syringe", perKit: 3 },
+    { sku: "baclab-kit-long-needle", name: "Long needle", perKit: 3 },
+    { sku: "baclab-kit-insulin-needle", name: "Insulin needle", perKit: 3 },
+    { sku: "baclab-kit-alcohol-swab", name: "Alcohol swab", perKit: 6 },
+  ],
+} as const;
+
+/** "3 syringes, 3 long needles, 3 insulin needles and 6 alcohol swabs": one kit, in words. */
+export function labKitContents(kits = 1): string {
+  const parts = LAB_KIT.parts.map((p) => `${p.perKit * kits} ${p.name.toLowerCase()}s`);
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+/**
+ * Whether the Lab Kit is on sale. Off until stock arrives: while it is off
+ * the checkout refuses kits, so the backend can ship ahead of the shelves.
+ * Read at call time, not load time, so tests can flip it.
+ */
+export function labKitEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_LAB_KIT === "1";
+}
+
+/**
+ * Kit prices, set by the pack the order buys (agreed 23 Oct 2026): £5.99
+ * with single vials, £4.99 with the 5-pack, £3.99 with the 10-pack and up.
+ * By pack rather than by kit count, so taking a kit off never changes what
+ * the others cost. One Stripe Price per tier.
+ */
+export type KitTier = "single" | "five" | "ten";
+
+export const KIT_PRICES: Record<KitTier, number> = { single: 599, five: 499, ten: 399 };
+
+export function kitTierFor(b: Bundle): KitTier {
+  return b.id === "single" || b.id === "five" ? b.id : "ten";
+}
+
+/** Price of one kit with this pack, in pence. */
+export function kitPriceMinor(b: Bundle): number {
+  return KIT_PRICES[kitTierFor(b)];
+}
+
+/**
+ * The Starter Kit (28 Oct 2026): one vial and one Lab Kit for £9.99, sold
+ * from its own landing page. One Stripe Price for the pair; the order
+ * records it as the single vial at its usual £5.99 and the Lab Kit at the
+ * £4.00 left over, so every reader of Order.items (stock, packing slip,
+ * finance) sees a vial and a kit as it would anywhere else.
+ */
+export const STARTER_KIT = {
+  name: "Starter Kit",
+  path: "/starter-kit",
+  priceMinor: 999,
+  /** Stripe/Meta id for the pair. */
+  sku: "baclab-starter-kit",
+  /** When the page's offer last changed, YYYY-MM-DD: the sitemap's lastmod. */
+  updated: "2026-10-28",
+} as const;
+
+/**
+ * A Starter Kit order's goods: the single vial plus one kit, priced so the
+ * two lines sum to STARTER_KIT.priceMinor.
+ */
+export function priceStarterKit(): PricedOrder {
+  const packsMinor = SINGLE_BUNDLE.priceMinor;
+  const kitUnitMinor = STARTER_KIT.priceMinor - packsMinor;
+  return {
+    packsMinor,
+    extrasMinor: 0,
+    goodsMinor: STARTER_KIT.priceMinor,
+    vials: SINGLE_BUNDLE.vials,
+    extraVials: 0,
+    kitsMinor: kitUnitMinor,
+    kits: 1,
+    kitUnitMinor,
+  };
+}
+
 // ── Derived figures — computed, never typed by hand ───────────────
 
 export function bundleById(id: string): Bundle | undefined {
@@ -176,26 +268,39 @@ export interface PricedOrder {
   /** Vials in the order, loose ones included. */
   vials: number;
   extraVials: number;
+  /** Lab Kits, in pence: `kits` at the pack's kit price. */
+  kitsMinor: number;
+  kits: number;
+  kitUnitMinor: number;
 }
 
 /**
- * An order's goods: `quantity` packs plus `extraVials` loose vials. THE
- * pricing the checkout route, the buy box and the tests share, so the page
- * and the charge cannot disagree. Null for an order the shop doesn't sell:
- * loose vials beyond MAX_EXTRA_VIALS, or loose vials on the single tier
- * (more singles is just a bigger quantity).
+ * An order's goods: `quantity` packs plus `extraVials` loose vials plus
+ * `kits` Lab Kits. THE pricing the checkout route, the buy box and the tests
+ * share, so the page and the charge cannot disagree. Null for an order the
+ * shop doesn't sell: loose vials beyond MAX_EXTRA_VIALS, loose vials on the
+ * single tier (more singles is just a bigger quantity), or more kits than
+ * vials (a kit is the kit for one vial). Whether kits are on sale at all is
+ * the checkout's call (labKitEnabled), not this one's.
  */
-export function priceOrder(b: Bundle, quantity: number, extraVials = 0): PricedOrder | null {
+export function priceOrder(b: Bundle, quantity: number, extraVials = 0, kits = 0): PricedOrder | null {
   if (!Number.isInteger(extraVials) || extraVials < 0 || extraVials > MAX_EXTRA_VIALS) return null;
   if (extraVials > 0 && b.id === SINGLE_BUNDLE.id) return null;
+  const vials = b.vials * quantity + extraVials;
+  if (!Number.isInteger(kits) || kits < 0 || kits > vials) return null;
   const packsMinor = totalMinor(b, quantity);
   const extrasMinor = SINGLE_BUNDLE.priceMinor * extraVials;
+  const kitUnitMinor = kitPriceMinor(b);
+  const kitsMinor = kitUnitMinor * kits;
   return {
     packsMinor,
     extrasMinor,
-    goodsMinor: packsMinor + extrasMinor,
-    vials: b.vials * quantity + extraVials,
+    goodsMinor: packsMinor + extrasMinor + kitsMinor,
+    vials,
     extraVials,
+    kitsMinor,
+    kits,
+    kitUnitMinor,
   };
 }
 
@@ -351,13 +456,35 @@ export function priceIdFor(id: BundleId): string | null {
   return process.env[PRICE_ENV[id]] || null;
 }
 
+/** One Price per kit tier (KIT_PRICES), also printed by scripts/stripe-setup.ts. */
+export const KIT_PRICE_ENV: Record<KitTier, string> = {
+  single: "STRIPE_PRICE_KIT_SINGLE",
+  five: "STRIPE_PRICE_KIT_FIVE",
+  ten: "STRIPE_PRICE_KIT_TEN",
+};
+
+/** The Price ID configured for a kit tier, or null when unset. */
+export function kitPriceIdFor(tier: KitTier): string | null {
+  return process.env[KIT_PRICE_ENV[tier]] || null;
+}
+
+/** The Starter Kit's one Price (STARTER_KIT.priceMinor). */
+export const STARTER_KIT_PRICE_ENV = "STRIPE_PRICE_STARTER_KIT";
+
+export function starterKitPriceId(): string | null {
+  return process.env[STARTER_KIT_PRICE_ENV] || null;
+}
+
 /**
  * Every Price ID this deployment will accept. The checkout route matches the
  * resolved Price against this list before creating a session, so a Price ID
  * that is not configured here can never be charged.
  */
 export function allowedPriceIds(): string[] {
-  return BUNDLES.map((b) => priceIdFor(b.id)).filter((v): v is string => !!v);
+  const kitTiers = Object.keys(KIT_PRICES) as KitTier[];
+  return [...BUNDLES.map((b) => priceIdFor(b.id)), ...kitTiers.map(kitPriceIdFor), starterKitPriceId()].filter(
+    (v): v is string => !!v
+  );
 }
 
 // ── Storefront configuration ──────────────────────────────────────

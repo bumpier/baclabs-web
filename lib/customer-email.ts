@@ -14,7 +14,8 @@ import {
   boxShippedCopy, nudgePlanOfferHtml, planScheduleHtml, planStartedCopy, planTermsOf, renewalCopy, upgradeOfferHtml,
 } from "@/lib/plans/copy";
 import { isPlanMonths, isPlanPackId, planKey } from "@/config/plans";
-import { DELIVERY, formatMinor, formatMinorShort, freeDeliveryName } from "@/config/funnel";
+import { DELIVERY, formatMinor, formatMinorShort, freeDeliveryName, labKitContents } from "@/config/funnel";
+import { isKitLine } from "@/lib/order-items";
 import { reorderOffer, type ReorderOffer } from "@/lib/reorder";
 import { waitingVials } from "@/lib/vial-gifts";
 
@@ -165,8 +166,12 @@ function receiptTable(
       // A plan's line carries the whole plan's price: name the plan, not "× 5".
       const detail =
         i.planLine === "plan" && i.bundleName ? `&middot; ${escapeHtml(i.bundleName)}` : `&times; ${i.qty}`;
+      // A Lab Kit line lists the pieces in the box, multiplied out.
+      const pieces = isKitLine(i)
+        ? `<br><span style="font-size:13px;color:${LITERAL.inkSoft}">${escapeHtml(labKitContents(i.qty))}</span>`
+        : "";
       return `<tr>
-        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};color:${LITERAL.ink}">${escapeHtml(i.name)} <span style="color:${LITERAL.inkSoft}">${detail}</span></td>
+        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};color:${LITERAL.ink}">${escapeHtml(i.name)} <span style="color:${LITERAL.inkSoft}">${detail}</span>${pieces}</td>
         <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};text-align:right;color:${LITERAL.ink};white-space:nowrap">${i.welcome || i.gift || i.planBonus ? "Free" : formatPrice(amount, currency)}</td>
       </tr>`;
     })

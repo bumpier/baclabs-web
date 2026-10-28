@@ -1,6 +1,7 @@
 import { BUNDLES } from "@/config/funnel";
 import { goodsMinor, optionRank, type TakingsOrder } from "@/lib/dailyTakings";
 import { paidMinor } from "@/lib/meta-capi-event";
+import { isKitLine } from "@/lib/order-items";
 import { orderKind, type OrderKind } from "@/lib/plans/kinds";
 import {
   dayKeysBetween,
@@ -178,6 +179,8 @@ export function ledgerRow(order: LedgerOrder, ctx: LedgerContext): LedgerRow {
   let welcomeVials = 0;
   let giftVials = 0;
   for (const l of lines) {
+    // A Lab Kit line's qty is kits.
+    if (isKitLine(l)) continue;
     const qty = typeof l.qty === "number" ? l.qty : 0;
     vials += qty;
     if (l.welcome === true) welcomeVials += qty;

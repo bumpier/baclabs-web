@@ -1,5 +1,6 @@
-import { BUNDLES, bundleById } from "@/config/funnel";
+import { BUNDLES, LAB_KIT, bundleById } from "@/config/funnel";
 import { normaliseCode } from "@/lib/inventory/codes";
+import { isKitLine } from "@/lib/order-items";
 
 /**
  * The storefront sells bundles; the warehouse ships SKUs. This is the one
@@ -14,6 +15,9 @@ import { normaliseCode } from "@/lib/inventory/codes";
 
 /** The single vial, the thing on the shelf. Matches the Product row's slug. */
 export const VIAL_SKU_CODE = normaliseCode("baclab-10ml");
+
+/** The Lab Kit: a kit SKU of LAB_KIT.parts, or one pre-packed SKU. */
+export const LAB_KIT_SKU_CODE = normaliseCode(LAB_KIT.sku);
 
 /**
  * Vials in one pack as the supplier delivers them. Stock is counted in
@@ -61,6 +65,10 @@ export function soldLines(itemsJson: string): SoldLine[] {
     );
     const description = item.name ?? item.slug ?? "";
 
+    // Kits, not vials: one unit of the kit SKU per kit sold.
+    if (isKitLine(item)) {
+      return { skuCode: LAB_KIT_SKU_CODE, quantity: item.qty, description, lineTotalMinor };
+    }
     if (item.bundleId && item.bundleQty && item.bundleQty > 0) {
       const bundle = bundleById(item.bundleId);
       const vialsPerBundle = item.qty / item.bundleQty;

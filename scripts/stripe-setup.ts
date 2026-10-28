@@ -1,6 +1,7 @@
 /**
- * Create (or reconcile) the Stripe Products and Prices for every bundle tier,
- * and make sure the local inventory row exists.
+ * Create (or reconcile) the Stripe Products and Prices for every bundle tier
+ * and every Lab Kit tier, and make sure the local inventory rows exist (the
+ * vial, and the Lab Kit with its own stock count).
  *
  * Usage:
  *   npx tsx scripts/stripe-setup.ts            # dry run — shows what it would do
@@ -24,7 +25,20 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import Stripe from "stripe";
 import { PrismaClient } from "@prisma/client";
-import { BUNDLES, PRODUCT, formatMinor, CURRENCY } from "../config/funnel";
+import {
+  BUNDLES,
+  KIT_PRICES,
+  KIT_PRICE_ENV,
+  LAB_KIT,
+  PRODUCT,
+  STARTER_KIT,
+  STARTER_KIT_PRICE_ENV,
+  VIAL_ML,
+  formatMinor,
+  CURRENCY,
+  labKitContents,
+  type KitTier,
+} from "../config/funnel";
 
 // ── env ───────────────────────────────────────────────────────────
 // tsx does not load .env files the way `next` does, so do it here.
@@ -155,6 +169,54 @@ async function main() {
     envLines.push(`STRIPE_PRICE_${b.id.toUpperCase()}=${priceId}`);
   }
 
+  // ── Lab Kit: one Stripe Product per tier, since ensurePrice keeps exactly
+  // one active Price per Product. All are named "Lab Kit" on Stripe's page.
+  const kitDescription = LAB_KIT.parts.map((p) => `${p.perKit} × ${p.name}`).join(", ");
+  for (const tier of Object.keys(KIT_PRICES) as KitTier[]) {
+    const key = `lab_kit_${tier}`;
+    const { product, created: productCreated } = await ensureProduct(key, LAB_KIT.name, kitDescription);
+    let priceId = "(dry-run)";
+    let priceCreated = true;
+    let archived: string[] = [];
+    if (product) {
+      const r = await ensurePrice(product.id, KIT_PRICES[tier], key);
+      priceId = r.price?.id ?? "(dry-run)";
+      priceCreated = r.created;
+      archived = r.archived;
+    }
+    console.log(
+      `${`kit/${tier}`.padEnd(9)}   1 kit     ${formatMinor(KIT_PRICES[tier]).padStart(8)}  ` +
+        `product ${productCreated ? "CREATE" : "ok    "}  price ${priceCreated ? "CREATE" : "ok    "}  ${priceId}`
+    );
+    for (const a of archived) console.log(`${"".padEnd(8)}   archived stale price ${a}`);
+    envLines.push(`${KIT_PRICE_ENV[tier]}=${priceId}`);
+  }
+
+  // ── The Starter Kit: one vial and one Lab Kit, one Price for the pair.
+  {
+    const key = "starter_kit";
+    const { product, created: productCreated } = await ensureProduct(
+      key,
+      STARTER_KIT.name,
+      `1 × ${VIAL_ML}ml ${PRODUCT.name} and a ${LAB_KIT.name}: ${labKitContents()}.`
+    );
+    let priceId = "(dry-run)";
+    let priceCreated = true;
+    let archived: string[] = [];
+    if (product) {
+      const r = await ensurePrice(product.id, STARTER_KIT.priceMinor, key);
+      priceId = r.price?.id ?? "(dry-run)";
+      priceCreated = r.created;
+      archived = r.archived;
+    }
+    console.log(
+      `${"starter".padEnd(9)}   1 + kit   ${formatMinor(STARTER_KIT.priceMinor).padStart(8)}  ` +
+        `product ${productCreated ? "CREATE" : "ok    "}  price ${priceCreated ? "CREATE" : "ok    "}  ${priceId}`
+    );
+    for (const a of archived) console.log(`${"".padEnd(8)}   archived stale price ${a}`);
+    envLines.push(`${STARTER_KIT_PRICE_ENV}=${priceId}`);
+  }
+
   // ── Local inventory row. Stock counts VIALS, not bundles.
   const existing = await prisma.product.findUnique({ where: { slug: VIAL_SLUG } });
   if (!APPLY) {
@@ -184,6 +246,28 @@ async function main() {
     console.log(
       `\nLocal product row "${VIAL_SLUG}": ${existing ? "updated" : "created"}` +
         (existing ? "" : " — stock is 0, set it in /admin before launch")
+    );
+  }
+
+  // ── The Lab Kit's row. Stock counts KITS. supplyDays 0: the restock nudge
+  // goes by the vials, never the kits.
+  const kitExisting = await prisma.product.findUnique({ where: { slug: LAB_KIT.sku } });
+  if (!APPLY) {
+    console.log(`Local product row "${LAB_KIT.sku}": ${kitExisting ? "exists" : "would be CREATED with stock 0"}`);
+  } else {
+    const kitRow = {
+      name: LAB_KIT.name,
+      description: LAB_KIT.parts.map((p) => `${p.perKit} × ${p.name}`).join(", "),
+      priceGbp: KIT_PRICES.single / 100,
+      active: true,
+    };
+    await prisma.product.upsert({
+      where: { slug: LAB_KIT.sku },
+      update: kitRow,
+      create: { ...kitRow, slug: LAB_KIT.sku, stock: 0, weightGrams: 0, supplyDays: 0 },
+    });
+    console.log(
+      `Local product row "${LAB_KIT.sku}": ${kitExisting ? "updated" : "created — stock is 0 kits, set it in /admin/products when they arrive"}`
     );
   }
 

@@ -8,10 +8,13 @@ import {
   deliveryOptionsFor,
   dispatchNoticeAt,
   shipsFree,
+  KIT_PRICES,
   MAILING_LIST,
+  STARTER_KIT,
   PRODUCT,
   type BundleId,
   type DeliveryOptionId,
+  type KitTier,
 } from "@/config/funnel";
 import { planFreeLine, type PlanPrice } from "@/config/plans";
 
@@ -55,19 +58,30 @@ async function retrievePrice(priceId: string): Promise<Stripe.Price> {
 export async function assertPriceMatchesConfig(bundleId: BundleId, priceId: string): Promise<void> {
   const bundle = bundleById(bundleId);
   if (!bundle) throw new Error(`Unknown bundle ${bundleId}`);
+  await assertPriceCharges(priceId, bundle.priceMinor, `bundle ${bundleId}`);
+}
 
+/** The same check for a Lab Kit tier's Price (KIT_PRICES). */
+export async function assertKitPriceMatchesConfig(tier: KitTier, priceId: string): Promise<void> {
+  await assertPriceCharges(priceId, KIT_PRICES[tier], `kit tier ${tier}`);
+}
+
+/** The same check for the Starter Kit's Price (STARTER_KIT). */
+export async function assertStarterKitPriceMatchesConfig(priceId: string): Promise<void> {
+  await assertPriceCharges(priceId, STARTER_KIT.priceMinor, "the Starter Kit");
+}
+
+async function assertPriceCharges(priceId: string, expectedMinor: number, what: string): Promise<void> {
   const price = await retrievePrice(priceId);
   if (!price.active) {
-    throw new Error(`Stripe price ${priceId} for bundle ${bundleId} is archived`);
+    throw new Error(`Stripe price ${priceId} for ${what} is archived`);
   }
   if (price.currency !== "gbp") {
-    throw new Error(
-      `Stripe price ${priceId} is in ${price.currency}, expected gbp (bundle ${bundleId})`
-    );
+    throw new Error(`Stripe price ${priceId} is in ${price.currency}, expected gbp (${what})`);
   }
-  if (price.unit_amount !== bundle.priceMinor) {
+  if (price.unit_amount !== expectedMinor) {
     throw new Error(
-      `Stripe price ${priceId} charges ${price.unit_amount} but bundle ${bundleId} is configured at ${bundle.priceMinor}. Re-run scripts/stripe-setup.ts and update the env var.`
+      `Stripe price ${priceId} charges ${price.unit_amount} but ${what} is configured at ${expectedMinor}. Re-run scripts/stripe-setup.ts and update the env var.`
     );
   }
 }
@@ -82,6 +96,8 @@ export interface BundleCheckoutParams {
    * single tier's Price, which the caller has reconciled like the pack's.
    */
   extras?: { priceId: string; quantity: number };
+  /** Lab Kits, at the pack's kit tier Price, reconciled by the caller the same way. */
+  kits?: { priceId: string; quantity: number };
   /**
    * Value of the whole order, in pence: the packs plus any loose vials
    * (priceOrder's goodsMinor, post-sale if a sale is live). Decides the
@@ -166,6 +182,13 @@ export async function createBundleCheckout(
     shippingOptions = rate && !shipsFree(orderValueMinor) ? [{ shipping_rate: rate }] : [];
   }
 
+  const metadata = {
+    orderId,
+    bundleId: params.bundleId,
+    extraVials: String(params.extras?.quantity ?? 0),
+    kits: String(params.kits?.quantity ?? 0),
+  };
+
   const session = await getStripe().checkout.sessions.create(
     {
       mode: "payment",
@@ -180,6 +203,9 @@ export async function createBundleCheckout(
         { price: priceId, quantity },
         ...(params.extras && params.extras.quantity > 0
           ? [{ price: params.extras.priceId, quantity: params.extras.quantity }]
+          : []),
+        ...(params.kits && params.kits.quantity > 0
+          ? [{ price: params.kits.priceId, quantity: params.kits.quantity }]
           : []),
         // Stripe supports no-cost line items when the session total is above
         // zero (docs.stripe.com/payments/checkout/no-cost-orders).
@@ -204,11 +230,9 @@ export async function createBundleCheckout(
           }
         : {}),
       client_reference_id: orderId,
-      metadata: { orderId, bundleId: params.bundleId, extraVials: String(params.extras?.quantity ?? 0) },
+      metadata,
       // Also on the PaymentIntent, where refunds and disputes are worked.
-      payment_intent_data: {
-        metadata: { orderId, bundleId: params.bundleId, extraVials: String(params.extras?.quantity ?? 0) },
-      },
+      payment_intent_data: { metadata },
 
       // Stripe collects the delivery address — the funnel deliberately does
       // not ask for one before the customer has decided to buy.

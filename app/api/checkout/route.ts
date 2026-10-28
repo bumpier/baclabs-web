@@ -9,7 +9,13 @@ import {
   buildPendingNote,
   type CryptoPaymentMethod,
 } from "@/lib/crypto-gateway";
-import { createBundleCheckout, createPlanCheckout, assertPriceMatchesConfig } from "@/lib/payments/stripe";
+import {
+  createBundleCheckout,
+  createPlanCheckout,
+  assertKitPriceMatchesConfig,
+  assertPriceMatchesConfig,
+  assertStarterKitPriceMatchesConfig,
+} from "@/lib/payments/stripe";
 import { planPrice, BONUS_PACK_ID } from "@/config/plans";
 import { planPurchaseItems, planRowData } from "@/lib/plans/items";
 import type { Product, Subscriber } from "@prisma/client";
@@ -34,8 +40,14 @@ import { fetchFxRates } from "@/lib/fx-rates";
 import {
   bundleById,
   allowedPriceIds,
+  kitPriceIdFor,
+  kitTierFor,
+  labKitEnabled,
   priceIdFor,
   priceOrder,
+  priceStarterKit,
+  starterKitPriceId,
+  LAB_KIT,
   SINGLE_BUNDLE,
   deliveryChoiceEnabled,
   deliveryOptionsFor,
@@ -118,22 +130,33 @@ export async function POST(req: Request) {
     if ("plan" in input) return await planCheckout(req, input, provider);
 
     // ── Pricing. The request carries a tier id and a count, never an amount.
-    const bundle = bundleById(input.tierId);
+    // The Starter Kit is the single vial and one Lab Kit at its own price
+    // (priceStarterKit); from here on it is that order like any other.
+    const starter = "starterKit" in input;
+    const bundle = starter ? SINGLE_BUNDLE : bundleById(input.tierId);
     if (!bundle) {
       return NextResponse.json({ error: "Invalid order details" }, { status: 400 });
     }
+    const quantity = starter ? 1 : input.quantity;
     // The packs plus any loose vials (priceOrder): null for loose vials on
     // the single tier, which a bigger quantity already covers.
-    const extraVials = input.extraVials ?? 0;
-    const priced = priceOrder(bundle, input.quantity, extraVials);
+    const extraVials = starter ? 0 : (input.extraVials ?? 0);
+    // Lab Kits: refused outright until they are on sale (labKitEnabled), and
+    // never more than one per vial (priceOrder).
+    const kits = starter ? 1 : (input.kits ?? 0);
+    if (kits > 0 && !labKitEnabled()) {
+      return NextResponse.json({ error: "Invalid order details" }, { status: 400 });
+    }
+    const priced = starter ? priceStarterKit() : priceOrder(bundle, quantity, extraVials, kits);
     if (!priced) {
       return NextResponse.json({ error: "Invalid order details" }, { status: 400 });
     }
     const totalVials = priced.vials;
     const grandTotalMinor = priced.goodsMinor;
     const paidLines: ShelfLine[] = [
-      { code: bundle.sku, quantity: input.quantity },
+      { code: bundle.sku, quantity },
       ...(extraVials > 0 ? [{ code: SINGLE_BUNDLE.sku, quantity: extraVials }] : []),
+      ...(kits > 0 ? [{ code: LAB_KIT.sku, quantity: kits }] : []),
     ];
 
     const product = await prisma.product.findUnique({ where: { slug: VIAL_SLUG } });
@@ -145,6 +168,15 @@ export async function POST(req: Request) {
         { error: "This product is not available for purchase right now" },
         { status: 400 }
       );
+    }
+    // The kit is a Product row of its own, so legacy stock counts kits and
+    // payment takes them off it (lib/payments/stock.ts) like vials.
+    const kitProduct = kits > 0 ? await prisma.product.findUnique({ where: { slug: LAB_KIT.sku } }) : null;
+    if (kits > 0 && (!kitProduct || !kitProduct.active)) {
+      console.error(
+        `[internal] checkout rejected — product "${LAB_KIT.sku}" is missing or inactive. Run: npx tsx scripts/stripe-setup.ts`
+      );
+      return NextResponse.json({ error: "Lab Kits are not available right now" }, { status: 400 });
     }
     // Which stock count to sell against — see lib/inventory/mode.ts. In
     // warehouse mode a pack is sellable as far as the shelves can make it
@@ -167,6 +199,8 @@ export async function POST(req: Request) {
       }
     } else if (product.stock < totalVials) {
       return NextResponse.json({ error: "Not enough stock for that quantity" }, { status: 409 });
+    } else if (kitProduct && kitProduct.stock < kits) {
+      return NextResponse.json({ error: "Not enough Lab Kits in stock for that quantity" }, { status: 409 });
     }
 
     // The mailing-list welcome vial: see welcomeForOrder.
@@ -210,9 +244,10 @@ export async function POST(req: Request) {
         productId: product.id,
         slug: product.slug,
         bundle,
-        quantity: input.quantity,
+        quantity,
         priced,
         goodsUsd: subtotalUsd.toFixed(2),
+        kitProductId: kitProduct?.id,
       }),
       // £0, so every total that sums lineTotal still matches the charge.
       ...(welcome ? [welcomeItem(product.id, product.slug, welcomeQty)] : []),
@@ -271,11 +306,11 @@ export async function POST(req: Request) {
     if (isCard) {
       // Resolve the Price from env and check it against the allowlist. A
       // Price ID that is not configured for one of our bundles can never be
-      // reached from here.
-      const priceId = priceIdFor(bundle.id as BundleId);
+      // reached from here. The Starter Kit is one Price for vial and kit.
+      const priceId = starter ? starterKitPriceId() : priceIdFor(bundle.id as BundleId);
       if (!priceId || !allowedPriceIds().includes(priceId)) {
         console.error(
-          `[internal] no Stripe Price configured for bundle "${bundle.id}". Run: npx tsx scripts/stripe-setup.ts`
+          `[internal] no Stripe Price configured for ${starter ? "the Starter Kit" : `bundle "${bundle.id}"`}. Run: npx tsx scripts/stripe-setup.ts`
         );
         return NextResponse.json(
           { error: "Card payment is not available right now" },
@@ -293,19 +328,33 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Card payment is not available right now" }, { status: 503 });
       }
 
+      // Lab Kits are charged at their pack's kit tier Price, checked the same
+      // way. The Starter Kit's own Price already covers its kit.
+      const kitTier = kitTierFor(bundle);
+      const kitsPriceId = kits > 0 && !starter ? kitPriceIdFor(kitTier) : null;
+      if (kits > 0 && !starter && (!kitsPriceId || !allowedPriceIds().includes(kitsPriceId))) {
+        console.error(
+          `[internal] no Stripe Price configured for Lab Kits at tier "${kitTier}". Run: npx tsx scripts/stripe-setup.ts`
+        );
+        return NextResponse.json({ error: "Card payment is not available right now" }, { status: 503 });
+      }
+
       // Confirm Stripe will charge exactly what the page advertised. Skipped
       // only in the keyless dev simulator, which never charges anything.
       if (process.env.STRIPE_SECRET_KEY) {
-        await assertPriceMatchesConfig(bundle.id as BundleId, priceId);
+        if (starter) await assertStarterKitPriceMatchesConfig(priceId);
+        else await assertPriceMatchesConfig(bundle.id as BundleId, priceId);
         if (extrasPriceId) await assertPriceMatchesConfig(SINGLE_BUNDLE.id, extrasPriceId);
+        if (kitsPriceId) await assertKitPriceMatchesConfig(kitTier, kitsPriceId);
       }
 
       const checkout = await createBundleCheckout({
         orderId: order.id,
         bundleId: bundle.id as BundleId,
         priceId,
-        quantity: input.quantity,
+        quantity,
         ...(extrasPriceId ? { extras: { priceId: extrasPriceId, quantity: extraVials } } : {}),
+        ...(kitsPriceId ? { kits: { priceId: kitsPriceId, quantity: kits } } : {}),
         orderValueMinor: grandTotalMinor,
         shippingCountries: SHIPPING_COUNTRIES,
         origin,

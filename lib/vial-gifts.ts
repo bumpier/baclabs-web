@@ -18,6 +18,7 @@ import { prisma } from "@/lib/db";
 import { brand } from "@/config/brand";
 import { ctaButton, escapeHtml, layout, send } from "@/lib/email";
 import { normEmail, type OrderItemLike } from "@/lib/mailing-list";
+import { isKitLine } from "@/lib/order-items";
 import { canonicalOrigin } from "@/lib/site-url";
 import { formatShopDay, shiftDayKey, shopDayBounds, shopDayKey } from "@/lib/saleTime";
 import { LITERAL } from "@/lib/theme";
@@ -160,7 +161,8 @@ export async function settleVialGifts(
 
   if (opts.legacyStockCheck) {
     const promised = gifts.reduce((n, g) => n + g.vials, 0);
-    const onOrder = items.reduce((n, i) => n + i.qty, 0);
+    // Vials only: a Lab Kit line's qty is kits, on the kit's own stock.
+    const onOrder = items.reduce((n, i) => n + (isKitLine(i) ? 0 : i.qty), 0);
     const product = await tx.product.findUnique({ where: { id: vial.productId } });
     if ((product?.stock ?? 0) < onOrder + promised) {
       return {

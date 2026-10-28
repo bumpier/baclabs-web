@@ -1,9 +1,9 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { PRODUCT } from "@/config/funnel";
+import { LAB_KIT, PRODUCT } from "@/config/funnel";
 import { coversDemand, expandDemand, kitsAvailable, planAllocation } from "@/lib/inventory/allocation";
 import { normaliseCode } from "@/lib/inventory/codes";
-import { soldLines, storefrontSkuCodes, VIAL_SKU_CODE } from "@/lib/inventory/demand";
+import { LAB_KIT_SKU_CODE, soldLines, storefrontSkuCodes, VIAL_SKU_CODE } from "@/lib/inventory/demand";
 
 /**
  * Every write to stock goes through this file, and every one of them is a
@@ -465,10 +465,11 @@ export async function inventoryReadiness(): Promise<Readiness> {
 }
 
 /**
- * One click to a working starting point: the vial as a stocked SKU, and each
- * storefront pack as a kit of that many vials. Creates only what is missing,
- * and never touches a SKU that exists — so a pack that has been changed to a
- * pre-packed SKU of its own stays that way.
+ * One click to a working starting point: the vial as a stocked SKU, each
+ * storefront pack as a kit of that many vials, and the Lab Kit as a kit of
+ * its parts (LAB_KIT), each part a stocked SKU. Creates only what is
+ * missing, and never touches a SKU that exists — so a pack that has been
+ * changed to a pre-packed SKU of its own stays that way.
  *
  * Packs start unmeasured on purpose. Their weight as posted has to be read
  * off a scale, not multiplied up from a bare vial.
@@ -504,6 +505,32 @@ export async function createStorefrontSkus(): Promise<string[]> {
         },
       });
       created.push(pack.code);
+    }
+
+    // The Lab Kit, so an order for 10 kits picks 30 syringes, 30 long
+    // needles and so on from the parts' shelves.
+    if (!(await tx.sku.findUnique({ where: { code: LAB_KIT_SKU_CODE } }))) {
+      const parts: { componentId: string; quantity: number }[] = [];
+      for (const part of LAB_KIT.parts) {
+        const code = normaliseCode(part.sku);
+        let sku = await tx.sku.findUnique({ where: { code } });
+        if (!sku) {
+          sku = await tx.sku.create({
+            data: { code, name: part.name, description: `A ${LAB_KIT.name} part: ${part.perKit} in each kit.` },
+          });
+          created.push(code);
+        }
+        parts.push({ componentId: sku.id, quantity: part.perKit });
+      }
+      await tx.sku.create({
+        data: {
+          code: LAB_KIT_SKU_CODE,
+          name: LAB_KIT.name,
+          description: LAB_KIT.parts.map((p) => `${p.perKit} × ${p.name}`).join(", "),
+          components: { create: parts },
+        },
+      });
+      created.push(LAB_KIT_SKU_CODE);
     }
   });
   return created;

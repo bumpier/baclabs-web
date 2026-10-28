@@ -2,6 +2,7 @@ import type { VialDelivery } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { SOLD_STATUSES } from "@/lib/dailyTakings";
 import { packName, packOf, type ItemLine } from "@/lib/finance/ledger";
+import { isKitLine } from "@/lib/order-items";
 import { PARCEL_KINDS, orderKind } from "@/lib/plans/kinds";
 import { shopDayBounds, shopDayKey, weekKey } from "@/lib/saleTime";
 
@@ -76,7 +77,7 @@ function readLines(itemsJson: string): ItemLine[] {
   }
 }
 
-/** The vials on one order: every line's qty, packs and free lines alike. */
+/** The vials on one order: every line's qty, packs and free lines alike. Lab Kits are not vials. */
 export function vialsOnOrder(itemsJson: string): number {
   return vialsOnLines(readLines(itemsJson));
 }
@@ -84,6 +85,7 @@ export function vialsOnOrder(itemsJson: string): number {
 function vialsOnLines(lines: ItemLine[]): number {
   let vials = 0;
   for (const line of lines) {
+    if (isKitLine(line)) continue;
     const qty = line?.qty;
     if (typeof qty === "number" && Number.isInteger(qty) && qty > 0) vials += qty;
   }

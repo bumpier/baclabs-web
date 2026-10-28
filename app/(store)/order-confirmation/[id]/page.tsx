@@ -3,13 +3,14 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { brand } from "@/config/brand";
-import { deliveryOptionById, dispatchNoticeAt, formatMinor } from "@/config/funnel";
+import { deliveryOptionById, dispatchNoticeAt, formatMinor, labKitContents } from "@/config/funnel";
 import { formatDeliveryDay, nextDayDeadline, ukDayKey } from "@/lib/delivery-date";
 import { paidMinor, purchaseContents, purchaseEventId } from "@/lib/meta-capi-event";
 import { parseTrackingNumbers } from "@/lib/shipping/shipments";
 import { trackingLink } from "@/lib/shipping/carriers";
 import { formatSaleDateTime, formatShopDay, shopDayKey } from "@/lib/saleTime";
 import { planDeliveryNote, planFreeLine } from "@/config/plans";
+import { isKitLine } from "@/lib/order-items";
 import { orderKind } from "@/lib/plans/kinds";
 import { upgradeEligibility, upgradeOffers } from "@/lib/plans/upgrade";
 import { PlanSchedule } from "@/components/plans/PlanSchedule";
@@ -255,7 +256,10 @@ export default async function OrderConfirmationPage({
             <div key={idx} className="flex justify-between gap-4 py-3">
               <dt className="text-ink">
                 {item.name} <span className="tabular text-ink-soft">× {item.qty}</span>
-                {item.bundleName && item.bundleQty ? (
+                {/* A Lab Kit lists the pieces in the box, multiplied out. */}
+                {isKitLine(item) ? (
+                  <span className="block text-xs text-ink-soft">{labKitContents(item.qty)}</span>
+                ) : item.bundleName && item.bundleQty ? (
                   <span className="block text-xs text-ink-soft">
                     <span className="tabular">{item.bundleQty}</span> × {item.bundleName}
                   </span>
