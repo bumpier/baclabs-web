@@ -39,6 +39,8 @@ ARG NEXT_PUBLIC_GA4_ID
 ARG NEXT_PUBLIC_CONTACT_EMAIL
 # Delivery choice at checkout, in testing. Unset = off.
 ARG NEXT_PUBLIC_DELIVERY_CHOICE
+# Lab Kits and /starter-kit (config/funnel.ts labKitEnabled). "1" = on sale.
+ARG NEXT_PUBLIC_LAB_KIT
 # Not NEXT_PUBLIC_, but still build-time: the home page is a static prerender,
 # so app/layout.tsx reads this while `next build` runs and bakes the
 # <meta name="google-site-verification"> tag into the HTML. Passing it only
@@ -57,6 +59,7 @@ ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_GA4_ID=$NEXT_PUBLIC_GA4_ID \
     NEXT_PUBLIC_CONTACT_EMAIL=$NEXT_PUBLIC_CONTACT_EMAIL \
     NEXT_PUBLIC_DELIVERY_CHOICE=$NEXT_PUBLIC_DELIVERY_CHOICE \
+    NEXT_PUBLIC_LAB_KIT=$NEXT_PUBLIC_LAB_KIT \
     GOOGLE_SITE_VERIFICATION=$GOOGLE_SITE_VERIFICATION \
     BLOG_ORIGIN=$BLOG_ORIGIN
 

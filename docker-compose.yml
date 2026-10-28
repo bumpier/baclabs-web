@@ -29,6 +29,8 @@ services:
         NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:-}
         # Delivery choice at checkout, in testing: leave unset in live.
         NEXT_PUBLIC_DELIVERY_CHOICE: ${NEXT_PUBLIC_DELIVERY_CHOICE:-}
+        # Lab Kits and the /starter-kit page: "1" puts them on sale, unset = off.
+        NEXT_PUBLIC_LAB_KIT: ${NEXT_PUBLIC_LAB_KIT:-}
         # Build-time too — the verification meta tag is baked into the static
         # home page, so changing it requires a rebuild, not a restart.
         GOOGLE_SITE_VERIFICATION: ${GOOGLE_SITE_VERIFICATION:-}
