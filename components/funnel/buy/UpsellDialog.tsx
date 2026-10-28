@@ -69,7 +69,7 @@ function offerEvent(u: Upsell) {
  * onClick; render `dialog` anywhere, it goes to <body>.
  */
 export function useUpsellCheckout() {
-  const { bundle, quantity, extraVials } = useFunnel();
+  const { bundle, quantity, extraVials, kits } = useFunnel();
   const { checkout, checkoutPack, pending, error } = useCheckout();
   const [offer, setOffer] = useState<Upsell | null>(null);
   const [taken, setTaken] = useState<"accept" | "decline" | null>(null);
@@ -81,7 +81,9 @@ export function useUpsellCheckout() {
   );
 
   function start() {
-    const u = UPSELL.popup ? upsellFor(bundle, quantity, extraVials) : null;
+    // No offer with Lab Kits chosen (upsellFor), so accept and decline below
+    // never have kits to carry.
+    const u = UPSELL.popup ? upsellFor(bundle, quantity, extraVials, kits) : null;
     if (u && !wasSeen(seenKey(u))) {
       markSeen(seenKey(u));
       setOffer(u);

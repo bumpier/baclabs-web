@@ -49,7 +49,7 @@ import { useHeroCtaPassed } from "@/lib/use-hero-cta-passed";
  * reduced-motion block can remove the slide while keeping the fade.
  */
 export function StickyBuyBar() {
-  const { bundle, quantity, extraVials, vials: totalVials, totalMinor, mode } = useFunnel();
+  const { bundle, quantity, extraVials, kits, kitsMinor, vials: totalVials, totalMinor, mode } = useFunnel();
   // The pack step-up comes up first, as from the buy box's own button. Its
   // dialog goes to <body>, outside this bar's hidden/shown state.
   const { start, pending, error, dialog } = useUpsellCheckout();
@@ -107,13 +107,21 @@ export function StickyBuyBar() {
             <>
               <p className="truncate text-xs text-ink-soft">
                 <span className="tabular">{totalVials}</span> × {totalVials === 1 ? "vial" : "vials"}, {VIAL_ML}ml
+                {kits > 0 ? (
+                  <>
+                    {" "}
+                    + <span className="tabular">{kits}</span> {kits === 1 ? "kit" : "kits"}
+                  </>
+                ) : null}
               </p>
               <p className="flex min-w-0 items-baseline gap-2 whitespace-nowrap leading-tight">
                 <span className="tabular text-lg font-semibold text-ink">{formatMinor(totalMinor)}</span>
                 {sale ? (
                   <>
                     <span className="tabular truncate text-xs text-ink-soft line-through">
-                      {formatMinor(referencePriceMinor(bundle) * quantity + referenceUnitPriceMinor() * extraVials)}
+                      {formatMinor(
+                        referencePriceMinor(bundle) * quantity + referenceUnitPriceMinor() * extraVials + kitsMinor
+                      )}
                     </span>
                     <SaleTag />
                   </>

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { CheckoutForm } from "./CheckoutForm";
 import { getPaymentConfig } from "@/lib/payments/config";
-import { bundleById, DEFAULT_BUNDLE_ID, MAX_QUANTITY, MIN_QUANTITY, priceOrder } from "@/config/funnel";
+import { bundleById, DEFAULT_BUNDLE_ID, MAX_QUANTITY, MIN_QUANTITY, labKitEnabled, priceOrder } from "@/config/funnel";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tier?: string; qty?: string; extra?: string }>;
+  searchParams: Promise<{ tier?: string; qty?: string; extra?: string; kits?: string }>;
 }) {
   const { methods } = getPaymentConfig();
   const coins = methods.filter((m) => m !== "card");
@@ -35,6 +35,12 @@ export default async function CheckoutPage({
   // Loose vials the shop would sell with this pack (priceOrder), else none.
   const parsedExtra = Number.parseInt(sp.extra ?? "0", 10);
   const extraVials = Number.isFinite(parsedExtra) && priceOrder(bundle, quantity, parsedExtra) ? parsedExtra : 0;
+  // Lab Kits, while they are on sale, up to one per vial (priceOrder).
+  const parsedKits = Number.parseInt(sp.kits ?? "0", 10);
+  const kits =
+    labKitEnabled() && Number.isFinite(parsedKits) && priceOrder(bundle, quantity, extraVials, parsedKits)
+      ? parsedKits
+      : 0;
 
   if (coins.length === 0) {
     return (
@@ -54,7 +60,14 @@ export default async function CheckoutPage({
 
   return (
     <Suspense>
-      <CheckoutForm coins={coins} bundleId={bundle.id} quantity={quantity} extraVials={extraVials} nowMs={Date.now()} />
+      <CheckoutForm
+        coins={coins}
+        bundleId={bundle.id}
+        quantity={quantity}
+        extraVials={extraVials}
+        kits={kits}
+        nowMs={Date.now()}
+      />
     </Suspense>
   );
 }

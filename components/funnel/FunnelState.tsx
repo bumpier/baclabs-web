@@ -17,6 +17,7 @@ import {
   MIN_QUANTITY,
   SINGLE_BUNDLE,
   bundleById,
+  labKitEnabled,
   priceOrder,
   type Bundle,
   type BundleId,
@@ -46,11 +47,24 @@ interface FunnelState {
   extraVials: number;
   /** Vials in the order, loose ones included. */
   vials: number;
-  /** Goods in pence: the packs plus the loose vials (priceOrder). */
+  /**
+   * Lab Kits (config/funnel.ts LAB_KIT), never more than the vials. Always 0
+   * while the kit is switched off (labKitEnabled).
+   */
+  kits: number;
+  /** The kits' price in pence, and one kit's at this pack (kitPriceMinor). */
+  kitsMinor: number;
+  kitUnitMinor: number;
+  /** Goods in pence: the packs, the loose vials and the kits (priceOrder). */
   totalMinor: number;
   select: (id: BundleId) => void;
   setQuantity: (n: number) => void;
   setExtraVials: (n: number) => void;
+  /**
+   * "all" is a kit for every vial, and keeps following the vials as the pack
+   * changes; a number is held to the vials there are.
+   */
+  setKits: (n: number | "all") => void;
   /**
    * Which half of the buy box's switch is showing. Shared so the mobile buy
    * bar never offers to charge the one-time pack while the customer is
@@ -79,6 +93,8 @@ export function FunnelStateProvider({
   const [bundleId, setBundleId] = useState<BundleId>(initialBundleId);
   const [quantity, setQuantityState] = useState(1);
   const [extraVials, setExtraVialsState] = useState(0);
+  // None until the customer ticks the box: an extra charge is never pre-selected.
+  const [kitsWanted, setKitsWanted] = useState<number | "all">(0);
   // One-time opens selected: a preselected prepaid plan would put a much
   // larger charge in front of someone who came for one pack.
   const [mode, setModeState] = useState<PurchaseMode>("once");
@@ -120,6 +136,10 @@ export function FunnelStateProvider({
     setExtraVialsState(Math.min(MAX_EXTRA_VIALS, Math.max(0, Math.round(n) || 0)));
   }, []);
 
+  const setKits = useCallback((n: number | "all") => {
+    setKitsWanted(n === "all" ? "all" : Math.max(0, Math.round(n) || 0));
+  }, []);
+
   const setMode = useCallback((m: PurchaseMode) => {
     setModeState(m);
     setExtraVialsState(0);
@@ -127,10 +147,11 @@ export function FunnelStateProvider({
 
   // No loose vials on the single tier: more singles is a bigger quantity.
   const extras = bundle.id === SINGLE_BUNDLE.id ? 0 : extraVials;
-  const priced = useMemo(
-    () => priceOrder(bundle, quantity, extras) ?? priceOrder(bundle, quantity)!,
-    [bundle, quantity, extras]
-  );
+  const priced = useMemo(() => {
+    const vials = bundle.vials * quantity + extras;
+    const kits = !labKitEnabled() ? 0 : kitsWanted === "all" ? vials : Math.min(kitsWanted, vials);
+    return priceOrder(bundle, quantity, extras, kits) ?? priceOrder(bundle, quantity)!;
+  }, [bundle, quantity, extras, kitsWanted]);
 
   const value = useMemo<FunnelState>(
     () => ({
@@ -138,14 +159,18 @@ export function FunnelStateProvider({
       quantity,
       extraVials: priced.extraVials,
       vials: priced.vials,
+      kits: priced.kits,
+      kitsMinor: priced.kitsMinor,
+      kitUnitMinor: priced.kitUnitMinor,
       totalMinor: priced.goodsMinor,
       select,
       setQuantity,
       setExtraVials,
+      setKits,
       mode,
       setMode,
     }),
-    [bundle, quantity, priced, select, setQuantity, setExtraVials, mode, setMode]
+    [bundle, quantity, priced, select, setQuantity, setExtraVials, setKits, mode, setMode]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -158,14 +183,14 @@ export function useFunnel(): FunnelState {
 }
 
 /**
- * Honour /?pack=ten&qty=1&extra=1#buy (the reorder email and the
+ * Honour /?pack=ten&qty=1&extra=1&kits=11#buy (the reorder email and the
  * checkout-recovery fallback, lib/pack-link.ts): open the one-time half on
  * that order. Read after mount from window.location, NOT useSearchParams, so
  * the home page stays static. Call it before usePlanQuery, so a link naming
  * a plan as well still opens on the plan.
  */
 export function usePackQuery() {
-  const { select, setQuantity, setExtraVials, setMode } = useFunnel();
+  const { select, setQuantity, setExtraVials, setKits, setMode } = useFunnel();
   useEffect(() => {
     const wanted = parsePackQuery(window.location.search);
     if (!wanted) return;
@@ -175,5 +200,6 @@ export function usePackQuery() {
     select(wanted.bundleId);
     setQuantity(wanted.quantity);
     setExtraVials(wanted.extraVials);
-  }, [select, setQuantity, setExtraVials, setMode]);
+    setKits(wanted.kits ?? 0);
+  }, [select, setQuantity, setExtraVials, setKits, setMode]);
 }

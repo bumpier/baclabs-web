@@ -9,7 +9,7 @@ import { useFunnel } from "@/components/funnel/FunnelState";
 import { useDispatchNotice } from "@/components/funnel/useDispatchNotice";
 import { PaymentMarks } from "@/components/funnel/PaymentMarks";
 import { WelcomeVialPanel } from "@/components/mailing-list/WelcomeVialPanel";
-import { CheckMark, CheckoutRow, DeliveryLine, PriceLine } from "@/components/funnel/buy/parts";
+import { CheckMark, CheckoutRow, DeliveryLine, KitRow, PriceLine } from "@/components/funnel/buy/parts";
 
 /**
  * The purchase panel on a pack page.
@@ -41,10 +41,10 @@ export function PackBuy({
 }) {
   // The provider is mounted with this pack's tier, so `bundle` here and the
   // context agree. Quantity is the only thing the customer changes.
-  const { quantity, extraVials, vials, setExtraVials } = useFunnel();
+  const { quantity, extraVials, kits, vials, setExtraVials } = useFunnel();
   // The step up to the next pack, as the home page offers it (lib/upsell.ts).
   // A top-up keeps this pack, so it is a button rather than a link away.
-  const offer = upsellFor(bundle, quantity, extraVials);
+  const offer = upsellFor(bundle, quantity, extraVials, kits);
   const offerPage = offer && offer.kind !== "top-up" ? packByBundleId(offer.to.bundle.id) : undefined;
 
   // No "Cheapest in the UK" here: that claim lives only on the home page,
@@ -91,6 +91,8 @@ export function PackBuy({
           )}
         </p>
       ) : null}
+
+      <KitRow className="mt-5" />
 
       <div className="mt-5">
         <CheckoutRow cryptoEnabled={cryptoEnabled} />

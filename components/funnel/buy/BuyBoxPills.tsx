@@ -28,6 +28,7 @@ import {
   CheckMark,
   CheckoutRow,
   DeliveryLine,
+  KitRow,
   ModeSwitch,
   PlusMark,
   PriceLine,
@@ -165,6 +166,7 @@ export function BuyBoxPills({ cryptoEnabled }: { cryptoEnabled: boolean }) {
           <div className="mt-4 empty:hidden">
             <UpsellNudge />
           </div>
+          <KitRow className="mt-5" />
           <div className="mt-5">
             <CheckoutRow cryptoEnabled={cryptoEnabled} />
           </div>

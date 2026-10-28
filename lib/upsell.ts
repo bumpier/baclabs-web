@@ -110,9 +110,13 @@ function topUpFor(from: PricedChoice): PricedChoice | null {
   return null;
 }
 
-/** The one offer for this selection, or null (switched off, topped up, or nothing bigger). */
-export function upsellFor(bundle: Bundle, quantity: number, extraVials = 0): Upsell | null {
-  if (!UPSELL.enabled || extraVials > 0) return null;
+/**
+ * The one offer for this selection, or null (switched off, topped up, nothing
+ * bigger, or Lab Kits chosen: the offers are priced on vials alone, so with
+ * kits in the order their delivery sums would no longer be true).
+ */
+export function upsellFor(bundle: Bundle, quantity: number, extraVials = 0, kits = 0): Upsell | null {
+  if (!UPSELL.enabled || extraVials > 0 || kits > 0) return null;
   const from = priced(bundle, quantity);
   if (!from) return null;
 

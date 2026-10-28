@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { LEARN_LINKS, LEGAL_LINKS, SHOP_LINKS } from "@/components/Footer";
 import { PACK_PAGES, packPath } from "@/config/products";
-import { PRICES_UPDATED } from "@/config/funnel";
+import { PRICES_UPDATED, STARTER_KIT, labKitEnabled } from "@/config/funnel";
 import { publishedGuides, publishedPosts } from "@/lib/articles";
 import { canonicalOrigin } from "@/lib/site-url";
 import { isBlogMigrated, isMigratedPath } from "@/lib/blog-migration";
@@ -61,6 +61,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.9,
     })),
+    // The Starter Kit's landing page, only while the Lab Kit is on sale: the
+    // page is not found otherwise, and a sitemap must not list a 404.
+    ...(labKitEnabled()
+      ? [
+          {
+            url: STARTER_KIT.path,
+            lastModified: STARTER_KIT.updated,
+            changeFrequency: "monthly" as const,
+            priority: 0.9,
+          },
+        ]
+      : []),
     // The hub they sit under. A rung below its own children: it exists to
     // introduce them and to be the thing they all link up to, not to be the
     // page that ranks.

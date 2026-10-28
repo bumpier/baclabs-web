@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PRODUCT, SINGLE_BUNDLE, priceOrder, type Bundle } from "@/config/funnel";
+import { LAB_KIT, PRODUCT, SINGLE_BUNDLE, STARTER_KIT, priceOrder, type Bundle } from "@/config/funnel";
 import { trackEvent } from "@/lib/analytics";
 import { hasTrackingConsent } from "@/components/consent/consent-store";
 import { useFunnel } from "@/components/funnel/FunnelState";
@@ -34,8 +34,8 @@ export function useCheckout() {
   const [error, setError] = useState<string | null>(null);
   useResetOnRestore(useCallback(() => setPending(false), []));
 
-  async function checkoutPack(bundle: Bundle, quantity: number, extraVials = 0) {
-    const priced = priceOrder(bundle, quantity, extraVials) ?? priceOrder(bundle, quantity)!;
+  async function checkoutPack(bundle: Bundle, quantity: number, extraVials = 0, kits = 0) {
+    const priced = priceOrder(bundle, quantity, extraVials, kits) ?? priceOrder(bundle, quantity)!;
     setError(null);
     setPending(true);
     trackEvent("begin_checkout", {
@@ -60,6 +60,9 @@ export function useCheckout() {
               },
             ]
           : []),
+        ...(priced.kits > 0
+          ? [{ item_id: LAB_KIT.sku, item_name: LAB_KIT.name, price: priced.kitUnitMinor / 100, quantity: priced.kits }]
+          : []),
       ],
     });
 
@@ -71,6 +74,7 @@ export function useCheckout() {
           tierId: bundle.id,
           quantity,
           ...(priced.extraVials > 0 ? { extraVials: priced.extraVials } : {}),
+          ...(priced.kits > 0 ? { kits: priced.kits } : {}),
           method: "card",
           trackingConsent: hasTrackingConsent(),
         }),
@@ -92,10 +96,51 @@ export function useCheckout() {
 
   // Takes no arguments, so it can be an onClick handler as it stands.
   function checkout() {
-    return checkoutPack(funnel.bundle, funnel.quantity, funnel.extraVials);
+    return checkoutPack(funnel.bundle, funnel.quantity, funnel.extraVials, funnel.kits);
   }
 
   return { checkout, checkoutPack, pending, error };
+}
+
+/**
+ * Pay for the Starter Kit (config/funnel.ts STARTER_KIT): one vial and one
+ * Lab Kit at one price. Needs no funnel: its landing page sells nothing else.
+ */
+export function useStarterCheckout() {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useResetOnRestore(useCallback(() => setPending(false), []));
+
+  async function checkout() {
+    setError(null);
+    setPending(true);
+    trackEvent("begin_checkout", {
+      currency: "GBP",
+      value: STARTER_KIT.priceMinor / 100,
+      bundleId: STARTER_KIT.sku,
+      quantity: 1,
+      items: [{ item_id: STARTER_KIT.sku, item_name: STARTER_KIT.name, price: STARTER_KIT.priceMinor / 100, quantity: 1 }],
+    });
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: "card", starterKit: true, trackingConsent: hasTrackingConsent() }),
+      });
+      const data = (await res.json()) as { paymentUrl?: string; error?: string };
+      if (!res.ok || !data.paymentUrl) {
+        setError(data.error ?? "Something went wrong. Please try again.");
+        setPending(false);
+        return;
+      }
+      window.location.href = data.paymentUrl;
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setPending(false);
+    }
+  }
+
+  return { checkout, pending, error };
 }
 
 /**

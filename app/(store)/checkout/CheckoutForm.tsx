@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  LAB_KIT,
   PRODUCT,
   bundleById,
   deliveryChoiceEnabled,
@@ -38,6 +39,7 @@ export function CheckoutForm({
   bundleId,
   quantity,
   extraVials,
+  kits,
   nowMs,
 }: {
   coins: string[];
@@ -45,6 +47,8 @@ export function CheckoutForm({
   quantity: number;
   /** Loose single vials on top of the packs, already checked by the page. */
   extraVials: number;
+  /** Lab Kits, already checked by the page. */
+  kits: number;
   /** When the page was rendered: next day's date is worked out from it, the same on server and client. */
   nowMs: number;
 }) {
@@ -52,7 +56,7 @@ export function CheckoutForm({
   const cancelled = searchParams.get("cancelled") === "1";
 
   const bundle = bundleById(bundleId)!;
-  const priced = priceOrder(bundle, quantity, extraVials) ?? priceOrder(bundle, quantity)!;
+  const priced = priceOrder(bundle, quantity, extraVials, kits) ?? priceOrder(bundle, quantity)!;
   const total = priced.goodsMinor;
   const totalVials = priced.vials;
   // The same function the server prices the order with.
@@ -81,6 +85,7 @@ export function CheckoutForm({
           tierId: bundle.id as BundleId,
           quantity,
           ...(priced.extraVials > 0 ? { extraVials: priced.extraVials } : {}),
+          ...(priced.kits > 0 ? { kits: priced.kits } : {}),
           method: coin,
           name: form.get("name"),
           email: form.get("email"),
@@ -132,8 +137,16 @@ export function CheckoutForm({
             <span className="tabular">{totalVials}</span> × {PRODUCT.name.toLowerCase()},{" "}
             {PRODUCT.size}
           </dt>
-          <dd className="tabular text-ink">{formatMinor(total)}</dd>
+          <dd className="tabular text-ink">{formatMinor(total - priced.kitsMinor)}</dd>
         </div>
+        {priced.kits > 0 ? (
+          <div className="flex justify-between gap-4">
+            <dt className="text-ink-soft">
+              <span className="tabular">{priced.kits}</span> × {LAB_KIT.name}
+            </dt>
+            <dd className="tabular text-ink">{formatMinor(priced.kitsMinor)}</dd>
+          </div>
+        ) : null}
         {delivery ? (
           <div className="flex justify-between gap-4">
             <dt className="text-ink-soft">Delivery ({delivery.option.label})</dt>

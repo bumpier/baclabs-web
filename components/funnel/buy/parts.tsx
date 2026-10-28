@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   BUNDLES,
   DELIVERY,
+  LAB_KIT,
   MAX_QUANTITY,
   MIN_QUANTITY,
   STOCK_LEVEL,
@@ -13,6 +14,8 @@ import {
   deliveryMinorFor,
   formatMinor,
   freeDeliveryName,
+  labKitContents,
+  labKitEnabled,
   otherDeliveryOptionsLine,
   perVialMinor,
   referencePriceMinor,
@@ -98,8 +101,8 @@ export function ModeSwitch({
  * cheaper way to the same vials; the same offer the checkout dialog makes.
  */
 export function UpsellNudge() {
-  const { bundle, quantity, extraVials, select, setQuantity, setExtraVials } = useFunnel();
-  const offer = upsellFor(bundle, quantity, extraVials);
+  const { bundle, quantity, extraVials, kits, select, setQuantity, setExtraVials } = useFunnel();
+  const offer = upsellFor(bundle, quantity, extraVials, kits);
   if (!offer) return null;
   const copy = upsellCopy(offer);
   return (
@@ -153,6 +156,79 @@ export function ExtraVialsLine({ className = "" }: { className?: string }) {
         Remove
       </button>
     </p>
+  );
+}
+
+/**
+ * The Lab Kit offer (config/funnel.ts LAB_KIT): a box to add a kit for every
+ * vial, what is in one, and once ticked how many and what they cost. Never
+ * ticked to begin with: an extra charge is the customer's choice. Nothing at
+ * all while the kit is switched off.
+ */
+export function KitRow({ className = "" }: { className?: string }) {
+  const { kits, vials, kitUnitMinor, kitsMinor, setKits } = useFunnel();
+  const id = useId();
+  if (!labKitEnabled()) return null;
+  const on = kits > 0;
+  return (
+    <div
+      className={[
+        "rounded-control border px-4 py-3 transition-colors duration-150",
+        on ? "border-brand bg-cta-tint" : "border-line-strong/50 bg-surface",
+        className,
+      ].join(" ")}
+      style={{ transitionTimingFunction: "var(--ease-out)" }}
+    >
+      <label htmlFor={id} className="flex cursor-pointer items-start gap-3">
+        <input
+          id={id}
+          type="checkbox"
+          checked={on}
+          onChange={(e) => setKits(e.target.checked ? "all" : 0)}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand)]"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm font-semibold text-ink">
+            <span>Add a {LAB_KIT.name} for each vial</span>
+            <span className="tabular font-normal text-ink-soft">{formatMinor(kitUnitMinor)} each</span>
+          </span>
+          <span className="mt-0.5 block text-xs text-ink-soft">
+            {labKitContents()}. Sterile and individually wrapped.
+          </span>
+        </span>
+      </label>
+      {on ? (
+        <div className="mt-3 flex items-center justify-between gap-3 pl-7">
+          <div className="flex h-9 items-center rounded-control border border-line-strong/50 bg-surface">
+            <button
+              type="button"
+              onClick={() => setKits(kits - 1)}
+              disabled={kits <= 1}
+              aria-label="One kit fewer"
+              className="h-full w-9 text-ink disabled:opacity-40"
+            >
+              &minus;
+            </button>
+            <span className="tabular w-8 text-center text-sm font-semibold text-ink" aria-live="polite">
+              {kits}
+            </span>
+            <button
+              type="button"
+              onClick={() => setKits(kits + 1 >= vials ? "all" : kits + 1)}
+              disabled={kits >= vials}
+              aria-label="One kit more"
+              className="h-full w-9 text-ink disabled:opacity-40"
+            >
+              +
+            </button>
+          </div>
+          <span className="text-sm text-ink">
+            <span className="tabular">{kits}</span> {kits === 1 ? "kit" : "kits"}{" "}
+            <span className="tabular text-ink-soft">{formatMinor(kitsMinor)}</span>
+          </span>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -274,7 +350,7 @@ export function QuantityStepper() {
  * buy box places it elsewhere.
  */
 export function CheckoutRow({ cryptoEnabled, stepper = true }: { cryptoEnabled: boolean; stepper?: boolean }) {
-  const { bundle, quantity, extraVials, vials: totalVials, totalMinor } = useFunnel();
+  const { bundle, quantity, extraVials, kits, vials: totalVials, totalMinor } = useFunnel();
   const { start, pending, error, dialog } = useUpsellCheckout();
   const known = DELIVERY.mode !== "unknown";
   const payable = totalMinor + deliveryMinorFor(totalMinor);
@@ -347,7 +423,7 @@ export function CheckoutRow({ cryptoEnabled, stepper = true }: { cryptoEnabled: 
       {cryptoEnabled ? (
         <p className="mt-2 text-xs">
           <Link
-            href={`/checkout?tier=${bundle.id}&qty=${quantity}${extraVials > 0 ? `&extra=${extraVials}` : ""}`}
+            href={`/checkout?tier=${bundle.id}&qty=${quantity}${extraVials > 0 ? `&extra=${extraVials}` : ""}${kits > 0 ? `&kits=${kits}` : ""}`}
             className="text-ink-soft underline decoration-line underline-offset-4 hover:text-ink"
           >
             or pay with cryptocurrency
