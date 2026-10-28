@@ -45,7 +45,7 @@ import {
   labKitEnabled,
   priceIdFor,
   priceOrder,
-  priceStarterKit,
+  isStarterKitOrder,
   starterKitPriceId,
   LAB_KIT,
   SINGLE_BUNDLE,
@@ -130,27 +130,30 @@ export async function POST(req: Request) {
     if ("plan" in input) return await planCheckout(req, input, provider);
 
     // ── Pricing. The request carries a tier id and a count, never an amount.
-    // The Starter Kit is the single vial and one Lab Kit at its own price
-    // (priceStarterKit); from here on it is that order like any other.
-    const starter = "starterKit" in input;
-    const bundle = starter ? SINGLE_BUNDLE : bundleById(input.tierId);
+    // The Starter Kit page sends no tier: it is the single vial and one Lab
+    // Kit, and from here on that order like any other.
+    const starterPage = "starterKit" in input;
+    const bundle = starterPage ? SINGLE_BUNDLE : bundleById(input.tierId);
     if (!bundle) {
       return NextResponse.json({ error: "Invalid order details" }, { status: 400 });
     }
-    const quantity = starter ? 1 : input.quantity;
+    const quantity = starterPage ? 1 : input.quantity;
     // The packs plus any loose vials (priceOrder): null for loose vials on
     // the single tier, which a bigger quantity already covers.
-    const extraVials = starter ? 0 : (input.extraVials ?? 0);
+    const extraVials = starterPage ? 0 : (input.extraVials ?? 0);
     // Lab Kits: refused outright until they are on sale (labKitEnabled), and
     // never more than one per vial (priceOrder).
-    const kits = starter ? 1 : (input.kits ?? 0);
+    const kits = starterPage ? 1 : (input.kits ?? 0);
     if (kits > 0 && !labKitEnabled()) {
       return NextResponse.json({ error: "Invalid order details" }, { status: 400 });
     }
-    const priced = starter ? priceStarterKit() : priceOrder(bundle, quantity, extraVials, kits);
+    const priced = priceOrder(bundle, quantity, extraVials, kits);
     if (!priced) {
       return NextResponse.json({ error: "Invalid order details" }, { status: 400 });
     }
+    // A lone vial with its kit, from the page or the buy box, is the Starter
+    // Kit (priceOrder priced it at £9.99): it is charged at that one Price.
+    const starter = isStarterKitOrder(bundle, quantity, extraVials, kits);
     const totalVials = priced.vials;
     const grandTotalMinor = priced.goodsMinor;
     const paidLines: ShelfLine[] = [

@@ -14,6 +14,8 @@ import {
   deliveryMinorFor,
   formatMinor,
   freeDeliveryName,
+  isOneVial,
+  kitPriceMinor,
   labKitContents,
   labKitEnabled,
   otherDeliveryOptionsLine,
@@ -22,6 +24,7 @@ import {
   saleVisible,
   shipsFree,
   SINGLE_BUNDLE,
+  STARTER_KIT,
 } from "@/config/funnel";
 import { upsellCopy, upsellFor } from "@/lib/upsell";
 import { useFunnel, type PurchaseMode } from "@/components/funnel/FunnelState";
@@ -161,15 +164,18 @@ export function ExtraVialsLine({ className = "" }: { className?: string }) {
 
 /**
  * The Lab Kit offer (config/funnel.ts LAB_KIT): a box to add a kit for every
- * vial, what is in one, and once ticked how many and what they cost. Never
+ * vial, what is in one, and once ticked how many and what they cost. With a
+ * lone vial it is the Starter Kit: the kit for £4.00, £9.99 for both. Never
  * ticked to begin with: an extra charge is the customer's choice. Nothing at
  * all while the kit is switched off.
  */
 export function KitRow({ className = "" }: { className?: string }) {
-  const { kits, vials, kitUnitMinor, kitsMinor, setKits } = useFunnel();
+  const { bundle, quantity, extraVials, kits, vials, kitUnitMinor, kitsMinor, setKits } = useFunnel();
   const id = useId();
   if (!labKitEnabled()) return null;
   const on = kits > 0;
+  const starter = isOneVial(bundle, quantity, extraVials);
+  const separately = SINGLE_BUNDLE.priceMinor + kitPriceMinor(SINGLE_BUNDLE);
   return (
     <div
       className={[
@@ -189,15 +195,25 @@ export function KitRow({ className = "" }: { className?: string }) {
         />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm font-semibold text-ink">
-            <span>Add a {LAB_KIT.name} for each vial</span>
-            <span className="tabular font-normal text-ink-soft">{formatMinor(kitUnitMinor)} each</span>
+            <span>{starter ? `Make it a ${STARTER_KIT.name}` : `Add a ${LAB_KIT.name} for each vial`}</span>
+            <span className="tabular font-normal text-ink-soft">
+              {starter ? `+${formatMinor(kitUnitMinor)}` : `${formatMinor(kitUnitMinor)} each`}
+            </span>
           </span>
           <span className="mt-0.5 block text-xs text-ink-soft">
+            {starter ? `A ${LAB_KIT.name}: ` : null}
             {labKitContents()}. Sterile and individually wrapped.
+            {starter ? (
+              <>
+                {" "}
+                <span className="tabular">{formatMinor(STARTER_KIT.priceMinor)}</span> for both,{" "}
+                <span className="tabular">{formatMinor(separately - STARTER_KIT.priceMinor)}</span> less than separately.
+              </>
+            ) : null}
           </span>
         </span>
       </label>
-      {on ? (
+      {on && vials > 1 ? (
         <div className="mt-3 flex items-center justify-between gap-3 pl-7">
           <div className="flex h-9 items-center rounded-control border border-line-strong/50 bg-surface">
             <button

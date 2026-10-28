@@ -135,7 +135,9 @@ for (const b of BUNDLES) {
         const p = priceOrder(b, q, e, k);
         check(`${at}: priced only up to one kit per vial`, (p !== null) === (Number.isInteger(k) && k >= 0 && k <= vials));
         if (!p) continue;
-        check(`${at}: goods include the kits`, p.goodsMinor === b.priceMinor * q + SINGLE_BUNDLE.priceMinor * e + kitPriceMinor(b) * k);
+        // A lone vial's kit is the Starter Kit's £4.00; every other kit is at the pack's price.
+        const unit = b.id === "single" && q === 1 && e === 0 ? 400 : kitPriceMinor(b);
+        check(`${at}: goods include the kits`, p.goodsMinor === b.priceMinor * q + SINGLE_BUNDLE.priceMinor * e + unit * k);
         check(`${at}: kits do not change the vial count`, p.vials === vials);
 
         const goodsUsd = ((p.goodsMinor / 100) * 1.27).toFixed(2);
@@ -151,7 +153,8 @@ for (const b of BUNDLES) {
 
   // The agreed example orders.
   const total = (id: string, q: number, k: number) => priceOrder(bundleById(id)!, q, 0, k)!.goodsMinor;
-  check("1 vial + 1 kit = £11.98", total("single", 1, 1) === 1198);
+  check("1 vial + 1 kit is the Starter Kit's £9.99", total("single", 1, 1) === 999);
+  check("2 vials + 2 kits = £23.96", total("single", 2, 2) === 2396);
   check("5-pack + 5 kits = £46.94", total("five", 1, 5) === 4694);
   check("10-pack + 10 kits = £74.89", total("ten", 1, 10) === 7489);
   check("20-pack + 20 kits = £144.79", total("twenty", 1, 20) === 14479);
@@ -210,6 +213,8 @@ for (const b of BUNDLES) {
 // ── The Starter Kit ────────────────────────────────────────────────
 {
   const p = priceStarterKit();
+  const fromBuyBox = priceOrder(SINGLE_BUNDLE, 1, 0, 1)!;
+  check("starter: the same £9.99 ticked in the buy box", fromBuyBox.goodsMinor === p.goodsMinor && fromBuyBox.kitUnitMinor === p.kitUnitMinor);
   check("starter: £9.99 in all", p.goodsMinor === STARTER_KIT.priceMinor && STARTER_KIT.priceMinor === 999);
   check("starter: the single vial at its own price", p.packsMinor === SINGLE_BUNDLE.priceMinor && p.vials === 1);
   check("starter: one kit, at what is left", p.kits === 1 && p.kitsMinor === 999 - SINGLE_BUNDLE.priceMinor);

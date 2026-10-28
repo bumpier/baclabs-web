@@ -22,7 +22,8 @@ import {
   shipsFree,
   totalMinor,
 } from "@/config/funnel";
-import { upsellCopy, upsellFor } from "@/lib/upsell";
+import { kitOfferCopy, kitOfferFor, upsellCopy, upsellFor } from "@/lib/upsell";
+import { checkCompliance } from "@/lib/content-rules";
 
 let failures = 0;
 
@@ -158,6 +159,43 @@ process.env.NEXT_PUBLIC_DELIVERY_CHOICE = "on";
   const u = upsellFor(bundleById("five")!, 2)!;
   check("2 × 5 → one 10-pack", u.kind === "same-for-less" && u.to.bundle.id === "ten");
   check("2 × 5 → 10 loses free delivery", u.losesFreeDelivery);
+}
+
+// ── The Lab Kit offer at checkout ───────────────────────────────────
+for (const choice of ["on", "off"]) {
+  process.env.NEXT_PUBLIC_DELIVERY_CHOICE = choice;
+
+  process.env.NEXT_PUBLIC_LAB_KIT = "";
+  check(`${choice}: no kit offer while kits are switched off`, kitOfferFor(bundleById("five")!, 1) === null);
+  process.env.NEXT_PUBLIC_LAB_KIT = "1";
+
+  for (const b of BUNDLES) {
+    for (let q = MIN_QUANTITY; q <= MAX_QUANTITY; q++) {
+      for (const e of b.id === "single" ? [0] : [0, MAX_EXTRA_VIALS]) {
+        const at = `${choice}: ${q} × ${b.id} + ${e}`;
+        const o = kitOfferFor(b, q, e);
+        if (!o) {
+          check(`${at}: a kit offer`, false);
+          continue;
+        }
+        check(`${at}: a kit for every vial`, o.to.kits === o.from.vials && o.to.vials === o.from.vials);
+        check(`${at}: buttons priced as Stripe would charge`, o.to.payableMinor === payable(o.to.goodsMinor) && o.from.payableMinor === payable(o.from.goodsMinor));
+        check(`${at}: free delivery claimed only when true`, o.unlocksFreeDelivery === (!shipsFree(o.from.goodsMinor) && shipsFree(o.to.goodsMinor)));
+        check(`${at}: no offer once kits are chosen`, kitOfferFor(b, q, e, 1) === null);
+        const copy = kitOfferCopy(o);
+        check(`${at}: says free delivery only when it unlocks it`, copy.body.includes("ships free") === o.unlocksFreeDelivery);
+        const v = checkCompliance(Object.values(copy));
+        check(`${at}: copy passes the content rules`, v.length === 0, JSON.stringify(v));
+      }
+    }
+  }
+
+  const starter = kitOfferFor(bundleById("single")!, 1)!;
+  check(`${choice}: a lone vial is offered the Starter Kit`, starter.starter && starter.to.goodsMinor === 999 && starter.kitsMinor === 400);
+  check(`${choice}: two single vials are not`, !kitOfferFor(bundleById("single")!, 2)!.starter);
+  const five = kitOfferFor(bundleById("five")!, 1)!;
+  check(`${choice}: 5-pack + 5 kits = £46.94`, five.to.goodsMinor === 4694 && five.kitsMinor === 2495);
+  check(`${choice}: the 5-pack's kits take it to free delivery`, five.unlocksFreeDelivery);
 }
 
 if (failures > 0) {

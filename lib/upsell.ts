@@ -1,12 +1,18 @@
 import {
   BUNDLES,
   DELIVERY,
+  LAB_KIT,
   SINGLE_BUNDLE,
+  STARTER_KIT,
   TOP_UP_MAX_VIALS,
   UPSELL,
   deliveryMinorFor,
   formatMinor,
   freeDeliveryName,
+  isOneVial,
+  kitPriceMinor,
+  labKitContents,
+  labKitEnabled,
   perVialMinor,
   priceOrder,
   remainingForFreeDeliveryMinor,
@@ -42,6 +48,8 @@ export interface PricedChoice {
   extraVials: number;
   /** Vials in all, loose ones included. */
   vials: number;
+  /** Lab Kits. Only a kit offer's side has any. */
+  kits: number;
   goodsMinor: number;
   /** Delivery this order would be charged, 0 when it ships free. */
   deliveryMinor: number;
@@ -63,8 +71,8 @@ export interface Upsell {
   toFreeMinor: number;
 }
 
-function priced(bundle: Bundle, quantity: number, extraVials = 0): PricedChoice | null {
-  const order = priceOrder(bundle, quantity, extraVials);
+function priced(bundle: Bundle, quantity: number, extraVials = 0, kits = 0): PricedChoice | null {
+  const order = priceOrder(bundle, quantity, extraVials, kits);
   if (!order) return null;
   const deliveryMinor = deliveryMinorFor(order.goodsMinor);
   return {
@@ -72,6 +80,7 @@ function priced(bundle: Bundle, quantity: number, extraVials = 0): PricedChoice 
     quantity,
     extraVials,
     vials: order.vials,
+    kits: order.kits,
     goodsMinor: order.goodsMinor,
     deliveryMinor,
     payableMinor: order.goodsMinor + deliveryMinor,
@@ -229,5 +238,69 @@ export function upsellCopy(u: Upsell): {
     line: `${moreVials(u.extraVials)} for ${extra} more, ${perThen} a vial.`,
     accept,
     decline,
+  };
+}
+
+// ── Lab Kits at checkout ──────────────────────────────────────────────
+
+/**
+ * The checkout's first offer (Liam, 28 Oct 2026: "kits first"): a Lab Kit
+ * for every vial, made when the customer presses the button on an order
+ * with none. Worth more per yes than the pack step-up: a 5-pack's kits add
+ * £24.95 at about 61.5p each to make, against £13.00 of vials. A lone vial
+ * is offered the Starter Kit instead: its kit at £4.00, £9.99 for both.
+ *
+ * Priced with delivery the way Stripe will charge it, like the pack offer,
+ * so the two buttons show what each choice really costs.
+ */
+export interface KitOffer {
+  /** The order as it stands, without kits. */
+  from: PricedChoice;
+  /** The same order with a kit for every vial. */
+  to: PricedChoice;
+  kitUnitMinor: number;
+  kitsMinor: number;
+  /** One vial and its kit: the Starter Kit. */
+  starter: boolean;
+  /** The kits take the order to free delivery. */
+  unlocksFreeDelivery: boolean;
+}
+
+export function kitOfferFor(bundle: Bundle, quantity: number, extraVials = 0, kits = 0): KitOffer | null {
+  if (!labKitEnabled() || kits > 0) return null;
+  const from = priced(bundle, quantity, extraVials);
+  const to = from ? priced(bundle, quantity, extraVials, from.vials) : null;
+  if (!from || !to) return null;
+  return {
+    from,
+    to,
+    kitUnitMinor: (to.goodsMinor - from.goodsMinor) / to.kits,
+    kitsMinor: to.goodsMinor - from.goodsMinor,
+    starter: isOneVial(bundle, quantity, extraVials),
+    unlocksFreeDelivery: !shipsFree(from.goodsMinor) && shipsFree(to.goodsMinor),
+  };
+}
+
+/**
+ * The words for a kit offer. "Insulin needles" appears only in the list of
+ * what is in the kit; free delivery only when shipsFree() says so.
+ */
+export function kitOfferCopy(o: KitOffer): { heading: string; body: string; accept: string; decline: string } {
+  const n = o.to.kits;
+  if (o.starter) {
+    const separately = SINGLE_BUNDLE.priceMinor + kitPriceMinor(SINGLE_BUNDLE);
+    return {
+      heading: `Make it a ${STARTER_KIT.name}`,
+      body: `Add a ${LAB_KIT.name} for ${formatMinor(o.kitUnitMinor)}: ${labKitContents()}, sterile and individually wrapped. ${formatMinor(STARTER_KIT.priceMinor)} for the vial and the kit, ${formatMinor(separately - STARTER_KIT.priceMinor)} less than buying them separately.`,
+      accept: `Make it a ${STARTER_KIT.name}`,
+      decline: "Just the vial",
+    };
+  }
+  const free = o.unlocksFreeDelivery ? ` With them your order ships free.` : "";
+  return {
+    heading: `Add a ${LAB_KIT.name} for each vial`,
+    body: `${n} × ${LAB_KIT.name} at ${formatMinor(o.kitUnitMinor)} each: ${labKitContents(n)}, sterile and individually wrapped.${free}`,
+    accept: `Add ${n} ${n === 1 ? "kit" : "kits"}`,
+    decline: "No thanks",
   };
 }

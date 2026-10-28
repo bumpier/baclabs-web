@@ -188,11 +188,13 @@ export function kitPriceMinor(b: Bundle): number {
 }
 
 /**
- * The Starter Kit (28 Oct 2026): one vial and one Lab Kit for £9.99, sold
- * from its own landing page. One Stripe Price for the pair; the order
- * records it as the single vial at its usual £5.99 and the Lab Kit at the
- * £4.00 left over, so every reader of Order.items (stock, packing slip,
- * finance) sees a vial and a kit as it would anywhere else.
+ * The Starter Kit (28 Oct 2026): one vial and one Lab Kit for £9.99, from
+ * its own landing page AND whenever an order of one single vial adds a kit
+ * (Liam: "£9.99 everywhere"), so the same two things never cost more in the
+ * buy box than on the page. One Stripe Price for the pair; the order records
+ * it as the single vial at its usual £5.99 and the Lab Kit at the £4.00 left
+ * over, so every reader of Order.items (stock, packing slip, finance) sees a
+ * vial and a kit as it would anywhere else.
  */
 export const STARTER_KIT = {
   name: "Starter Kit",
@@ -204,23 +206,27 @@ export const STARTER_KIT = {
   updated: "2026-10-28",
 } as const;
 
+/** One single vial and no more: the order a kit turns into the Starter Kit. */
+export function isOneVial(b: Bundle, quantity: number, extraVials: number): boolean {
+  return b.id === "single" && quantity === 1 && extraVials === 0;
+}
+
+/** One single vial and one kit: the Starter Kit, charged at its own Price. */
+export function isStarterKitOrder(b: Bundle, quantity: number, extraVials: number, kits: number): boolean {
+  return isOneVial(b, quantity, extraVials) && kits === 1;
+}
+
 /**
- * A Starter Kit order's goods: the single vial plus one kit, priced so the
- * two lines sum to STARTER_KIT.priceMinor.
+ * What one kit costs on this order: the Starter Kit's £4.00 beside a lone
+ * vial (the only kit such an order can have), else the pack's kit price.
  */
+export function kitUnitMinorFor(b: Bundle, quantity: number, extraVials: number): number {
+  return isOneVial(b, quantity, extraVials) ? STARTER_KIT.priceMinor - b.priceMinor : kitPriceMinor(b);
+}
+
+/** A Starter Kit order's goods: the single vial plus one kit, £9.99 in all. */
 export function priceStarterKit(): PricedOrder {
-  const packsMinor = SINGLE_BUNDLE.priceMinor;
-  const kitUnitMinor = STARTER_KIT.priceMinor - packsMinor;
-  return {
-    packsMinor,
-    extrasMinor: 0,
-    goodsMinor: STARTER_KIT.priceMinor,
-    vials: SINGLE_BUNDLE.vials,
-    extraVials: 0,
-    kitsMinor: kitUnitMinor,
-    kits: 1,
-    kitUnitMinor,
-  };
+  return priceOrder(SINGLE_BUNDLE, 1, 0, 1)!;
 }
 
 // ── Derived figures — computed, never typed by hand ───────────────
@@ -280,7 +286,8 @@ export interface PricedOrder {
  * share, so the page and the charge cannot disagree. Null for an order the
  * shop doesn't sell: loose vials beyond MAX_EXTRA_VIALS, loose vials on the
  * single tier (more singles is just a bigger quantity), or more kits than
- * vials (a kit is the kit for one vial). Whether kits are on sale at all is
+ * vials (a kit is the kit for one vial). One vial with its kit is the
+ * Starter Kit's £9.99 (kitUnitMinorFor). Whether kits are on sale at all is
  * the checkout's call (labKitEnabled), not this one's.
  */
 export function priceOrder(b: Bundle, quantity: number, extraVials = 0, kits = 0): PricedOrder | null {
@@ -290,7 +297,7 @@ export function priceOrder(b: Bundle, quantity: number, extraVials = 0, kits = 0
   if (!Number.isInteger(kits) || kits < 0 || kits > vials) return null;
   const packsMinor = totalMinor(b, quantity);
   const extrasMinor = SINGLE_BUNDLE.priceMinor * extraVials;
-  const kitUnitMinor = kitPriceMinor(b);
+  const kitUnitMinor = kitUnitMinorFor(b, quantity, extraVials);
   const kitsMinor = kitUnitMinor * kits;
   return {
     packsMinor,
