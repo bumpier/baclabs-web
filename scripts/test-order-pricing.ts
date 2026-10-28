@@ -192,8 +192,8 @@ for (const b of BUNDLES) {
   // What the packer is told to put in: each part, multiplied out.
   const parts = new Map(kitPartsFor(10).map((p) => [p.name, p.quantity]));
   check("10 kits: 30 syringes", parts.get("Syringe") === 30);
-  check("10 kits: 30 long needles", parts.get("Long needle") === 30);
-  check("10 kits: 30 insulin needles", parts.get("Insulin needle") === 30);
+  check("10 kits: 60 long needles", parts.get("Long needle") === 60);
+  check("10 kits: no insulin needles", !parts.has("Insulin needle"));
   check("10 kits: 60 alcohol swabs", parts.get("Alcohol swab") === 60);
 
   // In warehouse mode the kit SKU expands to the same parts on the pick list.
@@ -234,7 +234,7 @@ for (const b of BUNDLES) {
   const violations = checkCompliance(copy);
   check("starter page copy passes the content rules", violations.length === 0, JSON.stringify(violations));
   check("starter page lists every part", LAB_KIT.parts.every((part) => copy.some((t) => t.includes(`${part.name.toLowerCase()}s`))));
-  check("kit contents read as words", labKitContents(10) === "30 syringes, 30 long needles, 30 insulin needles and 60 alcohol swabs", labKitContents(10));
+  check("kit contents read as words", labKitContents(10) === "30 syringes, 60 long needles and 60 alcohol swabs", labKitContents(10));
 }
 
 if (failures > 0) {

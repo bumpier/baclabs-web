@@ -7,16 +7,14 @@ import { FACTS } from "@/content/facts";
  * content rules (lib/content-rules.ts) like a guide. Every figure is read
  * from config, never typed.
  *
- * "Insulin needle" is the supplier's name for the part, and the only place
- * the word may appear (Liam, 26 Oct 2026). Nothing here describes what the
- * water or the pieces are used on: they are lab consumables.
+ * Nothing here describes what the water or the pieces are used on: they are
+ * lab consumables.
  */
 
 /** What each part is, in a line. Keyed by LAB_KIT part SKU. */
 const PART_NOTES: Record<string, string> = {
   "baclab-kit-syringe": "Single-use and individually wrapped.",
   "baclab-kit-long-needle": "Longer needles for drawing from the vial through its stopper.",
-  "baclab-kit-insulin-needle": "Fine needles, single-use and individually wrapped.",
   "baclab-kit-alcohol-swab": "Individually wrapped, for wiping the vial's stopper.",
 };
 

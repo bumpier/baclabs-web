@@ -138,22 +138,21 @@ export const TOP_UP_MAX_VIALS = 2;
 // the kit SKU's components on the pick list). Change the contents HERE: the
 // slip, the SKU setup and the tests all read this list.
 //
-// "Insulin needle" is the supplier's name and is allowed on the site
-// (Liam, 26 Oct 2026). Nothing else about the kit may suggest the water is
-// for injection: see the house rules.
+// Contents changed 28 Oct 2026: the insulin needles are gone, and the kit
+// carries 6 long needles instead of 3. Nothing about the kit may suggest
+// the water is for injection: see the house rules.
 export const LAB_KIT = {
   name: "Lab Kit",
   /** Product row slug, Stripe/Meta id and (upper-cased) warehouse SKU code. */
   sku: "baclab-lab-kit",
   parts: [
     { sku: "baclab-kit-syringe", name: "Syringe", perKit: 3 },
-    { sku: "baclab-kit-long-needle", name: "Long needle", perKit: 3 },
-    { sku: "baclab-kit-insulin-needle", name: "Insulin needle", perKit: 3 },
+    { sku: "baclab-kit-long-needle", name: "Long needle", perKit: 6 },
     { sku: "baclab-kit-alcohol-swab", name: "Alcohol swab", perKit: 6 },
   ],
 } as const;
 
-/** "3 syringes, 3 long needles, 3 insulin needles and 6 alcohol swabs": one kit, in words. */
+/** "3 syringes, 6 long needles and 6 alcohol swabs": one kit, in words. */
 export function labKitContents(kits = 1): string {
   const parts = LAB_KIT.parts.map((p) => `${p.perKit * kits} ${p.name.toLowerCase()}s`);
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;

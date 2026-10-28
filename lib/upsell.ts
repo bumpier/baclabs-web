@@ -282,8 +282,8 @@ export function kitOfferFor(bundle: Bundle, quantity: number, extraVials = 0, ki
 }
 
 /**
- * The words for a kit offer. "Insulin needles" appears only in the list of
- * what is in the kit; free delivery only when shipsFree() says so.
+ * The words for a kit offer: what is in the kit, multiplied out, and free
+ * delivery only when shipsFree() says so.
  */
 export function kitOfferCopy(o: KitOffer): { heading: string; body: string; accept: string; decline: string } {
   const n = o.to.kits;
