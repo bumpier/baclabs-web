@@ -5,6 +5,8 @@ import { ActionForm } from "@/components/admin/ActionForm";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { inventoryReadiness, onHandBySku } from "@/lib/inventory/store";
 import { kitsAvailable } from "@/lib/inventory/allocation";
+import { LAB_KIT_SKU_CODE } from "@/lib/inventory/demand";
+import { labKitContents } from "@/config/funnel";
 import { formatDimensions, formatWeight } from "@/lib/shipping/parcel";
 import { skuParcel } from "@/lib/shipping/order-parcel";
 import { createStorefrontSkusAction, setInventoryModeAction } from "@/app/admin/inventory/actions";
@@ -27,6 +29,16 @@ export default async function AdminInventoryPage() {
   ]);
   const serviceName = new Map(services.map((s) => [s.code, s.name]));
   const missingPacks = readiness.packs.filter((p) => !p.sku).length;
+  // The Lab Kit is not a pack, so the readiness table does not list it; the
+  // button below creates it all the same, so a shop whose packs exist can
+  // still get it.
+  const missingKit = !skus.some((s) => s.code === LAB_KIT_SKU_CODE);
+  const createLabel = [
+    missingPacks > 0 ? `the ${missingPacks} missing SKU${missingPacks === 1 ? "" : "s"}` : "",
+    missingKit ? "the Lab Kit SKUs" : "",
+  ]
+    .filter(Boolean)
+    .join(" and ");
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -119,16 +131,21 @@ export default async function AdminInventoryPage() {
             No locations yet. <Link href="/admin/inventory/warehouses" className="underline">Add a warehouse and its locations.</Link>
           </p>
         )}
-        {missingPacks > 0 && (
+        {createLabel && (
           <div className="mt-4">
             <ActionForm
               action={createStorefrontSkusAction}
-              submitLabel={`Create the ${missingPacks} missing SKU${missingPacks === 1 ? "" : "s"}`}
+              submitLabel={`Create ${createLabel}`}
               submitClassName="btn-secondary"
             >
               <p className="text-sm text-ink-soft">
-                Creates the vial as a stocked SKU and each missing pack as a kit of that many vials. Change any
-                pack to pre-packed later by removing its components.
+                {missingPacks > 0
+                  ? "Creates the vial as a stocked SKU and each missing pack as a kit of that many vials. Change any pack to pre-packed later by removing its components. "
+                  : ""}
+                {missingKit
+                  ? `Creates the Lab Kit as a kit of its parts (${labKitContents()}), each part a stocked SKU to book stock into. `
+                  : ""}
+                Nothing that already exists is changed.
               </p>
             </ActionForm>
           </div>
