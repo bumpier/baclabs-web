@@ -18,6 +18,7 @@ import { cleanDeliveryInstructions, LIMITS } from "@/lib/smarttrack/payload";
 import { SETTING_KEYS, writeSetting } from "@/lib/settings";
 import { syncTracking, type TrackingSyncResult } from "@/lib/shipping/tracking-sync";
 import { closeCatchUpGroup } from "@/lib/shipping/catch-up";
+import { ALL_BRANDS_SCOPE, isBrandScope } from "@/lib/admin/brand-scope";
 import { deliveryOptionById } from "@/config/funnel";
 
 function message(err: unknown, what: string): FormState {
@@ -313,8 +314,11 @@ export async function closeCatchUpGroupAction(_prev: FormState, formData: FormDa
   await requireAdminRole("ADMIN");
   const group = catchUpGroupField.safeParse(formData.get("group"));
   if (!group.success) return { error: "Unknown group" };
+  // The brand the page listed (lib/admin/brand-scope.ts), so the button
+  // closes only the orders it showed.
+  const brand = formData.get("brand");
   try {
-    const moved = await closeCatchUpGroup(group.data);
+    const moved = await closeCatchUpGroup(group.data, new Date(), isBrandScope(brand) ? brand : ALL_BRANDS_SCOPE);
     revalidatePath("/admin/shipping/catch-up");
     revalidatePath("/admin/orders");
     revalidatePath("/admin");

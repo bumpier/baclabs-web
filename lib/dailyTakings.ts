@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { DELIVERY_OPTIONS } from "@/config/funnel";
 import { prisma } from "@/lib/db";
+import { ALL_BRANDS_SCOPE, ordersWhere, type BrandScope } from "@/lib/admin/brand-scope";
 import { paidMinor } from "@/lib/meta-capi-event";
 import { orderKind } from "@/lib/plans/kinds";
 import { saleTime, shopDayBounds } from "@/lib/saleTime";
@@ -19,11 +20,13 @@ export const SOLD_STATUSES = ["paid", "packed", "shipped", "delivered"];
 
 /**
  * The orders whose sale falls in [start, end): sold ones, and ones paid for
- * then cancelled. Shared with /admin/finance so the two always agree.
+ * then cancelled, in one brand or every brand (lib/admin/brand-scope.ts).
+ * Shared with /admin/finance so the two always agree.
  */
-export function takingsWhere(start: Date, end: Date): Prisma.OrderWhereInput {
+export function takingsWhere(start: Date, end: Date, brand: BrandScope = ALL_BRANDS_SCOPE): Prisma.OrderWhereInput {
   const inRange = { gte: start, lt: end };
-  return {
+  return ordersWhere({
+    brand,
     OR: [
       { status: { in: SOLD_STATUSES }, paidAt: inRange },
       // Paid before paidAt was recorded: when checkout began is all there is.
@@ -32,7 +35,7 @@ export function takingsWhere(start: Date, end: Date): Prisma.OrderWhereInput {
       // cancelled afterwards, never an abandoned checkout.
       { status: "cancelled", paidAt: inRange },
     ],
-  };
+  });
 }
 
 export interface TakingsOrder {
@@ -129,9 +132,9 @@ export function summariseTakings(orders: TakingsOrder[]): TakingsSummary {
 }
 
 /** The day's paid orders, earliest first, and what they add up to. */
-export async function dailyTakings(dayKey: string) {
+export async function dailyTakings(dayKey: string, brand: BrandScope = ALL_BRANDS_SCOPE) {
   const { start, end } = shopDayBounds(dayKey);
-  const orders = await prisma.order.findMany({ where: takingsWhere(start, end) });
+  const orders = await prisma.order.findMany({ where: takingsWhere(start, end, brand) });
   orders.sort((a, b) => saleTime(a).getTime() - saleTime(b).getTime());
   return { orders, summary: summariseTakings(orders) };
 }

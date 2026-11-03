@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdminRole } from "@/lib/adminAuth";
 import { firstSaleDay, loadFinance } from "@/lib/finance/query";
+import { adminBrandScope, keepBrandParam } from "@/lib/admin/brand-scope";
 import { EXPORT_RANGES, exportRange, parseExportRange, type ExportRangeId } from "@/lib/finance/range";
 import { daysInRange, shopDayKey } from "@/lib/saleTime";
 import { gbp, plural, shortDay } from "@/components/admin/finance/parts";
@@ -19,19 +20,22 @@ const PILL_ON = `${PILL} border-brand bg-brand-tint text-brand-deep`;
 export default async function AdminExportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; brand?: string }>;
 }) {
   await requireAdminRole("ADMIN");
 
-  const id: ExportRangeId = parseExportRange((await searchParams).range) ?? "30d";
+  const sp = await searchParams;
+  const id: ExportRangeId = parseExportRange(sp.range) ?? "30d";
+  const brand = await adminBrandScope(sp.brand);
+  const keep = keepBrandParam(sp.brand);
   const today = shopDayKey(new Date());
-  const range = exportRange(id, today, id === "all" ? await firstSaleDay() : null);
-  const f = await loadFinance(range.from, range.to, { compare: false });
+  const range = exportRange(id, today, id === "all" ? await firstSaleDay(brand) : null);
+  const f = await loadFinance(range.from, range.to, { compare: false, brand });
   const t = f.totals;
   const days = daysInRange(f.from, f.to);
   const period = f.granularity;
   const periodly = period === "day" ? "Daily" : period === "week" ? "Weekly" : "Monthly";
-  const fileHref = (level: "order" | "period") => `/admin/finance/export?range=${id}&level=${level}`;
+  const fileHref = (level: "order" | "period") => keep(`/admin/finance/export?range=${id}&level=${level}`);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -45,7 +49,7 @@ export default async function AdminExportPage({
         {EXPORT_RANGES.map((r) => (
           <Link
             key={r.id}
-            href={`/admin/export?range=${r.id}`}
+            href={keep(`/admin/export?range=${r.id}`)}
             className={id === r.id ? PILL_ON : PILL_OFF}
             aria-current={id === r.id ? "page" : undefined}
           >

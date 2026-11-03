@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdminRole } from "@/lib/adminAuth";
 import type { LedgerRow } from "@/lib/finance/ledger";
 import { loadFinance } from "@/lib/finance/query";
+import { adminBrandScope, brandParam, keepBrandParam } from "@/lib/admin/brand-scope";
 import { statusLabel } from "@/lib/order-status";
 import { formatSaleClock, formatShopDay, parseDayKey, shiftDayKey, shopDayKey } from "@/lib/saleTime";
 import { describeDelivery, FinanceWarningsPanel, gbp, plural, Stat } from "@/components/admin/finance/parts";
@@ -25,18 +26,21 @@ function postageGap(r: LedgerRow): string | null {
 export default async function AdminTakingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; brand?: string }>;
 }) {
   await requireAdminRole("ADMIN");
 
   const today = shopDayKey(new Date());
-  const { date } = await searchParams;
+  const { date, brand: brandQuery } = await searchParams;
+  const brand = await adminBrandScope(brandQuery);
+  const keep = keepBrandParam(brandQuery);
+  const pinned = brandParam(brandQuery);
   // No date, a mistyped one, or one that has not happened yet: show today.
   const requested = parseDayKey(date);
   const day = requested && requested <= today ? requested : today;
   const isToday = day === today;
 
-  const f = await loadFinance(day, day, { compare: false });
+  const f = await loadFinance(day, day, { compare: false, brand });
   const t = f.totals;
   const orders = f.rows;
   const showVat = t.vatMinor > 0;
@@ -57,7 +61,7 @@ export default async function AdminTakingsPage({
       <p className="eyebrow">Finance</p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <h1 className="font-display text-3xl font-medium tracking-tight text-brand-deep">Daily takings</h1>
-        <Link href="/admin/finance" className="btn-secondary">
+        <Link href={keep("/admin/finance")} className="btn-secondary">
           Finance overview
         </Link>
       </div>
@@ -73,15 +77,15 @@ export default async function AdminTakingsPage({
             )}
           </h2>
           <div className="mt-3 flex flex-wrap gap-2 text-sm font-medium">
-            <Link href={dayHref(shiftDayKey(day, -1))} className={DAY_LINK}>
+            <Link href={keep(dayHref(shiftDayKey(day, -1)))} className={DAY_LINK}>
               ← Previous day
             </Link>
             {!isToday && (
               <>
-                <Link href={dayHref(shiftDayKey(day, 1))} className={DAY_LINK}>
+                <Link href={keep(dayHref(shiftDayKey(day, 1)))} className={DAY_LINK}>
                   Next day →
                 </Link>
-                <Link href="/admin/takings" className={DAY_LINK}>
+                <Link href={keep("/admin/takings")} className={DAY_LINK}>
                   Today
                 </Link>
               </>
@@ -90,6 +94,7 @@ export default async function AdminTakingsPage({
         </div>
 
         <form method="get" className="flex items-end gap-2">
+          {pinned && <input type="hidden" name="brand" value={pinned} />}
           <div>
             <label htmlFor="date" className="label">
               Go to a day

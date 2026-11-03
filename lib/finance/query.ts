@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { ALL_BRANDS_SCOPE, ordersWhere, type BrandScope } from "@/lib/admin/brand-scope";
 import { SOLD_STATUSES, takingsWhere } from "@/lib/dailyTakings";
 import {
   bucket,
@@ -20,13 +21,14 @@ export async function vatRegisteredFrom(): Promise<string | null> {
 }
 
 /**
- * The UK day of the shop's first sale, where an "all time" export starts, or
- * null before there is one. The earlier of both columns, so an order whose
- * paidAt somehow predates its createdAt still falls inside the range.
+ * The UK day of the first sale in the brand scope, where an "all time"
+ * export starts, or null before there is one. The earlier of both columns,
+ * so an order whose paidAt somehow predates its createdAt still falls inside
+ * the range.
  */
-export async function firstSaleDay(): Promise<string | null> {
+export async function firstSaleDay(brand: BrandScope = ALL_BRANDS_SCOPE): Promise<string | null> {
   const { _min } = await prisma.order.aggregate({
-    where: takingsWhere(new Date(0), new Date()),
+    where: takingsWhere(new Date(0), new Date(), brand),
     _min: { paidAt: true, createdAt: true },
   });
   const times = [_min.paidAt, _min.createdAt].filter((d): d is Date => d !== null);
@@ -36,26 +38,31 @@ export async function firstSaleDay(): Promise<string | null> {
 
 /**
  * Everything /admin/finance shows for the UK days `from` to `to`, and the
- * same figures for the period before when `compare` is set. One order query
- * covers both periods; the split is done here.
+ * same figures for the period before when `compare` is set, in one brand or
+ * every brand (lib/admin/brand-scope.ts). One order query covers both
+ * periods; the split is done here.
  */
-export async function loadFinance(from: string, to: string, { compare }: { compare: boolean }) {
+export async function loadFinance(
+  from: string,
+  to: string,
+  { compare, brand = ALL_BRANDS_SCOPE }: { compare: boolean; brand?: BrandScope }
+) {
   const previous: DayRange | null = compare ? previousRange({ from, to }) : null;
   const { start, end } = shopRangeBounds(previous?.from ?? from, to);
 
   const [orders, rates, vatFrom, sold, services] = await Promise.all([
     prisma.order.findMany({
-      where: takingsWhere(start, end),
+      where: takingsWhere(start, end, brand),
       include: { shipments: { select: { status: true, environment: true, serviceCode: true, createdAt: true } } },
     }),
     prisma.costRate.findMany(),
     vatRegisteredFrom(),
-    // Every sold order's email, to tell a first order from a repeat one.
-    // Small: one short row per order the shop has ever sold.
+    // Every sold order's email, to tell a first order from a repeat one
+    // within its brand (customerKey). Small: one short row per order sold.
     prisma.order.findMany({
       // Sales only: a plan box or an upgrade is never anyone's first order.
-      where: { status: { in: SOLD_STATUSES }, kind: "sale", customerEmail: { not: "" } },
-      select: { id: true, customerEmail: true, paidAt: true, createdAt: true },
+      where: ordersWhere({ brand, status: { in: SOLD_STATUSES }, kind: "sale", customerEmail: { not: "" } }),
+      select: { id: true, brand: true, customerEmail: true, paidAt: true, createdAt: true },
     }),
     prisma.postalService.findMany({ select: { code: true, name: true } }),
   ]);
@@ -68,6 +75,7 @@ export async function loadFinance(from: string, to: string, { compare }: { compa
   return {
     from,
     to,
+    brand,
     rows,
     totals: summarise(rows),
     previous: previous && {

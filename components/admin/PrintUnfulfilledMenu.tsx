@@ -16,7 +16,14 @@ const OPTIONS = [
  * Each option opens the batch print page in a new tab, where the print dialog
  * opens on its own, so the dashboard stays where it was.
  */
-export function PrintUnfulfilledMenu({ count }: { count: number }) {
+export function PrintUnfulfilledMenu({
+  count,
+  brand,
+}: {
+  count: number;
+  /** The dashboard's own ?brand=, carried on so the print page shows the same brand. */
+  brand?: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -70,7 +77,7 @@ export function PrintUnfulfilledMenu({ count }: { count: number }) {
             <a
               key={o.type}
               role="menuitem"
-              href={`/admin/orders/print?type=${o.type}`}
+              href={`/admin/orders/print?type=${o.type}${brand ? `&brand=${encodeURIComponent(brand)}` : ""}`}
               target="_blank"
               rel="noopener"
               onClick={() => setOpen(false)}

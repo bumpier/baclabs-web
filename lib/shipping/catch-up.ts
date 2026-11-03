@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { ALL_BRANDS_SCOPE, ordersWhere, type BrandScope } from "@/lib/admin/brand-scope";
 import { OPEN_STATUSES } from "@/lib/order-status";
 import { PARCEL_KINDS } from "@/lib/plans/kinds";
 
@@ -37,18 +38,27 @@ export type ClosableCatchUpGroup = Exclude<CatchUpGroup, "notScanned">;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_SHIPMENT = { status: { in: ["PENDING", "CREATED"] } };
 
-function soldBefore(cutoff: Date): Prisma.OrderWhereInput {
+function soldBefore(cutoff: Date): Pick<Prisma.OrderWhereInput, "OR"> {
   return { OR: [{ paidAt: { lt: cutoff } }, { paidAt: null, createdAt: { lt: cutoff } }] };
 }
 
-/** The conditions for each group, re-applied when it is closed, so a change since the page loaded is respected. */
-export function catchUpWhere(group: CatchUpGroup, now = new Date()): Prisma.OrderWhereInput {
+/**
+ * The conditions for each group, re-applied when it is closed, so a change
+ * since the page loaded is respected. Within the admin's brand scope
+ * (lib/admin/brand-scope.ts), so a button only closes what the page listed.
+ */
+export function catchUpWhere(
+  group: CatchUpGroup,
+  now = new Date(),
+  brand: BrandScope = ALL_BRANDS_SCOPE
+): Prisma.OrderWhereInput {
   const cutoff = new Date(now.getTime() - CATCH_UP_AFTER_DAYS * DAY_MS);
-  const base: Prisma.OrderWhereInput = {
+  const base: Prisma.OrderWhereInput = ordersWhere({
+    brand,
     status: { in: OPEN_STATUSES },
     kind: { in: PARCEL_KINDS },
     ...soldBefore(cutoff),
-  };
+  });
   switch (group) {
     case "noLabel":
       return { ...base, labelError: null, shipments: { none: ACTIVE_SHIPMENT } };
@@ -73,16 +83,16 @@ const listSelect = {
   },
 } as const;
 
-export async function catchUpGroups(now = new Date()) {
+export async function catchUpGroups(now = new Date(), brand: BrandScope = ALL_BRANDS_SCOPE) {
   const orderBy = [{ paidAt: "asc" as const }, { createdAt: "asc" as const }];
   const cutoff = new Date(now.getTime() - CATCH_UP_AFTER_DAYS * DAY_MS);
   const [noLabel, labelFailed, notScanned, open, old] = await Promise.all([
-    prisma.order.findMany({ where: catchUpWhere("noLabel", now), select: listSelect, orderBy }),
-    prisma.order.findMany({ where: catchUpWhere("labelFailed", now), select: listSelect, orderBy }),
-    prisma.order.findMany({ where: catchUpWhere("notScanned", now), select: listSelect, orderBy }),
-    prisma.order.count({ where: { status: { in: OPEN_STATUSES }, kind: { in: PARCEL_KINDS } } }),
+    prisma.order.findMany({ where: catchUpWhere("noLabel", now, brand), select: listSelect, orderBy }),
+    prisma.order.findMany({ where: catchUpWhere("labelFailed", now, brand), select: listSelect, orderBy }),
+    prisma.order.findMany({ where: catchUpWhere("notScanned", now, brand), select: listSelect, orderBy }),
+    prisma.order.count({ where: ordersWhere({ brand, status: { in: OPEN_STATUSES }, kind: { in: PARCEL_KINDS } }) }),
     prisma.order.count({
-      where: { status: { in: OPEN_STATUSES }, kind: { in: PARCEL_KINDS }, ...soldBefore(cutoff) },
+      where: ordersWhere({ brand, status: { in: OPEN_STATUSES }, kind: { in: PARCEL_KINDS }, ...soldBefore(cutoff) }),
     }),
   ]);
   // Sold within the last few days: rightly still waiting.
@@ -94,16 +104,20 @@ export async function catchUpGroups(now = new Date()) {
  * it. notScanned is left out: the page cannot close it, so counting it
  * would keep the link up for good.
  */
-export function catchUpCount(now = new Date()): Promise<number> {
+export function catchUpCount(now = new Date(), brand: BrandScope = ALL_BRANDS_SCOPE): Promise<number> {
   return prisma.order.count({
-    where: { OR: [catchUpWhere("noLabel", now), catchUpWhere("labelFailed", now)] },
+    where: { OR: [catchUpWhere("noLabel", now, brand), catchUpWhere("labelFailed", now, brand)] },
   });
 }
 
 /** Close one group as delivered. Returns how many orders moved. */
-export async function closeCatchUpGroup(group: ClosableCatchUpGroup, now = new Date()): Promise<number> {
+export async function closeCatchUpGroup(
+  group: ClosableCatchUpGroup,
+  now = new Date(),
+  brand: BrandScope = ALL_BRANDS_SCOPE
+): Promise<number> {
   const { count } = await prisma.order.updateMany({
-    where: catchUpWhere(group, now),
+    where: catchUpWhere(group, now, brand),
     data: { status: "delivered", labelError: null },
   });
   return count;

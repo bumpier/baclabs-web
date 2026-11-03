@@ -1,3 +1,4 @@
+import { DEFAULT_BRAND } from "@/brands/types";
 import { BUNDLES } from "@/config/funnel";
 import { goodsMinor, optionRank, type TakingsOrder } from "@/lib/dailyTakings";
 import { paidMinor } from "@/lib/meta-capi-event";
@@ -36,6 +37,8 @@ export interface LedgerShipment {
 
 export interface LedgerOrder extends TakingsOrder {
   id: string;
+  /** Order.brand. Absent (fixtures, rows from before brands): BacLab. */
+  brand?: string;
   customerName: string;
   customerEmail: string;
   items: string;
@@ -48,7 +51,7 @@ export interface LedgerContext {
   rates: readonly Rate[];
   /** The VAT registration day, or null/"" while not registered. */
   vatFrom: string | null;
-  /** Each customer's first sold order id, by lower-cased email (firstOrders). */
+  /** Each customer's first sold order id, by customerKey (firstOrders). */
   firstOrderByEmail: ReadonlyMap<string, string>;
 }
 
@@ -65,6 +68,8 @@ export type CustomerKind = "new" | "returning" | "unknown";
 
 export interface LedgerRow {
   id: string;
+  /** The order's brand id. */
+  brand: string;
   /** sale | plan_box | plan_upgrade (lib/plans/kinds.ts). */
   kind: OrderKind;
   /** The UK day it was paid for. */
@@ -187,15 +192,17 @@ export function ledgerRow(order: LedgerOrder, ctx: LedgerContext): LedgerRow {
     if (l.gift === true) giftVials += qty;
   }
 
+  const brand = order.brand ?? DEFAULT_BRAND;
   const email = order.customerEmail.trim().toLowerCase();
   const customer: CustomerKind = kind !== "sale" || !email
     ? "unknown"
-    : ctx.firstOrderByEmail.get(email) === order.id
+    : ctx.firstOrderByEmail.get(customerKey(email, brand)) === order.id
       ? "new"
       : "returning";
 
   return {
     id: order.id,
+    brand,
     kind,
     day,
     saleTime: at,
@@ -226,22 +233,34 @@ export function ledgerRow(order: LedgerOrder, ctx: LedgerContext): LedgerRow {
 }
 
 /**
- * Each customer's first sold order, keyed by lower-cased email: the order
- * that makes them "new". Cancelled and unpaid orders are not passed in, so
- * they never count as anyone's first.
+ * Who a customer is, for telling a first order from a repeat: the
+ * lower-cased email within one brand. Each brand is its own shop, so a
+ * BacLab customer's first order from another brand is a first order there.
+ * BacLab's key is the bare email, exactly as before brands existed; another
+ * brand's is prefixed with its id and a space, which no email contains.
+ */
+export function customerKey(email: string, brand: string | null | undefined): string {
+  const e = email.trim().toLowerCase();
+  return !brand || brand === DEFAULT_BRAND ? e : `${brand} ${e}`;
+}
+
+/**
+ * Each customer's first sold order, by customerKey: the order that makes
+ * them "new". Cancelled and unpaid orders are not passed in, so they never
+ * count as anyone's first.
  */
 export function firstOrders(
-  orders: { id: string; customerEmail: string; paidAt: Date | null; createdAt: Date }[]
+  orders: { id: string; brand?: string; customerEmail: string; paidAt: Date | null; createdAt: Date }[]
 ): Map<string, string> {
   const first = new Map<string, { id: string; at: number }>();
   for (const o of orders) {
-    const email = o.customerEmail.trim().toLowerCase();
-    if (!email) continue;
+    if (!o.customerEmail.trim()) continue;
+    const key = customerKey(o.customerEmail, o.brand);
     const at = saleTime(o).getTime();
-    const seen = first.get(email);
-    if (!seen || at < seen.at || (at === seen.at && o.id < seen.id)) first.set(email, { id: o.id, at });
+    const seen = first.get(key);
+    if (!seen || at < seen.at || (at === seen.at && o.id < seen.id)) first.set(key, { id: o.id, at });
   }
-  return new Map([...first].map(([email, v]) => [email, v.id]));
+  return new Map([...first].map(([key, v]) => [key, v.id]));
 }
 
 // ── Adding up

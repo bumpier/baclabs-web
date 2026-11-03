@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { PARCEL_KINDS } from "@/lib/plans/kinds";
+import { adminBrandScope, keepBrandParam, ordersWhere } from "@/lib/admin/brand-scope";
 import { requireAdmin } from "@/lib/adminAuth";
 import { AutoPrint } from "@/components/AutoPrint";
 import { PrintButton } from "@/components/PrintButton";
@@ -43,10 +44,12 @@ const KINDS: Record<Kind, { singular: string; plural: string; help: string }> = 
 export default async function AdminBatchPrintPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; brand?: string }>;
 }) {
   await requireAdmin();
-  const { type } = await searchParams;
+  const { type, brand: brandQuery } = await searchParams;
+  const brand = await adminBrandScope(brandQuery);
+  const keep = keepBrandParam(brandQuery);
   const kind: Kind = type === "labels" ? "labels" : "slips";
   const other: Kind = kind === "labels" ? "slips" : "labels";
 
@@ -56,7 +59,7 @@ export default async function AdminBatchPrintPage({
   // box. Oldest first, and the same sort for both kinds, so the slips and
   // labels come off their printers in matching stacks.
   const orders = await prisma.order.findMany({
-    where: { status: { in: ["paid", "packed"] }, kind: { in: PARCEL_KINDS } },
+    where: ordersWhere({ brand, status: { in: ["paid", "packed"] }, kind: { in: PARCEL_KINDS } }),
     orderBy: { createdAt: "asc" },
   });
   const printable = orders.flatMap((order) => {
@@ -89,7 +92,7 @@ export default async function AdminBatchPrintPage({
             <Link href="/admin" className="btn-secondary">
               Back to dashboard
             </Link>
-            <Link href={`/admin/orders/print?type=${other}`} className="btn-secondary">
+            <Link href={keep(`/admin/orders/print?type=${other}`)} className="btn-secondary">
               Switch to {KINDS[other].plural}
             </Link>
             {count > 0 && <PrintButton label={`Print ${heading}`} />}

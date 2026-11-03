@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdminRole } from "@/lib/adminAuth";
 import type { Bucket, FinanceTotals } from "@/lib/finance/ledger";
 import { loadFinance } from "@/lib/finance/query";
+import { adminBrandScope, brandParam, keepBrandParam } from "@/lib/admin/brand-scope";
 import { PRESETS, resolveRange } from "@/lib/finance/range";
 import { daysInRange, shopDayKey } from "@/lib/saleTime";
 import { ShippingChart, TakingsChart, type FinancePoint } from "@/components/admin/finance/FinanceCharts";
@@ -43,13 +44,17 @@ function chartPoint(b: Bucket): FinancePoint {
 export default async function AdminFinancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; brand?: string }>;
 }) {
   await requireAdminRole("ADMIN");
 
   const today = shopDayKey(new Date());
-  const range = resolveRange(await searchParams, today);
-  const f = await loadFinance(range.from, range.to, { compare: true });
+  const sp = await searchParams;
+  const range = resolveRange(sp, today);
+  const brand = await adminBrandScope(sp.brand);
+  const keep = keepBrandParam(sp.brand);
+  const pinned = brandParam(sp.brand);
+  const f = await loadFinance(range.from, range.to, { compare: true, brand });
   const t = f.totals;
   const p = f.previous?.totals;
   const days = daysInRange(f.from, f.to);
@@ -93,9 +98,10 @@ export default async function AdminFinancePage({
   ];
 
   const points = f.buckets.map(chartPoint);
-  const exportHref = (level: "period" | "order") => `/admin/finance/export?from=${f.from}&to=${f.to}&level=${level}`;
+  const exportHref = (level: "period" | "order") =>
+    keep(`/admin/finance/export?from=${f.from}&to=${f.to}&level=${level}`);
   const bucketHref = (b: Bucket) =>
-    f.granularity === "day" ? `/admin/takings?date=${b.key}` : `/admin/finance?from=${b.from}&to=${b.to}`;
+    keep(f.granularity === "day" ? `/admin/takings?date=${b.key}` : `/admin/finance?from=${b.from}&to=${b.to}`);
   const periodWord = f.granularity === "day" ? "Day" : f.granularity === "week" ? "Week" : "Month";
 
   return (
@@ -119,7 +125,7 @@ export default async function AdminFinancePage({
             {PRESETS.map((preset) => (
               <Link
                 key={preset.id}
-                href={`/admin/finance?range=${preset.id}`}
+                href={keep(`/admin/finance?range=${preset.id}`)}
                 className={range.preset === preset.id ? PILL_ON : PILL_OFF}
                 aria-current={range.preset === preset.id ? "page" : undefined}
               >
@@ -129,6 +135,7 @@ export default async function AdminFinancePage({
           </div>
         </div>
         <form method="get" className="flex flex-wrap items-end gap-2">
+          {pinned && <input type="hidden" name="brand" value={pinned} />}
           <div>
             <label htmlFor="from" className="label">
               From

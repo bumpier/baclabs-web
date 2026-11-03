@@ -9,6 +9,7 @@ import { LabelWarning } from "@/components/admin/LabelWarning";
 import { TrackingWarning } from "@/components/admin/TrackingWarning";
 import { LowStockWarning } from "@/components/admin/LowStockWarning";
 import { catchUpCount } from "@/lib/shipping/catch-up";
+import { adminBrandScope, brandParam, keepBrandParam, ordersWhere } from "@/lib/admin/brand-scope";
 import { PARCEL_KINDS } from "@/lib/plans/kinds";
 import { statusLabel } from "@/lib/order-status";
 import { SalesActivityChart } from "@/components/admin/SalesActivity";
@@ -22,12 +23,21 @@ import type { DailyRevenue, StatusCount, ProductCount } from "@/components/admin
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminOverviewPage() {
+export default async function AdminOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ brand?: string }>;
+}) {
   await requireAdmin();
   const session = await getAdminSession();
   if (session?.role === "PACKER") redirect("/admin/orders");
 
   const today = shopDayKey(new Date());
+  // Every figure is the brand scope's (lib/admin/brand-scope.ts), except the
+  // vial count: every brand packs the same vials.
+  const sp = await searchParams;
+  const brand = await adminBrandScope(sp.brand);
+  const keep = keepBrandParam(sp.brand);
 
   // Pending orders (checkouts never paid) are left out of everything here.
   const [
@@ -46,10 +56,10 @@ export default async function AdminOverviewPage() {
     // shipped → delivered. Tracking moves them on (lib/shipping/tracking-sync.ts).
     prisma.order.groupBy({
       by: ["status"],
-      where: { status: { in: ["paid", "packed", "shipped", "delivered"] }, kind: { in: PARCEL_KINDS } },
+      where: ordersWhere({ brand, status: { in: ["paid", "packed", "shipped", "delivered"] }, kind: { in: PARCEL_KINDS } }),
       _count: { id: true },
     }),
-    catchUpCount(),
+    catchUpCount(new Date(), brand),
     // A failure here shows "—", not a broken dashboard.
     loadVialStock().catch((err: unknown) => {
       console.error("[internal] working out the vial count failed", err);
@@ -57,30 +67,35 @@ export default async function AdminOverviewPage() {
     }),
     // Takings as /admin/finance counts them: what customers were charged, by
     // the UK day they paid.
-    loadFinance(shiftDayKey(today, -29), today, { compare: false }),
+    loadFinance(shiftDayKey(today, -29), today, { compare: false, brand }),
     prisma.order.aggregate({
-      where: { status: { in: SOLD_STATUSES }, amountPaidMinor: { not: null } },
+      where: ordersWhere({ brand, status: { in: SOLD_STATUSES }, amountPaidMinor: { not: null } }),
       _sum: { amountPaidMinor: true },
     }),
     // Paid before the amount charged was recorded: the goods total is all there is.
     prisma.order.aggregate({
-      where: { status: { in: SOLD_STATUSES }, amountPaidMinor: null },
+      where: ordersWhere({ brand, status: { in: SOLD_STATUSES }, amountPaidMinor: null }),
       _sum: { totalAmount: true },
     }),
-    prisma.order.groupBy({ by: ["status"], where: { status: { not: "pending" }, kind: { in: PARCEL_KINDS } }, _count: { id: true } }),
+    prisma.order.groupBy({
+      by: ["status"],
+      where: ordersWhere({ brand, status: { not: "pending" }, kind: { in: PARCEL_KINDS } }),
+      _count: { id: true },
+    }),
     prisma.order.findMany({
-      where: { status: { in: ["paid", "packed", "shipped", "delivered"] }, kind: "sale" },
+      where: ordersWhere({ brand, status: { in: ["paid", "packed", "shipped", "delivered"] }, kind: "sale" }),
       select: { items: true },
     }),
     prisma.order.findMany({
-      where: {
+      where: ordersWhere({
+        brand,
         status: { in: ["paid", "packed", "shipped", "delivered"] },
         kind: "sale",
         paidAt: { not: null },
-      },
+      }),
       select: { paidAt: true },
     }),
-    dailyTakings(today),
+    dailyTakings(today, brand),
   ]);
 
   const takenAllTimeMinor =
@@ -101,17 +116,17 @@ export default async function AdminOverviewPage() {
   // session came from one of those emails, so each is credited to it).
   const recoverySince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const [remindersSent, recovered] = await Promise.all([
-    prisma.order.count({ where: { recoveryEmailSentAt: { gte: recoverySince } } }),
+    prisma.order.count({ where: ordersWhere({ brand, recoveryEmailSentAt: { gte: recoverySince } }) }),
     prisma.order.aggregate({
-      where: { recoveredAt: { gte: recoverySince }, status: { in: SOLD_STATUSES } },
+      where: ordersWhere({ brand, recoveredAt: { gte: recoverySince }, status: { in: SOLD_STATUSES } }),
       _count: { id: true },
       _sum: { amountPaidMinor: true },
     }),
   ]);
 
   const cards: { label: string; value: string; href: string; note?: string }[] = [
-    { label: "Taken today", value: formatPrice(takingsToday.summary.takenMinor / 100, "GBP"), href: "/admin/takings" },
-    { label: "Taken, all time", value: formatPrice(takenAllTimeMinor / 100, "GBP"), href: "/admin/finance?range=this-year" },
+    { label: "Taken today", value: formatPrice(takingsToday.summary.takenMinor / 100, "GBP"), href: keep("/admin/takings") },
+    { label: "Taken, all time", value: formatPrice(takenAllTimeMinor / 100, "GBP"), href: keep("/admin/finance?range=this-year") },
     {
       label: "Vials left",
       value: vialStock.since ? vialStock.left.toLocaleString("en-GB") : "—",
@@ -123,7 +138,7 @@ export default async function AdminOverviewPage() {
     {
       label: "Recovered checkouts, 30 days",
       value: formatPrice((recovered._sum.amountPaidMinor ?? 0) / 100, "GBP"),
-      href: "/admin/orders",
+      href: keep("/admin/orders"),
       note: `${recovered._count.id} of ${remindersSent} reminder${remindersSent === 1 ? "" : "s"} paid`,
     },
   ];
@@ -183,7 +198,7 @@ export default async function AdminOverviewPage() {
           <span className="font-semibold text-brand-deep">
             {oldOpenOrders} order{oldOpenOrders === 1 ? "" : "s"} sold more than 3 days ago still count as not shipped.
           </span>{" "}
-          <Link href="/admin/shipping/catch-up" className="font-semibold text-brand hover:text-brand-deep">
+          <Link href={keep("/admin/shipping/catch-up")} className="font-semibold text-brand hover:text-brand-deep">
             Catch up old orders →
           </Link>
         </p>
@@ -193,7 +208,7 @@ export default async function AdminOverviewPage() {
         {stages.map((s) => (
           <Link
             key={s.status}
-            href={`/admin/orders?status=${s.status}`}
+            href={keep(`/admin/orders?status=${s.status}`)}
             className={`card p-5 transition-shadow hover:shadow-lift ${s.highlight ? "border-brand bg-brand-tint" : ""}`}
           >
             <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">{s.label}</p>
@@ -219,7 +234,7 @@ export default async function AdminOverviewPage() {
       </div>
 
       <div className="mt-10 flex flex-wrap gap-3">
-        <PrintUnfulfilledMenu count={unshippedOrders} />
+        <PrintUnfulfilledMenu count={unshippedOrders} brand={brandParam(sp.brand)} />
         <Link href="/admin/products/new" className="btn-primary">
           Add product
         </Link>

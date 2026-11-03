@@ -3,6 +3,7 @@ import { requireAdminRole } from "@/lib/adminAuth";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { catchUpTrackingAction, closeCatchUpGroupAction } from "@/app/admin/shipping/actions";
 import { CATCH_UP_AFTER_DAYS, catchUpCount, catchUpGroups, type ClosableCatchUpGroup } from "@/lib/shipping/catch-up";
+import { adminBrandScope, type BrandScope } from "@/lib/admin/brand-scope";
 import { trackingUnavailableReason } from "@/lib/shipping/tracking-sync";
 import { TRACKING_STAGE_LABELS, type TrackingStage } from "@/lib/shipping/tracking";
 import { statusLabel } from "@/lib/order-status";
@@ -40,6 +41,7 @@ function OrderList({ rows, detail }: { rows: Row[]; detail: (r: Row) => string |
 
 function Group({
   group,
+  brand,
   title,
   explain,
   rows,
@@ -47,6 +49,8 @@ function Group({
 }: {
   /** Absent for a group that may not be marked delivered. */
   group?: ClosableCatchUpGroup;
+  /** The brand scope the rows were listed in: the button closes only those. */
+  brand: BrandScope;
   title: string;
   explain: string;
   rows: Row[];
@@ -69,6 +73,7 @@ function Group({
             confirm={`Mark these ${rows.length} orders delivered? No emails are sent.`}
           >
             <input type="hidden" name="group" value={group} />
+            <input type="hidden" name="brand" value={brand} />
           </ActionForm>
         )}
       </div>
@@ -86,9 +91,15 @@ function Group({
  * waiting (lib/shipping/catch-up.ts). Admins only: /admin/shipping is closed
  * to packers by the middleware, and the actions check again.
  */
-export default async function CatchUpPage() {
+export default async function CatchUpPage({ searchParams }: { searchParams: Promise<{ brand?: string }> }) {
   await requireAdminRole("ADMIN");
-  const [groups, old, unavailable] = await Promise.all([catchUpGroups(), catchUpCount(), trackingUnavailableReason()]);
+  const brand = await adminBrandScope((await searchParams).brand);
+  const now = new Date();
+  const [groups, old, unavailable] = await Promise.all([
+    catchUpGroups(now, brand),
+    catchUpCount(now, brand),
+    trackingUnavailableReason(),
+  ]);
   const shown = groups.noLabel.length + groups.labelFailed.length + groups.notScanned.length;
   const pendingLabels = old - shown;
 
@@ -120,6 +131,7 @@ export default async function CatchUpPage() {
 
       <Group
         group="noLabel"
+        brand={brand}
         title="2. No label on record"
         explain="Sent before labels were bought here, or labelled somewhere else, so tracking knows nothing about them. Marked delivered, with no dates and no email."
         rows={groups.noLabel}
@@ -127,12 +139,14 @@ export default async function CatchUpPage() {
       />
       <Group
         group="labelFailed"
+        brand={brand}
         title="3. The automatic label failed"
         explain="The label could not be bought when the order was paid. If these went out with a label made somewhere else, mark them delivered; if not, open each one and buy its label."
         rows={groups.labelFailed}
         detail={(r) => r.labelError}
       />
       <Group
+        brand={brand}
         title="4. Labelled, but never scanned"
         explain="A label was bought, but the carrier has never scanned the parcel, so it may still be on the shelf. These are not marked delivered: tracking moves each one on when the carrier scans it. If one went out on a different label, open it and mark it shipped."
         rows={groups.notScanned}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/adminAuth";
 import { packName } from "@/lib/finance/ledger";
 import { firstSaleDay, loadFinance } from "@/lib/finance/query";
+import { adminBrandScope } from "@/lib/admin/brand-scope";
 import { exportRange, parseExportRange, resolveRange } from "@/lib/finance/range";
 import { formatSaleDateTime, shopDayKey } from "@/lib/saleTime";
 
@@ -23,7 +24,8 @@ const money = (minor: number) => (minor / 100).toFixed(2);
 /**
  * The finance figures as a spreadsheet: one row per day/week/month
  * (level=period, as on /admin/finance) or one row per order (level=order).
- * Same range rules as the page; admins only.
+ * Same range rules as the page, and the same brand scope
+ * (lib/admin/brand-scope.ts): ?brand=, else the admin's cookie. Admins only.
  */
 export async function GET(req: Request) {
   const session = await getAdminSession();
@@ -37,11 +39,12 @@ export async function GET(req: Request) {
   // /admin/export asks for a range by name, and "all" may run past the
   // two-year cap resolveRange applies to the finance page.
   const exportId = from || to ? null : parseExportRange(url.searchParams.get("range"));
+  const brand = await adminBrandScope(url.searchParams.get("brand"));
   const range = exportId
-    ? exportRange(exportId, today, exportId === "all" ? await firstSaleDay() : null)
+    ? exportRange(exportId, today, exportId === "all" ? await firstSaleDay(brand) : null)
     : resolveRange({ from, to, range: url.searchParams.get("range") ?? undefined }, today);
   const level = url.searchParams.get("level") === "order" ? "order" : "period";
-  const f = await loadFinance(range.from, range.to, { compare: false });
+  const f = await loadFinance(range.from, range.to, { compare: false, brand });
 
   let header: string[];
   let lines: string[][];

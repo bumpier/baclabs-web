@@ -10,6 +10,7 @@ import { STATUS_BADGE, STATUS_TABS, statusLabel } from "@/lib/order-status";
 import { formatSaleClock, formatSaleDate, saleTime } from "@/lib/saleTime";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { PARCEL_KINDS } from "@/lib/plans/kinds";
+import { adminBrandScope, keepBrandParam, ordersWhere } from "@/lib/admin/brand-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -27,18 +28,24 @@ const PACKER_NEXT_STATUS: Record<string, string | null> = {
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; brand?: string }>;
 }) {
   await requireAdmin();
   const session = await getAdminSession();
   const isPacker = session?.role === "PACKER";
 
-  const { status } = await searchParams;
+  const { status, brand: brandQuery } = await searchParams;
   const filter = STATUSES.includes(status as never) ? status : "all";
+  const brand = await adminBrandScope(brandQuery);
+  const keep = keepBrandParam(brandQuery);
 
   const [orders, inventoryMode] = await Promise.all([
     prisma.order.findMany({
-      where: { kind: { in: PARCEL_KINDS }, status: filter && filter !== "all" ? filter : { not: "pending" } },
+      where: ordersWhere({
+        brand,
+        kind: { in: PARCEL_KINDS },
+        status: filter && filter !== "all" ? filter : { not: "pending" },
+      }),
       orderBy: { createdAt: "desc" },
       take: 200,
       // The active label, if any: "Label created" vs "Packed", and the latest
@@ -74,7 +81,7 @@ export default async function AdminOrdersPage({
         {STATUSES.map((s) => (
           <Link
             key={s}
-            href={s === "all" ? "/admin/orders" : `/admin/orders?status=${s}`}
+            href={keep(s === "all" ? "/admin/orders" : `/admin/orders?status=${s}`)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               filter === s
                 ? "bg-brand text-white"

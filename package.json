@@ -24,6 +24,7 @@
     "test:recovery": "tsx scripts/test-recovery.ts",
     "test:contact": "tsx scripts/test-contact.ts",
     "test:brands": "tsx scripts/test-brands.ts",
+    "test:admin-brands": "tsx scripts/test-admin-brands.ts",
     "test:meta": "tsx scripts/test-meta-capi.ts",
     "test:inventory": "tsx scripts/test-inventory.ts",
     "test:shipping": "tsx scripts/test-shipping.ts",
