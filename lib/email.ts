@@ -1,13 +1,33 @@
 import { Resend } from "resend";
 import { brand } from "@/config/brand";
+import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { canonicalOrigin } from "@/lib/site-url";
 import { LITERAL } from "@/lib/theme";
 
 // Transactional email via Resend (HTTP API).
 // Without RESEND_API_KEY (local dev), emails are logged to the server
 // console instead — never in production.
+//
+// Every customer email is in one brand's voice (brands/registry.ts): its
+// from-address, its name in the header, its colours, its contact line and
+// its disclaimer. Callers pass the brand of the row they are handling
+// (brandFor(order.brand), brandFor(subscriber.brand), ...). Leaving it out
+// means BacLab, which is what every email was before brands existed.
 
-const from = process.env.EMAIL_FROM ?? `${brand.name} <noreply@example.com>`;
+/** The brand an email is in when the caller names none. */
+function defaultBrand(): BrandProfile {
+  return brandFor(DEFAULT_BRAND);
+}
+
+/**
+ * "[Brute Lab] " before the subject of an email to the owner (new order,
+ * contact form), so one inbox can tell the brands apart. Nothing for BacLab:
+ * its subjects stay exactly as they were, and so do the owner's inbox
+ * filters on them.
+ */
+export function ownerSubjectPrefix(b: BrandProfile): string {
+  return b.id === DEFAULT_BRAND ? "" : `[${b.name}] `;
+}
 
 // Constructed lazily: the Resend client throws when handed an empty key, and
 // this module is imported by pages that render fine with email switched off.
@@ -30,8 +50,9 @@ export async function send(
   to: string,
   subject: string,
   html: string,
-  opts?: { bcc?: string; replyTo?: string; headers?: Record<string, string> }
+  opts?: { bcc?: string; replyTo?: string; headers?: Record<string, string>; brand?: BrandProfile }
 ) {
+  const from = (opts?.brand ?? defaultBrand()).email.from;
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     if (process.env.NODE_ENV !== "production") {
@@ -95,9 +116,16 @@ export type BatchResult = { ok: true; id: string | null } | { ok: false; error: 
  * Without RESEND_API_KEY it logs in development and reports success, so a
  * campaign can be walked through end to end locally; in production it
  * reports failure, because an unsent campaign must not read as sent.
+ *
+ * Every email in one batch goes out from the same brand, `b`.
  */
-export async function sendBatch(emails: BatchEmail[], idempotencyKey: string): Promise<BatchResult[]> {
+export async function sendBatch(
+  emails: BatchEmail[],
+  idempotencyKey: string,
+  b: BrandProfile = defaultBrand()
+): Promise<BatchResult[]> {
   if (emails.length === 0) return [];
+  const from = b.email.from;
   if (emails.length > 100) throw new Error("sendBatch takes at most 100 emails");
   const fail = (error: string): BatchResult[] => emails.map(() => ({ ok: false, error }));
 
@@ -151,43 +179,49 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/** The brand-blue pill CTA used across every transactional email. */
-export function ctaButton(url: string, label: string): string {
-  return `<a href="${url}" style="display:inline-block;background:${LITERAL.brand};color:#ffffff;padding:12px 28px;border-radius:24px;text-decoration:none;font-weight:600;font-size:14px">${escapeHtml(label)}</a>`;
+/** The pill CTA used across every transactional email, in the brand's button colour. */
+export function ctaButton(url: string, label: string, b: BrandProfile = defaultBrand()): string {
+  return `<a href="${url}" style="display:inline-block;background:${b.colours.cta};color:${b.colours.onCta ?? "#ffffff"};padding:12px 28px;border-radius:24px;text-decoration:none;font-weight:600;font-size:14px">${escapeHtml(label)}</a>`;
 }
 
 /**
- * Wraps an email body in the shared BacLab shell: dark header band, white
- * card, neutral footer with the compliance line. Table-based markup, not
- * flex/grid — Outlook's rendering engine (Word) only understands tables.
+ * Wraps an email body in the brand's shell: a header band with its name, a
+ * white card, and a neutral footer with its contact and compliance lines.
+ * Table-based markup, not flex/grid — Outlook's rendering engine (Word) only
+ * understands tables.
  *
  * `preheader` is the hidden text inbox lists show as the preview snippet;
  * without it clients fall back to the email's opening HTML (e.g. a stray
  * "Hi ,") which reads as broken before the message is even opened.
  */
-export function layout(body: string, opts?: { preheader?: string }): string {
+export function layout(body: string, opts?: { preheader?: string; brand?: BrandProfile }): string {
   const preheader = opts?.preheader;
+  const b = opts?.brand ?? defaultBrand();
+  const c = b.colours;
+  // Escaped: a brand name can hold an "&".
+  const name = escapeHtml(b.name);
+  const contact = b.email.contact;
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${brand.name}</title>
+<title>${name}</title>
 </head>
-<body style="margin:0;padding:0;background:${LITERAL.neutral};font-family:${FONT_STACK}">
+<body style="margin:0;padding:0;background:${c.neutral};font-family:${FONT_STACK}">
 ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${escapeHtml(preheader)}</div>` : ""}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${LITERAL.neutral}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${c.neutral}">
 <tr><td align="center" style="padding:32px 16px">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:${LITERAL.paper};border-radius:12px;overflow:hidden">
-<tr><td style="background:${LITERAL.abyss};padding:24px 32px">
-<span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.02em">${brand.name}</span>
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:${c.paper};border-radius:12px;overflow:hidden">
+<tr><td style="background:${c.header};padding:24px 32px">
+<span style="color:${c.onHeader ?? "#ffffff"};font-size:18px;font-weight:700;letter-spacing:0.02em">${name}</span>
 </td></tr>
-<tr><td style="padding:32px;color:${LITERAL.ink};font-size:15px;line-height:1.6">
+<tr><td style="padding:32px;color:${c.ink};font-size:15px;line-height:1.6">
 ${body}
 </td></tr>
-<tr><td style="padding:20px 32px;background:${LITERAL.neutral};border-top:1px solid ${LITERAL.line}">
-<p style="margin:0 0 6px;font-size:12px;color:${LITERAL.inkSoft}">${brand.name}${brand.contact.email ? ` &middot; <a href="mailto:${brand.contact.email}" style="color:${LITERAL.inkSoft}">${brand.contact.email}</a>` : ""}</p>
-<p style="margin:0;font-size:11px;color:${LITERAL.inkSoft};line-height:1.5">${escapeHtml(brand.disclaimer)}</p>
+<tr><td style="padding:20px 32px;background:${c.neutral};border-top:1px solid ${c.line}">
+<p style="margin:0 0 6px;font-size:12px;color:${c.inkSoft}">${name}${contact ? ` &middot; <a href="mailto:${contact}" style="color:${c.inkSoft}">${contact}</a>` : ""}</p>
+<p style="margin:0;font-size:11px;color:${c.inkSoft};line-height:1.5">${escapeHtml(b.disclaimer)}</p>
 </td></tr>
 </table>
 </td></tr>
@@ -195,6 +229,9 @@ ${body}
 </body>
 </html>`;
 }
+
+// The affiliate programme's emails below are BacLab's own (affiliates sign
+// up on BacLab's site), so they keep BacLab's shell and canonical origin.
 
 export async function sendVerificationEmail(to: string, token: string) {
   const url = `${canonicalOrigin()}/auth/verify?token=${token}`;

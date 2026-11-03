@@ -1,9 +1,8 @@
 import type { Plan } from "@prisma/client";
 import { formatMinor } from "@/config/funnel";
 import { planDeliveryNote, planFreeLine, planPriceFor, planPrice, type PlanPackId } from "@/config/plans";
-import { brand } from "@/config/brand";
+import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { ctaButton, escapeHtml } from "@/lib/email";
-import { LITERAL } from "@/lib/theme";
 import { formatShopDay, shopDayKey } from "@/lib/saleTime";
 import { freeBoxNumbers, lastBoxDay, ordinalDay } from "@/lib/plans/schedule";
 import { upgradeOffers } from "@/lib/plans/upgrade";
@@ -12,7 +11,12 @@ import { upgradeOffers } from "@/lib/plans/upgrade";
  * Every customer-facing sentence about a plan, built once, for the emails
  * (lib/customer-email.ts) and the order page. Pure. All of it must pass
  * lib/content-rules.ts: scripts/test-plans.ts checks every builder.
+ *
+ * Builders that name the shop or colour a link take the plan's brand as a
+ * last argument (brandFor(plan.brand)); left out, it is BacLab.
  */
+
+const baclab = (): BrandProfile => brandFor(DEFAULT_BRAND);
 
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -82,10 +86,13 @@ export function planScheduleHtml(plan: PlanTerms, opts: { boxOne?: string; reply
 }
 
 /** `cancelled`: the plan has been cancelled, so no box comes after this one. */
-export function boxShippedCopy(input: { boxNumber: number; months: number; nextBoxDay: string | null; cancelled?: boolean }) {
+export function boxShippedCopy(
+  input: { boxNumber: number; months: number; nextBoxDay: string | null; cancelled?: boolean },
+  b: BrandProfile = baclab()
+) {
   const box = `Box ${input.boxNumber} of ${input.months}`;
   return {
-    subject: `${box} of your ${brand.name} plan is on its way`,
+    subject: `${box} of your ${b.name} plan is on its way`,
     preheader: `${box} has shipped.`,
     lead: `${box} of your monthly plan has been shipped and is on its way to you.`,
     next: input.cancelled
@@ -96,7 +103,7 @@ export function boxShippedCopy(input: { boxNumber: number; months: number; nextB
   };
 }
 
-export function renewalCopy(input: { customerName: string; plan: PlanTerms; renewUrl: string }) {
+export function renewalCopy(input: { customerName: string; plan: PlanTerms; renewUrl: string }, b: BrandProfile = baclab()) {
   const { plan } = input;
   const anchor = plan.anchorDay;
   const day = anchor ? formatShopDay(lastBoxDay(anchor, plan.months)) : "its final date";
@@ -113,39 +120,46 @@ export function renewalCopy(input: { customerName: string; plan: PlanTerms; rene
       <p>Plans are paid once and never renew by themselves, so nothing more will be taken.</p>
       <p>If you would like to carry on, you can start a new plan at the price on the site on the day you order.</p>
       ${today}
-      <p style="margin:28px 0 0">${ctaButton(input.renewUrl, "See the plans")}</p>`,
+      <p style="margin:28px 0 0">${ctaButton(input.renewUrl, "See the plans", b)}</p>`,
   };
 }
 
-const BOX = `border:1px solid ${LITERAL.line};border-radius:12px;padding:16px 20px;margin:24px 0`;
+const boxStyle = (b: BrandProfile) =>
+  `border:1px solid ${b.colours.line};border-radius:12px;padding:16px 20px;margin:24px 0`;
 
-export function nudgePlanOfferHtml(packId: PlanPackId, siteUrl: string): string {
+export function nudgePlanOfferHtml(packId: PlanPackId, siteUrl: string, b: BrandProfile = baclab()): string {
   const p = planPrice(packId, 6);
   // One line and a text link, not a second boxed button: in the reorder
   // email the reorder button is the one to press.
-  return `<p style="margin:24px 0 0">Rather not have to remember? Our monthly plan sends your ${p.pack.vials}-vial pack on the same date each month. ${p.months} months is ${formatMinor(p.totalMinor)}, paid once: ${planFreeLine(p)}, save ${formatMinor(p.saveMinor)}, ${planDeliveryNote(p)}. It never renews by itself, and you can cancel any time. <a href="${siteUrl}/?plan=${p.key}#buy" style="color:${LITERAL.brand}">See monthly plans</a></p>`;
+  return `<p style="margin:24px 0 0">Rather not have to remember? Our monthly plan sends your ${p.pack.vials}-vial pack on the same date each month. ${p.months} months is ${formatMinor(p.totalMinor)}, paid once: ${planFreeLine(p)}, save ${formatMinor(p.saveMinor)}, ${planDeliveryNote(p)}. It never renews by itself, and you can cancel any time. <a href="${siteUrl}/?plan=${p.key}#buy" style="color:${b.colours.primary}">See monthly plans</a></p>`;
 }
 
-export function upgradeOfferHtml(input: { packId: PlanPackId; orderUrl: string; deadline: Date }): string {
+export function upgradeOfferHtml(
+  input: { packId: PlanPackId; orderUrl: string; deadline: Date },
+  b: BrandProfile = baclab()
+): string {
   const [o6, o12] = upgradeOffers(input.packId) as [
     ReturnType<typeof upgradeOffers>[number],
     ReturnType<typeof upgradeOffers>[number],
   ];
-  return `<div style="${BOX}">
-    <p style="margin:0 0 8px;font-weight:600;color:${LITERAL.ink}">Make this order box 1 of a monthly plan</p>
+  return `<div style="${boxStyle(b)}">
+    <p style="margin:0 0 8px;font-weight:600;color:${b.colours.ink}">Make this order box 1 of a monthly plan</p>
     <p style="margin:0 0 8px">Keep this box coming every month. Until ${formatShopDay(shopDayKey(input.deadline))} you can turn this order into the first box of a plan and pay only the difference:</p>
     <ul style="padding-left:18px;margin:8px 0 12px">
       <li style="margin:6px 0">6 months: ${formatMinor(o6.priceMinor)} more (${planFreeLine(o6.plan)})</li>
       <li style="margin:6px 0">12 months: ${formatMinor(o12.priceMinor)} more (${planFreeLine(o12.plan)}, the free pack in box 2)</li>
     </ul>
     <p style="margin:0 0 16px">${capitalise(planDeliveryNote(o6.plan))}. Paid once, never renews, cancel any time.</p>
-    ${ctaButton(`${input.orderUrl}#plan-upgrade`, "See the plan options")}
+    ${ctaButton(`${input.orderUrl}#plan-upgrade`, "See the plan options", b)}
   </div>`;
 }
 
-export function planStartedCopy(input: { customerName: string; originalRef: string; plan: PlanTerms; paidMinor: number }) {
+export function planStartedCopy(
+  input: { customerName: string; originalRef: string; plan: PlanTerms; paidMinor: number },
+  b: BrandProfile = baclab()
+) {
   return {
-    subject: `Your ${brand.name} monthly plan has started`,
+    subject: `Your ${b.name} monthly plan has started`,
     preheader: `Order ${input.originalRef} is now box 1 of your plan.`,
     body: `<p>Hi ${escapeHtml(input.customerName)},</p>
       <p>Thank you. Order ${escapeHtml(input.originalRef)} is now box 1 of your ${input.plan.months}-month plan, and ${formatMinor(input.paidMinor)} has been paid today for the rest of it.</p>

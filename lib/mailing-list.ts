@@ -1,7 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { Prisma, type Subscriber } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { canonicalOrigin } from "@/lib/site-url";
+import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { SHOP_TIME_ZONE } from "@/lib/saleTime";
 import { MAILING_LIST, type BundleId } from "@/config/funnel";
 import { isKitLine } from "@/lib/order-items";
@@ -126,10 +126,12 @@ export function isLinkToken(token: string | null | undefined): boolean {
  * app/api/subscribe/link/route.ts, which sets the cookie, so the vial shows
  * on the site and on the payment page whichever device opens the email.
  * `pack` lands on that pack's page instead of the home page's buy block.
+ * The link is on the subscriber's own brand's site (`b`), so the cookie is
+ * set where they shop.
  */
-export function welcomeLink(subscriberId: string, pack?: BundleId): string {
+export function welcomeLink(subscriberId: string, pack?: BundleId, b: BrandProfile = brandFor(DEFAULT_BRAND)): string {
   const query = new URLSearchParams({ t: signSubscriberLinkToken(subscriberId), ...(pack ? { pack } : {}) });
-  return `${canonicalOrigin()}/api/subscribe/link?${query}`;
+  return `${b.origin}/api/subscribe/link?${query}`;
 }
 
 /** Pull one cookie out of a raw Cookie header. */

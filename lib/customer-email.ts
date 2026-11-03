@@ -1,11 +1,10 @@
 import { createHmac } from "node:crypto";
 import type { Order, Plan, Subscriber } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { send, layout, escapeHtml, ctaButton } from "@/lib/email";
+import { send, layout, escapeHtml, ctaButton, ownerSubjectPrefix } from "@/lib/email";
 import { welcomeLink } from "@/lib/mailing-list";
-import { canonicalOrigin } from "@/lib/site-url";
-import { LITERAL } from "@/lib/theme";
-import { brand, formatPrice, type Currency } from "@/config/brand";
+import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
+import { formatPrice, type Currency } from "@/config/brand";
 import { formatSaleDateTime, formatShopDay, saleTime, shopDayKey } from "@/lib/saleTime";
 import { orderKind } from "@/lib/plans/kinds";
 import { boxDueDay } from "@/lib/plans/schedule";
@@ -23,6 +22,10 @@ import { waitingVials } from "@/lib/vial-gifts";
 // the @@unique([orderId, type]) constraint makes double-sends impossible.
 // Senders never throw — a Resend outage must not break a webhook or
 // admin action. Callers fire-and-forget.
+//
+// Each email is in the brand of the row it is about (brandFor(order.brand),
+// brandFor(subscriber.brand)): its name, colours, from-address, and links
+// to its own site. Nothing here names a brand directly.
 
 export type EmailType = "confirmation" | "shipped" | "delivered" | "nudge" | "review" | "plan_renewal";
 
@@ -48,9 +51,10 @@ interface OrderItem {
 }
 
 // Order + nudge emails are sent from the payment webhook and the cron job —
-// no request context — so they always use the stable canonical origin.
-function siteUrl(): string {
-  return canonicalOrigin();
+// no request context — so they always use the brand's stable origin
+// (canonicalOrigin() for BacLab, as before).
+function brandOf(row: { brand?: string | null }): BrandProfile {
+  return brandFor(row.brand ?? DEFAULT_BRAND);
 }
 
 /** HMAC-signed unsubscribe link — no token storage needed. Reuses JWT_SECRET. */
@@ -60,9 +64,9 @@ export function unsubscribeSig(email: string): string {
     .digest("hex");
 }
 
-export function unsubscribeUrl(email: string): string {
+export function unsubscribeUrl(email: string, b: BrandProfile = brandFor(DEFAULT_BRAND)): string {
   const e = email.toLowerCase();
-  return `${siteUrl()}/api/email/unsubscribe?email=${encodeURIComponent(e)}&sig=${unsubscribeSig(e)}`;
+  return `${b.origin}/api/email/unsubscribe?email=${encodeURIComponent(e)}&sig=${unsubscribeSig(e)}`;
 }
 
 /**
@@ -71,9 +75,9 @@ export function unsubscribeUrl(email: string): string {
  * "List-Unsubscribe=One-Click" to the https URL, which the unsubscribe route
  * accepts. The mailto is a fallback for clients that only offer that.
  */
-export function marketingHeaders(email: string): Record<string, string> {
-  const links = [`<${unsubscribeUrl(email)}>`];
-  if (brand.contact.email) links.push(`<mailto:${brand.contact.email}?subject=unsubscribe>`);
+export function marketingHeaders(email: string, b: BrandProfile = brandFor(DEFAULT_BRAND)): Record<string, string> {
+  const links = [`<${unsubscribeUrl(email, b)}>`];
+  if (b.email.contact) links.push(`<mailto:${b.email.contact}?subject=unsubscribe>`);
   return {
     "List-Unsubscribe": links.join(", "),
     "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -81,9 +85,9 @@ export function marketingHeaders(email: string): Record<string, string> {
 }
 
 /** The line at the foot of every marketing email. */
-export function marketingFooter(email: string): string {
-  return `<p style="font-size:11px;color:${LITERAL.inkSoft};margin-top:28px">You are receiving this because you signed up to ${escapeHtml(brand.name)} emails or bought from us.
-    <a href="${unsubscribeUrl(email)}" style="color:${LITERAL.inkSoft}">Unsubscribe</a></p>`;
+export function marketingFooter(email: string, b: BrandProfile = brandFor(DEFAULT_BRAND)): string {
+  return `<p style="font-size:11px;color:${b.colours.inkSoft};margin-top:28px">You are receiving this because you signed up to ${escapeHtml(b.name)} emails or bought from us.
+    <a href="${unsubscribeUrl(email, b)}" style="color:${b.colours.inkSoft}">Unsubscribe</a></p>`;
 }
 
 /**
@@ -93,26 +97,27 @@ export function marketingFooter(email: string): string {
  * reminders that follow are lib/welcome-reminders.ts. Never throws.
  */
 export async function sendWelcomeEmail(
-  sub: Pick<Subscriber, "id" | "email">,
+  sub: Pick<Subscriber, "id" | "email"> & { brand?: string | null },
   opts: { withOffer: boolean }
 ): Promise<void> {
   const { email } = sub;
+  const b = brandOf(sub);
   try {
     const offer = opts.withOffer
       ? `<p>As promised, your first order comes with <strong>an extra 10ml vial, free</strong>. There is no code to enter: use the button below, or check out with this email address (${escapeHtml(email)}), and we add it to your order automatically. You will see it on the payment page.</p>`
       : "";
     await send(
       email,
-      offer ? `Your free vial is waiting` : `You're on the ${brand.name} list`,
+      offer ? `Your free vial is waiting` : `You're on the ${b.name} list`,
       layout(
         `<p>Hi,</p>
-        <p>Thanks for joining the ${escapeHtml(brand.name)} mailing list. We will email you about offers, restocks and new pack sizes, and nothing else.</p>
+        <p>Thanks for joining the ${escapeHtml(b.name)} mailing list. We will email you about offers, restocks and new pack sizes, and nothing else.</p>
         ${offer}
-        <p style="margin:28px 0 0">${ctaButton(offer ? welcomeLink(sub.id) : `${siteUrl()}/#buy`, "Choose your pack")}</p>
-        ${marketingFooter(email)}`,
-        { preheader: offer ? "An extra vial on your first order, added automatically." : "Thanks for signing up." }
+        <p style="margin:28px 0 0">${ctaButton(offer ? welcomeLink(sub.id, undefined, b) : `${b.origin}/#buy`, "Choose your pack", b)}</p>
+        ${marketingFooter(email, b)}`,
+        { preheader: offer ? "An extra vial on your first order, added automatically." : "Thanks for signing up.", brand: b }
       ),
-      { headers: marketingHeaders(email) }
+      { headers: marketingHeaders(email, b), brand: b }
     );
   } catch (err) {
     console.error("[email] welcome email failed", err);
@@ -140,7 +145,7 @@ async function logAndSend(
     return false;
   }
   try {
-    await send(order.customerEmail, subject, html, opts);
+    await send(order.customerEmail, subject, html, { ...opts, brand: brandOf(order) });
     return true;
   } catch (err) {
     console.error(`[email] send failed for order ${order.id} type ${type}`, err);
@@ -158,8 +163,10 @@ function receiptTable(
   items: OrderItem[],
   currency: Currency,
   deliveryMinor: number,
-  goodsTotal: string
+  goodsTotal: string,
+  b: BrandProfile
 ): string {
+  const C = b.colours;
   const rows = items
     .map((i) => {
       const amount = i.lineTotal ? parseFloat(i.lineTotal) : parseFloat(i.unitPrice) * i.qty;
@@ -168,11 +175,11 @@ function receiptTable(
         i.planLine === "plan" && i.bundleName ? `&middot; ${escapeHtml(i.bundleName)}` : `&times; ${i.qty}`;
       // A Lab Kit line lists the pieces in the box, multiplied out.
       const pieces = isKitLine(i)
-        ? `<br><span style="font-size:13px;color:${LITERAL.inkSoft}">${escapeHtml(labKitContents(i.qty))}</span>`
+        ? `<br><span style="font-size:13px;color:${C.inkSoft}">${escapeHtml(labKitContents(i.qty))}</span>`
         : "";
       return `<tr>
-        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};color:${LITERAL.ink}">${escapeHtml(i.name)} <span style="color:${LITERAL.inkSoft}">${detail}</span>${pieces}</td>
-        <td style="padding:10px 0;border-bottom:1px solid ${LITERAL.line};text-align:right;color:${LITERAL.ink};white-space:nowrap">${i.welcome || i.gift || i.planBonus ? "Free" : formatPrice(amount, currency)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid ${C.line};color:${C.ink}">${escapeHtml(i.name)} <span style="color:${C.inkSoft}">${detail}</span>${pieces}</td>
+        <td style="padding:10px 0;border-bottom:1px solid ${C.line};text-align:right;color:${C.ink};white-space:nowrap">${i.welcome || i.gift || i.planBonus ? "Free" : formatPrice(amount, currency)}</td>
       </tr>`;
     })
     .join("");
@@ -182,8 +189,8 @@ function receiptTable(
   const deliveryRow =
     deliveryMinor > 0
       ? `<tr>
-          <td style="padding:10px 0;color:${LITERAL.inkSoft}">Delivery</td>
-          <td style="padding:10px 0;text-align:right;color:${LITERAL.inkSoft}">${formatPrice(deliveryMajor, currency)}</td>
+          <td style="padding:10px 0;color:${C.inkSoft}">Delivery</td>
+          <td style="padding:10px 0;text-align:right;color:${C.inkSoft}">${formatPrice(deliveryMajor, currency)}</td>
         </tr>`
       : "";
 
@@ -191,8 +198,8 @@ function receiptTable(
     ${rows}
     ${deliveryRow}
     <tr>
-      <td style="padding:14px 0 0;border-top:2px solid ${LITERAL.ink};font-weight:700;color:${LITERAL.ink}">Total</td>
-      <td style="padding:14px 0 0;border-top:2px solid ${LITERAL.ink};text-align:right;font-weight:700;color:${LITERAL.ink}">${formatPrice(grandTotal, currency)}</td>
+      <td style="padding:14px 0 0;border-top:2px solid ${C.ink};font-weight:700;color:${C.ink}">Total</td>
+      <td style="padding:14px 0 0;border-top:2px solid ${C.ink};text-align:right;font-weight:700;color:${C.ink}">${formatPrice(grandTotal, currency)}</td>
     </tr>
   </table>`;
 }
@@ -225,9 +232,13 @@ function shippingAddressLine(order: Order): string {
 // Automatic Feedback Service). Set that delay long enough for the parcel to
 // arrive — this email goes out the moment payment lands.
 
-/** The AFS address, or null when invitations are switched off. Runtime env. */
-export function trustpilotBcc(): string | null {
-  const v = process.env.TRUSTPILOT_BCC_EMAIL?.trim();
+/**
+ * The brand's AFS address, or null when its invitations are switched off.
+ * Runtime env (BacLab's is TRUSTPILOT_BCC_EMAIL), read through the profile,
+ * so one brand's orders are never invited to review another.
+ */
+export function trustpilotBcc(b: BrandProfile = brandFor(DEFAULT_BRAND)): string | null {
+  const v = b.reviews.inviteBcc?.trim();
   return v && v.endsWith("@invite.trustpilot.com") ? v : null;
 }
 
@@ -252,7 +263,7 @@ function trustpilotSnippet(order: Order): string {
  * who asked us to stop should not hear from a third party on our behalf.
  */
 async function trustpilotBccFor(order: Order): Promise<string | null> {
-  const bcc = trustpilotBcc();
+  const bcc = trustpilotBcc(brandOf(order));
   if (!bcc || !order.customerEmail) return null;
   try {
     const optedOut = await prisma.emailOptOut.findUnique({
@@ -298,16 +309,18 @@ export async function sendOrderConfirmationEmail(
     if (plan && plan.status !== "cancelled") await sendPlanStartedEmail(order, plan);
     return;
   }
+  const b = brandOf(order);
+  const C = b.colours;
   const items = JSON.parse(order.items) as OrderItem[];
   const currency = order.currency as Currency;
-  const orderUrl = `${siteUrl()}/order-confirmation/${order.id}`;
+  const orderUrl = `${b.origin}/order-confirmation/${order.id}`;
   const planBlock = plan
-    ? `<p style="margin:24px 0 0;font-weight:600;color:${LITERAL.ink}">Your monthly plan</p>${planScheduleHtml(planTermsOf(plan))}`
+    ? `<p style="margin:24px 0 0;font-weight:600;color:${C.ink}">Your monthly plan</p>${planScheduleHtml(planTermsOf(plan))}`
     : "";
   const verdict = plan ? null : upgradeEligibility(order, new Date());
   const upgradeBlock =
     verdict?.eligible && !(await optedOutOfEmails(order))
-      ? upgradeOfferHtml({ packId: verdict.packId, orderUrl, deadline: verdict.deadline })
+      ? upgradeOfferHtml({ packId: verdict.packId, orderUrl, deadline: verdict.deadline }, b)
       : "";
   const placedOn = order.createdAt.toLocaleDateString("en-GB", {
     day: "numeric",
@@ -323,31 +336,31 @@ export async function sendOrderConfirmationEmail(
   const tracking = opts?.tracking?.number ? opts.tracking : null;
   const trackingBlock = tracking
     ? `<p style="margin:0 0 12px">Your ${tracking.carrier ? `${escapeHtml(tracking.carrier)} ` : ""}tracking number is
-      ${trackingNumberHtml(tracking)}. It starts showing updates once ${tracking.carrier ? escapeHtml(tracking.carrier) : "the carrier"} has your parcel.</p>`
+      ${trackingNumberHtml(tracking, b)}. It starts showing updates once ${tracking.carrier ? escapeHtml(tracking.carrier) : "the carrier"} has your parcel.</p>`
     : "";
 
   await logAndSend(
     order,
     "confirmation",
-    plan ? `Your ${brand.name} monthly plan is confirmed` : `Your ${brand.name} order is confirmed`,
+    plan ? `Your ${b.name} monthly plan is confirmed` : `Your ${b.name} order is confirmed`,
     layout(
       `<p>Hi ${escapeHtml(order.customerName)},</p>
       <p>${plan ? "Thank you for your order." : "Thanks for your order!"} Your payment has been received and we're getting it ready.</p>
       ${trackingBlock}
       ${welcomeVials > 0 ? `<p style="margin:0 0 12px">Your mailing-list welcome gift, ${welcomeVials === 1 ? "an extra 10ml vial" : `${welcomeVials} extra 10ml vials`}, is included in this order.</p>` : ""}
       ${giftVials > 0 ? `<p style="margin:0 0 12px">The ${giftVials === 1 ? "free 10ml vial" : `${giftVials} free 10ml vials`} we promised you ${giftVials === 1 ? "is" : "are"} included in this order.</p>` : ""}
-      <p style="margin:0 0 4px;font-size:12px;color:${LITERAL.inkSoft}">Order ${order.id} &middot; placed ${placedOn}</p>
-      ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString())}
+      <p style="margin:0 0 4px;font-size:12px;color:${C.inkSoft}">Order ${order.id} &middot; placed ${placedOn}</p>
+      ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString(), b)}
       ${planBlock}
       ${
         order.shippingAddress
-          ? `<p style="margin:20px 0 0;font-size:13px;color:${LITERAL.inkSoft}"><strong style="color:${LITERAL.ink}">Shipping to</strong><br>${shippingAddressLine(order)}</p>`
+          ? `<p style="margin:20px 0 0;font-size:13px;color:${C.inkSoft}"><strong style="color:${C.ink}">Shipping to</strong><br>${shippingAddressLine(order)}</p>`
           : ""
       }
       ${upgradeBlock}
-      <p style="margin:28px 0 0">${ctaButton(orderUrl, "View your order")}</p>
+      <p style="margin:28px 0 0">${ctaButton(orderUrl, "View your order", b)}</p>
       ${bcc ? trustpilotSnippet(order) : ""}`,
-      { preheader: `Order ${order.id} confirmed — total ${formatPrice(grandTotal, currency)}` }
+      { preheader: `Order ${order.id} confirmed — total ${formatPrice(grandTotal, currency)}`, brand: b }
     ),
     bcc ? { bcc } : undefined
   );
@@ -355,20 +368,24 @@ export async function sendOrderConfirmationEmail(
 
 /** The "plan has started" email for a plan-upgrade payment, sent instead of a receipt. */
 async function sendPlanStartedEmail(order: Order, plan: Plan): Promise<void> {
+  const b = brandOf(order);
   const original = await prisma.order.findFirst({ where: { planId: plan.id, planBox: 1 } });
-  const copy = planStartedCopy({
-    customerName: order.customerName,
-    originalRef: (original?.id ?? "").slice(0, 8).toUpperCase(),
-    plan: planTermsOf(plan),
-    paidMinor: order.amountPaidMinor ?? Math.round(Number(order.totalAmount) * 100),
-  });
+  const copy = planStartedCopy(
+    {
+      customerName: order.customerName,
+      originalRef: (original?.id ?? "").slice(0, 8).toUpperCase(),
+      plan: planTermsOf(plan),
+      paidMinor: order.amountPaidMinor ?? Math.round(Number(order.totalAmount) * 100),
+    },
+    b
+  );
   await logAndSend(
     order,
     "confirmation",
     copy.subject,
     layout(
-      `${copy.body}<p style="margin:28px 0 0">${ctaButton(`${siteUrl()}/order-confirmation/${order.id}`, "View your plan")}</p>`,
-      { preheader: copy.preheader }
+      `${copy.body}<p style="margin:28px 0 0">${ctaButton(`${b.origin}/order-confirmation/${order.id}`, "View your plan", b)}</p>`,
+      { preheader: copy.preheader, brand: b }
     )
   );
 }
@@ -385,10 +402,10 @@ export interface ShippedTracking {
 }
 
 /** The tracking number, linked to the carrier's own tracking page when there is one. */
-function trackingNumberHtml(tracking: ShippedTracking): string {
+function trackingNumberHtml(tracking: ShippedTracking, b: BrandProfile): string {
   const style = "font-family:monospace;font-size:15px;font-weight:700";
   return tracking.url
-    ? `<a href="${escapeHtml(tracking.url)}" style="${style};color:${LITERAL.brand}">${escapeHtml(tracking.number)}</a>`
+    ? `<a href="${escapeHtml(tracking.url)}" style="${style};color:${b.colours.primary}">${escapeHtml(tracking.number)}</a>`
     : `<strong style="${style}">${escapeHtml(tracking.number)}</strong>`;
 }
 
@@ -399,44 +416,52 @@ function trackingNumberHtml(tracking: ShippedTracking): string {
  * order page, which shows the latest tracking.
  */
 export async function sendOrderShippedEmail(order: Order, tracking?: ShippedTracking | null): Promise<void> {
-  const orderUrl = `${siteUrl()}/order-confirmation/${order.id}`;
+  const b = brandOf(order);
+  const C = b.colours;
+  const orderUrl = `${b.origin}/order-confirmation/${order.id}`;
   const carrierUrl = tracking?.number ? (tracking.url ?? null) : null;
   const trackingLine = tracking?.number
     ? `<p style="margin:0 0 20px">Your tracking number${tracking.carrier ? ` with ${escapeHtml(tracking.carrier)}` : ""} is
-      ${trackingNumberHtml(tracking)}.${carrierUrl ? "" : " Your order page shows where it has got to."}</p>`
+      ${trackingNumberHtml(tracking, b)}.${carrierUrl ? "" : " Your order page shows where it has got to."}</p>`
     : "";
   const plan = order.planId && order.planBox ? await prisma.plan.findUnique({ where: { id: order.planId } }) : null;
   const box =
     plan && order.planBox
-      ? boxShippedCopy({
-          boxNumber: order.planBox,
-          months: plan.months,
-          // Only a running plan has a next box; a cancelled one says no more are coming.
-          nextBoxDay:
-            plan.status === "active" && plan.anchorDay && order.planBox < plan.months
-              ? boxDueDay(plan.anchorDay, order.planBox + 1)
-              : null,
-          cancelled: plan.status === "cancelled",
-        })
+      ? boxShippedCopy(
+          {
+            boxNumber: order.planBox,
+            months: plan.months,
+            // Only a running plan has a next box; a cancelled one says no more are coming.
+            nextBoxDay:
+              plan.status === "active" && plan.anchorDay && order.planBox < plan.months
+                ? boxDueDay(plan.anchorDay, order.planBox + 1)
+                : null,
+            cancelled: plan.status === "cancelled",
+          },
+          b
+        )
       : null;
   await logAndSend(
     order,
     "shipped",
-    box ? box.subject : `Your ${brand.name} order is on its way`,
+    box ? box.subject : `Your ${b.name} order is on its way`,
     layout(
       `<p>Hi ${escapeHtml(order.customerName)},</p>
       <p>${box ? escapeHtml(box.lead) : "Good news — your order has been shipped and is on its way to you."}</p>
       ${trackingLine}
       ${box ? `<p style="margin:0 0 20px">${escapeHtml(box.next)}</p>` : ""}
-      <p style="margin:0 0 20px;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id}${
-        carrierUrl ? ` &middot; <a href="${orderUrl}" style="color:${LITERAL.inkSoft}">View your order</a>` : ""
+      <p style="margin:0 0 20px;font-size:12px;color:${C.inkSoft}">Order reference: ${order.id}${
+        carrierUrl ? ` &middot; <a href="${orderUrl}" style="color:${C.inkSoft}">View your order</a>` : ""
       }</p>
       ${
         carrierUrl
-          ? ctaButton(escapeHtml(carrierUrl), "Track your parcel")
-          : ctaButton(orderUrl, tracking?.number ? "Track your order" : "View your order")
+          ? ctaButton(escapeHtml(carrierUrl), "Track your parcel", b)
+          : ctaButton(orderUrl, tracking?.number ? "Track your order" : "View your order", b)
       }`,
-      { preheader: box ? box.preheader : tracking?.number ? `Tracking number ${tracking.number}` : `Order ${order.id} has shipped` }
+      {
+        preheader: box ? box.preheader : tracking?.number ? `Tracking number ${tracking.number}` : `Order ${order.id} has shipped`,
+        brand: b,
+      }
     )
   );
 }
@@ -472,12 +497,14 @@ export async function sendOrderDeliveredEmail(order: Order): Promise<void> {
  * buy box instead.
  */
 export function deliveredEmail(
-  order: Pick<Order, "id" | "customerName" | "customerEmail" | "items">,
+  order: Pick<Order, "id" | "customerName" | "customerEmail" | "items"> & { brand?: string | null },
   opts: { offers: boolean; giftVials: number }
 ): { subject: string; html: string } {
-  const site = siteUrl();
+  const b = brandOf(order);
+  const C = b.colours;
+  const site = b.origin;
   const orderUrl = `${site}/order-confirmation/${order.id}`;
-  const subject = `Your ${brand.name} order has been delivered`;
+  const subject = `Your ${b.name} order has been delivered`;
   const opening = `<p>${order.customerName ? `Hi ${escapeHtml(order.customerName)},` : "Hi,"}</p>
       <p>Your order has been delivered. We hope you enjoy it.</p>`;
 
@@ -486,9 +513,9 @@ export function deliveredEmail(
       subject,
       html: layout(
         `${opening}
-      <p style="margin:0 0 20px;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id}</p>
-      ${ctaButton(orderUrl, "View your order")}`,
-        { preheader: `Order ${order.id} has been delivered` }
+      <p style="margin:0 0 20px;font-size:12px;color:${C.inkSoft}">Order reference: ${order.id}</p>
+      ${ctaButton(orderUrl, "View your order", b)}`,
+        { preheader: `Order ${order.id} has been delivered`, brand: b }
       ),
     };
   }
@@ -510,15 +537,15 @@ export function deliveredEmail(
       <p>${offer ? "When you need more, the same order again is one click away:" : "When you need more, you can order again here:"}</p>
       <p style="margin:24px 0 0">${
         offer
-          ? ctaButton(`${site}${offer.link}`, `Reorder ${vials} · ${formatMinor(offer.goodsMinor)}`)
-          : ctaButton(`${site}/#buy`, "Choose your pack")
+          ? ctaButton(`${site}${offer.link}`, `Reorder ${vials} · ${formatMinor(offer.goodsMinor)}`, b)
+          : ctaButton(`${site}/#buy`, "Choose your pack", b)
       }</p>
-      ${delivery ? `<p style="font-size:13px;color:${LITERAL.inkSoft};margin:12px 0 0">${delivery}</p>` : ""}
-      ${offer ? reorderStepHtml(offer, site) : ""}
-      <p style="margin:28px 0 0;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id} &middot; <a href="${orderUrl}" style="color:${LITERAL.inkSoft}">View your order</a></p>
-      <p style="font-size:11px;color:${LITERAL.inkSoft};margin-top:24px">Don't want offers like this?
-        <a href="${unsubscribeUrl(order.customerEmail)}" style="color:${LITERAL.inkSoft}">Unsubscribe</a></p>`,
-      { preheader: offer ? `Your parcel has arrived. Reorder your ${vials} in one click.` : "Your parcel has arrived." }
+      ${delivery ? `<p style="font-size:13px;color:${C.inkSoft};margin:12px 0 0">${delivery}</p>` : ""}
+      ${offer ? reorderStepHtml(offer, b) : ""}
+      <p style="margin:28px 0 0;font-size:12px;color:${C.inkSoft}">Order reference: ${order.id} &middot; <a href="${orderUrl}" style="color:${C.inkSoft}">View your order</a></p>
+      <p style="font-size:11px;color:${C.inkSoft};margin-top:24px">Don't want offers like this?
+        <a href="${unsubscribeUrl(order.customerEmail, b)}" style="color:${C.inkSoft}">Unsubscribe</a></p>`,
+      { preheader: offer ? `Your parcel has arrived. Reorder your ${vials} in one click.` : "Your parcel has arrived.", brand: b }
     ),
   };
 }
@@ -533,9 +560,9 @@ function reorderDeliveryLine(offer: ReorderOffer): string {
 }
 
 /** The step up from a reorder, as a line and a text link: the reorder button stays the one to press. */
-function reorderStepHtml(offer: ReorderOffer, site: string): string {
+function reorderStepHtml(offer: ReorderOffer, b: BrandProfile): string {
   return offer.upsell
-    ? `<p style="margin:24px 0 0">Or: ${escapeHtml(offer.upsell.line)} <a href="${site}${offer.upsell.link}" style="color:${LITERAL.brand}">${escapeHtml(offer.upsell.linkText)}</a></p>`
+    ? `<p style="margin:24px 0 0">Or: ${escapeHtml(offer.upsell.line)} <a href="${b.origin}${offer.upsell.link}" style="color:${b.colours.primary}">${escapeHtml(offer.upsell.linkText)}</a></p>`
     : "";
 }
 
@@ -547,14 +574,15 @@ function reorderStepHtml(offer: ReorderOffer, site: string): string {
  */
 export async function sendPlanRenewalEmail(plan: Plan, order: Order): Promise<boolean> {
   if (!isPlanPackId(plan.packId) || !isPlanMonths(plan.months)) return false;
-  const renewUrl = `${siteUrl()}/?plan=${planKey(plan.packId, plan.months)}#buy`;
-  const copy = renewalCopy({ customerName: order.customerName, plan: planTermsOf(plan), renewUrl });
+  const b = brandOf(order);
+  const renewUrl = `${b.origin}/?plan=${planKey(plan.packId, plan.months)}#buy`;
+  const copy = renewalCopy({ customerName: order.customerName, plan: planTermsOf(plan), renewUrl }, b);
   return logAndSend(
     order,
     "plan_renewal",
     copy.subject,
-    layout(`${copy.body}${marketingFooter(order.customerEmail)}`, { preheader: copy.preheader }),
-    { headers: marketingHeaders(order.customerEmail) }
+    layout(`${copy.body}${marketingFooter(order.customerEmail, b)}`, { preheader: copy.preheader, brand: b }),
+    { headers: marketingHeaders(order.customerEmail, b) }
   );
 }
 
@@ -569,11 +597,12 @@ export async function sendPlanRenewalEmail(plan: Plan, order: Order): Promise<bo
  * names no pack we still sell.
  */
 export async function sendRepurchaseNudgeEmail(order: Order, items: OrderItem[]): Promise<boolean> {
-  const site = siteUrl();
+  const b = brandOf(order);
+  const site = b.origin;
   const email = order.customerEmail;
   const hi = order.customerName ? `Hi ${escapeHtml(order.customerName)},` : "Hi,";
   const pack = nudgePlanPack(order);
-  const planLine = pack ? nudgePlanOfferHtml(pack, site) : "";
+  const planLine = pack ? nudgePlanOfferHtml(pack, site, b) : "";
   const offer = reorderOffer(order.items);
 
   if (!offer) {
@@ -583,23 +612,23 @@ export async function sendRepurchaseNudgeEmail(order: Order, items: OrderItem[])
     return logAndSend(
       order,
       "nudge",
-      `Running low? Time to restock your ${brand.name} order`,
+      `Running low? Time to restock your ${b.name} order`,
       layout(
         `<p>${hi}</p>
         <p>By our count, the vials from your last order may be running low. Reorder before you run out:</p>
         <ul style="padding-left:18px">${list}</ul>
-        <p style="margin:24px 0 0">${ctaButton(`${site}/#buy`, "Choose your pack")}</p>
+        <p style="margin:24px 0 0">${ctaButton(`${site}/#buy`, "Choose your pack", b)}</p>
         ${planLine}
-        ${marketingFooter(email)}`,
-        { preheader: "Reorder before you run out." }
+        ${marketingFooter(email, b)}`,
+        { preheader: "Reorder before you run out.", brand: b }
       ),
-      { headers: marketingHeaders(email) }
+      { headers: marketingHeaders(email, b) }
     );
   }
 
   const vials = `${offer.vials} ${offer.vials === 1 ? "vial" : "vials"}`;
   const delivery = reorderDeliveryLine(offer);
-  const step = reorderStepHtml(offer, site);
+  const step = reorderStepHtml(offer, b);
 
   return logAndSend(
     order,
@@ -608,14 +637,14 @@ export async function sendRepurchaseNudgeEmail(order: Order, items: OrderItem[])
     layout(
       `<p>${hi}</p>
       <p>By our count, the ${vials} from your last order will run low in a few days. The same order again is one click away:</p>
-      <p style="margin:24px 0 0">${ctaButton(`${site}${offer.link}`, `Reorder ${vials} · ${formatMinor(offer.goodsMinor)}`)}</p>
-      ${delivery ? `<p style="font-size:13px;color:${LITERAL.inkSoft};margin:12px 0 0">${delivery}</p>` : ""}
+      <p style="margin:24px 0 0">${ctaButton(`${site}${offer.link}`, `Reorder ${vials} · ${formatMinor(offer.goodsMinor)}`, b)}</p>
+      ${delivery ? `<p style="font-size:13px;color:${b.colours.inkSoft};margin:12px 0 0">${delivery}</p>` : ""}
       ${step}
       ${planLine}
-      ${marketingFooter(email)}`,
-      { preheader: `Reorder your ${vials} in one click.` }
+      ${marketingFooter(email, b)}`,
+      { preheader: `Reorder your ${vials} in one click.`, brand: b }
     ),
-    { headers: marketingHeaders(email) }
+    { headers: marketingHeaders(email, b) }
   );
 }
 
@@ -629,6 +658,7 @@ export async function sendRepurchaseNudgeEmail(order: Order, items: OrderItem[])
  * Never throws.
  */
 export async function sendCheckoutRecoveryEmail(order: Order, to: string, linkExpiresAt: Date): Promise<boolean> {
+  const b = brandOf(order);
   try {
     const offer = reorderOffer(order.items);
     const vials = offer ? `${offer.vials} ${offer.vials === 1 ? "vial" : "vials"}` : "";
@@ -641,17 +671,17 @@ export async function sendCheckoutRecoveryEmail(order: Order, to: string, linkEx
       : "";
     await send(
       to,
-      offer ? `Your ${vials} are still in your basket` : `Your ${brand.name} basket is still here`,
+      offer ? `Your ${vials} are still in your basket` : `Your ${b.name} basket is still here`,
       layout(
         `<p>Hi,</p>
         <p>You started an order earlier but didn't finish checking out, so nothing has been charged. We've kept your basket:</p>
         ${basket}
-        <p style="margin:24px 0 0">${ctaButton(`${siteUrl()}/api/checkout/resume?o=${encodeURIComponent(order.id)}`, "Complete my order")}</p>
-        <p style="font-size:13px;color:${LITERAL.inkSoft};margin:12px 0 0">The button takes you back to Stripe's secure payment page as you left it, and works until ${formatShopDay(shopDayKey(linkExpiresAt))}. If something went wrong, or you have a question first, just reply to this email.</p>
-        ${marketingFooter(to)}`,
-        { preheader: "Nothing has been charged." }
+        <p style="margin:24px 0 0">${ctaButton(`${b.origin}/api/checkout/resume?o=${encodeURIComponent(order.id)}`, "Complete my order", b)}</p>
+        <p style="font-size:13px;color:${b.colours.inkSoft};margin:12px 0 0">The button takes you back to Stripe's secure payment page as you left it, and works until ${formatShopDay(shopDayKey(linkExpiresAt))}. If something went wrong, or you have a question first, just reply to this email.</p>
+        ${marketingFooter(to, b)}`,
+        { preheader: "Nothing has been charged.", brand: b }
       ),
-      { headers: marketingHeaders(to) }
+      { headers: marketingHeaders(to, b), brand: b }
     );
     return true;
   } catch (err) {
@@ -665,34 +695,36 @@ export async function sendCheckoutRecoveryEmail(order: Order, to: string, linkEx
  * cron (app/api/cron/nudges/route.ts), never from a webhook, so it cannot
  * arrive before the parcel does. The EmailLog slot makes it once per order.
  *
- * Where it sends them is config: brand.reviews.url when a public review page
- * exists, otherwise a reply to the support address. Reviews received are
- * added to config/reviews.json by hand — nothing here writes one, and the
- * email must never offer anything in return for a review (the DMCC Act 2024
- * treats an incentivised review that does not say so as a fake one).
+ * Where it sends them is the brand's profile: reviews.url when a public
+ * review page exists, otherwise a reply to the support address. Reviews
+ * received are added to config/reviews.json by hand — nothing here writes
+ * one, and the email must never offer anything in return for a review (the
+ * DMCC Act 2024 treats an incentivised review that does not say so as a fake
+ * one).
  */
 export async function sendReviewRequestEmail(order: Order): Promise<boolean> {
-  const reviewUrl = brand.reviews.url;
-  const support = brand.contact.email;
+  const b = brandOf(order);
+  const reviewUrl = b.reviews.url;
+  const support = b.email.contact;
   const ask = reviewUrl
-    ? `<p style="margin:24px 0 0">${ctaButton(reviewUrl, "Leave a review")}</p>`
+    ? `<p style="margin:24px 0 0">${ctaButton(reviewUrl, "Leave a review", b)}</p>`
     : support
-      ? `<p>Reply to this email, or write to <a href="mailto:${support}" style="color:${LITERAL.brand}">${support}</a>. A sentence or two is plenty.</p>`
+      ? `<p>Reply to this email, or write to <a href="mailto:${support}" style="color:${b.colours.primary}">${support}</a>. A sentence or two is plenty.</p>`
       : `<p>Reply to this email. A sentence or two is plenty.</p>`;
 
   return logAndSend(
     order,
     "review",
-    `How was your ${brand.name} order?`,
+    `How was your ${b.name} order?`,
     layout(
       `<p>Hi ${escapeHtml(order.customerName)},</p>
       <p>Your order should have arrived by now. If you have a minute, we would value a few words on how it went: the vial, the packaging, the delivery.</p>
       <p>Honest reviews, good or bad, are the only kind we publish, and we do not offer anything in return for one.</p>
       ${ask}
-      <p style="margin:24px 0 0;font-size:12px;color:${LITERAL.inkSoft}">Order reference: ${order.id}</p>
+      <p style="margin:24px 0 0;font-size:12px;color:${b.colours.inkSoft}">Order reference: ${order.id}</p>
       <p style="font-size:11px;color:#6b7a72;margin-top:24px">Don't want emails like this?
-        <a href="${unsubscribeUrl(order.customerEmail)}" style="color:#6b7a72">Unsubscribe</a></p>`,
-      { preheader: `A quick word on order ${order.id}?` }
+        <a href="${unsubscribeUrl(order.customerEmail, b)}" style="color:#6b7a72">Unsubscribe</a></p>`,
+      { preheader: `A quick word on order ${order.id}?`, brand: b }
     )
   );
 }
@@ -705,22 +737,26 @@ export function buildNewOrderAlert(
   order: Order,
   opts?: { deliveryMinor?: number }
 ): { subject: string; html: string } {
+  const b = brandOf(order);
   const items = JSON.parse(order.items) as OrderItem[];
   const currency = order.currency as Currency;
   const deliveryMinor = opts?.deliveryMinor ?? 0;
   const grandTotal = parseFloat(order.totalAmount.toString()) + deliveryMinor / 100;
 
   const total = formatPrice(grandTotal, currency);
-  const subject = `New paid order — ${total} from ${order.customerName}`;
-  const html = layout(`<p style="font-weight:bold;margin-top:0">You have a new paid order.</p>
+  const subject = `${ownerSubjectPrefix(b)}New paid order — ${total} from ${order.customerName}`;
+  const html = layout(
+    `<p style="font-weight:bold;margin-top:0">You have a new paid order.</p>
       ${orderKind(order.kind) === "plan_upgrade" ? `<p style="margin:0 0 12px">${escapeHtml(order.notes ?? "Plan upgrade")}</p>` : ""}
-      ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString())}
+      ${receiptTable(items, currency, deliveryMinor, order.totalAmount.toString(), b)}
       <p style="margin:20px 0 0"><strong>Paid:</strong> ${formatSaleDateTime(saleTime(order))} (UK time)</p>
       <p style="margin:12px 0 0"><strong>Customer:</strong> ${escapeHtml(order.customerName)}<br>
          <strong>Email:</strong> ${escapeHtml(order.customerEmail)}<br>
          <strong>Phone:</strong> ${escapeHtml(order.customerPhone)}</p>
       <p style="margin:12px 0 0"><strong>Ship to:</strong> ${shippingAddressLine(order)}</p>
-      <p style="margin:20px 0 0;font-size:12px;color:${LITERAL.inkSoft}">Order ${order.id} &middot; paid via ${escapeHtml(String(order.paymentMethod).toUpperCase())}</p>`);
+      <p style="margin:20px 0 0;font-size:12px;color:${b.colours.inkSoft}">Order ${order.id} &middot; paid via ${escapeHtml(String(order.paymentMethod).toUpperCase())}</p>`,
+    { brand: b }
+  );
   return { subject, html };
 }
 
@@ -733,7 +769,7 @@ export async function sendNewOrderAlert(
   if (!to) return;
   try {
     const { subject, html } = buildNewOrderAlert(order, opts);
-    await send(to, subject, html);
+    await send(to, subject, html, { brand: brandOf(order) });
   } catch (err) {
     console.error(`[email] order alert failed for ${order.id}`, err);
   }

@@ -28,10 +28,17 @@ export function baclabProfile(): BrandProfile {
       line: LITERAL.line,
       primary: LITERAL.primary,
       cta: LITERAL.cta,
+      header: LITERAL.abyss,
     },
     email: {
       from: process.env.EMAIL_FROM || `${brand.name} <noreply@example.com>`,
       contact: brand.contact.email,
+      inbox: brand.contact.published,
+    },
+    reviews: {
+      url: brand.reviews.url,
+      // BacLab's AFS address is a runtime secret, as it always was.
+      inviteBcc: process.env.TRUSTPILOT_BCC_EMAIL ?? null,
     },
     disclaimer: brand.disclaimer,
     packingSlipThankYou: brand.packingSlipThankYou,

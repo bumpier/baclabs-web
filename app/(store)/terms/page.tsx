@@ -24,9 +24,10 @@ export const metadata: Metadata = pageMetadata({
  */
 export default function TermsPage() {
   const { company } = brand;
-  // Set here rather than in brand.contact.email, which also feeds the footer
-  // and home page — this address is meant to appear on the terms only.
-  const email = "contact@baclab.co.uk";
+  // brand.contact.published rather than brand.contact.email, which also feeds
+  // the footer and home page — this address is meant for the terms and the
+  // contact page only.
+  const email = brand.contact.published;
   // The monthly plans example is derived from config so it cannot drift from
   // the prices on the storefront.
   const bonus = bundleById(BONUS_PACK_ID)!;

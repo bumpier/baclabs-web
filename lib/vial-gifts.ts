@@ -15,13 +15,11 @@
 // the UK day the email names.
 import type { Prisma, VialGift } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { brand } from "@/config/brand";
+import { brandFor } from "@/brands/registry";
 import { ctaButton, escapeHtml, layout, send } from "@/lib/email";
 import { normEmail, type OrderItemLike } from "@/lib/mailing-list";
 import { isKitLine } from "@/lib/order-items";
-import { canonicalOrigin } from "@/lib/site-url";
 import { formatShopDay, shiftDayKey, shopDayBounds, shopDayKey } from "@/lib/saleTime";
-import { LITERAL } from "@/lib/theme";
 
 export const GIFT_EXPIRY_DAYS = 90;
 export const MAX_GIFT_VIALS = 20;
@@ -216,30 +214,32 @@ async function firstNameFor(email: string): Promise<string> {
  * sent by hand, in the wording of the reason chosen (GIFT_REASONS). It
  * carries no unsubscribe footer; the admin form warns before sending to an
  * address that has opted out, and more firmly for a thank-you, which is
- * closer to marketing than an apology is.
+ * closer to marketing than an apology is. In the gift's own brand: it is
+ * honoured on that brand's next order (settleVialGifts).
  */
 export function giftEmail(
-  gift: Pick<VialGift, "vials" | "expiresAt" | "reason">,
+  gift: Pick<VialGift, "vials" | "expiresAt" | "reason"> & { brand?: string | null },
   firstName = ""
 ): { subject: string; html: string } {
+  const b = brandFor(gift.brand);
   const words = GIFT_REASONS[giftReason(gift.reason)];
   const what = gift.vials === 1 ? "a free vial" : `${gift.vials} free vials`;
   const What = `${what[0]!.toUpperCase()}${what.slice(1)}`;
-  const contact = brand.contact.email;
+  const contact = b.email.contact;
   const contactLine = contact
-    ? `<p>If you have any questions, email us at <a href="mailto:${escapeHtml(contact)}" style="color:${LITERAL.brand}">${escapeHtml(contact)}</a>.</p>`
+    ? `<p>If you have any questions, email us at <a href="mailto:${escapeHtml(contact)}" style="color:${b.colours.primary}">${escapeHtml(contact)}</a>.</p>`
     : "";
   return {
-    subject: `${What} on your next ${brand.name} order, ${words.subjectSuffix}`,
+    subject: `${What} on your next ${b.name} order, ${words.subjectSuffix}`,
     html: layout(
       `<p>Hi ${escapeHtml(firstName || "there")},</p>
       <p>${words.opening}</p>
       <p>${words.lead} <strong>${gift.vials === 1 ? "a free 10ml vial" : `${gift.vials} free 10ml vials`}</strong> to your next order. There's nothing you need to do: order as usual with this email address and ${gift.vials === 1 ? "it will" : "they'll"} be packed with it.</p>
       <p>We'll hold ${gift.vials === 1 ? "it" : "them"} for you until ${formatShopDay(lastGiftDay(gift.expiresAt))}.</p>
-      <p style="margin:24px 0">${ctaButton(`${canonicalOrigin()}/#buy`, "Order now")}</p>
+      <p style="margin:24px 0">${ctaButton(`${b.origin}/#buy`, "Order now", b)}</p>
       ${contactLine}
-      <p style="margin:0">${words.signOff}<br />The ${escapeHtml(brand.name)} team</p>`,
-      { preheader: `${What}, added to your next order automatically.` }
+      <p style="margin:0">${words.signOff}<br />The ${escapeHtml(b.name)} team</p>`,
+      { preheader: `${What}, added to your next order automatically.`, brand: b }
     ),
   };
 }
@@ -247,7 +247,7 @@ export function giftEmail(
 /** True when Resend took the email; emailedAt is set only then. send() never throws. */
 export async function sendGiftEmail(gift: VialGift): Promise<boolean> {
   const { subject, html } = giftEmail(gift, await firstNameFor(gift.email));
-  const sent = await send(gift.email, subject, html);
+  const sent = await send(gift.email, subject, html, { brand: brandFor(gift.brand) });
   if (!sent?.id) return false;
   await prisma.vialGift.update({ where: { id: gift.id }, data: { emailedAt: new Date() } });
   return true;

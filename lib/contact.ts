@@ -3,14 +3,18 @@
  * the form (a client component) and by the route, so nothing server-only
  * belongs here. Storing and emailing a message is lib/contact-inbox.ts.
  */
+import { brand } from "@/config/brand";
 
 /**
- * The published contact address: shown on /contact and the inbox each form
- * message is emailed to (CONTACT_FORM_TO overrides the latter). Not in
- * brand.contact.email, which also feeds the footer, the home page and the
- * structured data; see app/(store)/contact/page.tsx.
+ * BacLab's published contact address: shown on /contact and the inbox each
+ * form message is emailed to (CONTACT_FORM_TO overrides the latter). Set in
+ * config/brand.ts as brand.contact.published, not brand.contact.email, which
+ * also feeds the footer, the home page and the structured data; see
+ * app/(store)/contact/page.tsx. Other brands' inboxes are on their profiles
+ * (brands/registry.ts), which this file must not import: the form is a
+ * client component and would ship every brand's name.
  */
-export const CONTACT_EMAIL = "contact@baclab.co.uk";
+export const CONTACT_EMAIL = brand.contact.published;
 
 export interface ContactTopic {
   id: string;

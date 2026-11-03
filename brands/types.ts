@@ -25,6 +25,12 @@ export interface BrandColours {
   line: string;
   primary: string;
   cta: string;
+  /** The band behind the name at the top of every email. */
+  header: string;
+  /** Text on `header`. Defaults to white. */
+  onHeader?: string;
+  /** Text on `cta` (the email button). Defaults to white. */
+  onCta?: string;
 }
 
 export interface BrandProfile {
@@ -43,8 +49,24 @@ export interface BrandProfile {
   email: {
     /** `Name <address>`, on a domain verified in Resend. */
     from: string;
-    /** The address shown to customers. "" renders nothing. */
+    /** The address shown to customers in email footers and receipts. "" renders nothing. */
     contact: string;
+    /**
+     * The address published on the contact page and in the terms, and the
+     * inbox contact-form messages are emailed to (CONTACT_FORM_TO overrides
+     * the latter for every brand).
+     */
+    inbox: string;
+  };
+  reviews: {
+    /** Where a review request sends the customer. "" asks for a reply by email instead. */
+    url: string;
+    /**
+     * The brand's own Trustpilot Automatic Feedback Service address, BCC'd on
+     * order confirmations; null sends no invitations. Never another brand's:
+     * the invitation would tie the two together.
+     */
+    inviteBcc: string | null;
   };
   /** Compliance line in the email footer. */
   disclaimer: string;

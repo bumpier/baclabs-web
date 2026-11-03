@@ -4,10 +4,13 @@ import { prisma } from "@/lib/db";
 import { ctaButton, escapeHtml, layout, send, sendBatch } from "@/lib/email";
 import { marketingFooter, marketingHeaders } from "@/lib/customer-email";
 import { getStripe } from "@/lib/payments/stripe";
-import { LITERAL } from "@/lib/theme";
 import { normEmail } from "@/lib/mailing-list";
+import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 
 // Marketing email campaigns, written and sent from /admin/campaigns.
+//
+// A campaign belongs to one brand (Campaign.brand): it goes to that brand's
+// subscribers and customers only, from that brand's address, in its layout.
 //
 // Sending is two steps so it can never double-send and always resumes:
 //  1. startCampaign() resolves the audience into CampaignRecipient rows, one
@@ -112,10 +115,10 @@ export function mergeAudience(
   return [...out.values()];
 }
 
-/** Every address that has placed an order, with its latest name and date. */
-async function customerRows(): Promise<CustomerRow[]> {
+/** Every address that has placed an order with this brand, with its latest name and date. */
+async function customerRows(brand: string): Promise<CustomerRow[]> {
   const orders = await prisma.order.findMany({
-    where: { status: { notIn: ["pending", "cancelled"] }, customerEmail: { not: "" } },
+    where: { brand, status: { notIn: ["pending", "cancelled"] }, customerEmail: { not: "" } },
     select: { customerEmail: true, customerName: true, paidAt: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
@@ -131,10 +134,15 @@ async function customerRows(): Promise<CustomerRow[]> {
   return [...rows.values()];
 }
 
-export async function resolveAudience(spec: AudienceSpec): Promise<Recipient[]> {
+/**
+ * The audience within one brand: its subscribers and its customers. Someone
+ * who bought from another brand is not this brand's customer, so PECR's soft
+ * opt-in does not reach them here.
+ */
+export async function resolveAudience(spec: AudienceSpec, brand: string = DEFAULT_BRAND): Promise<Recipient[]> {
   const [subscribers, customers, optOuts] = await Promise.all([
-    prisma.subscriber.findMany({ where: { status: "subscribed" }, select: { email: true } }),
-    customerRows(),
+    prisma.subscriber.findMany({ where: { brand, status: "subscribed" }, select: { email: true } }),
+    customerRows(brand),
     prisma.emailOptOut.findMany({ select: { email: true } }),
   ]);
   return mergeAudience(spec, subscribers, customers, new Set(optOuts.map((o) => normEmail(o.email))));
@@ -148,14 +156,15 @@ export async function resolveAudience(spec: AudienceSpec): Promise<Recipient[]> 
  * button written [button: Label](https://…). Everything is HTML-escaped
  * first, so nothing typed in the composer can inject markup, and only
  * http(s) and mailto links survive. Inline styles throughout, because mail
- * clients drop <style>.
+ * clients drop <style>. Links and buttons take the brand's colours.
  */
-export function markdownToEmailHtml(md: string): string {
+export function markdownToEmailHtml(md: string, b: BrandProfile = brandFor(DEFAULT_BRAND)): string {
+  const C = b.colours;
   const safeUrl = (url: string) => (/^(https?:|mailto:)/i.test(url) ? url : "#");
   const inline = (text: string) =>
     escapeHtml(text)
       .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label: string, url: string) => {
-        return `<a href="${safeUrl(url)}" style="color:${LITERAL.brand}">${label}</a>`;
+        return `<a href="${safeUrl(url)}" style="color:${C.primary}">${label}</a>`;
       })
       .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
       .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
@@ -163,16 +172,16 @@ export function markdownToEmailHtml(md: string): string {
   const blocks = md.replace(/\r\n/g, "\n").split(/\n{2,}/);
   return blocks
     .map((block) => {
-      const b = block.trim();
-      if (!b) return "";
-      const button = b.match(/^\[button:\s*([^\]]+)\]\(([^)\s]+)\)$/i);
-      if (button) return `<p style="margin:24px 0">${ctaButton(safeUrl(button[2]), button[1].trim())}</p>`;
-      const heading = b.match(/^(#{1,2})\s+(.+)$/);
+      const text = block.trim();
+      if (!text) return "";
+      const button = text.match(/^\[button:\s*([^\]]+)\]\(([^)\s]+)\)$/i);
+      if (button) return `<p style="margin:24px 0">${ctaButton(safeUrl(button[2]), button[1].trim(), b)}</p>`;
+      const heading = text.match(/^(#{1,2})\s+(.+)$/);
       if (heading) {
         const size = heading[1].length === 1 ? 22 : 18;
-        return `<h2 style="margin:24px 0 8px;font-size:${size}px;line-height:1.3;color:${LITERAL.ink}">${inline(heading[2])}</h2>`;
+        return `<h2 style="margin:24px 0 8px;font-size:${size}px;line-height:1.3;color:${C.ink}">${inline(heading[2])}</h2>`;
       }
-      const lines = b.split("\n");
+      const lines = text.split("\n");
       if (lines.every((l) => /^\s*[-*]\s+/.test(l))) {
         return `<ul style="padding-left:20px;margin:0 0 16px">${lines
           .map((l) => `<li style="margin:4px 0">${inline(l.replace(/^\s*[-*]\s+/, ""))}</li>`)
@@ -222,28 +231,36 @@ export function expiresText(c: Pick<Campaign, "offerExpiresAt">): string {
 }
 
 /** A block stating the code, added under the body whenever there is one. */
-function offerBlock(c: Pick<Campaign, "promoCode" | "offerSummary" | "offerExpiresAt">): string {
+function offerBlock(c: Pick<Campaign, "promoCode" | "offerSummary" | "offerExpiresAt">, b: BrandProfile): string {
   if (!c.promoCode) return "";
+  const C = b.colours;
   const expires = expiresText(c);
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;border:2px dashed ${LITERAL.line};border-radius:12px">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;border:2px dashed ${C.line};border-radius:12px">
     <tr><td style="padding:18px;text-align:center">
-      ${c.offerSummary ? `<p style="margin:0 0 6px;font-weight:700;color:${LITERAL.ink}">${escapeHtml(c.offerSummary)}</p>` : ""}
-      <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.08em;color:${LITERAL.ink}">${escapeHtml(c.promoCode)}</p>
-      <p style="margin:6px 0 0;font-size:12px;color:${LITERAL.inkSoft}">Enter it on the card payment page${expires ? `. Ends ${escapeHtml(expires)}` : ""}.</p>
+      ${c.offerSummary ? `<p style="margin:0 0 6px;font-weight:700;color:${C.ink}">${escapeHtml(c.offerSummary)}</p>` : ""}
+      <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.08em;color:${C.ink}">${escapeHtml(c.promoCode)}</p>
+      <p style="margin:6px 0 0;font-size:12px;color:${C.inkSoft}">Enter it on the card payment page${expires ? `. Ends ${escapeHtml(expires)}` : ""}.</p>
     </td></tr>
   </table>`;
 }
 
-/** The finished email for one recipient. */
+/** The campaign's brand. A row from before brands existed is BacLab. */
+export function campaignBrand(c: Pick<Campaign, "brand">): BrandProfile {
+  return brandFor(c.brand);
+}
+
+/** The finished email for one recipient, in the campaign's brand. */
 export function renderCampaign(c: Campaign, r: Recipient): string {
-  const body = applyMergeFields(markdownToEmailHtml(c.bodyMarkdown), {
+  const b = campaignBrand(c);
+  const body = applyMergeFields(markdownToEmailHtml(c.bodyMarkdown, b), {
     firstName: r.firstName,
     code: c.promoCode ?? "",
     offer: c.offerSummary,
     expires: expiresText(c),
   });
-  return layout(`${body}${offerBlock(c)}${marketingFooter(r.email)}`, {
+  return layout(`${body}${offerBlock(c, b)}${marketingFooter(r.email, b)}`, {
     preheader: c.preheader || undefined,
+    brand: b,
   });
 }
 
@@ -306,7 +323,11 @@ export async function startCampaign(campaignId: string): Promise<number> {
   if (!campaign) throw new Error("Campaign not found");
   if (campaign.status !== "draft") throw new Error("This campaign has already been sent");
 
-  const recipients = await resolveAudience(parseAudience(campaign.audience));
+  // An unknown brand would read as BacLab and mail BacLab's list another
+  // brand's copy, so a campaign for a brand no longer registered stops here.
+  const b = campaignBrand(campaign);
+  if (b.id !== campaign.brand) throw new Error(`Brand "${campaign.brand}" is not registered`);
+  const recipients = await resolveAudience(parseAudience(campaign.audience), b.id);
   if (recipients.length === 0) throw new Error("Nobody is in this audience (after removing unsubscribes)");
 
   await prisma.$transaction(async (tx) => {
@@ -375,14 +396,16 @@ export async function processCampaign(campaignId: string): Promise<void> {
         .update(batch.map((r) => r.id).join(","))
         .digest("hex")
         .slice(0, 32)}`;
+      const b = campaignBrand(campaign);
       const results = await sendBatch(
         batch.map((r) => ({
           to: r.email,
           subject: renderSubject(campaign, r),
           html: renderCampaign(campaign, r),
-          headers: marketingHeaders(r.email),
+          headers: marketingHeaders(r.email, b),
         })),
-        key
+        key,
+        b
       );
 
       const now = new Date();
@@ -430,7 +453,9 @@ export async function resumeSendingCampaigns(): Promise<number> {
 /** One copy to a named address, marked as a test in the subject. */
 export async function sendTestEmail(c: Campaign, to: string): Promise<void> {
   const r = { email: normEmail(to), firstName: "Test" };
+  const b = campaignBrand(c);
   await send(r.email, `[Test] ${renderSubject(c, r)}`, renderCampaign(c, r), {
-    headers: marketingHeaders(r.email),
+    headers: marketingHeaders(r.email, b),
+    brand: b,
   });
 }

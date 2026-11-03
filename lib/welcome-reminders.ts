@@ -9,7 +9,7 @@ import {
   welcomeLink,
   welcomeVialOn,
 } from "@/lib/mailing-list";
-import { brand } from "@/config/brand";
+import { brandFor, type BrandProfile } from "@/brands/registry";
 import { BUNDLES, MAILING_LIST } from "@/config/funnel";
 
 // The emails that follow a signup whose welcome vial is still unused:
@@ -69,21 +69,22 @@ export interface ReminderEmail {
   html: string;
 }
 
-type Recipient = Pick<Subscriber, "id" | "email" | "welcomeBonusUntil">;
+/** `brand` left out reads as BacLab, like a row from before brands existed. */
+type Recipient = Pick<Subscriber, "id" | "email" | "welcomeBonusUntil"> & { brand?: string | null };
 
-function firstReminder(sub: Recipient): Omit<ReminderEmail, "html"> {
+function firstReminder(sub: Recipient, b: BrandProfile): Omit<ReminderEmail, "html"> {
   return {
     subject: "Your free vial is still waiting",
     preheader: "An extra 10ml vial, free with your first order.",
     body: `<p>Hi,</p>
-      <p>You joined the ${escapeHtml(brand.name)} mailing list and have not used your free vial yet. It is still here: <strong>an extra 10ml vial, free with your first order</strong>.</p>
+      <p>You joined the ${escapeHtml(b.name)} mailing list and have not used your free vial yet. It is still here: <strong>an extra 10ml vial, free with your first order</strong>.</p>
       <p>There is no code to enter. Use the button below and we add it to your order automatically. You will see it on the payment page before you pay.</p>
-      <p style="margin:28px 0 0">${ctaButton(welcomeLink(sub.id), "Claim my free vial")}</p>
-      ${marketingFooter(sub.email)}`,
+      <p style="margin:28px 0 0">${ctaButton(welcomeLink(sub.id, undefined, b), "Claim my free vial", b)}</p>
+      ${marketingFooter(sub.email, b)}`,
   };
 }
 
-function secondReminder(sub: Recipient): Omit<ReminderEmail, "html"> {
+function secondReminder(sub: Recipient, b: BrandProfile): Omit<ReminderEmail, "html"> {
   const { extraVials, minVials, validDays } = MAILING_LIST.reminders.bonus;
   const total = 1 + extraVials;
   const by = bonusDeadlineText(sub.welcomeBonusUntil ?? new Date(Date.now() + validDays * DAY));
@@ -96,14 +97,16 @@ function secondReminder(sub: Recipient): Omit<ReminderEmail, "html"> {
       <p>Your free vial is still waiting, and until ${by} we will add to it. Order ${minVials} vials or more and we include ${extraVials} more: <strong>${total} free vials with your first order</strong>.</p>
       <p>Smaller orders still come with the one free vial, and that has no end date.</p>
       <p>There is no code to enter. Use the button below and the vials are added automatically. You will see them on the payment page before you pay.</p>
-      <p style="margin:28px 0 0">${ctaButton(welcomeLink(sub.id, pack?.id), pack ? `See the ${minVials}-vial pack` : "Choose your pack")}</p>
-      ${marketingFooter(sub.email)}`,
+      <p style="margin:28px 0 0">${ctaButton(welcomeLink(sub.id, pack?.id, b), pack ? `See the ${minVials}-vial pack` : "Choose your pack", b)}</p>
+      ${marketingFooter(sub.email, b)}`,
   };
 }
 
+/** The reminder in the subscriber's own brand. */
 export function reminderEmail(step: ReminderStep, sub: Recipient): ReminderEmail {
-  const copy = step === 1 ? firstReminder(sub) : secondReminder(sub);
-  return { ...copy, html: layout(copy.body, { preheader: copy.preheader }) };
+  const b = brandFor(sub.brand);
+  const copy = step === 1 ? firstReminder(sub, b) : secondReminder(sub, b);
+  return { ...copy, html: layout(copy.body, { preheader: copy.preheader, brand: b }) };
 }
 
 // ── Sending ────────────────────────────────────────────────────────
@@ -128,10 +131,12 @@ async function sendReminder(sub: Subscriber, step: ReminderStep, now: Date): Pro
   });
   if (count !== 1) return "skipped";
 
+  const b = brandFor(sub.brand);
   const email = reminderEmail(step, { ...sub, welcomeBonusUntil: bonusUntil });
   const [result] = await sendBatch(
-    [{ to: sub.email, subject: email.subject, html: email.html, headers: marketingHeaders(sub.email) }],
-    `welcome-reminder:${step}:${sub.id}`
+    [{ to: sub.email, subject: email.subject, html: email.html, headers: marketingHeaders(sub.email, b) }],
+    `welcome-reminder:${step}:${sub.id}`,
+    b
   );
   if (result?.ok) return "sent";
 

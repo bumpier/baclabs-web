@@ -83,6 +83,13 @@ export const brand = {
     // worse than none — it turns the price-match guarantee into a promise
     // with a dead letterbox. Set up mail routing first.
     email: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "",
+    /**
+     * The address published on /contact and /terms, and the inbox each
+     * contact-form message is emailed to (lib/contact.ts). Deliberately not
+     * `email` above, which also feeds the footer, the home page and the
+     * structured data: this one is meant for those two pages only.
+     */
+    published: "contact@baclab.co.uk",
     // Leave "" to omit the phone from JSON-LD.
     phone: "",
   },
