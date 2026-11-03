@@ -38,6 +38,24 @@ export function chargeableGrams(p: Parcel, volumetricDivisor: number | null): nu
 }
 
 /**
+ * The weight a label declares: the most the service takes, not what the
+ * parcel weighs. Amazon Shipping must never be told less than a parcel
+ * weighs, so every SKU had been set to the 2 kg maximum as a margin — and a
+ * 10-pack with a free vial then added up to 4 kg (22 Oct 2026). Declaring
+ * the service's maximum keeps the margin without it adding up; the packed
+ * weight on the SKUs only decides whether the parcel fits the service.
+ *
+ * Never under what it weighs: a parcel heavier than the service (one picked
+ * by hand) is declared at its own weight, for the carrier to refuse. A
+ * service with no maximum, or a parcel not yet weighed, keeps the packed
+ * weight, so "weight not set" still stops the label.
+ */
+export function declaredGrams(weightGrams: number, maxWeightGrams: number): number {
+  if (weightGrams <= 0 || maxWeightGrams <= 0) return weightGrams;
+  return Math.max(weightGrams, maxWeightGrams);
+}
+
+/**
  * Several units in one parcel. Weight adds up. Size is the box they make
  * stacked flat — each unit lying on its largest face, one on top of another —
  * which always contains them, so it can over-state the size but never

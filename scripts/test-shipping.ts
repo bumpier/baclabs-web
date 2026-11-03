@@ -4,7 +4,7 @@
  * non-zero on any failure, like scripts/test-sale.ts. No network, no
  * database.
  */
-import { combineUnits, chargeableGrams } from "@/lib/shipping/parcel";
+import { combineUnits, chargeableGrams, declaredGrams } from "@/lib/shipping/parcel";
 import {
   checkService,
   evaluateSizeFormula,
@@ -65,6 +65,15 @@ const vialBox = { weightGrams: 60, lengthMm: 95, widthMm: 45, heightMm: 30 };
 check("volumetric weight wins when bulkier than heavy", chargeableGrams({ weightGrams: 100, lengthMm: 400, widthMm: 300, heightMm: 200 }, 5000) === 4800);
 check("actual weight wins when heavier", chargeableGrams({ weightGrams: 9000, lengthMm: 400, widthMm: 300, heightMm: 200 }, 5000) === 9000);
 check("no divisor means actual weight", chargeableGrams({ weightGrams: 100, lengthMm: 400, widthMm: 300, heightMm: 200 }, null) === 100);
+
+// ── Declared weight ──────────────────────────────────────────────
+// 22 Oct 2026: SKUs padded to 2 kg each added up to 4 kg for a 10-pack and
+// a free vial. The label declares the service's maximum instead.
+check("a light parcel is declared at the service's maximum", declaredGrams(320, 2000) === 2000);
+check("a parcel at the maximum is declared at it", declaredGrams(2000, 2000) === 2000);
+check("a parcel over the maximum is never declared under its weight", declaredGrams(2400, 2000) === 2400);
+check("a service with no maximum declares the packed weight", declaredGrams(320, 0) === 320);
+check("an unweighed parcel stays unweighed, so its label is still stopped", declaredGrams(0, 2000) === 0);
 
 // ── Services ─────────────────────────────────────────────────────
 const base: ServiceRule = {
@@ -498,6 +507,12 @@ const input: LabelInput = {
   const lower = { ...belfast, address: { ...belfast.address, postalCode: "bt11 8ly" } };
   check("a lower-case BT postcode counts too", buildShipmentRequest({ ...input, receiver: lower }).request === null);
   check("a mainland GB item needs no HS code", buildShipmentRequest(input).request !== null);
+  for (const postalCode of ["JE2 3AB", "GY1 1AA", "IM1 1AA"]) {
+    const island = { ...input.receiver, address: { ...belfast.address, city: "St Helier", postalCode } };
+    check(`a ${postalCode.slice(0, 2)} item without an HS code blocks the label`, buildShipmentRequest({ ...input, receiver: island }).request === null);
+  }
+  const dublin = { ...input.receiver, address: { ...belfast.address, city: "Dublin", country: "IE", postalCode: "D02 X285" } };
+  check("an item going abroad without an HS code blocks the label", buildShipmentRequest({ ...input, receiver: dublin }).request === null);
 }
 
 if (failures > 0) {

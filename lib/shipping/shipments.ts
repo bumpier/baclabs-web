@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { parseAddress } from "@/lib/orderAddress";
 import { readSetting, SETTING_KEYS } from "@/lib/settings";
 import { planOrderShipment } from "@/lib/shipping/order-parcel";
+import { declaredGrams } from "@/lib/shipping/parcel";
 import { smartTrackConfig } from "@/lib/smarttrack/config";
 import {
   generateLabel,
@@ -176,6 +177,10 @@ export async function createShipmentLabel(input: {
     (await prisma.warehouse.findFirst({ where: { active: true }, orderBy: { createdAt: "asc" } }));
   if (!warehouse) throw new ShippingError("Add a warehouse, with its address, on the Inventory page first");
 
+  // The label, and the Shipment row that records it, carry the declared
+  // weight — the most the service takes — rather than the packed weight.
+  const parcel = { ...plan.parcel, weightGrams: declaredGrams(plan.parcel.weightGrams, service.maxWeightGrams) };
+
   const reference = labelReference(order.id, order.shipments.length + 1);
   const built = buildShipmentRequest({
     reference,
@@ -189,7 +194,7 @@ export async function createShipmentLabel(input: {
       phone: order.customerPhone,
       address,
     },
-    parcel: plan.parcel,
+    parcel,
     items: plan.lines.map((l) => ({
       skuCode: l.sold.skuCode,
       description: l.sku?.name ?? l.sold.description,
@@ -218,10 +223,10 @@ export async function createShipmentLabel(input: {
         serviceCode: service.code,
         serviceName: service.name,
         serviceChoice: choice,
-        weightGrams: plan.parcel.weightGrams,
-        lengthMm: plan.parcel.lengthMm,
-        widthMm: plan.parcel.widthMm,
-        heightMm: plan.parcel.heightMm,
+        weightGrams: parcel.weightGrams,
+        lengthMm: parcel.lengthMm,
+        widthMm: parcel.widthMm,
+        heightMm: parcel.heightMm,
         actor: input.actor,
       },
     })

@@ -38,6 +38,11 @@ vial counter (`Product.stock`).
   over. A service assigned to a SKU wins whenever it fits the order; when an
   order outgrows it the automatic choice is used and the order page says why.
   Volumetric weight is applied per service where a divisor is set.
+- **Declared weight.** A label declares the most its service takes (2 kg on
+  a 0–2 kg service), never the packed weight, so a parcel is never
+  under-declared. The packed weight on the SKUs only decides which service
+  the parcel fits, so enter real weights there — padding them makes
+  multi-SKU orders add up past every service.
 - **Labels.** "Buy label" on the order calls SmartTrack `generate-label`,
   stores the PDF and tracking number, and can void it. Buying a label moves
   a paid order to **packed**; voiding it does not move the order back.

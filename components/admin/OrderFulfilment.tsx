@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { planOrderShipment } from "@/lib/shipping/order-parcel";
-import { formatDimensions, formatWeight } from "@/lib/shipping/parcel";
+import { declaredGrams, formatDimensions, formatWeight } from "@/lib/shipping/parcel";
 import { getDeliveryInstructions, parseTrackingNumbers } from "@/lib/shipping/shipments";
 import { trackingLink } from "@/lib/shipping/carriers";
 import { LIMITS } from "@/lib/smarttrack/payload";
@@ -169,6 +169,12 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
               Parcel: {plan.parcel.weightGrams > 0 ? formatWeight(plan.parcel.weightGrams) : "weight not set"} ·{" "}
               {formatDimensions(plan.parcel)} · to {plan.countryIso}
             </p>
+            {suggested && suggested.maxWeightGrams > 0 && plan.parcel.weightGrams > 0 && (
+              <p className="text-ink-soft">
+                Declared on the label as {formatWeight(declaredGrams(plan.parcel.weightGrams, suggested.maxWeightGrams))}, the
+                most {suggested.name} takes.
+              </p>
+            )}
             <p className="mt-2 font-semibold text-brand-deep">{suggested ? suggested.name : "No service fits"}</p>
             <p className="text-ink-soft">{plan.selection.note}</p>
           </>

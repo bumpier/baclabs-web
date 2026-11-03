@@ -245,12 +245,21 @@ export function buildShipmentRequest(input: LabelInput): BuiltRequest {
   }
   if (input.items.length === 0) problems.push("The order has no items");
 
-  // GB to Northern Ireland carries customs data per item: on 4 Oct 2026
-  // Amazon Shipping refused a Belfast parcel for want of HS codes.
-  if (/^BT\d/i.test(receiverPostcode)) {
+  // Anywhere off mainland GB carries customs data per item: on 4 Oct 2026
+  // Amazon Shipping refused a Belfast parcel for want of HS codes. Northern
+  // Ireland (BT), the Channel Islands (JE, GY), the Isle of Man (IM) and
+  // abroad all need one.
+  const customsArea = receiverCountry !== "GB"
+    ? "Parcels abroad"
+    : /^BT\d/i.test(receiverPostcode)
+      ? "Northern Ireland parcels"
+      : /^(JE|GY|IM)\d/i.test(receiverPostcode)
+        ? "Channel Islands and Isle of Man parcels"
+        : null;
+  if (customsArea) {
     const uncoded = new Set(input.items.filter((i) => !i.hsCode?.trim()).map((i) => i.skuCode));
     for (const code of uncoded) {
-      problems.push(`HS code is not set for ${code} — Northern Ireland parcels need one; add it to the SKU`);
+      problems.push(`HS code is not set for ${code} — ${customsArea} need one; add it to the SKU`);
     }
   }
 

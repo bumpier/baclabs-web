@@ -23,6 +23,7 @@ import {
   ShippingError,
   voidShipment,
 } from "../lib/shipping/shipments";
+import { labelReference } from "../lib/smarttrack/payload";
 
 if (!process.env.DATABASE_URL || /data\/baclab\.db/.test(process.env.DATABASE_URL)) {
   console.error("Refusing to run: set DATABASE_URL to a throwaway database (see the header of this file).");
@@ -110,9 +111,9 @@ async function main() {
   });
   const existingWh = await prisma.warehouse.findFirst({ where: { active: true }, orderBy: { createdAt: "asc" } });
   if (existingWh) {
-    await prisma.warehouse.update({ where: { id: existingWh.id }, data: { contactName: "Dispatch", addressLine1: "Unit 1", city: "Leeds", postcode: "LS1 1AA" } });
+    await prisma.warehouse.update({ where: { id: existingWh.id }, data: { contactName: "Dispatch", company: "BacLab", addressLine1: "Unit 1", city: "Leeds", postcode: "LS1 1AA" } });
   } else {
-    await prisma.warehouse.create({ data: { code: "MAIN", name: "Main", contactName: "Dispatch", addressLine1: "Unit 1", city: "Leeds", postcode: "LS1 1AA" } });
+    await prisma.warehouse.create({ data: { code: "MAIN", name: "Main", contactName: "Dispatch", company: "BacLab", addressLine1: "Unit 1", city: "Leeds", postcode: "LS1 1AA" } });
   }
 
   const orderData = {
@@ -140,7 +141,7 @@ async function main() {
   mode = "refuse";
   await rejects(() => createShipmentLabel({ orderId: order.id, actor: "smoke" }), "receiver postcode", "a refusal carries SmartTrack's reason");
   rows = await shipments();
-  assert(rows[1]?.status === "FAILED" && rows[1].reference === `${order.id}-2`, "the second attempt has its own reference and failed");
+  assert(rows[1]?.status === "FAILED" && rows[1].reference === labelReference(order.id, 2), "the second attempt has its own reference and failed");
 
   // ── 3. No answer: stays PENDING, blocks a second purchase ───────
   mode = "timeout";
@@ -171,8 +172,10 @@ async function main() {
     description: string;
     parcel: { weight: number; length: number; width: number; height: number }[];
   };
-  assert(sent.order_reference === `${order.id}-4`, "the fourth attempt's reference was sent");
-  assert(sent.parcel[0]!.weight === 0.18 && sent.parcel[0]!.length === 11 && sent.parcel[0]!.height === 4.5, "the parcel went in kg and cm");
+  assert(sent.order_reference === labelReference(order.id, 4), "the fourth attempt's reference was sent");
+  assert(sent.parcel[0]!.length === 11 && sent.parcel[0]!.height === 4.5, "the parcel went in cm");
+  assert(sent.parcel[0]!.weight === 3, "a 180 g parcel is declared at the service's 3 kg maximum, in kg");
+  assert(bought.weightGrams === 3000, "the shipment records the declared weight");
   assert(sent.receiver_postcode === "LS2 2BB" && sent.sender_address_line_1 === "Unit 1", "addresses went through");
   assert(sent.description === "Leave at doorstep", "the default delivery instructions went in the description");
   const pdf = await shipmentLabelPdf(shipmentId);
@@ -189,7 +192,7 @@ async function main() {
   assert(voided.status === "VOIDED" && voided.voidedAt !== null, "voiding marks it VOIDED");
   assert((await orderStatus()) === "packed", "…and leaves the order packed");
   const voidCall = calls.filter((c) => c.path === "void-labels").at(-1)!;
-  assert(JSON.stringify(voidCall.body) === JSON.stringify({ order_reference: { "0": `${order.id}-4` } }), "void sends the reference keyed as SmartTrack documents");
+  assert(JSON.stringify(voidCall.body) === JSON.stringify({ order_reference: { "0": labelReference(order.id, 4) } }), "void sends the reference keyed as SmartTrack documents");
 
   // ── 7. Reconcile: SmartTrack did make it ────────────────────────
   await prisma.order.update({ where: { id: order.id }, data: { status: "paid" } });

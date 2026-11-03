@@ -88,7 +88,8 @@ export function SkuForm({
         <legend className="font-display text-lg font-medium text-brand-deep">As it goes in the post</legend>
         <p className="mt-1 text-sm text-ink-soft">
           Weighed and measured packed, box or bag included. This is what picks the postal service, so leave
-          it at 0 until it has actually been measured.
+          it at 0 until it has actually been measured. Enter the real weight, not a padded one: every label
+          already declares the most its service takes.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-4">
           {(
