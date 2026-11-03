@@ -1,6 +1,6 @@
 /**
  * Test suite for host routing: brands/hosts.json, lib/brand/resolve.ts and
- * the literals in middleware.ts that must agree with it.
+ * the literals in middleware.ts and next.config.js that must agree with it.
  * Run with `npm run test:hosts`. Exits non-zero on any failure, like the
  * other tsx test scripts.
  */
@@ -17,6 +17,13 @@ import {
 import { config } from "../middleware";
 
 type Cond = { type: string; value?: string };
+// next.config.js is CommonJS and has no types.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const nextConfig = require("../next.config.js") as {
+  redirects: () => Promise<{ source: string; has?: Cond[]; missing?: Cond[]; destination: string }[]>;
+  headers: () => Promise<{ source: string; headers: { key: string; value: string }[] }[]>;
+  allowedDevOrigins?: string[];
+};
 
 let failures = 0;
 
@@ -135,8 +142,53 @@ for (const [host, path, expected] of cases) {
 }
 check("the not-found path is no brand's tree", brandRewrite("baclab.co.uk", NOT_FOUND_PATH) === null);
 
-if (failures > 0) {
-  console.error(`\n${failures} host check(s) failed.`);
-  process.exit(1);
+/** Does a CSP source expression (`https://host`, `http://host:*`) allow this origin? */
+function cspAllows(source: string, origin: string): boolean {
+  const m = /^(https?):\/\/([^:/]+)(?::(\d+|\*))?$/.exec(source);
+  if (!m) return false;
+  const o = new URL(origin);
+  const port = m[3] ?? "";
+  return `${m[1]}:` === o.protocol && m[2] === o.hostname && (port === "*" || port === o.port);
 }
-console.log("✓ hosts: all checks passed");
+
+// ── next.config.js: every BacLab redirect stands down on brand hosts, a
+// brand's www form (if it has one) goes to its apex, and the admin may load
+// every brand's logo.
+const run = async () => {
+  const redirects = await nextConfig.redirects();
+  const isBrandWww = (r: (typeof redirects)[number]) =>
+    !!r.has?.some((c) => c.type === "host" && allHosts.some((h) => anchored(c.value ?? "").test(h)));
+  const brandWww = redirects.filter(isBrandWww);
+  for (const r of redirects.filter((r) => !isBrandWww(r))) {
+    const missing = r.missing?.find((c) => c.type === "host");
+    check(`redirect ${r.source} stands down on brand hosts`, missing?.value === brandHostPattern(), String(missing?.value));
+  }
+  const expectedWww = allHosts.filter((h) => h.startsWith("www.") && allHosts.includes(h.slice(4)));
+  check("one www -> apex redirect per brand www host", brandWww.length === expectedWww.length, `${brandWww.length} vs ${expectedWww.length}`);
+  check("dev origins allow *.localhost", nextConfig.allowedDevOrigins?.includes("*.localhost") === true);
+
+  const headers = await nextConfig.headers();
+  const cspOf = (source: string) =>
+    headers.find((h) => h.source === source)?.headers.find((x) => x.key === "Content-Security-Policy")?.value ?? "";
+  const imgSrcOf = (csp: string) =>
+    (csp.split(";").map((d) => d.trim()).find((d) => d.startsWith("img-src")) ?? "").split(/\s+/).slice(1);
+  for (const source of ["/admin", "/admin/:path*"]) {
+    const imgSrc = imgSrcOf(cspOf(source));
+    for (const b of allBrands()) {
+      if (b.id === DEFAULT_BRAND) continue;
+      check(`${source} img-src allows ${b.origin}`, imgSrc.some((s) => cspAllows(s, b.origin)), imgSrc.join(" "));
+    }
+    check(`${source} img-src has no wildcard host`, !imgSrc.some((s) => s === "*" || /^https?:$/.test(s) || s.includes("//*")), imgSrc.join(" "));
+  }
+  const siteImgSrc = imgSrcOf(cspOf("/:path*"));
+  check("the storefront img-src allows no brand", !allBrands().some((b) => b.id !== DEFAULT_BRAND && siteImgSrc.some((s) => cspAllows(s, b.origin))));
+  const adminCsp = cspOf("/admin/:path*").replace(/img-src[^;]*/, "");
+  check("the admin CSP is the storefront's but for img-src", adminCsp === cspOf("/:path*").replace(/img-src[^;]*/, ""));
+
+  if (failures > 0) {
+    console.error(`\n${failures} host check(s) failed.`);
+    process.exit(1);
+  }
+  console.log("✓ hosts: all checks passed");
+};
+void run();
