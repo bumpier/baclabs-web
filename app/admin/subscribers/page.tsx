@@ -7,6 +7,16 @@ import {
   type SubscriberFilter,
 } from "@/lib/mailing-list";
 import { ActionForm } from "@/components/admin/ActionForm";
+import { BrandChip } from "@/components/admin/BrandChip";
+import { BrandSelect } from "@/components/admin/BrandSelect";
+import { brandChip } from "@/lib/admin/brand-chip";
+import {
+  adminBrandScope,
+  brandOptions,
+  brandParam,
+  brandWhere,
+  defaultBrandFor,
+} from "@/lib/admin/brand-scope";
 import { formatSaleDate } from "@/lib/saleTime";
 import {
   addSubscriberAction,
@@ -34,24 +44,32 @@ const SOURCE_LABELS: Record<string, string> = {
 export default async function AdminSubscribersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; q?: string }>;
+  searchParams: Promise<{ filter?: string; q?: string; brand?: string }>;
 }) {
   await requireAdminRole("ADMIN");
-  const { filter: rawFilter, q: rawQ } = await searchParams;
+  const { filter: rawFilter, q: rawQ, brand: brandQuery } = await searchParams;
+  const scope = await adminBrandScope(brandQuery);
+  const { brand } = brandWhere(scope);
+  const pinned = brandParam(brandQuery);
   const filter: SubscriberFilter = SUBSCRIBER_FILTERS.includes(rawFilter as SubscriberFilter)
     ? (rawFilter as SubscriberFilter)
     : "all";
   const q = (rawQ ?? "").trim().slice(0, 100);
 
-  const [rows, stats] = await Promise.all([subscriberRows({ filter, q, take: 200 }), subscriberStats()]);
+  const [rows, stats] = await Promise.all([subscriberRows({ filter, q, take: 200, brand }), subscriberStats(brand)]);
   const query = (f: SubscriberFilter) => {
     const p = new URLSearchParams();
     if (f !== "all") p.set("filter", f);
     if (q) p.set("q", q);
+    if (pinned) p.set("brand", pinned);
     const s = p.toString();
     return s ? `/admin/subscribers?${s}` : "/admin/subscribers";
   };
-  const exportHref = `/admin/subscribers/export?${new URLSearchParams({ filter, ...(q ? { q } : {}) })}`;
+  const exportHref = `/admin/subscribers/export?${new URLSearchParams({
+    filter,
+    ...(q ? { q } : {}),
+    ...(pinned ? { brand: pinned } : {}),
+  })}`;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -97,6 +115,7 @@ export default async function AdminSubscribersPage({
         </div>
         <form className="flex gap-2" action="/admin/subscribers">
           {filter !== "all" && <input type="hidden" name="filter" value={filter} />}
+          {pinned && <input type="hidden" name="brand" value={pinned} />}
           <input
             name="q"
             defaultValue={q}
@@ -121,6 +140,7 @@ export default async function AdminSubscribersPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
+                <th className="px-5 py-3 font-semibold">Brand</th>
                 <th className="px-5 py-3 font-semibold">Email</th>
                 <th className="px-5 py-3 font-semibold">Signed up</th>
                 <th className="px-5 py-3 font-semibold">Source</th>
@@ -133,6 +153,9 @@ export default async function AdminSubscribersPage({
             <tbody className="divide-y divide-line">
               {rows.map((s) => (
                 <tr key={s.id} className="hover:bg-brand-tint/40">
+                  <td className="px-5 py-3">
+                    <BrandChip chip={brandChip(s.brand)} />
+                  </td>
                   <td className="px-5 py-3 font-medium">{s.email}</td>
                   <td className="px-5 py-3 text-ink-soft">{formatSaleDate(s.createdAt)}</td>
                   <td className="px-5 py-3 text-ink-soft">{SOURCE_LABELS[s.source] ?? s.source}</td>
@@ -222,6 +245,10 @@ export default async function AdminSubscribersPage({
             Email
           </label>
           <input id="add-email" name="email" type="email" required className="field" />
+          <label className="label" htmlFor="add-brand">
+            Brand&apos;s list
+          </label>
+          <BrandSelect id="add-brand" options={brandOptions()} defaultValue={defaultBrandFor(scope)} />
         </ActionForm>
       </div>
     </div>

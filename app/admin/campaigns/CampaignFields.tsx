@@ -1,15 +1,29 @@
 import type { Campaign } from "@prisma/client";
+import { brandFor } from "@/brands/registry";
+import { brandOptions } from "@/lib/admin/brand-scope";
 import { EMPTY_AUDIENCE, parseAudience } from "@/lib/campaigns";
+import { BrandSelect } from "@/components/admin/BrandSelect";
 
 /**
  * The composer's inputs, rendered inside an ActionForm by both the new and
  * the edit page. Plain inputs, no client state: the server action reads them.
+ *
+ * A campaign belongs to one brand (lib/campaigns.ts): its list, its sender,
+ * its layout. A new one starts in `defaultBrand`, the admin's brand scope.
+ * Links in the starter text point at that brand's own site.
  */
-export function CampaignFields({ campaign }: { campaign?: Campaign }) {
+export function CampaignFields({ campaign, defaultBrand }: { campaign?: Campaign; defaultBrand: string }) {
   const a = campaign ? parseAudience(campaign.audience) : { ...EMPTY_AUDIENCE, subscribers: true };
+  const b = brandFor(campaign?.brand ?? defaultBrand);
   return (
     <>
       {campaign && <input type="hidden" name="id" value={campaign.id} />}
+      <div>
+        <label htmlFor="campaign-brand" className="label">
+          Brand <span className="font-normal text-ink-soft">(whose list it goes to, and who it is from)</span>
+        </label>
+        <BrandSelect id="campaign-brand" options={brandOptions()} defaultValue={b.id} />
+      </div>
       <div>
         <label htmlFor="subject" className="label">
           Subject
@@ -32,7 +46,7 @@ export function CampaignFields({ campaign }: { campaign?: Campaign }) {
           rows={16}
           defaultValue={
             campaign?.bodyMarkdown ??
-            "Hi {{first_name}},\n\nWrite your message here.\n\n[button: Choose your pack](https://baclab.co.uk/#buy)"
+            `Hi {{first_name}},\n\nWrite your message here.\n\n[button: Choose your pack](${b.origin}/#buy)`
           }
           className="field font-mono text-sm"
         />
@@ -75,7 +89,7 @@ export function CampaignFields({ campaign }: { campaign?: Campaign }) {
         </div>
         <p className="mt-3 text-xs text-ink-soft">
           Combined, with duplicates removed. Anyone who has unsubscribed is always left out. Past customers
-          are emailed under the soft opt-in, so keep it to BacLab products they would expect to hear about.
+          are emailed under the soft opt-in, so keep it to {b.name} products they would expect to hear about.
         </p>
       </fieldset>
     </>

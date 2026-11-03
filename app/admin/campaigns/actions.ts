@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAdminSession, requireAdminRole } from "@/lib/adminAuth";
 import type { FormState } from "@/lib/form-state";
+import { isAdminBrand } from "@/lib/admin/brand-scope";
 import {
   createStripeOffer,
   offerSummary,
@@ -50,12 +51,17 @@ export async function saveCampaignAction(_prev: FormState, formData: FormData): 
     bodyMarkdown: formData.get("bodyMarkdown") ?? "",
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form" };
-  const data = { ...parsed.data, audience: JSON.stringify(audienceFrom(formData)) };
+  // Every campaign has a brand: its list, its sender, its layout (lib/campaigns.ts).
+  const brand = formData.get("brand");
+  if (!isAdminBrand(brand)) return { error: "Choose the brand this campaign is for" };
+  const data = { ...parsed.data, brand, audience: JSON.stringify(audienceFrom(formData)) };
   const id = formData.get("id");
 
   if (typeof id === "string" && id) {
     const c = await draft(id);
     if (c.status !== "draft") return { error: "This campaign has been sent and can no longer be edited." };
+    // The code was made for the old brand's checkout.
+    if (c.promoCode && c.brand !== brand) return { error: "Remove the offer before changing the brand." };
     await prisma.campaign.update({ where: { id }, data });
     revalidatePath(`/admin/campaigns/${id}`);
     return { success: "Saved." };

@@ -12,6 +12,9 @@ import {
   lastGiftDay,
 } from "@/lib/vial-gifts";
 import { ActionForm } from "@/components/admin/ActionForm";
+import { BrandChip } from "@/components/admin/BrandChip";
+import { adminBrandScope, brandOptions, brandWhere, defaultBrandFor } from "@/lib/admin/brand-scope";
+import { brandChip } from "@/lib/admin/brand-chip";
 import { plural, shortDay } from "@/components/admin/finance/parts";
 import { cancelVialGiftAction, resendVialGiftEmailAction } from "./actions";
 import { GiftForm } from "./GiftForm";
@@ -20,11 +23,17 @@ export const dynamic = "force-dynamic";
 
 const PILL = "rounded-full px-2 py-0.5 text-xs font-semibold";
 
-export default async function AdminFreeVialsPage({ searchParams }: { searchParams: Promise<{ email?: string }> }) {
+export default async function AdminFreeVialsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ email?: string; brand?: string }>;
+}) {
   await requireAdminRole("ADMIN");
-  const { email = "" } = await searchParams;
+  const { email = "", brand: brandQuery } = await searchParams;
+  // The admin's brand scope (lib/admin/brand-scope.ts).
+  const scope = await adminBrandScope(brandQuery);
   const now = new Date();
-  const gifts = await prisma.vialGift.findMany({ orderBy: { createdAt: "desc" }, take: 300 });
+  const gifts = await prisma.vialGift.findMany({ where: brandWhere(scope), orderBy: { createdAt: "desc" }, take: 300 });
   const waiting = gifts.filter((g) => giftStatus(g, now) === "waiting");
   const waitingVials = waiting.reduce((n, g) => n + g.vials, 0);
   const waitingCustomers = new Set(waiting.map((g) => g.email)).size;
@@ -46,6 +55,8 @@ export default async function AdminFreeVialsPage({ searchParams }: { searchParam
           email={email.slice(0, 254)}
           maxVials={MAX_GIFT_VIALS}
           reasons={GIFT_REASON_KEYS.map((key) => ({ key, label: GIFT_REASONS[key].label }))}
+          brands={brandOptions()}
+          defaultBrand={defaultBrandFor(scope)}
         />
       </section>
 
@@ -62,6 +73,7 @@ export default async function AdminFreeVialsPage({ searchParams }: { searchParam
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
+                  <th className="px-5 py-3 font-semibold">Brand</th>
                   <th className="px-5 py-3 font-semibold">Added</th>
                   <th className="px-5 py-3 font-semibold">Email</th>
                   <th className="px-5 py-3 text-right font-semibold">Vials</th>
@@ -75,6 +87,9 @@ export default async function AdminFreeVialsPage({ searchParams }: { searchParam
                   const status = giftStatus(g, now);
                   return (
                     <tr key={g.id} className="hover:bg-brand-tint/40">
+                      <td className="px-5 py-3">
+                        <BrandChip chip={brandChip(g.brand)} />
+                      </td>
                       <td className="whitespace-nowrap px-5 py-3 text-ink-soft">{formatSaleDateTime(g.createdAt)}</td>
                       <td className="px-5 py-3">{g.email}</td>
                       <td className="px-5 py-3 text-right tabular-nums">{g.vials}</td>

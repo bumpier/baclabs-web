@@ -282,6 +282,16 @@ export interface OfferInput {
   maxRedemptions: number | null;
 }
 
+/**
+ * The code the offer form suggests, with two random digits (`digits`, 10 to
+ * 99): BACLAB42 for BacLab, as always, and the short code for any other
+ * brand (FX42), so one brand's code never carries another's name.
+ */
+export function defaultPromoCode(b: Pick<BrandProfile, "id" | "shortCode">, digits: number): string {
+  const prefix = b.id === DEFAULT_BRAND ? "BACLAB" : b.shortCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return `${prefix}${digits}`;
+}
+
 export function offerSummary(o: Pick<OfferInput, "kind" | "value">): string {
   return o.kind === "percent" ? `${o.value}% off your order` : `£${(o.value / 100).toFixed(2)} off your order`;
 }

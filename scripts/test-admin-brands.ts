@@ -19,9 +19,12 @@ import {
   ALL_BRANDS_SCOPE,
   adminBrandScope,
   afterBrandSwitch,
+  brandOptions,
   brandParam,
   brandRank,
   brandWhere,
+  defaultBrandFor,
+  isAdminBrand,
   isBrandScope,
   keepBrandParam,
   ordersWhere,
@@ -29,6 +32,7 @@ import {
   sortByBrand,
 } from "@/lib/admin/brand-scope";
 import { takingsWhere } from "@/lib/dailyTakings";
+import { defaultPromoCode } from "@/lib/campaigns";
 import {
   brandMix,
   bucket,
@@ -151,8 +155,19 @@ async function main() {
   check("every colour gets text at AA contrast (4.5:1) or better", worst >= 4.5, worst.toFixed(2));
   check("an unknown brand's chip is BacLab's", brandChip("nope").shortCode === "BL");
 
+  // ── New rows start in the scope's brand; "all" is never a row's brand.
+  check("all is not a brand for a row", !isAdminBrand("all") && !isAdminBrand("nope") && isAdminBrand("baclab"));
+  check("a new row in the all scope is BacLab's", defaultBrandFor("all") === "baclab");
+  check("a new row in BacLab's scope is BacLab's", defaultBrandFor("baclab") === "baclab");
+  check("BacLab's promo codes keep their prefix", defaultPromoCode(brandFor("baclab"), 42) === "BACLAB42");
+
   // ── A second brand.
   const fixture = registerTestBrand();
+  check("the fixture is a brand for a row", isAdminBrand(TEST_BRAND_ID));
+  check("a new row in the fixture's scope is the fixture's", defaultBrandFor(TEST_BRAND_ID) === TEST_BRAND_ID);
+  check("brand options list every brand, BacLab first", brandOptions()[0]?.id === "baclab" && brandOptions().some((o) => o.id === TEST_BRAND_ID && o.label === "Fixture & Co"));
+  check("another brand's promo code uses its short code", defaultPromoCode(fixture, 42) === "FX42");
+  check("…and is a valid code", /^[A-Z0-9_-]{3,30}$/.test(defaultPromoCode(fixture, 10)));
   const fx = brandChip(TEST_BRAND_ID);
   check("the fixture's chip is its own", fx.shortCode === "FX" && fx.name === "Fixture & Co" && fx.background === "#8A3B12");
   check("the fixture's chip text is readable", contrastRatio(fx.color, fx.background) >= 4.5);
@@ -267,11 +282,108 @@ async function main() {
   check("the fixture's logo comes from its own origin", fxSlip.includes('src="https://fixture.example/fixture/logo.svg"'));
   check("nothing of BacLab's is on the fixture's slip", bacLabLeaks(fxSlip).length === 0, bacLabLeaks(fxSlip).join());
 
+  if (process.env.ADMIN_BRANDS_DB === "1") await databaseChecks();
+  else console.log("  (database checks skipped: set ADMIN_BRANDS_DB=1 and DATABASE_URL to a throwaway database)");
+
   if (failures > 0) {
     console.error(`\n${failures} check(s) failed`);
     process.exit(1);
   }
   console.log("admin brand checks passed");
+}
+
+/**
+ * Against a real, throwaway SQLite database: BacLab's and the fixture's
+ * orders and subscribers come out apart, and "all" is both together. It
+ * writes rows, so it refuses the real database:
+ *
+ *   export DATABASE_URL="file:/tmp/admin-brands.db"
+ *   npx prisma migrate deploy
+ *   ADMIN_BRANDS_DB=1 npm run -s test:admin-brands
+ */
+async function databaseChecks() {
+  if (!process.env.DATABASE_URL || /data\/baclab\.db/.test(process.env.DATABASE_URL)) {
+    console.error("Refusing the database checks: point DATABASE_URL at a throwaway database.");
+    process.exit(1);
+  }
+  const { prisma } = await import("@/lib/db");
+  const { loadFinance, firstSaleDay } = await import("@/lib/finance/query");
+  const { dailyTakings } = await import("@/lib/dailyTakings");
+  const { catchUpCount } = await import("@/lib/shipping/catch-up");
+  const { subscriberRows, subscriberStats } = await import("@/lib/mailing-list");
+  const { shopDayKey } = await import("@/lib/saleTime");
+
+  if ((await prisma.order.count()) > 0) {
+    console.error("Refusing the database checks: the database already has orders. Use a fresh one.");
+    process.exit(1);
+  }
+
+  const now = new Date();
+  const today = shopDayKey(now);
+  const weekAgo = new Date(now.getTime() - 7 * 86_400_000);
+  const order = (brand: string, over: Record<string, unknown>) =>
+    prisma.order.create({
+      data: {
+        brand,
+        status: "paid",
+        customerName: "A",
+        customerEmail: "same@example.com",
+        shippingAddress: JSON.stringify({ line1: "1 High St", city: "Leeds", country: "GB", postalCode: "LS1 1AA" }),
+        items: JSON.stringify([{ name: "Pack", qty: 5, unitPrice: "10.00", bundleId: "five" }]),
+        currency: "GBP",
+        totalAmount: "10.00",
+        paymentMethod: "card",
+        amountPaidMinor: 1000,
+        deliveryMinor: 0,
+        paidAt: now,
+        ...over,
+      },
+    });
+  await order("baclab", {});
+  await order(TEST_BRAND_ID, { totalAmount: "25.00", amountPaidMinor: 2500 });
+  await order(TEST_BRAND_ID, { status: "pending", paidAt: null, amountPaidMinor: null });
+  // Old and still open, with no label: both brands, for the catch-up count.
+  // BacLab sold to same@ an hour before the fixture did.
+  const earlier = new Date(weekAgo.getTime() - 3_600_000);
+  await order("baclab", { paidAt: earlier, createdAt: earlier });
+  await order(TEST_BRAND_ID, { paidAt: weekAgo, createdAt: weekAgo });
+  await order(TEST_BRAND_ID, { paidAt: weekAgo, createdAt: weekAgo, customerEmail: "other@example.com" });
+
+  const all = await loadFinance(today, today, { compare: false });
+  const allExplicit = await loadFinance(today, today, { compare: false, brand: "all" });
+  const bl = await loadFinance(today, today, { compare: false, brand: "baclab" });
+  const fxF = await loadFinance(today, today, { compare: false, brand: TEST_BRAND_ID });
+  check("db: all brands take both brands' money", all.totals.takenMinor === 3500, String(all.totals.takenMinor));
+  check("db: no brand is the same as all", canon(all.totals) === canon(allExplicit.totals));
+  check("db: BacLab's finance is BacLab's alone", bl.totals.takenMinor === 1000 && bl.totals.orders === 1);
+  check("db: the fixture's finance is its own", fxF.totals.takenMinor === 2500 && fxF.totals.orders === 1);
+  check("db: one brand gets no breakdown", bl.brands.length === 0);
+  const line = (id: string) => all.brands.find((b) => b.brand === id)?.totals.takenMinor;
+  check("db: the breakdown splits all brands", line("baclab") === 1000 && line(TEST_BRAND_ID) === 2500);
+  const wide = await loadFinance(shopDayKey(earlier), today, { compare: false });
+  const fxOld = wide.rows.find((r) => r.brand === TEST_BRAND_ID && r.customerEmail === "same@example.com" && r.day !== today);
+  check("db: a first order with the fixture is new, though BacLab sold to that email first", fxOld?.customer === "new", fxOld?.customer);
+  check("db: the fixture's next order is a repeat", fxF.rows.find((r) => r.customerEmail === "same@example.com")?.customer === "returning");
+  check("db: daily takings follow the brand", (await dailyTakings(today, TEST_BRAND_ID)).summary.takenMinor === 2500);
+  check("db: daily takings for all are both", (await dailyTakings(today)).summary.takenMinor === 3500);
+  check("db: catch-up counts each brand's old orders", (await catchUpCount(now, "baclab")) === 1 && (await catchUpCount(now, TEST_BRAND_ID)) === 2);
+  check("db: catch-up for all counts both", (await catchUpCount(now)) === 3);
+  const fxFirst = await firstSaleDay(TEST_BRAND_ID);
+  check("db: the first sale day is per brand", fxFirst === shopDayKey(weekAgo));
+  check(
+    "db: orders in the fixture's scope are the fixture's",
+    (await prisma.order.count({ where: ordersWhere({ brand: TEST_BRAND_ID, status: { not: "pending" } }) })) === 3
+  );
+
+  await prisma.subscriber.create({ data: { brand: "baclab", email: "same@example.com", status: "subscribed", source: "admin", consentText: "x" } });
+  await prisma.subscriber.create({ data: { brand: TEST_BRAND_ID, email: "same@example.com", status: "subscribed", source: "admin", consentText: "x" } });
+  const fxSubs = await subscriberRows({ filter: "all", brand: TEST_BRAND_ID });
+  const blSubs = await subscriberRows({ filter: "all", brand: "baclab" });
+  check("db: each brand lists its own subscribers", fxSubs.length === 1 && fxSubs[0]?.brand === TEST_BRAND_ID && blSubs.length === 1);
+  check("db: a subscriber's orders are their own brand's", fxSubs[0]?.orderCount === 2 && blSubs[0]?.orderCount === 2, `${fxSubs[0]?.orderCount}/${blSubs[0]?.orderCount}`);
+  check("db: all brands list both", (await subscriberRows({ filter: "all" })).length === 2);
+  check("db: stats follow the brand", (await subscriberStats(TEST_BRAND_ID)).subscribed === 1 && (await subscriberStats()).subscribed === 2);
+  await prisma.$disconnect();
 }
 
 main().catch((err) => {

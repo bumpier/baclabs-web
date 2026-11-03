@@ -279,16 +279,23 @@ export function bonusOffer(sub: Pick<Subscriber, "welcomeBonusUntil">, at: Date 
 type Db = Prisma.TransactionClient | typeof prisma;
 
 /**
- * Orders this email has actually placed. Pending checkouts that were never
- * paid do not count, and neither do cancellations. Case-insensitive, because
- * Order.customerEmail is stored however Stripe or the form supplied it.
+ * Orders this email has actually placed, with every brand or only with
+ * `brand`. Pending checkouts that were never paid do not count, and neither
+ * do cancellations. Case-insensitive, because Order.customerEmail is stored
+ * however Stripe or the form supplied it.
  */
-export async function previousOrderCount(email: string, excludeOrderId = "", db: Db = prisma): Promise<number> {
+export async function previousOrderCount(
+  email: string,
+  excludeOrderId = "",
+  db: Db = prisma,
+  brand?: string
+): Promise<number> {
   const rows = await db.$queryRaw<{ n: bigint | number }[]>`
     SELECT COUNT(*) AS n FROM "Order"
     WHERE lower("customerEmail") = ${normEmail(email)}
       AND "status" NOT IN ('pending', 'cancelled')
-      AND "id" != ${excludeOrderId}`;
+      AND "id" != ${excludeOrderId}
+      ${brand ? Prisma.sql`AND "brand" = ${brand}` : Prisma.empty}`;
   return Number(rows[0]?.n ?? 0);
 }
 
@@ -524,13 +531,18 @@ export function addressKey(shippingAddress: string): string | null {
   }
 }
 
-/** The subscribers list for /admin/subscribers and its CSV export. */
+/**
+ * The subscribers list for /admin/subscribers and its CSV export, in one
+ * brand or (no `brand`) every brand.
+ */
 export async function subscriberRows(opts: {
   filter: SubscriberFilter;
   q?: string;
   take?: number;
+  brand?: string;
 }): Promise<SubscriberRow[]> {
   const where: Prisma.SubscriberWhereInput = {
+    ...(opts.brand ? { brand: opts.brand } : {}),
     ...(opts.q ? { email: { contains: normEmail(opts.q) } } : {}),
     ...(opts.filter === "subscribed" || opts.filter === "not_ordered" ? { status: "subscribed" } : {}),
     ...(opts.filter === "unsubscribed" ? { status: "unsubscribed" } : {}),
@@ -542,16 +554,18 @@ export async function subscriberRows(opts: {
     ...(opts.take ? { take: opts.take } : {}),
   });
 
-  // Orders per address, case-insensitively, for just these subscribers.
+  // Orders per address with the subscriber's own brand, case-insensitively,
+  // for just these subscribers: each brand's list counts its own shop's orders.
   const counts = new Map<string, number>();
+  const countKey = (brand: string, email: string) => `${brand} ${email}`;
   if (subs.length > 0) {
     const emails = subs.map((s) => s.email);
-    const rows = await prisma.$queryRaw<{ email: string; n: bigint | number }[]>`
-      SELECT lower("customerEmail") AS email, COUNT(*) AS n FROM "Order"
+    const rows = await prisma.$queryRaw<{ brand: string; email: string; n: bigint | number }[]>`
+      SELECT "brand" AS brand, lower("customerEmail") AS email, COUNT(*) AS n FROM "Order"
       WHERE "status" NOT IN ('pending', 'cancelled')
         AND lower("customerEmail") IN (${Prisma.join(emails)})
-      GROUP BY lower("customerEmail")`;
-    for (const r of rows) counts.set(r.email, Number(r.n));
+      GROUP BY "brand", lower("customerEmail")`;
+    for (const r of rows) counts.set(countKey(r.brand, r.email), Number(r.n));
   }
 
   // Every welcome order, oldest first: an address seen before is a repeat.
@@ -572,18 +586,20 @@ export async function subscriberRows(opts: {
   return subs
     .map((s) => ({
       ...s,
-      orderCount: counts.get(s.email) ?? 0,
+      orderCount: counts.get(countKey(s.brand, s.email)) ?? 0,
       duplicateAddress: s.welcomeOrderId ? repeats.has(s.welcomeOrderId) : false,
     }))
     .filter((s) => opts.filter !== "not_ordered" || s.orderCount === 0);
 }
 
-export async function subscriberStats(): Promise<{ subscribed: number; lastWeek: number; redeemed: number }> {
+/** The list's headline counts, in one brand or (no `brand`) every brand. */
+export async function subscriberStats(brand?: string): Promise<{ subscribed: number; lastWeek: number; redeemed: number }> {
   const weekAgo = new Date(Date.now() - 7 * 86_400_000);
+  const inBrand = brand ? { brand } : {};
   const [subscribed, lastWeek, redeemed] = await Promise.all([
-    prisma.subscriber.count({ where: { status: "subscribed" } }),
-    prisma.subscriber.count({ where: { createdAt: { gte: weekAgo } } }),
-    prisma.subscriber.count({ where: { welcomeOrderId: { not: null } } }),
+    prisma.subscriber.count({ where: { ...inBrand, status: "subscribed" } }),
+    prisma.subscriber.count({ where: { ...inBrand, createdAt: { gte: weekAgo } } }),
+    prisma.subscriber.count({ where: { ...inBrand, welcomeOrderId: { not: null } } }),
   ]);
   return { subscribed, lastWeek, redeemed };
 }

@@ -7,6 +7,7 @@ import { requireAdminRole } from "@/lib/adminAuth";
 import { normEmail } from "@/lib/mailing-list";
 import { clearOptOut, optOut } from "@/lib/opt-outs";
 import { DEFAULT_BRAND } from "@/brands/registry";
+import { isAdminBrand } from "@/lib/admin/brand-scope";
 import type { FormState } from "@/lib/form-state";
 
 const emailField = z.string().trim().email("Enter a valid email address").max(254);
@@ -20,8 +21,10 @@ export async function addSubscriberAction(_prev: FormState, formData: FormData):
   const parsed = emailField.safeParse(formData.get("email"));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid email" };
   const email = normEmail(parsed.data);
-  // BacLab's list until the admin can choose a brand.
-  const brand = DEFAULT_BRAND;
+  // The brand whose list they asked to join; a form without one is BacLab's.
+  const chosen = formData.get("brand");
+  if (chosen !== null && !isAdminBrand(chosen)) return { error: "Choose a brand" };
+  const brand = chosen ?? DEFAULT_BRAND;
   try {
     const data = {
       status: "subscribed",

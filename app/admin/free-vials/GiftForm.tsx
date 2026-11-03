@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
+import { BrandSelect } from "@/components/admin/BrandSelect";
 import { addVialGiftAction, type GiftFormState } from "./actions";
 
 /**
@@ -13,11 +14,16 @@ export function GiftForm({
   email: initialEmail,
   maxVials,
   reasons,
+  brands,
+  defaultBrand,
 }: {
   email: string;
   maxVials: number;
   /** From lib/vial-gifts.ts GIFT_REASONS, passed in so this client file never imports it. */
   reasons: { key: string; label: string }[];
+  /** brandOptions(): the gift is honoured on that brand's next order only. */
+  brands: { id: string; label: string }[];
+  defaultBrand: string;
 }) {
   const [state, formAction] = useActionState<GiftFormState, FormData>(addVialGiftAction, {});
   const [email, setEmail] = useState(initialEmail);
@@ -93,6 +99,12 @@ export function GiftForm({
               </option>
             ))}
           </select>
+        </div>
+        <div>
+          <label htmlFor="gift-brand" className="label">
+            Brand
+          </label>
+          <BrandSelect id="gift-brand" options={brands} defaultValue={defaultBrand} />
         </div>
         <div className="min-w-[16rem] flex-1">
           <label htmlFor="gift-note" className="label">

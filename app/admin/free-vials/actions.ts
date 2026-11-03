@@ -6,7 +6,8 @@ import { prisma } from "@/lib/db";
 import { getAdminSession, requireAdminRole } from "@/lib/adminAuth";
 import { normEmail, previousOrderCount } from "@/lib/mailing-list";
 import { isOptedOut } from "@/lib/opt-outs";
-import { DEFAULT_BRAND } from "@/brands/registry";
+import { brandFor, DEFAULT_BRAND } from "@/brands/registry";
+import { isAdminBrand } from "@/lib/admin/brand-scope";
 import type { FormState } from "@/lib/form-state";
 import {
   MAX_GIFT_VIALS,
@@ -42,16 +43,20 @@ export async function addVialGiftAction(_prev: GiftFormState, formData: FormData
   if (!isGiftReason(reason)) return { error: "Choose a reason" };
   const note = String(formData.get("note") ?? "").trim().slice(0, 200);
 
-  // Gifts are BacLab's until the admin can choose a brand (VialGift.brand defaults to it).
-  const brand = DEFAULT_BRAND;
+  // The brand whose next order takes the gift, and whose email tells them
+  // (lib/vial-gifts.ts). A form without one is BacLab's.
+  const chosen = formData.get("brand");
+  if (chosen !== null && !isAdminBrand(chosen)) return { error: "Choose a brand" };
+  const brand = chosen ?? DEFAULT_BRAND;
+  const at = brand === DEFAULT_BRAND ? "" : ` at ${brandFor(brand).name}`;
   if (formData.get("anyway") !== "on") {
     const [orders, optOut, subscriber] = await Promise.all([
-      previousOrderCount(email),
+      previousOrderCount(email, "", prisma, brand),
       isOptedOut(email, brand),
       prisma.subscriber.findUnique({ where: { brand_email: { brand, email } }, select: { status: true } }),
     ]);
     const warnings: string[] = [];
-    if (orders === 0) warnings.push(`No paid orders have been placed with ${email}. Check the spelling.`);
+    if (orders === 0) warnings.push(`No paid orders have been placed with ${email}${at}. Check the spelling.`);
     if (optOut || subscriber?.status === "unsubscribed") {
       warnings.push(
         reason === "thanks"
@@ -66,12 +71,12 @@ export async function addVialGiftAction(_prev: GiftFormState, formData: FormData
 
   const session = await getAdminSession();
   const gift = await prisma.vialGift.create({
-    data: { email, vials, reason, note, actor: session?.adminUserId ?? "admin", expiresAt: giftExpiresAt(new Date()) },
+    data: { brand, email, vials, reason, note, actor: session?.adminUserId ?? "admin", expiresAt: giftExpiresAt(new Date()) },
   });
   const emailed = await sendGiftEmail(gift);
   revalidatePath("/admin/free-vials");
 
-  const total = await waitingVials(email);
+  const total = await waitingVials(email, new Date(), brand);
   const waiting = total > vials ? ` They now have ${total} free vials waiting.` : "";
   // Saved either way, so this is a success: an error would leave the form
   // filled in, inviting a second gift.

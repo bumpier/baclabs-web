@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/adminAuth";
 import { describeAudience, parseAudience } from "@/lib/campaigns";
 import { formatSaleDate } from "@/lib/saleTime";
+import { adminBrandScope, brandWhere } from "@/lib/admin/brand-scope";
+import { brandChip } from "@/lib/admin/brand-chip";
+import { BrandChip } from "@/components/admin/BrandChip";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +15,11 @@ const STATUS_STYLES: Record<string, string> = {
   sent: "bg-brand-tint text-brand-deep",
 };
 
-export default async function AdminCampaignsPage() {
+export default async function AdminCampaignsPage({ searchParams }: { searchParams: Promise<{ brand?: string }> }) {
   await requireAdminRole("ADMIN");
-  const campaigns = await prisma.campaign.findMany({ orderBy: { createdAt: "desc" }, take: 200 });
+  // The admin's brand scope (lib/admin/brand-scope.ts).
+  const inBrand = brandWhere(await adminBrandScope((await searchParams).brand));
+  const campaigns = await prisma.campaign.findMany({ where: inBrand, orderBy: { createdAt: "desc" }, take: 200 });
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -36,6 +41,7 @@ export default async function AdminCampaignsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
+                <th className="px-5 py-3 font-semibold">Brand</th>
                 <th className="px-5 py-3 font-semibold">Subject</th>
                 <th className="px-5 py-3 font-semibold">Audience</th>
                 <th className="px-5 py-3 font-semibold">Offer</th>
@@ -47,6 +53,9 @@ export default async function AdminCampaignsPage() {
             <tbody className="divide-y divide-line">
               {campaigns.map((c) => (
                 <tr key={c.id} className="hover:bg-brand-tint/40">
+                  <td className="px-5 py-3">
+                    <BrandChip chip={brandChip(c.brand)} />
+                  </td>
                   <td className="px-5 py-3 font-medium">
                     {c.subject}
                     <span className="block text-xs font-normal text-ink-soft">

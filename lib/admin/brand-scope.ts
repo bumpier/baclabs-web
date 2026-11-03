@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { allBrands } from "@/brands/registry";
+import { allBrands, DEFAULT_BRAND } from "@/brands/registry";
 
 /**
  * Which brand the admin is looking at: one brand, or every brand at once.
@@ -34,6 +34,24 @@ export const ADMIN_BRAND_COOKIE_MAX_AGE = 365 * 24 * 3600;
 export function isBrandScope(value: unknown): value is BrandScope {
   if (value === ALL_BRANDS_SCOPE) return true;
   return typeof value === "string" && allBrands().some((b) => b.id === value);
+}
+
+/** A registered brand's id (a test fixture's included), never "all": for rows the admin creates. */
+export function isAdminBrand(value: unknown): value is string {
+  return typeof value === "string" && value !== ALL_BRANDS_SCOPE && isBrandScope(value);
+}
+
+/**
+ * The brand a new row starts in (a campaign, a subscriber, free vials): the
+ * scope's brand, or BacLab while every brand is in scope.
+ */
+export function defaultBrandFor(scope: BrandScope): string {
+  return isAdminBrand(scope) ? scope : DEFAULT_BRAND;
+}
+
+/** Every registered brand, for a brand select: id and public name. */
+export function brandOptions(): { id: string; label: string }[] {
+  return allBrands().map((b) => ({ id: b.id, label: b.name }));
 }
 
 type ParamValue = string | string[] | null | undefined;

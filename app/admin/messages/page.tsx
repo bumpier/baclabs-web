@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/adminAuth";
 import { contactTopic } from "@/lib/contact";
 import { formatSaleDateTime } from "@/lib/saleTime";
+import { adminBrandScope, brandWhere, keepBrandParam } from "@/lib/admin/brand-scope";
+import { brandChip } from "@/lib/admin/brand-chip";
+import { BrandChip } from "@/components/admin/BrandChip";
 
 export const dynamic = "force-dynamic";
 
@@ -17,19 +20,22 @@ const FILTER_LABELS: Record<Filter, string> = { open: "Open", closed: "Handled",
 export default async function AdminMessagesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; brand?: string }>;
 }) {
   await requireAdminRole("ADMIN");
-  const { filter: raw } = await searchParams;
+  const { filter: raw, brand: brandQuery } = await searchParams;
   const filter: Filter = FILTERS.includes(raw as Filter) ? (raw as Filter) : "open";
+  // The admin's brand scope (lib/admin/brand-scope.ts).
+  const inBrand = brandWhere(await adminBrandScope(brandQuery));
+  const keep = keepBrandParam(brandQuery);
 
   const [rows, openCount] = await Promise.all([
     prisma.contactMessage.findMany({
-      where: filter === "all" ? {} : { status: filter },
+      where: filter === "all" ? inBrand : { ...inBrand, status: filter },
       orderBy: { createdAt: "desc" },
       take: 200,
     }),
-    prisma.contactMessage.count({ where: { status: "open" } }),
+    prisma.contactMessage.count({ where: { ...inBrand, status: "open" } }),
   ]);
 
   return (
@@ -45,7 +51,7 @@ export default async function AdminMessagesPage({
         {FILTERS.map((f) => (
           <Link
             key={f}
-            href={f === "open" ? "/admin/messages" : `/admin/messages?filter=${f}`}
+            href={keep(f === "open" ? "/admin/messages" : `/admin/messages?filter=${f}`)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               filter === f ? "bg-brand text-white" : "border border-line bg-white text-ink-soft hover:border-brand"
             }`}
@@ -65,6 +71,7 @@ export default async function AdminMessagesPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
+                <th className="px-5 py-3 font-semibold">Brand</th>
                 <th className="px-5 py-3 font-semibold">Received</th>
                 <th className="px-5 py-3 font-semibold">Topic</th>
                 <th className="px-5 py-3 font-semibold">From</th>
@@ -75,6 +82,9 @@ export default async function AdminMessagesPage({
             <tbody className="divide-y divide-line">
               {rows.map((m) => (
                 <tr key={m.id} className="hover:bg-brand-tint/40">
+                  <td className="px-5 py-3">
+                    <BrandChip chip={brandChip(m.brand)} />
+                  </td>
                   <td className="whitespace-nowrap px-5 py-3 text-ink-soft">{formatSaleDateTime(m.createdAt)}</td>
                   <td className="px-5 py-3 font-medium">
                     <Link href={`/admin/messages/${m.id}`} className="text-brand hover:text-brand-deep">

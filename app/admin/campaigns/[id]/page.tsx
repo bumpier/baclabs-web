@@ -6,6 +6,8 @@ import { requireAdminRole } from "@/lib/adminAuth";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { checkCompliance } from "@/lib/content-rules";
 import {
+  campaignBrand,
+  defaultPromoCode,
   describeAudience,
   expiresText,
   parseAudience,
@@ -13,6 +15,8 @@ import {
   resolveAudience,
   type AudienceSpec,
 } from "@/lib/campaigns";
+import { brandChip } from "@/lib/admin/brand-chip";
+import { BrandChip } from "@/components/admin/BrandChip";
 import { formatSaleDateTime } from "@/lib/saleTime";
 import { CampaignFields } from "@/app/admin/campaigns/CampaignFields";
 import {
@@ -37,6 +41,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
 
   const audience = parseAudience(campaign.audience);
   const isDraft = campaign.status === "draft";
+  const chip = brandChip(campaign.brand);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -47,7 +52,13 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
       </Link>
       <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">{isDraft ? "Draft" : campaign.status === "sending" ? "Sending…" : "Sent"}</p>
+          <p className="eyebrow flex items-center gap-2">
+            <BrandChip chip={chip} />
+            <span>
+              <span aria-hidden="true">{chip.name} · </span>
+              {isDraft ? "Draft" : campaign.status === "sending" ? "Sending…" : "Sent"}
+            </span>
+          </p>
           <h1 className="mt-1 font-display text-3xl font-medium tracking-tight text-brand-deep">{campaign.subject}</h1>
         </div>
         {isDraft && (
@@ -75,7 +86,8 @@ async function DraftView({
   audienceLabel: string;
 }) {
   const [recipients, warnings] = await Promise.all([
-    resolveAudience(audience),
+    // The campaign's own brand's list, as startCampaign() will send it.
+    resolveAudience(audience, c.brand),
     Promise.resolve(checkCompliance([c.subject, c.preheader, c.bodyMarkdown])),
   ]);
   return (
@@ -84,7 +96,7 @@ async function DraftView({
         <div className="card p-6">
           <h2 className="font-display text-lg font-medium text-brand-deep">Write</h2>
           <ActionForm action={saveCampaignAction} submitLabel="Save" className="mt-4 space-y-4">
-            <CampaignFields campaign={c} />
+            <CampaignFields campaign={c} defaultBrand={c.brand} />
           </ActionForm>
         </div>
 
@@ -141,7 +153,7 @@ async function DraftView({
                     name="code"
                     required
                     pattern="[A-Za-z0-9_\-]{3,30}"
-                    defaultValue={`BACLAB${Math.floor(10 + Math.random() * 90)}`}
+                    defaultValue={defaultPromoCode(campaignBrand(c), Math.floor(10 + Math.random() * 90))}
                     className="field font-mono uppercase"
                   />
                 </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/adminAuth";
 import { SUBSCRIBER_FILTERS, subscriberRows, type SubscriberFilter } from "@/lib/mailing-list";
+import { adminBrandScope, ALL_BRANDS_SCOPE, brandWhere } from "@/lib/admin/brand-scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,9 +23,12 @@ export async function GET(req: Request) {
     ? (raw as SubscriberFilter)
     : "all";
   const q = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
+  // The admin's brand scope (lib/admin/brand-scope.ts), as on the page.
+  const scope = await adminBrandScope(url.searchParams.get("brand"));
 
-  const rows = await subscriberRows({ filter, q });
-  const header = ["email", "status", "source", "signed_up", "orders", "welcome_order_id", "welcome_claimed_at", "reminder_1_at", "reminder_2_at", "bonus_until", "unsubscribed_at", "consent_text"];
+  const rows = await subscriberRows({ filter, q, ...brandWhere(scope) });
+  // brand last, so a spreadsheet built on an older export keeps its columns.
+  const header = ["email", "status", "source", "signed_up", "orders", "welcome_order_id", "welcome_claimed_at", "reminder_1_at", "reminder_2_at", "bonus_until", "unsubscribed_at", "consent_text", "brand"];
   const lines = rows.map((s) =>
     [
       s.email,
@@ -39,15 +43,17 @@ export async function GET(req: Request) {
       s.welcomeBonusUntil?.toISOString() ?? "",
       s.unsubscribedAt?.toISOString() ?? "",
       s.consentText,
+      s.brand,
     ]
       .map(cell)
       .join(",")
   );
   const date = new Date().toISOString().slice(0, 10);
+  const which = scope === ALL_BRANDS_SCOPE ? "" : `-${scope}`;
   return new NextResponse([header.join(","), ...lines].join("\r\n") + "\r\n", {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="subscribers-${filter}-${date}.csv"`,
+      "Content-Disposition": `attachment; filename="subscribers${which}-${filter}-${date}.csv"`,
       "Cache-Control": "private, no-store",
     },
   });

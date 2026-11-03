@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/adminAuth";
 import { formatMinor } from "@/config/funnel";
 import { formatSaleDate } from "@/lib/saleTime";
+import { adminBrandScope, brandWhere, keepBrandParam } from "@/lib/admin/brand-scope";
+import { brandChip } from "@/lib/admin/brand-chip";
+import { BrandChip } from "@/components/admin/BrandChip";
 
 export const dynamic = "force-dynamic";
 
@@ -25,19 +28,23 @@ const BADGE: Record<string, string> = {
 export default async function AdminPlansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; brand?: string }>;
 }) {
   await requireAdminRole("ADMIN");
-  const { status } = await searchParams;
+  const { status, brand: brandQuery } = await searchParams;
   const filter: Filter = FILTERS.includes(status as Filter) ? (status as Filter) : "active";
+  // The admin's brand scope (lib/admin/brand-scope.ts).
+  const inBrand = brandWhere(await adminBrandScope(brandQuery));
+  const keep = keepBrandParam(brandQuery);
 
   const overdueBefore = new Date(Date.now() - OVERDUE_MS);
   const [plans, overdue] = await Promise.all([
     prisma.plan.findMany({
-      where: filter === "all" ? { status: { not: "pending" } } : { status: filter },
+      where: { ...inBrand, ...(filter === "all" ? { status: { not: "pending" } } : { status: filter }) },
       orderBy: [{ nextBoxAt: "asc" }, { createdAt: "desc" }],
       take: 200,
     }),
+    // Every brand's: an overdue box means the cron has stopped, whichever brand it is.
     prisma.plan.count({ where: { status: "active", nextBoxAt: { lt: overdueBefore } } }),
   ]);
 
@@ -56,7 +63,7 @@ export default async function AdminPlansPage({
         {FILTERS.map((f) => (
           <Link
             key={f}
-            href={f === "active" ? "/admin/plans" : `/admin/plans?status=${f}`}
+            href={keep(f === "active" ? "/admin/plans" : `/admin/plans?status=${f}`)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
               filter === f ? "bg-brand text-white" : "border border-line bg-white text-ink-soft hover:border-brand"
             }`}
@@ -73,6 +80,7 @@ export default async function AdminPlansPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
+                <th className="px-5 py-3 font-semibold">Brand</th>
                 <th className="px-5 py-3 font-semibold">Customer</th>
                 <th className="px-5 py-3 font-semibold">Plan</th>
                 <th className="px-5 py-3 font-semibold">Paid</th>
@@ -87,6 +95,9 @@ export default async function AdminPlansPage({
                 const systemCancelled = p.cancelledBy.startsWith("system:");
                 return (
                   <tr key={p.id} className="hover:bg-brand-tint/40">
+                    <td className="px-5 py-3">
+                      <BrandChip chip={brandChip(p.brand)} />
+                    </td>
                     <td className="px-5 py-3 font-medium">{p.email || "—"}</td>
                     <td className="px-5 py-3 text-ink-soft">
                       {p.vialsPerBox} vials × {p.months} months
