@@ -6,6 +6,17 @@ import { LITERAL } from "@/lib/theme";
 // Generated at build time by next/og — no static asset to keep in sync with
 // the price, and no extra dependency. The previous build declared an 800×600
 // image and shipped a 271×100 one.
+//
+// BacLab's, though it sits at the app root, as do icon.svg and apple-icon.tsx:
+// inside the (baclab) route group Next would serve all three at hashed URLs
+// (/opengraph-image-<hash>), breaking the manifest and every shared link.
+// Root file metadata reaches every root layout, so every brand layout sets its
+// own `icons`, `openGraph.images` and `twitter.images` (the admin sets
+// `icons`), which Next lets win: it skips root file icons for a page whose
+// layouts set `icons`, and a root file image for a layout whose `openGraph`
+// or `twitter` has an `images` key of its own. On a brand host these paths
+// are rewritten into the brand's own tree anyway (middleware.ts), so BacLab's
+// files never serve there.
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = `${PRODUCT.name}, ${PRODUCT.size}`;

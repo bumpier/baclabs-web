@@ -13,7 +13,8 @@ import { PRODUCT, formatMinor } from "@/config/funnel";
  * would otherwise be inherited here, which is a conflicting signal on a page
  * that does not exist.
  *
- * Root-level `not-found.tsx` renders inside the root layout only, so it
+ * It renders inside BacLab's root layout only (for a notFound() in a page,
+ * and through app/global-not-found.tsx for every unmatched URL), so it
  * repeats the store layout's shell (skip link, header, main, footer) to keep
  * the header and footer navigation — the whole point of a custom 404 is that
  * a visitor on a dead link can get to a live page in one click.

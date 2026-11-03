@@ -2,7 +2,7 @@ import { LAB_KIT, PRODUCT, SINGLE_BUNDLE, STARTER_KIT, VIAL_ML, formatMinor, kit
 import { FACTS } from "@/content/facts";
 
 /**
- * The copy on the Starter Kit's landing page (app/(store)/starter-kit),
+ * The copy on the Starter Kit's landing page (app/(baclab)/(store)/starter-kit),
  * kept as data so scripts/test-order-pricing.ts can run it through the
  * content rules (lib/content-rules.ts) like a guide. Every figure is read
  * from config, never typed.

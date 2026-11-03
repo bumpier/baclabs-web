@@ -51,7 +51,7 @@ import { dayAfter, formatCutoffHour, formatDeliveryDay, nextDayDeadline, ukDayKe
  * sale has no end date, and inventing one would be fake urgency.
  *
  * WHY THE CLOCK IS CLIENT-ONLY. Storefront pages are cached for five minutes
- * (app/(store)/layout.tsx), so a countdown rendered on the server would be
+ * (app/(baclab)/(store)/layout.tsx), so a countdown rendered on the server would be
  * up to five minutes wrong before it ever reached the screen. The server and
  * the no-JS page get the timeless "order by [3pm]" in a tile of the same
  * height, and the ticking tiles replace it after hydration with nothing

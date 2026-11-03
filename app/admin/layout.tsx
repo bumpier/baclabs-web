@@ -1,16 +1,43 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { allBrands } from "@/brands/registry";
 import { getAdminSession } from "@/lib/adminAuth";
 import { adminBrandScope, ALL_BRANDS_SCOPE } from "@/lib/admin/brand-scope";
+import { brandCssVariables } from "@/lib/theme";
+import { canonicalOrigin } from "@/lib/site-url";
+import { bodyFont, displayFont } from "@/app/fonts";
 import { adminLogoutAction } from "@/app/admin/actions";
 import { AdminNav, type NavEntry, type NavLink } from "@/components/admin/AdminNav";
 import { BrandSwitcher, type BrandOption } from "@/components/admin/BrandSwitcher";
+import "../globals.css";
 
+// The admin is its own root layout, not a child of BacLab's storefront one,
+// so it carries none of the storefront's Organization JSON-LD, analytics or
+// cookie banner: the Meta pixel and GA never fire on an admin page. Same
+// fonts, stylesheet and palette as before, so every admin page looks as it did.
+//
 // robots.txt already disallows /admin/, but a disallow stops crawling, not
 // indexing: a URL linked from elsewhere can still appear as a bare result.
-export const metadata: Metadata = { robots: { index: false, follow: false } };
+//
+// `icons` is set here because app/icon.svg and app/apple-icon.tsx sit at the
+// app root (see app/opengraph-image.tsx): Next applies root file icons only
+// to a page whose layouts set none.
+// metadataBase because the root opengraph-image still reaches these pages,
+// as it always did: without one its URL would be built on localhost.
+export const metadata: Metadata = {
+  metadataBase: new URL(canonicalOrigin()),
+  title: { default: "Admin", template: "%s · Admin" },
+  robots: { index: false, follow: false },
+  icons: { icon: { url: "/icon.svg", type: "image/svg+xml", sizes: "any" } },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  colorScheme: "light",
+};
 
 type Gated<T> = T & { adminOnly?: boolean };
 
@@ -99,38 +126,46 @@ export default async function AdminLayout({
   const brandScope = session ? await adminBrandScope() : ALL_BRANDS_SCOPE;
 
   return (
-    <div className="relative z-10 flex min-h-screen flex-col">
-      <header className="no-print relative border-b border-line bg-brand-deep text-white">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex items-center gap-6">
-            <Link
-              href={isAdminRole ? "/admin" : "/admin/orders"}
-              className="flex items-center gap-2"
-            >
-              {/* Neutral: the admin serves every brand. */}
-              <span className="font-display text-lg font-semibold">Ops</span>
-              <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                {session?.role === "PACKER" ? "Packer" : "Admin"}
-              </span>
-            </Link>
-            {session && <AdminNav entries={nav} />}
-          </div>
-          {session && (
-            <div className="flex items-center gap-4">
-              {/* useSearchParams: a boundary keeps any static render whole. */}
-              <Suspense fallback={null}>
-                <BrandSwitcher options={brandOptions} current={brandScope} />
-              </Suspense>
-              <form action={adminLogoutAction}>
-                <button type="submit" className="text-sm text-white/75 hover:text-white">
-                  Sign out
-                </button>
-              </form>
+    <html
+      lang="en-GB"
+      className={`${bodyFont.variable} ${displayFont.variable}`}
+      style={brandCssVariables() as React.CSSProperties}
+    >
+      <body className="font-sans">
+        <div className="relative z-10 flex min-h-screen flex-col">
+          <header className="no-print relative border-b border-line bg-brand-deep text-white">
+            <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+              <div className="flex items-center gap-6">
+                <Link
+                  href={isAdminRole ? "/admin" : "/admin/orders"}
+                  className="flex items-center gap-2"
+                >
+                  {/* Neutral: the admin serves every brand. */}
+                  <span className="font-display text-lg font-semibold">Ops</span>
+                  <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    {session?.role === "PACKER" ? "Packer" : "Admin"}
+                  </span>
+                </Link>
+                {session && <AdminNav entries={nav} />}
+              </div>
+              {session && (
+                <div className="flex items-center gap-4">
+                  {/* useSearchParams: a boundary keeps any static render whole. */}
+                  <Suspense fallback={null}>
+                    <BrandSwitcher options={brandOptions} current={brandScope} />
+                  </Suspense>
+                  <form action={adminLogoutAction}>
+                    <button type="submit" className="text-sm text-white/75 hover:text-white">
+                      Sign out
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
-          )}
+          </header>
+          <main className="flex-1">{children}</main>
         </div>
-      </header>
-      <main className="flex-1">{children}</main>
-    </div>
+      </body>
+    </html>
   );
 }

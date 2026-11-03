@@ -10,7 +10,7 @@ import { brand } from "@/config/brand";
  * form message is emailed to (CONTACT_FORM_TO overrides the latter). Set in
  * config/brand.ts as brand.contact.published, not brand.contact.email, which
  * also feeds the footer, the home page and the structured data; see
- * app/(store)/contact/page.tsx. Other brands' inboxes are on their profiles
+ * app/(baclab)/(store)/contact/page.tsx. Other brands' inboxes are on their profiles
  * (brands/registry.ts), which this file must not import: the form is a
  * client component and would ship every brand's name.
  */

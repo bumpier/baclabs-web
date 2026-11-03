@@ -30,7 +30,7 @@ import {
  * The sections a pack page is built from.
  *
  * Each is a whole section with its own heading, so a variant in
- * app/(store)/products/[slug]/page.tsx composes a page by choosing sections
+ * app/(baclab)/(store)/products/[slug]/page.tsx composes a page by choosing sections
  * and their ORDER rather than by passing flags into one mega-component. That
  * is what lets the four variants be genuinely different page shapes: the
  * stock-up pages lead with the price ladder, the wholesale pages lead with

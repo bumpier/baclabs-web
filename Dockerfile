@@ -42,7 +42,7 @@ ARG NEXT_PUBLIC_DELIVERY_CHOICE
 # Lab Kits and /starter-kit (config/funnel.ts labKitEnabled). "1" = on sale.
 ARG NEXT_PUBLIC_LAB_KIT
 # Not NEXT_PUBLIC_, but still build-time: the home page is a static prerender,
-# so app/layout.tsx reads this while `next build` runs and bakes the
+# so app/(baclab)/layout.tsx reads this while `next build` runs and bakes the
 # <meta name="google-site-verification"> tag into the HTML. Passing it only
 # through env_file set it at RUNTIME, after the tag had already been rendered
 # without it — the variable appeared correct on the server and the tag was

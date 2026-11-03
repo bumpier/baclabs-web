@@ -67,6 +67,10 @@ const nextConfig = {
     // CSS paints on the first byte of HTML. The stylesheet is small enough
     // that losing its separate cache entry costs less than the round trip.
     inlineCss: true,
+    // app/global-not-found.tsx answers every URL no route matches. Each site
+    // has its own root layout and there is none above them, so without it an
+    // unmatched URL would get Next's bare 404 instead of BacLab's.
+    globalNotFound: true,
   },
   async headers() {
     return [

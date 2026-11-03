@@ -7,7 +7,7 @@ import { bodyFont, displayFont } from "@/app/fonts";
 import { Analytics } from "@/components/Analytics";
 import { CookieBanner } from "@/components/consent/CookieBanner";
 import { JsonLd } from "@/components/JsonLd";
-import "./globals.css";
+import "../globals.css";
 
 const SITE = canonicalOrigin();
 
