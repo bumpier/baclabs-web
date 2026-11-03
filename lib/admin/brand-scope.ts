@@ -127,3 +127,11 @@ export function brandRank(id: string): number {
   const i = allBrands().findIndex((b) => b.id === id);
   return i === -1 ? Number.MAX_SAFE_INTEGER : i;
 }
+
+/**
+ * `rows` grouped by brand in registry order, keeping their order within each
+ * brand (the sort is stable). A new array; `rows` is left alone.
+ */
+export function sortByBrand<T extends { brand: string }>(rows: readonly T[]): T[] {
+  return [...rows].sort((a, b) => brandRank(a.brand) - brandRank(b.brand));
+}

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { PARCEL_KINDS } from "@/lib/plans/kinds";
-import { adminBrandScope, keepBrandParam, ordersWhere } from "@/lib/admin/brand-scope";
+import { adminBrandScope, keepBrandParam, ordersWhere, sortByBrand } from "@/lib/admin/brand-scope";
+import { brandChip } from "@/lib/admin/brand-chip";
+import { BrandChip } from "@/components/admin/BrandChip";
 import { requireAdmin } from "@/lib/adminAuth";
 import { AutoPrint } from "@/components/AutoPrint";
 import { PrintButton } from "@/components/PrintButton";
@@ -56,12 +58,15 @@ export default async function AdminBatchPrintPage({
   // "Unfulfilled" is what the dashboard calls awaiting fulfilment: paid or
   // packed, not yet shipped. Packed counts because the carrier label is
   // bought on payment, which marks the order packed before anything is in a
-  // box. Oldest first, and the same sort for both kinds, so the slips and
-  // labels come off their printers in matching stacks.
-  const orders = await prisma.order.findMany({
-    where: ordersWhere({ brand, status: { in: ["paid", "packed"] }, kind: { in: PARCEL_KINDS } }),
-    orderBy: { createdAt: "asc" },
-  });
+  // box. Brand by brand, so each brand's boxes are packed together, then
+  // oldest first; the same sort for both kinds, so the slips and labels come
+  // off their printers in matching stacks.
+  const orders = sortByBrand(
+    await prisma.order.findMany({
+      where: ordersWhere({ brand, status: { in: ["paid", "packed"] }, kind: { in: PARCEL_KINDS } }),
+      orderBy: { createdAt: "asc" },
+    })
+  );
   const printable = orders.flatMap((order) => {
     const address = parseAddress(order);
     return address?.line1 ? [{ order, address }] : [];
@@ -69,6 +74,9 @@ export default async function AdminBatchPrintPage({
   const skipped = orders.length - printable.length;
   const count = printable.length;
   const heading = `${count} ${count === 1 ? KINDS[kind].singular : KINDS[kind].plural}`;
+  // How many of each brand, in print order, once there is more than one.
+  const perBrand = new Map<string, number>();
+  for (const { order } of printable) perBrand.set(order.brand, (perBrand.get(order.brand) ?? 0) + 1);
 
   return (
     <div
@@ -99,6 +107,16 @@ export default async function AdminBatchPrintPage({
           </div>
         </div>
         <p className="mt-4 text-sm text-ink-soft">{KINDS[kind].help}</p>
+        {perBrand.size > 1 && (
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-soft">
+            Brand by brand:
+            {[...perBrand].map(([id, n]) => (
+              <span key={id} className="flex items-center gap-1.5">
+                <BrandChip chip={brandChip(id)} /> {n}
+              </span>
+            ))}
+          </p>
+        )}
         {skipped > 0 && (
           <p className="mt-2 text-sm text-ink-soft">
             {skipped === 1

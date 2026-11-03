@@ -2,6 +2,9 @@ import Link from "next/link";
 import type { Order } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ActionForm } from "@/components/admin/ActionForm";
+import { PackInBanner } from "@/components/admin/PackInBanner";
+import { brandFor } from "@/brands/registry";
+import { brandChip } from "@/lib/admin/brand-chip";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { planOrderShipment } from "@/lib/shipping/order-parcel";
 import { declaredGrams, formatDimensions, formatWeight } from "@/lib/shipping/parcel";
@@ -41,15 +44,21 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
     prisma.shipment.findMany({ where: { orderId: order.id }, orderBy: { createdAt: "desc" } }),
   ]);
   const cfg = smartTrackConfig();
+  const open = ["paid", "packed"].includes(order.status);
+
+  // A brand with its own box or insert says so in large type while the order
+  // is still to go out, in every inventory mode. BacLab has no packing note,
+  // so its order page is unchanged.
+  const packIn = open ? brandFor(order.brand).shipping?.packingNote : undefined;
+  const banner = packIn ? <PackInBanner chip={brandChip(order.brand)} note={packIn} className="no-print mt-4" /> : null;
 
   // Until the warehouse system is in use, the order page stays exactly as it
   // was for manual fulfilment: no pick list saying "not allocated", no "create
   // a SKU" warning on every order. It appears once stock is switched to the
   // warehouse, SmartTrack is connected, or this order has a pick list or label.
-  if (mode === "legacy" && !cfg && pickLines.length === 0 && shipments.length === 0) return null;
+  if (mode === "legacy" && !cfg && pickLines.length === 0 && shipments.length === 0) return banner;
 
   const [plan, defaultInstructions] = await Promise.all([planOrderShipment(order), getDeliveryInstructions()]);
-  const open = ["paid", "packed"].includes(order.status);
   const shortfall = pickLines.filter((l) => !l.locationId).reduce((n, l) => n + l.quantity, 0);
   const picks = pickLines
     .filter((l) => l.location)
@@ -61,7 +70,7 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
   const suggested = plan.selection.service;
   const paidFor = deliveryOptionById(order.deliveryOption);
 
-  return (
+  const panels = (
     <div className="no-print mt-4 grid gap-4 lg:grid-cols-2">
       {/* ── Pick list ── */}
       <section className="card p-6 text-sm">
@@ -334,5 +343,14 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
         )}
       </section>
     </div>
+  );
+
+  return banner ? (
+    <>
+      {banner}
+      {panels}
+    </>
+  ) : (
+    panels
   );
 }

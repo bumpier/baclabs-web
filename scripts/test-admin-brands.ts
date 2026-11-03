@@ -7,7 +7,12 @@
  * and the ledger is fed rows by hand. A second brand comes from the test
  * fixture (scripts/fixtures/test-brand.ts).
  */
+import * as React from "react";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import type { Order } from "@prisma/client";
 import { brandFor, DEFAULT_BRAND } from "@/brands/registry";
+import { PackingSlip } from "@/components/admin/PackingSlip";
 import { brandChip, contrastRatio, textOn } from "@/lib/admin/brand-chip";
 import {
   ADMIN_BRAND_COOKIE,
@@ -21,6 +26,7 @@ import {
   keepBrandParam,
   ordersWhere,
   parseBrandScope,
+  sortByBrand,
 } from "@/lib/admin/brand-scope";
 import { takingsWhere } from "@/lib/dailyTakings";
 import {
@@ -35,7 +41,11 @@ import {
 } from "@/lib/finance/ledger";
 import { csvCell, ORDER_CSV_HEADER, orderCsvLine, PERIOD_CSV_HEADER, periodCsvLine, toCsv } from "@/lib/finance/csv";
 import { catchUpWhere } from "@/lib/shipping/catch-up";
-import { registerTestBrand, TEST_BRAND_ID } from "./fixtures/test-brand";
+import { bacLabLeaks, registerTestBrand, TEST_BRAND_ID } from "./fixtures/test-brand";
+
+// The app's JSX compiles to React.createElement here (tsconfig "jsx": "preserve"
+// leaves it to Next), so the slip needs React in scope to render.
+(globalThis as unknown as { React: typeof React }).React = React;
 
 let failures = 0;
 
@@ -221,6 +231,41 @@ async function main() {
   check("the CSV header row ends with brand", csv.split("\r\n")[0]!.endsWith(",brand"));
   check("the CSV data row ends with the quoted brand", csv.split("\r\n")[1]!.endsWith(`,"${TEST_BRAND_ID}"`));
   check("CSV cells still defuse formulas", csvCell("=SUM(A1)") === `"'=SUM(A1)"` && csvCell("-3.10") === `"-3.10"`);
+
+  // ── Packing: brand by brand, oldest first within each, each slip in its order's brand.
+  const queue = [
+    { id: "1", brand: TEST_BRAND_ID },
+    { id: "2", brand: "baclab" },
+    { id: "3", brand: "gone" },
+    { id: "4", brand: TEST_BRAND_ID },
+    { id: "5", brand: "baclab" },
+  ];
+  check("the batch print groups by brand, BacLab first, keeping order", sortByBrand(queue).map((o) => o.id).join() === "2,5,1,4,3");
+  check("sortByBrand leaves its input alone", queue.map((o) => o.id).join() === "1,2,3,4,5");
+
+  const slipOrder = (brand: string) =>
+    ({
+      id: "11111111-2222-3333-4444-555555555555",
+      brand,
+      createdAt: at("2026-10-06T08:50:00Z"),
+      customerName: "Alex Example",
+      customerEmail: "alex@example.com",
+      customerPhone: "07000 000000",
+      shippingAddress: JSON.stringify({ line1: "1 High St", city: "Leeds", country: "GB", postalCode: "LS1 1AA" }),
+      items: JSON.stringify([{ name: "5-vial pack", qty: 1, unitPrice: "21.99", lineTotal: "21.99" }]),
+      totalAmount: "21.99",
+      currency: "GBP",
+    }) as unknown as Order;
+  const slip = (brand: string) => renderToStaticMarkup(createElement(PackingSlip, { order: slipOrder(brand) }));
+  const blSlip = slip("baclab");
+  check("BacLab's slip has BacLab's name and thank-you", blSlip.includes(brandFor("baclab").name) && blSlip.includes(brandFor("baclab").packingSlipThankYou));
+  check("BacLab's slip has no packing note", !blSlip.includes("Pack in"));
+  const fxSlip = slip(TEST_BRAND_ID);
+  check("the fixture's slip has its name, escaped", fxSlip.includes("Fixture &amp; Co"));
+  check("the fixture's slip has its contact and thank-you", fxSlip.includes("help@fixture.example") && fxSlip.includes("Thanks from the fixture."));
+  check("the fixture's slip says what to pack it in", fxSlip.includes("Pack in: Fixture box"));
+  check("the fixture's logo comes from its own origin", fxSlip.includes('src="https://fixture.example/fixture/logo.svg"'));
+  check("nothing of BacLab's is on the fixture's slip", bacLabLeaks(fxSlip).length === 0, bacLabLeaks(fxSlip).join());
 
   if (failures > 0) {
     console.error(`\n${failures} check(s) failed`);

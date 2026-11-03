@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import type { Order } from "@prisma/client";
-import { brand, formatPrice, type Currency } from "@/config/brand";
+import { formatPrice, type Currency } from "@/config/brand";
+import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { parseAddress, type Address } from "@/lib/orderAddress";
 import { isKitLine, kitPartsFor } from "@/lib/order-items";
 
@@ -18,8 +19,25 @@ interface OrderItem {
   kit?: boolean;
 }
 
-/** The A4 sheet that goes in the box. Shared by the order page and the batch print. */
+/**
+ * The brand's logo as the admin can load it. A brand's logo is served on its
+ * own domain, and the admin runs on BacLab's, where the same path could be
+ * BacLab's own file, so another brand's is fetched from its origin. BacLab's
+ * is used as it always was.
+ */
+function slipLogo(b: BrandProfile): string {
+  if (b.id === DEFAULT_BRAND || !b.logo.startsWith("/")) return b.logo;
+  return `${b.origin}${b.logo}`;
+}
+
+/**
+ * The A4 sheet that goes in the box. Shared by the order page and the batch
+ * print. In the order's own brand (brands/registry.ts): its logo, name,
+ * contact and thank-you line, and what to pack it in when the brand says.
+ */
 export function PackingSlip({ order }: { order: Order }) {
+  const b = brandFor(order.brand);
+  const packIn = b.shipping?.packingNote;
   const items = JSON.parse(order.items) as OrderItem[];
   const address: Address = parseAddress(order) ?? {
     line1: "",
@@ -35,10 +53,10 @@ export function PackingSlip({ order }: { order: Order }) {
       <div className="flex items-start justify-between border-b border-line pb-6">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={brand.logo} alt="" className="h-10 w-10" />
+          <img src={slipLogo(b)} alt="" className="h-10 w-10" />
           <div>
-            <p className="font-display text-xl font-semibold text-brand-deep">{brand.name}</p>
-            <p className="text-xs text-ink-soft">{brand.contact.email}</p>
+            <p className="font-display text-xl font-semibold text-brand-deep">{b.name}</p>
+            <p className="text-xs text-ink-soft">{b.email.contact}</p>
           </div>
         </div>
         <div className="text-right text-sm">
@@ -51,6 +69,7 @@ export function PackingSlip({ order }: { order: Order }) {
               year: "numeric",
             })}
           </p>
+          {packIn ? <p className="mt-1 text-xs font-semibold">Pack in: {packIn}</p> : null}
         </div>
       </div>
 
@@ -128,7 +147,7 @@ export function PackingSlip({ order }: { order: Order }) {
       </table>
 
       <p className="mt-10 border-t border-line pt-6 text-center text-sm italic text-ink-soft">
-        {brand.packingSlipThankYou}
+        {b.packingSlipThankYou}
       </p>
     </div>
   );
