@@ -333,6 +333,27 @@ export function summarise(rows: readonly LedgerRow[]): FinanceTotals {
   return t;
 }
 
+// ── Grouping by brand
+
+export interface BrandTotals {
+  brand: string;
+  totals: FinanceTotals;
+}
+
+/**
+ * The figures brand by brand, one line for each of `brandIds` (registry
+ * order), including brands that sold nothing. A row whose brand is not in
+ * the list counts as BacLab's, as brandFor() reads it everywhere else.
+ */
+export function brandMix(rows: readonly LedgerRow[], brandIds: readonly string[]): BrandTotals[] {
+  const byBrand = new Map<string, LedgerRow[]>(brandIds.map((id) => [id, []]));
+  for (const r of rows) {
+    const id = byBrand.has(r.brand) ? r.brand : DEFAULT_BRAND;
+    byBrand.set(id, [...(byBrand.get(id) ?? []), r]);
+  }
+  return [...byBrand].map(([brand, rs]) => ({ brand, totals: summarise(rs) }));
+}
+
 // ── Grouping by day, week or month
 
 export type Granularity = "day" | "week" | "month";

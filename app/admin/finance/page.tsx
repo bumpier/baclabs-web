@@ -6,6 +6,7 @@ import { adminBrandScope, brandParam, keepBrandParam } from "@/lib/admin/brand-s
 import { PRESETS, resolveRange } from "@/lib/finance/range";
 import { daysInRange, shopDayKey } from "@/lib/saleTime";
 import { ShippingChart, TakingsChart, type FinancePoint } from "@/components/admin/finance/FinanceCharts";
+import { BrandBreakdown } from "@/components/admin/finance/BrandBreakdown";
 import { describeDelivery, FinanceWarningsPanel, gbp, plural, shortDay, Stat } from "@/components/admin/finance/parts";
 
 export const dynamic = "force-dynamic";
@@ -172,6 +173,13 @@ export default async function AdminFinancePage({
           VAT is taken off from {shortDay(f.vatFrom!)}, when the shop registered; days before that carry none.
         </p>
       )}
+
+      <BrandBreakdown
+        brands={f.brands}
+        total={t}
+        hrefFor={(id) => `/admin/finance?from=${f.from}&to=${f.to}&brand=${encodeURIComponent(id)}`}
+        className="mt-10"
+      />
 
       <FinanceWarningsPanel warnings={f.warnings} serviceNames={f.serviceNames} />
 
@@ -348,7 +356,7 @@ export default async function AdminFinancePage({
               </tbody>
             </table>
           )}
-          <p className="mt-3 text-xs text-ink-soft">Matched by email address across every order the shop has sold.</p>
+          <p className="mt-3 text-xs text-ink-soft">Matched by email address across every order the same brand has sold.</p>
         </section>
       </div>
 

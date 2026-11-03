@@ -4,6 +4,7 @@ import { firstSaleDay, loadFinance } from "@/lib/finance/query";
 import { adminBrandScope, keepBrandParam } from "@/lib/admin/brand-scope";
 import { EXPORT_RANGES, exportRange, parseExportRange, type ExportRangeId } from "@/lib/finance/range";
 import { daysInRange, shopDayKey } from "@/lib/saleTime";
+import { BrandBreakdown } from "@/components/admin/finance/BrandBreakdown";
 import { gbp, plural, shortDay } from "@/components/admin/finance/parts";
 
 export const dynamic = "force-dynamic";
@@ -63,12 +64,19 @@ export default async function AdminExportPage({
         {gbp(t.takenMinor)} taken
       </p>
 
+      <BrandBreakdown
+        brands={f.brands}
+        total={t}
+        hrefFor={(b) => `/admin/export?range=${id}&brand=${encodeURIComponent(b)}`}
+        className="mt-6"
+      />
+
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <section className="card p-6">
           <h2 className="font-display text-xl font-medium text-brand-deep">Orders</h2>
           <p className="mt-2 text-sm text-ink-soft">
             One row per order: when it was paid, the customer, pack, delivery, what was taken, VAT,
-            postage and fulfilment. Includes paid orders cancelled later, with their status.
+            postage, fulfilment and the brand. Includes paid orders cancelled later, with their status.
           </p>
           <p className="mt-3 text-sm font-medium">{plural(f.rows.length, "row")}</p>
           <a href={fileHref("order")} className="btn-primary mt-5">

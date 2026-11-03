@@ -5,6 +5,7 @@ import { loadFinance } from "@/lib/finance/query";
 import { adminBrandScope, brandParam, keepBrandParam } from "@/lib/admin/brand-scope";
 import { statusLabel } from "@/lib/order-status";
 import { formatSaleClock, formatShopDay, parseDayKey, shiftDayKey, shopDayKey } from "@/lib/saleTime";
+import { BrandBreakdown } from "@/components/admin/finance/BrandBreakdown";
 import { describeDelivery, FinanceWarningsPanel, gbp, plural, Stat } from "@/components/admin/finance/parts";
 
 export const dynamic = "force-dynamic";
@@ -140,6 +141,13 @@ export default async function AdminTakingsPage({
           cancelled afterwards and {t.cancelledOrders === 1 ? "is" : "are"} not counted: {gbp(t.cancelledMinor)}.
         </p>
       )}
+
+      <BrandBreakdown
+        brands={f.brands}
+        total={t}
+        hrefFor={(id) => `/admin/takings?date=${day}&brand=${encodeURIComponent(id)}`}
+        className="mt-10"
+      />
 
       <FinanceWarningsPanel warnings={f.warnings} serviceNames={f.serviceNames} />
 

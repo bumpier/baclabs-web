@@ -23,7 +23,17 @@ import {
   parseBrandScope,
 } from "@/lib/admin/brand-scope";
 import { takingsWhere } from "@/lib/dailyTakings";
-import { customerKey, firstOrders, ledgerRow, type LedgerContext, type LedgerOrder } from "@/lib/finance/ledger";
+import {
+  brandMix,
+  bucket,
+  customerKey,
+  firstOrders,
+  ledgerRow,
+  summarise,
+  type LedgerContext,
+  type LedgerOrder,
+} from "@/lib/finance/ledger";
+import { csvCell, ORDER_CSV_HEADER, orderCsvLine, PERIOD_CSV_HEADER, periodCsvLine, toCsv } from "@/lib/finance/csv";
 import { catchUpWhere } from "@/lib/shipping/catch-up";
 import { registerTestBrand, TEST_BRAND_ID } from "./fixtures/test-brand";
 
@@ -176,6 +186,41 @@ async function main() {
   check("a second order with that brand is a repeat", ledgerRow(order({ id: "f2", brand: TEST_BRAND_ID }), ctx).customer === "returning");
   check("BacLab's first order is still new", ledgerRow(order({ id: "b1", brand: "baclab" }), ctx).customer === "new");
   check("a row with no brand reads as BacLab", ledgerRow(order({ id: "b1" }), ctx).brand === "baclab");
+
+  // ── Brand by brand: each brand's figures apart, every brand listed.
+  const rows = [
+    ledgerRow(order({ id: "b1", brand: "baclab", amountPaidMinor: 1000, deliveryMinor: 0, totalAmount: "10.00" }), ctx),
+    ledgerRow(order({ id: "f1", brand: TEST_BRAND_ID, amountPaidMinor: 2500, deliveryMinor: 0, totalAmount: "25.00" }), ctx),
+    ledgerRow(order({ id: "f2", brand: TEST_BRAND_ID, amountPaidMinor: 500, deliveryMinor: 0, totalAmount: "5.00" }), ctx),
+    ledgerRow(order({ id: "g1", brand: "gone", amountPaidMinor: 100, deliveryMinor: 0, totalAmount: "1.00" }), ctx),
+  ];
+  const mix = brandMix(rows, ["baclab", TEST_BRAND_ID, "empty"]);
+  const of = (id: string) => mix.find((m) => m.brand === id)?.totals;
+  check("brands come in the order given", mix.map((m) => m.brand).join() === `baclab,${TEST_BRAND_ID},empty`);
+  check("the fixture's takings are its own", of(TEST_BRAND_ID)?.takenMinor === 3000 && of(TEST_BRAND_ID)?.orders === 2);
+  check("an unregistered brand's order counts as BacLab's", of("baclab")?.takenMinor === 1100 && of("baclab")?.orders === 2);
+  check("a brand with no sales is listed at zero", of("empty")?.orders === 0 && of("empty")?.takenMinor === 0);
+  check(
+    "the brands add up to the whole",
+    mix.reduce((n, m) => n + m.totals.takenMinor, 0) === summarise(rows).takenMinor
+  );
+
+  // ── CSVs: the old columns, unchanged and in order, then brand.
+  const OLD_PERIOD = "period,from,to,orders,vials,welcome_vials,gift_vials,order_value,delivery,taken,discounts,vat,postage,postage_cancelled_orders,packages,fulfilment,after_shipping_costs,cancelled_orders,cancelled_value";
+  const OLD_ORDER = "order_id,kind,paid_at,day,status,customer_name,customer_email,customer,pack,vials,welcome_vials,gift_vials,delivery_option,order_value,delivery,taken,discount,vat,postage,postage_status,packages,fulfilment,after_shipping_costs";
+  check("period CSV keeps its columns, then brand", PERIOD_CSV_HEADER.join(",") === `${OLD_PERIOD},brand`);
+  check("order CSV keeps its columns, then brand", ORDER_CSV_HEADER.join(",") === `${OLD_ORDER},brand`);
+  const line = orderCsvLine(rows[1]!);
+  check("an order line has a cell per column", line.length === ORDER_CSV_HEADER.length);
+  check("an order line ends with its brand", line[line.length - 1] === TEST_BRAND_ID && line[0] === "f1");
+  const buckets = bucket(rows, "2026-10-06", "2026-10-06", "day");
+  const pLine = periodCsvLine(buckets[0]!, "all");
+  check("a period line has a cell per column", pLine.length === PERIOD_CSV_HEADER.length);
+  check("a period line ends with the scope", pLine[pLine.length - 1] === "all" && periodCsvLine(buckets[0]!, TEST_BRAND_ID).at(-1) === TEST_BRAND_ID);
+  const csv = toCsv(ORDER_CSV_HEADER, [line]);
+  check("the CSV header row ends with brand", csv.split("\r\n")[0]!.endsWith(",brand"));
+  check("the CSV data row ends with the quoted brand", csv.split("\r\n")[1]!.endsWith(`,"${TEST_BRAND_ID}"`));
+  check("CSV cells still defuse formulas", csvCell("=SUM(A1)") === `"'=SUM(A1)"` && csvCell("-3.10") === `"-3.10"`);
 
   if (failures > 0) {
     console.error(`\n${failures} check(s) failed`);

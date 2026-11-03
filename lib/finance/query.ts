@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/db";
+import { allBrands } from "@/brands/registry";
 import { ALL_BRANDS_SCOPE, ordersWhere, type BrandScope } from "@/lib/admin/brand-scope";
 import { SOLD_STATUSES, takingsWhere } from "@/lib/dailyTakings";
 import {
+  brandMix,
   bucket,
   customerMix,
   deliveryMix,
@@ -84,6 +86,8 @@ export async function loadFinance(
     },
     granularity,
     buckets: bucket(rows, from, to, granularity),
+    // Every brand at once: each brand's own figures too. [] for one brand.
+    brands: brand === ALL_BRANDS_SCOPE ? brandMix(rows, allBrands().map((b) => b.id)) : [],
     delivery: deliveryMix(rows),
     packs: packMix(rows),
     customers: customerMix(rows),
