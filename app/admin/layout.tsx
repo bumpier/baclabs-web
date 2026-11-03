@@ -31,6 +31,7 @@ const ALL_NAV: Gated<NavLink | { label: string; items: Gated<NavLink>[] }>[] = [
       { href: "/admin/finance", label: "Overview", hint: "Takings, shipping costs and charts" },
       { href: "/admin/takings", label: "Daily takings", hint: "One day, order by order" },
       { href: "/admin/finance/costs", label: "Costs", hint: "Postage, fulfilment and VAT" },
+      { href: "/admin/export", label: "Export", hint: "Sales as a CSV, up to all time" },
     ],
   },
   {
