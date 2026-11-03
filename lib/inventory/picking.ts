@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { brandFor } from "@/brands/registry";
+import { brandChip, type BrandChipData } from "@/lib/admin/brand-chip";
 import { parseAddress } from "@/lib/orderAddress";
 import {
   decideScan,
@@ -35,6 +37,8 @@ export interface PickView {
   orderId: string;
   ref: string;
   status: string;
+  /** The order's brand, for the chip, and what its parcel is packed in (brand.shipping.packingNote). */
+  brand: BrandChipData & { packingNote: string | null };
   customerName: string;
   postcode: string;
   lines: (PickLineState & { skuName: string })[];
@@ -68,6 +72,7 @@ async function loadView(db: Tx | typeof prisma, orderId: string): Promise<PickVi
     orderId: order.id,
     ref: orderScanCode(order.id),
     status: order.status,
+    brand: { ...brandChip(order.brand), packingNote: brandFor(order.brand).shipping?.packingNote || null },
     customerName: order.customerName,
     postcode: parseAddress(order)?.postalCode ?? "",
     lines,

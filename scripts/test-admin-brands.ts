@@ -7,7 +7,8 @@
  * and the ledger is fed rows by hand. A second brand comes from the test
  * fixture (scripts/fixtures/test-brand.ts).
  */
-import { DEFAULT_BRAND } from "@/brands/registry";
+import { brandFor, DEFAULT_BRAND } from "@/brands/registry";
+import { brandChip, contrastRatio, textOn } from "@/lib/admin/brand-chip";
 import {
   ADMIN_BRAND_COOKIE,
   ALL_BRANDS_SCOPE,
@@ -113,8 +114,28 @@ async function main() {
   check("no brand is BacLab's key", customerKey("a@example.com", undefined) === "a@example.com");
   check("another brand's key is prefixed", customerKey("A@example.com", "other") === "other a@example.com");
 
+  // ── Chips: the short code on the brand colour, always readable.
+  const bl = brandChip("baclab");
+  check("BacLab's chip is BL on its primary blue", bl.shortCode === "BL" && bl.background === brandFor("baclab").colours.primary);
+  check("BacLab's chip text is white", bl.color === "#FFFFFF");
+  check("a light colour gets black text", textOn("#FFD400") === "#000000" && textOn("#fff") === "#000000");
+  check("a dark colour gets white text", textOn("#050B1F") === "#FFFFFF");
+  check("contrast of white on black is 21", Math.round(contrastRatio("#FFFFFF", "#000000")) === 21);
+  let worst = 21;
+  for (let r = 0; r <= 255; r += 15)
+    for (let g = 0; g <= 255; g += 15)
+      for (let b = 0; b <= 255; b += 15) {
+        const hex = `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+        worst = Math.min(worst, contrastRatio(textOn(hex), hex));
+      }
+  check("every colour gets text at AA contrast (4.5:1) or better", worst >= 4.5, worst.toFixed(2));
+  check("an unknown brand's chip is BacLab's", brandChip("nope").shortCode === "BL");
+
   // ── A second brand.
   const fixture = registerTestBrand();
+  const fx = brandChip(TEST_BRAND_ID);
+  check("the fixture's chip is its own", fx.shortCode === "FX" && fx.name === "Fixture & Co" && fx.background === "#8A3B12");
+  check("the fixture's chip text is readable", contrastRatio(fx.color, fx.background) >= 4.5);
   check("the fixture is a scope once registered", isBrandScope(TEST_BRAND_ID));
   check("the param can pick the fixture", parseBrandScope(TEST_BRAND_ID, "baclab") === TEST_BRAND_ID);
   check("BacLab ranks first", brandRank(DEFAULT_BRAND) === 0 && brandRank(TEST_BRAND_ID) > 0);

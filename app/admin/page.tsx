@@ -9,16 +9,25 @@ import { LabelWarning } from "@/components/admin/LabelWarning";
 import { TrackingWarning } from "@/components/admin/TrackingWarning";
 import { LowStockWarning } from "@/components/admin/LowStockWarning";
 import { catchUpCount } from "@/lib/shipping/catch-up";
-import { adminBrandScope, brandParam, keepBrandParam, ordersWhere } from "@/lib/admin/brand-scope";
+import { allBrands, brandFor } from "@/brands/registry";
+import {
+  adminBrandScope,
+  ALL_BRANDS_SCOPE,
+  brandParam,
+  keepBrandParam,
+  ordersWhere,
+} from "@/lib/admin/brand-scope";
+import { brandChip } from "@/lib/admin/brand-chip";
+import { BrandChip } from "@/components/admin/BrandChip";
 import { PARCEL_KINDS } from "@/lib/plans/kinds";
 import { statusLabel } from "@/lib/order-status";
 import { SalesActivityChart } from "@/components/admin/SalesActivity";
 import { buildSalesActivity } from "@/lib/salesActivity";
-import { dailyTakings, SOLD_STATUSES } from "@/lib/dailyTakings";
+import { dailyTakings, SOLD_STATUSES, summariseTakings } from "@/lib/dailyTakings";
 import { loadFinance } from "@/lib/finance/query";
 import { shiftDayKey, shopDayKey } from "@/lib/saleTime";
 import { loadVialStock, summariseVialStock } from "@/lib/vial-stock";
-import { shortDay } from "@/components/admin/finance/parts";
+import { plural, shortDay } from "@/components/admin/finance/parts";
 import type { DailyRevenue, StatusCount, ProductCount } from "@/components/admin/AnalyticsDashboard";
 
 export const dynamic = "force-dynamic";
@@ -143,6 +152,17 @@ export default async function AdminOverviewPage({
     },
   ];
 
+  // Today's takings brand by brand, beside the all-brands total, when the
+  // dashboard shows every brand. An unregistered brand's order is BacLab's,
+  // as everywhere else (brandFor).
+  const todayByBrand =
+    brand === ALL_BRANDS_SCOPE
+      ? allBrands().map((b) => ({
+          chip: brandChip(b.id),
+          summary: summariseTakings(takingsToday.orders.filter((o) => brandFor(o.brand).id === b.id)),
+        }))
+      : [];
+
   // ── Analytics data
   const dailyRevenue: DailyRevenue[] = lastThirtyDays.buckets.map((b) => ({
     date: b.label,
@@ -232,6 +252,37 @@ export default async function AdminOverviewPage({
           </Link>
         ))}
       </div>
+
+      {todayByBrand.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-display text-xl font-medium text-brand-deep">Taken today by brand</h2>
+          <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {todayByBrand.map(({ chip, summary }) => (
+              <Link
+                key={chip.id}
+                href={`/admin/takings?brand=${encodeURIComponent(chip.id)}`}
+                className="card p-5 transition-shadow hover:shadow-lift"
+              >
+                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                  <BrandChip chip={chip} />
+                  <span aria-hidden="true">{chip.name}</span>
+                </p>
+                <p className="mt-2 font-display text-3xl font-medium text-brand-deep">
+                  {formatPrice(summary.takenMinor / 100, "GBP")}
+                </p>
+                <p className="mt-1 text-xs text-ink-soft">{plural(summary.orders, "order")}</p>
+              </Link>
+            ))}
+            <Link href={keep("/admin/takings")} className="card border-brand p-5 transition-shadow hover:shadow-lift">
+              <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">All brands</p>
+              <p className="mt-2 font-display text-3xl font-medium text-brand-deep">
+                {formatPrice(takingsToday.summary.takenMinor / 100, "GBP")}
+              </p>
+              <p className="mt-1 text-xs text-ink-soft">{plural(takingsToday.summary.orders, "order")}</p>
+            </Link>
+          </div>
+        </section>
+      )}
 
       <div className="mt-10 flex flex-wrap gap-3">
         <PrintUnfulfilledMenu count={unshippedOrders} brand={brandParam(sp.brand)} />

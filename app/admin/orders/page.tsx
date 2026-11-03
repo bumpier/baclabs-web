@@ -11,6 +11,8 @@ import { formatSaleClock, formatSaleDate, saleTime } from "@/lib/saleTime";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { PARCEL_KINDS } from "@/lib/plans/kinds";
 import { adminBrandScope, keepBrandParam, ordersWhere } from "@/lib/admin/brand-scope";
+import { brandChip } from "@/lib/admin/brand-chip";
+import { BrandChip } from "@/components/admin/BrandChip";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +102,7 @@ export default async function AdminOrdersPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
+                <th className="px-5 py-3 font-semibold">Brand</th>
                 <th className="px-5 py-3 font-semibold">Date</th>
                 <th className="px-5 py-3 font-semibold">Customer</th>
                 {!isPacker && <th className="px-5 py-3 font-semibold">Total</th>}
@@ -114,6 +117,9 @@ export default async function AdminOrdersPage({
                 const label = o.shipments[0];
                 return (
                   <tr key={o.id} className="hover:bg-brand-tint/40">
+                    <td className="px-5 py-3">
+                      <BrandChip chip={brandChip(o.brand)} />
+                    </td>
                     <td className="px-5 py-3 text-ink-soft">
                       {formatSaleDate(saleTime(o))}
                       <span className="block text-xs">{formatSaleClock(saleTime(o))}</span>

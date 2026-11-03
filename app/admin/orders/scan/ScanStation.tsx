@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ORDER_SCAN_PREFIX } from "@/lib/inventory/codes";
 import type { PickView } from "@/lib/inventory/picking";
+import { BrandChip } from "@/components/admin/BrandChip";
+import { PackInBanner } from "@/components/admin/PackInBanner";
 import {
   markPackedAction,
   openPickListAction,
@@ -152,12 +154,17 @@ export function ScanStation() {
       <div className={`rounded-2xl px-6 py-8 text-center transition-colors duration-150 ${PANEL[tone]}`} role="status" aria-live="assertive">
         <p className="text-2xl font-semibold leading-snug sm:text-3xl">{message}</p>
         {view && (
-          <p className="mt-2 text-sm opacity-80">
-            {view.ref} · {view.customerName}
-            {view.postcode ? ` · ${view.postcode}` : ""} · {picked} of {total} picked
+          <p className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm">
+            <BrandChip chip={view.brand} />
+            <span className="opacity-80">
+              {view.ref} · {view.customerName}
+              {view.postcode ? ` · ${view.postcode}` : ""} · {picked} of {total} picked
+            </span>
           </p>
         )}
       </div>
+
+      {view?.brand.packingNote && <PackInBanner chip={view.brand} note={view.brand.packingNote} />}
 
       <form onSubmit={submit} className="flex gap-3">
         <input

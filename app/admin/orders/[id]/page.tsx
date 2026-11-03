@@ -10,6 +10,8 @@ import { OrderFulfilment } from "@/components/admin/OrderFulfilment";
 import { SubmitButton } from "@/components/forms";
 import { SHOP_TIME_ZONE, formatSaleDateTime } from "@/lib/saleTime";
 import { statusLabel } from "@/lib/order-status";
+import { brandChip } from "@/lib/admin/brand-chip";
+import { BrandChip } from "@/components/admin/BrandChip";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +59,7 @@ export default async function AdminOrderDetailPage({
   // Box 1 of a plan (its purchase order, or an upgraded original): cancelling
   // the order releases its stock but leaves the plan running.
   const planBoxOne = order.plan && order.planBox === 1 && actions.some((a) => a.status === "cancelled") ? order.plan : null;
+  const chip = brandChip(order.brand);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
@@ -64,8 +67,14 @@ export default async function AdminOrderDetailPage({
       <div className="no-print">
         <p className="eyebrow">Order detail</p>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
-          <h1 className="font-display text-2xl font-medium tracking-tight text-brand-deep">
-            Order <span className="font-mono text-lg">{order.id.slice(0, 8)}</span>
+          <h1 className="flex flex-wrap items-center gap-3 font-display text-2xl font-medium tracking-tight text-brand-deep">
+            <span>
+              Order <span className="font-mono text-lg">{order.id.slice(0, 8)}</span>
+            </span>
+            <span className="flex items-center gap-2 font-sans text-sm font-medium text-ink-soft">
+              <BrandChip chip={chip} />
+              <span aria-hidden="true">{chip.name}</span>
+            </span>
           </h1>
           <div className="flex flex-wrap gap-3">
             {actions.map((a) => (
