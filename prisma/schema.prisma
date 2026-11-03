@@ -183,9 +183,17 @@ model EmailLog {
   @@unique([orderId, type])
 }
 
+// "Never email this person", per brand (lib/opt-outs.ts). Unsubscribing
+// from one brand's emails says nothing about another's, so the brand is part
+// of the key. brand "*" suppresses the address for EVERY brand: for a bounce
+// or a spam complaint, which are about the mailbox, not the brand. Rows from
+// before brands existed were BacLab unsubscribes, so they read as "baclab".
 model EmailOptOut {
-  email     String   @id
+  email     String
+  brand     String   @default("baclab")
   createdAt DateTime @default(now())
+
+  @@id([email, brand])
 }
 
 // ── Prepaid monthly plans ─────────────────────────────────────────
@@ -259,12 +267,15 @@ model Plan {
 // is the only file that writes this table outside the admin.
 //
 // Unsubscribing also writes an EmailOptOut row, which is what every sender
-// checks: the opt-out list stays the one source of "never email this person".
+// checks: the opt-out list stays the one source of "never email this person"
+// (for that brand, or for every brand after a bounce or complaint).
 model Subscriber {
   id          String   @id @default(cuid())
   // The storefront brand (brands/registry.ts). Rows from before brands existed are BacLab.
+  // One list per brand: the same address can be on several, each with its
+  // own consent record (the unique pair below).
   brand       String   @default("baclab")
-  email       String   @unique // lower-cased
+  email       String // lower-cased
   status      String   @default("subscribed") // subscribed | unsubscribed
   source      String   @default("footer") // popup | footer | inline | admin
   consentText String   @default("") @map("consent_text")
@@ -291,6 +302,7 @@ model Subscriber {
   createdAt      DateTime  @default(now()) @map("created_at")
   unsubscribedAt DateTime? @map("unsubscribed_at")
 
+  @@unique([brand, email])
   @@index([status, createdAt])
 }
 

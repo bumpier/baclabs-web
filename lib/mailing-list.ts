@@ -366,17 +366,24 @@ export async function subscriberFromCookie(cookieHeader: string | null): Promise
 /**
  * The subscriber whose gift belongs on a new checkout, or null. The signed-up
  * browser's cookie wins; otherwise the email typed at checkout (crypto only,
- * since card customers give theirs on Stripe's page).
+ * since card customers give theirs on Stripe's page). Only a subscriber of
+ * the checkout's own brand: each brand's list gives its own gift. Whether
+ * the mailbox has ordered before is judged across every brand, below.
  */
 export async function welcomeForCheckout(opts: {
   cookieHeader: string | null;
   email?: string;
+  brand?: string;
 }): Promise<Subscriber | null> {
   if (!welcomeVialOn()) return null;
+  const brand = opts.brand ?? DEFAULT_BRAND;
   try {
+    const fromCookie = await subscriberFromCookie(opts.cookieHeader);
     const sub =
-      (await subscriberFromCookie(opts.cookieHeader)) ??
-      (opts.email ? await prisma.subscriber.findUnique({ where: { email: normEmail(opts.email) } }) : null);
+      (fromCookie?.brand === brand ? fromCookie : null) ??
+      (opts.email
+        ? await prisma.subscriber.findUnique({ where: { brand_email: { brand, email: normEmail(opts.email) } } })
+        : null);
     if (!sub) return null;
     return welcomeEligible(sub, await mailboxOrderCount(sub.email)) ? sub : null;
   } catch (err) {
@@ -406,11 +413,19 @@ export async function welcomeForCheckout(opts: {
  * free) and take a vial on every order. So the paying mailbox
  * (mailboxOrderCount) and the delivery household (householdOrderCount) must
  * have no paid order before this one.
+ *
+ * Those two checks count every brand's orders: it is the same vial from the
+ * same stock whichever site gives it, so a household that has ordered from
+ * one brand has had its first order. The subscriber matched by email is the
+ * order's own brand's. The notes say why without naming where the earlier
+ * order was placed, since it may have been another brand.
  */
 export async function settleWelcomeVial(
   tx: Prisma.TransactionClient,
   order: {
     id: string;
+    /** Left out (an order from before brands existed): BacLab. */
+    brand?: string;
     items: string;
     customerEmail: string;
     customerName: string;
@@ -426,6 +441,7 @@ export async function settleWelcomeVial(
   const orderedBefore = async () =>
     (await mailboxOrderCount(order.customerEmail, order.id, tx)) > 0 ||
     (await householdOrderCount(order, tx)) > 0;
+  // Never names a brand: the earlier order may have been on another site.
   const BEEN_BEFORE = "this email or delivery address has ordered before.";
 
   if (items.some(isWelcomeItem)) {
@@ -449,7 +465,9 @@ export async function settleWelcomeVial(
   }
 
   if (!welcomeVialOn() || !order.customerEmail) return unchanged;
-  const sub = await tx.subscriber.findUnique({ where: { email: normEmail(order.customerEmail) } });
+  const sub = await tx.subscriber.findUnique({
+    where: { brand_email: { brand: order.brand ?? DEFAULT_BRAND, email: normEmail(order.customerEmail) } },
+  });
   if (!sub || !welcomeEligible(sub, await mailboxOrderCount(order.customerEmail, order.id, tx))) {
     return unchanged;
   }

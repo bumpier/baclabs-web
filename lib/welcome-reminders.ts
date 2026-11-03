@@ -10,6 +10,7 @@ import {
   welcomeVialOn,
 } from "@/lib/mailing-list";
 import { brandFor, type BrandProfile } from "@/brands/registry";
+import { isOptedOut } from "@/lib/opt-outs";
 import { BUNDLES, MAILING_LIST } from "@/config/funnel";
 
 // The emails that follow a signup whose welcome vial is still unused:
@@ -180,9 +181,13 @@ export async function runWelcomeReminders(now: Date = new Date()): Promise<Remin
     const step = reminderDue(sub, now);
     if (!step) continue;
     try {
-      // EmailOptOut is what every marketing sender checks.
-      if (await prisma.emailOptOut.findUnique({ where: { email: sub.email } })) continue;
-      // Ordered without the vial (an existing customer who then signed up).
+      // A brand no longer registered would read as BacLab: never send its
+      // subscribers BacLab's marketing.
+      if (brandFor(sub.brand).id !== sub.brand) continue;
+      // EmailOptOut is what every marketing sender checks, for the subscriber's brand.
+      if (await isOptedOut(sub.email, sub.brand)) continue;
+      // Ordered without the vial (an existing customer who then signed up),
+      // from any brand: it is the same vial.
       if (!welcomeEligible(sub, await mailboxOrderCount(sub.email))) continue;
 
       const outcome = await sendReminder(sub, step, now);

@@ -6,6 +6,8 @@ import {
   sendReviewRequestEmail,
   trustpilotBcc,
 } from "@/lib/customer-email";
+import { isOptedOut } from "@/lib/opt-outs";
+import { allBrands } from "@/brands/registry";
 
 export const dynamic = "force-dynamic";
 
@@ -101,9 +103,12 @@ async function runNudges() {
         continue;
       }
 
-      // Already repurchased? (any non-cancelled order placed after this one)
+      // Already repurchased? (any non-cancelled order with the same brand
+      // placed after this one: an order from another brand is not a restock
+      // of this one, and its reminder is that brand's to send)
       const newer = await prisma.order.count({
         where: {
+          brand: order.brand,
           customerEmail: order.customerEmail,
           createdAt: { gt: order.createdAt },
           status: { not: "cancelled" },
@@ -114,10 +119,7 @@ async function runNudges() {
         continue;
       }
 
-      const optedOut = await prisma.emailOptOut.findUnique({
-        where: { email: order.customerEmail.toLowerCase() },
-      });
-      if (optedOut) {
+      if (await isOptedOut(order.customerEmail, order.brand)) {
         skipped++;
         continue;
       }
@@ -141,16 +143,19 @@ async function runNudges() {
  * updatedAt, which moves on every write.
  */
 async function runReviewRequests() {
-  // With Trustpilot invitations on, Trustpilot asks every customer itself
-  // (BCC on the confirmation email). A second request from us would be a
-  // duplicate ask, so this job stands down.
-  if (trustpilotBcc()) return { scanned: 0, sent: 0, skipped: 0, handledBy: "trustpilot" };
+  // With a brand's Trustpilot invitations on, Trustpilot asks that brand's
+  // customers itself (BCC on the confirmation email). A second request from
+  // us would be a duplicate ask, so this job stands down for that brand, and
+  // entirely when every brand has them (as BacLab alone does today).
+  const invited = allBrands().filter((b) => trustpilotBcc(b)).map((b) => b.id);
+  if (invited.length === allBrands().length) return { scanned: 0, sent: 0, skipped: 0, handledBy: "trustpilot" };
 
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
   const tooOld = new Date(now - REVIEW_MAX_AGE_DAYS * day);
   const orders = await prisma.order.findMany({
     where: {
+      ...(invited.length > 0 ? { brand: { notIn: invited } } : {}),
       // Not plan boxes or plan orders: see runNudges.
       kind: "sale",
       planId: null,
@@ -171,10 +176,7 @@ async function runReviewRequests() {
         skipped++;
         continue;
       }
-      const optedOut = await prisma.emailOptOut.findUnique({
-        where: { email: order.customerEmail.toLowerCase() },
-      });
-      if (optedOut) {
+      if (await isOptedOut(order.customerEmail, order.brand)) {
         skipped++;
         continue;
       }

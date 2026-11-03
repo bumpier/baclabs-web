@@ -15,7 +15,7 @@
 // the UK day the email names.
 import type { Prisma, VialGift } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { brandFor } from "@/brands/registry";
+import { brandFor, DEFAULT_BRAND } from "@/brands/registry";
 import { ctaButton, escapeHtml, layout, send } from "@/lib/email";
 import { normEmail, type OrderItemLike } from "@/lib/mailing-list";
 import { isKitLine } from "@/lib/order-items";
@@ -133,10 +133,13 @@ export function giftStatus(gift: Pick<VialGift, "orderId" | "cancelledAt" | "exp
  * legacy stock mode a shortfall leaves the gifts waiting for the next order
  * rather than overselling; warehouse mode records a shortfall at allocation,
  * as it does for the welcome vial.
+ *
+ * A gift is the promise of one brand (VialGift.brand, the brand its email
+ * came from), so only that brand's orders take it.
  */
 export async function settleVialGifts(
   tx: Prisma.TransactionClient,
-  order: { id: string; items: string; customerEmail: string; createdAt: Date },
+  order: { id: string; brand?: string; items: string; customerEmail: string; createdAt: Date },
   opts: { legacyStockCheck: boolean }
 ): Promise<{ items: string; note: string | null }> {
   const unchanged = { items: order.items, note: null };
@@ -144,6 +147,7 @@ export async function settleVialGifts(
 
   const gifts = await tx.vialGift.findMany({
     where: {
+      brand: order.brand ?? DEFAULT_BRAND,
       email: normEmail(order.customerEmail),
       orderId: null,
       cancelledAt: null,
@@ -189,10 +193,10 @@ export async function settleVialGifts(
 
 // ── Admin reads ────────────────────────────────────────────────────
 
-/** Vials still waiting for this email's next order. */
-export async function waitingVials(email: string, now: Date = new Date()): Promise<number> {
+/** Vials still waiting for this email's next order with `brand`. */
+export async function waitingVials(email: string, now: Date = new Date(), brand: string = DEFAULT_BRAND): Promise<number> {
   const rows = await prisma.vialGift.findMany({
-    where: { email: normEmail(email), orderId: null, cancelledAt: null, expiresAt: { gt: now } },
+    where: { brand, email: normEmail(email), orderId: null, cancelledAt: null, expiresAt: { gt: now } },
     select: { vials: true },
   });
   return rows.reduce((n, r) => n + r.vials, 0);

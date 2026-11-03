@@ -4,6 +4,8 @@ import { SubscribeSchema, verifyOrigin } from "@/lib/validation";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { MAILING_LIST } from "@/config/funnel";
 import { sendWelcomeEmail } from "@/lib/customer-email";
+import { clearOptOut } from "@/lib/opt-outs";
+import { brandFromHost } from "@/brands/registry";
 import {
   SUBSCRIBER_COOKIE,
   SUBSCRIBER_COOKIE_MAX_AGE,
@@ -25,6 +27,10 @@ export const dynamic = "force-dynamic";
 // Every outcome answers the same { ok: true }: a bot, an address already on
 // the list and a new signup look identical from outside, so this cannot be
 // used to find out who is subscribed.
+//
+// The signup joins the list of the brand whose site it came from, read from
+// the Host (never the body), so every brand has its own list and consent
+// record. Unknown hosts are BacLab, as they always were.
 
 const OK = () => NextResponse.json({ ok: true });
 
@@ -51,8 +57,10 @@ export async function POST(req: Request) {
   if (parsed.data.website) return OK(); // honeypot
 
   const email = normEmail(parsed.data.email);
+  // nginx forwards the visitor's host, as lib/site-url.ts reads it.
+  const brand = brandFromHost(req.headers.get("x-forwarded-host") ?? req.headers.get("host")).id;
   try {
-    const existing = await prisma.subscriber.findUnique({ where: { email } });
+    const existing = await prisma.subscriber.findUnique({ where: { brand_email: { brand, email } } });
     // Already on the list: nothing to do, and no second welcome email, so
     // the form cannot be used to send someone mail over and over.
     if (existing?.status === "subscribed") return OK();
@@ -67,10 +75,13 @@ export async function POST(req: Request) {
     };
     const sub = existing
       ? await prisma.subscriber.update({ where: { id: existing.id }, data: consent })
-      : await prisma.subscriber.create({ data: { email, ...consent } });
-    // A fresh, explicit opt-in overrides an earlier unsubscribe.
-    await prisma.emailOptOut.deleteMany({ where: { email } });
+      : await prisma.subscriber.create({ data: { brand, email, ...consent } });
+    // A fresh, explicit opt-in overrides an earlier unsubscribe from this
+    // brand. Not a bounce or complaint suppression (lib/opt-outs.ts).
+    await clearOptOut(email, brand);
 
+    // Judged across every brand's orders: the welcome vial is the same
+    // physical vial whichever site it is claimed on.
     const withOffer = welcomeEligible(sub, await mailboxOrderCount(email));
     void sendWelcomeEmail(sub, { withOffer });
 

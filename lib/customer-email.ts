@@ -17,6 +17,7 @@ import { DELIVERY, formatMinor, formatMinorShort, freeDeliveryName, labKitConten
 import { isKitLine } from "@/lib/order-items";
 import { reorderOffer, type ReorderOffer } from "@/lib/reorder";
 import { waitingVials } from "@/lib/vial-gifts";
+import { isOptedOut } from "@/lib/opt-outs";
 
 // Customer-facing order emails. Every send is recorded in EmailLog first;
 // the @@unique([orderId, type]) constraint makes double-sends impossible.
@@ -57,16 +58,26 @@ function brandOf(row: { brand?: string | null }): BrandProfile {
   return brandFor(row.brand ?? DEFAULT_BRAND);
 }
 
-/** HMAC-signed unsubscribe link — no token storage needed. Reuses JWT_SECRET. */
-export function unsubscribeSig(email: string): string {
+/**
+ * HMAC-signed unsubscribe link — no token storage needed. Reuses JWT_SECRET.
+ *
+ * Opt-outs are per brand (lib/opt-outs.ts), so the link says which brand.
+ * BacLab's links are exactly what they were before brands existed (no brand
+ * in the URL, the bare email signed), so every one already in an inbox keeps
+ * working. Another brand's link carries `brand=<id>` and signs the brand
+ * with the email, so it cannot be edited into another brand's opt-out.
+ */
+export function unsubscribeSig(email: string, brand: string = DEFAULT_BRAND): string {
+  const e = email.toLowerCase();
   return createHmac("sha256", process.env.JWT_SECRET ?? "")
-    .update(email.toLowerCase())
+    .update(brand === DEFAULT_BRAND ? e : `unsubscribe:${brand}:${e}`)
     .digest("hex");
 }
 
 export function unsubscribeUrl(email: string, b: BrandProfile = brandFor(DEFAULT_BRAND)): string {
   const e = email.toLowerCase();
-  return `${b.origin}/api/email/unsubscribe?email=${encodeURIComponent(e)}&sig=${unsubscribeSig(e)}`;
+  const brandParam = b.id === DEFAULT_BRAND ? "" : `&brand=${encodeURIComponent(b.id)}`;
+  return `${b.origin}/api/email/unsubscribe?email=${encodeURIComponent(e)}${brandParam}&sig=${unsubscribeSig(e, b.id)}`;
 }
 
 /**
@@ -259,16 +270,15 @@ function trustpilotSnippet(order: Order): string {
 }
 
 /**
- * Invite only customers who have not unsubscribed from our emails. Someone
- * who asked us to stop should not hear from a third party on our behalf.
+ * Invite only customers who have not unsubscribed from this brand's emails.
+ * Someone who asked us to stop should not hear from a third party on our
+ * behalf.
  */
 async function trustpilotBccFor(order: Order): Promise<string | null> {
   const bcc = trustpilotBcc(brandOf(order));
   if (!bcc || !order.customerEmail) return null;
   try {
-    const optedOut = await prisma.emailOptOut.findUnique({
-      where: { email: order.customerEmail.toLowerCase() },
-    });
+    const optedOut = await isOptedOut(order.customerEmail, brandOf(order).id);
     return optedOut ? null : bcc;
   } catch (err) {
     // Unknown opt-out state: fail towards not inviting.
@@ -278,14 +288,15 @@ async function trustpilotBccFor(order: Order): Promise<string | null> {
 }
 
 /**
- * Whether the customer has unsubscribed (EmailOptOut, lowercased as every
- * sender stores it). The plan upgrade offer is marketing, so it is left out
- * of the receipt for them. Unknown state fails towards not offering.
+ * Whether the customer has unsubscribed from this order's brand, or is
+ * suppressed for every brand (lib/opt-outs.ts). The plan upgrade offer is
+ * marketing, so it is left out of the receipt for them. Unknown state fails
+ * towards not offering.
  */
 async function optedOutOfEmails(order: Order): Promise<boolean> {
   if (!order.customerEmail) return true;
   try {
-    return (await prisma.emailOptOut.findUnique({ where: { email: order.customerEmail.toLowerCase() } })) !== null;
+    return await isOptedOut(order.customerEmail, brandOf(order).id);
   } catch (err) {
     console.error(`[email] opt-out check failed for order ${order.id}`, err);
     return true;
@@ -479,7 +490,7 @@ export async function sendOrderDeliveredEmail(order: Order): Promise<void> {
   let giftVials = 0;
   if (offers) {
     try {
-      giftVials = await waitingVials(order.customerEmail);
+      giftVials = await waitingVials(order.customerEmail, new Date(), brandOf(order).id);
     } catch (err) {
       console.error(`[email] waiting gift check failed for order ${order.id}`, err);
     }

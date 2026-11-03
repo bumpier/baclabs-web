@@ -5,6 +5,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAdminSession, requireAdminRole } from "@/lib/adminAuth";
 import { normEmail, previousOrderCount } from "@/lib/mailing-list";
+import { isOptedOut } from "@/lib/opt-outs";
+import { DEFAULT_BRAND } from "@/brands/registry";
 import type { FormState } from "@/lib/form-state";
 import {
   MAX_GIFT_VIALS,
@@ -40,11 +42,13 @@ export async function addVialGiftAction(_prev: GiftFormState, formData: FormData
   if (!isGiftReason(reason)) return { error: "Choose a reason" };
   const note = String(formData.get("note") ?? "").trim().slice(0, 200);
 
+  // Gifts are BacLab's until the admin can choose a brand (VialGift.brand defaults to it).
+  const brand = DEFAULT_BRAND;
   if (formData.get("anyway") !== "on") {
     const [orders, optOut, subscriber] = await Promise.all([
       previousOrderCount(email),
-      prisma.emailOptOut.findUnique({ where: { email } }),
-      prisma.subscriber.findUnique({ where: { email }, select: { status: true } }),
+      isOptedOut(email, brand),
+      prisma.subscriber.findUnique({ where: { brand_email: { brand, email } }, select: { status: true } }),
     ]);
     const warnings: string[] = [];
     if (orders === 0) warnings.push(`No paid orders have been placed with ${email}. Check the spelling.`);

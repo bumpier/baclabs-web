@@ -20,11 +20,11 @@ export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get("o") ?? "";
   const order = id ? await prisma.order.findUnique({ where: { id } }) : null;
 
-  // Already bought again since (on another device, say): don't offer to
-  // charge for the same thing twice.
+  // Already bought again since (on another device, say) from the same
+  // brand: don't offer to charge for the same thing twice.
   const newerPaidOrder =
     order?.status === "pending" && order.recoveryEmail
-      ? await paidOrderSince(order.recoveryEmail, order.createdAt, false)
+      ? await paidOrderSince(order.recoveryEmail, order.createdAt, false, order.brand)
       : false;
 
   const target = resumeTarget({ order, newerPaidOrder, now: new Date() });

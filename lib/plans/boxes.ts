@@ -6,6 +6,7 @@ import { getInventoryMode } from "@/lib/inventory/mode";
 import { allocateAfterPayment, takeStockInTransaction } from "@/lib/payments/stock";
 import { autoBuyLabel } from "@/lib/shipping/shipments";
 import { sendPlanRenewalEmail } from "@/lib/customer-email";
+import { isOptedOut } from "@/lib/opt-outs";
 import { planBoxItems } from "@/lib/plans/items";
 import { afterBox, isBoxDue, renewalDue } from "@/lib/plans/schedule";
 
@@ -180,9 +181,8 @@ export async function runPlanRenewals(now = new Date()): Promise<RenewalRun> {
       }
       try {
         const order = await prisma.order.findUnique({ where: { id: plan.purchaseOrderId } });
-        const optedOut = order?.customerEmail
-          ? await prisma.emailOptOut.findUnique({ where: { email: order.customerEmail.toLowerCase() } })
-          : null;
+        // The renewal offer is marketing, from the plan's brand.
+        const optedOut = order?.customerEmail ? await isOptedOut(order.customerEmail, order.brand) : false;
         if (!order?.customerEmail || optedOut) {
           run.skipped++; // stays claimed: an opted-out customer is not asked again tomorrow
           continue;

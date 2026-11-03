@@ -90,7 +90,7 @@ async function check() {
   const shipped = await prisma.emailLog.count({ where: { orderId: orderA.id, type: "shipped" } });
   assert(shipped === 1, "shipped email logged exactly once despite two calls");
 
-  const optedOut = await prisma.emailOptOut.findUnique({ where: { email: EMAILS[0] } });
+  const optedOut = await prisma.emailOptOut.findUnique({ where: { email_brand: { email: EMAILS[0], brand: "baclab" } } });
   assert(optedOut !== null, "unsubscribe link created opt-out for nudge-a");
   console.log("ALL CHECKS PASSED");
 }

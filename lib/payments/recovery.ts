@@ -5,6 +5,8 @@ import { SUBSCRIBER_COOKIE, cookieFrom, isLinkToken, normEmail, subscriberFromCo
 import { orderKind } from "@/lib/plans/kinds";
 import { reorderOffer } from "@/lib/reorder";
 import { sendCheckoutRecoveryEmail } from "@/lib/customer-email";
+import { isOptedOut } from "@/lib/opt-outs";
+import { DEFAULT_BRAND } from "@/brands/registry";
 
 /**
  * Abandoned-checkout recovery, for card checkouts on Stripe's hosted page.
@@ -141,22 +143,26 @@ export async function orderForSession(session: SessionLike): Promise<Order | nul
 }
 
 /**
- * A paid order for this email placed at or after `since`. Raw SQL for the
- * case-insensitive email match (as previousOrderCount); the date goes in as
- * epoch milliseconds, which is how Prisma stores DateTime in SQLite: a Date
- * would bind as text, and SQLite orders every integer before any text.
+ * A paid order for this email with `brand`, placed at or after `since`. Raw
+ * SQL for the case-insensitive email match (as previousOrderCount); the date
+ * goes in as epoch milliseconds, which is how Prisma stores DateTime in
+ * SQLite: a Date would bind as text, and SQLite orders every integer before
+ * any text. Per brand: buying from another brand does not finish this
+ * brand's basket.
  */
-export async function paidOrderSince(email: string, since: Date, inclusive = true): Promise<boolean> {
+export async function paidOrderSince(email: string, since: Date, inclusive = true, brand: string = DEFAULT_BRAND): Promise<boolean> {
   const at = since.getTime();
   const rows = inclusive
     ? await prisma.$queryRaw<{ n: bigint | number }[]>`
         SELECT COUNT(*) AS n FROM "Order"
         WHERE lower("customerEmail") = ${normEmail(email)}
+          AND "brand" = ${brand}
           AND "status" NOT IN ('pending', 'cancelled')
           AND "createdAt" >= ${at}`
     : await prisma.$queryRaw<{ n: bigint | number }[]>`
         SELECT COUNT(*) AS n FROM "Order"
         WHERE lower("customerEmail") = ${normEmail(email)}
+          AND "brand" = ${brand}
           AND "status" NOT IN ('pending', 'cancelled')
           AND "createdAt" > ${at}`;
   return Number(rows[0]?.n ?? 0) > 0;
@@ -189,17 +195,21 @@ export async function handleExpiredCheckout(session: SessionLike, now = new Date
   if (!order.checkoutSubscriberId) return "no known email";
   const subscriber = await prisma.subscriber.findUnique({ where: { id: order.checkoutSubscriberId } });
   const email = subscriber ? normEmail(subscriber.email) : null;
+  // Every rule is within the order's brand: its opt-outs, its orders, its
+  // recovery emails. (A subscriber belongs to one brand, so the later
+  // checkout by the same subscriber is already that brand's.)
+  const brand = order.brand;
   const verdict = recoveryRecipient({
     subscriber,
-    optedOut: email ? (await prisma.emailOptOut.findUnique({ where: { email } })) !== null : false,
-    paidSince: email ? await paidOrderSince(email, order.createdAt) : false,
+    optedOut: email ? await isOptedOut(email, brand) : false,
+    paidSince: email ? await paidOrderSince(email, order.createdAt, true, brand) : false,
     laterCheckout:
       (await prisma.order.count({
         where: { checkoutSubscriberId: order.checkoutSubscriberId, createdAt: { gt: order.createdAt } },
       })) > 0,
     recentlyEmailed: email
       ? (await prisma.order.count({
-          where: { recoveryEmail: email, recoveryEmailSentAt: { gte: new Date(now.getTime() - EMAIL_GAP_MS) } },
+          where: { brand, recoveryEmail: email, recoveryEmailSentAt: { gte: new Date(now.getTime() - EMAIL_GAP_MS) } },
         })) > 0
       : false,
   });

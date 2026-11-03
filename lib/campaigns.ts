@@ -6,6 +6,7 @@ import { marketingFooter, marketingHeaders } from "@/lib/customer-email";
 import { getStripe } from "@/lib/payments/stripe";
 import { normEmail } from "@/lib/mailing-list";
 import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
+import { optedOutEmails } from "@/lib/opt-outs";
 
 // Marketing email campaigns, written and sent from /admin/campaigns.
 //
@@ -20,8 +21,9 @@ import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 //     batch API and marks each one. If the process dies part-way, the cron
 //     route (app/api/cron/campaigns) picks up whatever is still queued.
 //
-// Everyone on EmailOptOut is left out at step 1, whichever audience they
-// fall in, and every email carries a one-click unsubscribe.
+// Everyone opted out of the campaign's brand (or suppressed for every brand)
+// is left out at step 1, whichever audience they fall in, and every email
+// carries a one-click unsubscribe from that brand.
 
 // ── Audience ───────────────────────────────────────────────────────
 
@@ -143,9 +145,10 @@ export async function resolveAudience(spec: AudienceSpec, brand: string = DEFAUL
   const [subscribers, customers, optOuts] = await Promise.all([
     prisma.subscriber.findMany({ where: { brand, status: "subscribed" }, select: { email: true } }),
     customerRows(brand),
-    prisma.emailOptOut.findMany({ select: { email: true } }),
+    // This brand's opt-outs and every-brand suppressions (lib/opt-outs.ts).
+    optedOutEmails(brand),
   ]);
-  return mergeAudience(spec, subscribers, customers, new Set(optOuts.map((o) => normEmail(o.email))));
+  return mergeAudience(spec, subscribers, customers, optOuts);
 }
 
 // ── Rendering ──────────────────────────────────────────────────────
