@@ -19,18 +19,42 @@ const PROFILES: Record<BrandId, () => BrandProfile> = {
   baclab: baclabProfile,
 };
 
+/**
+ * Fixture brands registered by test scripts (__registerTestBrand). Empty in
+ * the app. Kept apart from PROFILES so BRAND_IDS and isBrandId() only ever
+ * describe real brands.
+ */
+const TEST_PROFILES = new Map<string, () => BrandProfile>();
+
+/**
+ * TESTS ONLY (scripts/): register a fixture brand, so the code paths for a
+ * second brand can be exercised without registering a real one. brandFor(),
+ * brandFromHost() and allBrands() then know it; BRAND_IDS and isBrandId() do
+ * not. Refuses to run in production.
+ */
+export function __registerTestBrand(profile: Omit<BrandProfile, "id"> & { id: string }): BrandProfile {
+  if (process.env.NODE_ENV === "production") throw new Error("__registerTestBrand is for test scripts only");
+  if (isBrandId(profile.id)) throw new Error(`"${profile.id}" is a real brand`);
+  // The id is a fixture's, not a BrandId: the cast is the point of the fixture.
+  const fixture = profile as BrandProfile;
+  TEST_PROFILES.set(profile.id, () => fixture);
+  return fixture;
+}
+
 export function isBrandId(value: unknown): value is BrandId {
   return typeof value === "string" && (BRAND_IDS as readonly string[]).includes(value);
 }
 
 /** The profile for a stored brand id. Anything unrecognised is BacLab. */
 export function brandFor(id: string | null | undefined): BrandProfile {
-  return PROFILES[isBrandId(id) ? id : DEFAULT_BRAND]();
+  if (isBrandId(id)) return PROFILES[id]();
+  const fixture = id ? TEST_PROFILES.get(id) : undefined;
+  return fixture ? fixture() : PROFILES[DEFAULT_BRAND]();
 }
 
-/** Every registered brand, BacLab first. */
+/** Every registered brand, BacLab first (then any test fixtures). */
 export function allBrands(): BrandProfile[] {
-  return BRAND_IDS.map((id) => PROFILES[id]());
+  return [...BRAND_IDS.map((id) => PROFILES[id]()), ...[...TEST_PROFILES.values()].map((p) => p())];
 }
 
 /** `Host` header value -> brand. Port and case are ignored; unknown hosts are BacLab. */
@@ -40,9 +64,8 @@ export function brandFromHost(host: string | null | undefined): BrandProfile {
   // BacLab is the only registered brand.
   const fallback: string = DEFAULT_BRAND;
   if (name) {
-    for (const id of BRAND_IDS) {
-      if (id === fallback) continue;
-      const profile = PROFILES[id]();
+    for (const profile of allBrands()) {
+      if (profile.id === fallback) continue;
       if (profile.domains.includes(name)) return profile;
     }
   }

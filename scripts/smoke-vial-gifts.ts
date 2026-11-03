@@ -13,8 +13,9 @@
 import { prisma } from "../lib/db";
 import { fulfillPaidOrder } from "../lib/payments/fulfillment";
 import { setInventoryMode } from "../lib/inventory/mode";
-import { giftExpiresAt, isGiftItem } from "../lib/vial-gifts";
+import { giftExpiresAt, isGiftItem, waitingVials } from "../lib/vial-gifts";
 import { isWelcomeItem } from "../lib/mailing-list";
+import { registerTestBrand, TEST_BRAND_ID } from "./fixtures/test-brand";
 
 if (!process.env.DATABASE_URL || /data\/baclab\.db/.test(process.env.DATABASE_URL)) {
   console.error("Refusing to run: set DATABASE_URL to a throwaway database (see the header of this file).");
@@ -29,9 +30,12 @@ function assert(cond: boolean, msg: string) {
 const HOUR = 3_600_000;
 let productId = "";
 
-async function pendingOrder(email: string, opts: { kind?: string; createdAt?: Date; postcode?: string } = {}) {
+type PayOpts = { kind?: string; createdAt?: Date; postcode?: string; brand?: string };
+
+async function pendingOrder(email: string, opts: PayOpts = {}) {
   return prisma.order.create({
     data: {
+      ...(opts.brand ? { brand: opts.brand } : {}),
       status: "pending",
       kind: opts.kind ?? "sale",
       customerName: "Smoke Test",
@@ -58,7 +62,7 @@ async function pendingOrder(email: string, opts: { kind?: string; createdAt?: Da
   });
 }
 
-async function pay(email: string, opts: { kind?: string; createdAt?: Date; postcode?: string } = {}) {
+async function pay(email: string, opts: PayOpts = {}) {
   const order = await pendingOrder(email, opts);
   await fulfillPaidOrder(order.id, { provider: "stripe" });
   const paid = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
@@ -151,6 +155,20 @@ async function main() {
   const mixed = await pay("mixed@smoke-gifts.test");
   assert((mixed.gift[0] as { name?: string; qty: number }).name === "Free vials" && mixed.gift[0]!.qty === 2, "mixed reasons merge under a plain name");
   assert((first.gift[0] as { name?: string }).name === "Free vials, with our apologies", "gifts added without a reason are apologies");
+
+  // ── A gift is one brand's promise ───────────────────────────────────
+  registerTestBrand();
+  const fxGift = await prisma.vialGift.create({
+    data: { brand: TEST_BRAND_ID, email: "brand@smoke-gifts.test", vials: 2, expiresAt: giftExpiresAt(new Date()) },
+  });
+  assert((await waitingVials("brand@smoke-gifts.test")) === 0, "another brand's gift is not waiting for BacLab");
+  assert((await waitingVials("brand@smoke-gifts.test", new Date(), TEST_BRAND_ID)) === 2, "…it is waiting for its own brand");
+  const onBaclab = await pay("brand@smoke-gifts.test");
+  assert(onBaclab.gift.length === 0, "a BacLab order does not take another brand's gift");
+  assert((await prisma.vialGift.findUniqueOrThrow({ where: { id: fxGift.id } })).orderId === null, "…which keeps waiting");
+  const onOwn = await pay("brand@smoke-gifts.test", { brand: TEST_BRAND_ID });
+  assert(onOwn.gift[0]?.qty === 2, "the gift's own brand's order takes it");
+  assert((await prisma.vialGift.findUniqueOrThrow({ where: { id: fxGift.id } })).orderId === onOwn.order.id, "…and claims it");
 
   // ── Paying twice does nothing twice ─────────────────────────────────
   await gift("twice@smoke-gifts.test", 1);

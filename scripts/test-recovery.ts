@@ -13,6 +13,7 @@ import { recoveryRecipient, resumeTarget, type ResumableOrder } from "@/lib/paym
 import { abandonedVerdict } from "@/lib/payments/abandoned";
 import { sendCheckoutRecoveryEmail } from "@/lib/customer-email";
 import { checkCompliance } from "@/lib/content-rules";
+import { bacLabLeaks, registerTestBrand, TEST_BRAND_ID } from "./fixtures/test-brand";
 
 let failures = 0;
 
@@ -132,6 +133,26 @@ async function main() {
   check("email: no discount offered", !/\b(code|discount|% off)\b/i.test(text));
   const violations = checkCompliance([text]);
   check("email: passes the content rules", violations.length === 0, JSON.stringify(violations.slice(0, 3)));
+  check("email: BacLab's, on BacLab's site", mail.includes("<title>BacLab</title>") && !mail.includes("brand="));
+
+  // ── A second brand's basket ─────────────────────────────────────────
+  // The same email for an order of another brand: its name, its site, its
+  // unsubscribe, and nothing of BacLab's.
+  const fx = registerTestBrand();
+  const fxLogged: string[] = [];
+  console.log = (...a: unknown[]) => fxLogged.push(a.join(" "));
+  const fxSent = await sendCheckoutRecoveryEmail(
+    { ...(order as unknown as Order), brand: TEST_BRAND_ID, totalAmount: order.totalAmount } as Order,
+    "sam@example.test",
+    new Date("2026-11-06T09:00:00Z")
+  );
+  console.log = log;
+  const fxMail = fxLogged.join("\n");
+  check("brand email: reports sent", fxSent);
+  check("brand email: in the brand's shell", fxMail.includes("<title>Fixture &amp; Co</title>"));
+  check("brand email: button through the brand's resume route", fxMail.includes(`${fx.origin}/api/checkout/resume?o=ord-1`));
+  check("brand email: the brand's unsubscribe", fxMail.includes(`${fx.origin}/api/email/unsubscribe?`) && fxMail.includes(`brand=${TEST_BRAND_ID}`));
+  check("brand email: nothing of BacLab's", bacLabLeaks(fxMail).length === 0, bacLabLeaks(fxMail).join(", "));
 
   if (failures > 0) {
     console.error(`\n${failures} recovery check(s) failed.`);

@@ -31,11 +31,26 @@ import {
   EMPTY_AUDIENCE,
   renderSubject,
 } from "@/lib/campaigns";
+import { createHmac } from "node:crypto";
+import type { Campaign, Order } from "@prisma/client";
 import { soldLines, VIAL_SKU_CODE } from "@/lib/inventory/demand";
-import { unsubscribeSig } from "@/lib/customer-email";
+import {
+  buildNewOrderAlert,
+  deliveredEmail,
+  marketingFooter,
+  marketingHeaders,
+  unsubscribeSig,
+  unsubscribeUrl,
+} from "@/lib/customer-email";
+import { ctaButton, layout, ownerSubjectPrefix } from "@/lib/email";
+import { renderCampaign } from "@/lib/campaigns";
+import { buildContactAlert, contactInbox } from "@/lib/contact-inbox";
+import { ALL_BRANDS, optOutScope } from "@/lib/opt-outs";
+import { brandFor } from "@/brands/registry";
 import { reminderDue, reminderEmail } from "@/lib/welcome-reminders";
 import { checkCompliance } from "@/lib/content-rules";
 import { MAILING_LIST } from "@/config/funnel";
+import { bacLabLeaks, registerTestBrand, TEST_BRAND_ID } from "./fixtures/test-brand";
 
 process.env.JWT_SECRET ??= "test-secret-that-is-at-least-32-characters-long";
 
@@ -298,6 +313,98 @@ check(
   applyMergeFields("Hi {{first_name}}", { firstName: "", code: "", offer: "", expires: "" }) === "Hi there"
 );
 check("subject merge", renderSubject({ subject: "For you, {{first_name}}" }, { email: "x", firstName: "Jo" }) === "For you, Jo");
+
+// ── A second brand ──────────────────────────────────────────────────
+// Every email in the brand of its row, with nothing of BacLab's in it; and
+// BacLab's own links exactly as they were.
+const fx = registerTestBrand();
+const baclab = brandFor("baclab");
+const leaks = (label: string, text: string) => check(`${label}: nothing of BacLab's`, bacLabLeaks(text).length === 0, bacLabLeaks(text).join(", "));
+
+const fxShell = layout("<p>Body</p>", { preheader: "Pre", brand: fx });
+check("layout: the brand's name, escaped", fxShell.includes("<title>Fixture &amp; Co</title>") && !fxShell.includes("Fixture & Co<"));
+check("layout: the brand's header and text colours", fxShell.includes(`background:${fx.colours.header}`) && fxShell.includes(`color:${fx.colours.onHeader}`));
+check("layout: the brand's contact and disclaimer", fxShell.includes("mailto:help@fixture.example") && fxShell.includes("Fixture disclaimer line."));
+leaks("layout", fxShell);
+check("layout: BacLab by default", layout("<p>x</p>").includes("<title>BacLab</title>"));
+const fxButton = ctaButton("https://fixture.example/x", "Go", fx);
+check("button: the brand's colours", fxButton.includes(`background:${fx.colours.cta}`) && fxButton.includes(`color:${fx.colours.onCta}`));
+
+// Unsubscribing is per brand, and BacLab's links are what they always were.
+const bareSig = createHmac("sha256", process.env.JWT_SECRET ?? "").update("jo@example.com").digest("hex");
+check("baclab unsubscribe signature unchanged", unsubscribeSig("Jo@Example.com") === bareSig && unsubscribeSig("jo@example.com", "baclab") === bareSig);
+check("baclab unsubscribe link names no brand", !new URL(unsubscribeUrl("jo@example.com", baclab)).searchParams.has("brand"));
+const fxUnsub = new URL(unsubscribeUrl("Jo@Example.com", fx));
+check(
+  "brand unsubscribe link is on its own site and names it",
+  fxUnsub.origin === fx.origin && fxUnsub.pathname === "/api/email/unsubscribe" && fxUnsub.searchParams.get("brand") === TEST_BRAND_ID
+);
+check(
+  "brand unsubscribe link is signed for that brand only",
+  fxUnsub.searchParams.get("sig") === unsubscribeSig("jo@example.com", TEST_BRAND_ID) && fxUnsub.searchParams.get("sig") !== bareSig
+);
+check("an unsubscribe signature is not a subscriber token for any brand", readSubscriberToken(`sub_123.${unsubscribeSig("sub_123", TEST_BRAND_ID)}`) === null);
+const fxHeaders = marketingHeaders("jo@example.com", fx);
+check(
+  "List-Unsubscribe: the brand's link and mailbox",
+  fxHeaders["List-Unsubscribe"]!.includes(fx.origin) && fxHeaders["List-Unsubscribe"]!.includes("mailto:help@fixture.example")
+);
+leaks("List-Unsubscribe", fxHeaders["List-Unsubscribe"]!);
+const fxFooter = marketingFooter("jo@example.com", fx);
+check("marketing footer names the brand", fxFooter.includes("Fixture &amp; Co emails"));
+leaks("marketing footer", fxFooter);
+
+// Opt-outs: the brand's own, plus the every-brand suppression.
+check("opt-out scope is the brand and every-brand", JSON.stringify(optOutScope(TEST_BRAND_ID)) === JSON.stringify([TEST_BRAND_ID, ALL_BRANDS]));
+check("every-brand marker is no brand id", ALL_BRANDS === "*" && brandFor(ALL_BRANDS).id === "baclab");
+
+// The welcome link and reminders go to the subscriber's own brand's site.
+check("welcomeLink on the brand's site", new URL(welcomeLink("sub_123", "ten", fx)).origin === fx.origin);
+for (const step of [1, 2] as const) {
+  const email = reminderEmail(step, { ...recipient, brand: TEST_BRAND_ID });
+  check(`reminder ${step}: in the brand's name`, step === 2 || email.body.includes("Fixture &amp; Co mailing list"));
+  check(`reminder ${step}: links to the brand's site`, email.html.includes(`${fx.origin}/api/subscribe/link?`));
+  leaks(`reminder ${step}`, email.html);
+}
+check("reminder without a brand is BacLab's", reminderEmail(1, recipient).html.includes("<title>BacLab</title>"));
+
+// Campaigns: the campaign's brand throughout.
+const fxCampaign = {
+  id: "c1", brand: TEST_BRAND_ID, subject: "Hi", preheader: "", bodyMarkdown: "Hello [here](https://fixture.example)\n\n[button: Shop](https://fixture.example/#buy)",
+  audience: "{}", status: "draft", promoCode: "FX10", offerSummary: "10% off", offerExpiresAt: null,
+} as unknown as Campaign;
+const fxCampaignHtml = renderCampaign(fxCampaign, { email: "jo@example.com", firstName: "Jo" });
+check("campaign: the brand's link colour and button", fxCampaignHtml.includes(`color:${fx.colours.primary}`) && fxCampaignHtml.includes(`background:${fx.colours.cta}`));
+check("campaign: the brand's unsubscribe", fxCampaignHtml.includes(`${fx.origin}/api/email/unsubscribe`) && fxCampaignHtml.includes(`brand=${TEST_BRAND_ID}`));
+leaks("campaign", fxCampaignHtml);
+
+// Owner alerts say which brand; BacLab's subjects are left exactly as they were.
+check("owner prefix: none for BacLab", ownerSubjectPrefix(baclab) === "");
+check("owner prefix: the brand's name otherwise", ownerSubjectPrefix(fx) === "[Fixture & Co] ");
+const alertOrder = {
+  id: "ord-fx", brand: TEST_BRAND_ID, items: JSON.stringify([{ productId: "p", slug: "s", name: "10ml bacteriostatic water", qty: 5, unitPrice: "4.40", unitPriceUsd: "5.50", lineTotal: "21.99" }]),
+  currency: "GBP", totalAmount: "21.99", customerName: "Jo", customerEmail: "jo@example.com", customerPhone: "", shippingAddress: "", paymentMethod: "card", kind: "sale",
+  paidAt: new Date("2026-11-03T10:00:00Z"), createdAt: new Date("2026-11-03T10:00:00Z"),
+} as unknown as Order;
+const fxAlert = buildNewOrderAlert(alertOrder);
+check("order alert: prefixed with the brand", fxAlert.subject.startsWith("[Fixture & Co] New paid order"));
+check("order alert: BacLab's is not", buildNewOrderAlert({ ...alertOrder, brand: "baclab" }).subject.startsWith("New paid order"));
+leaks("order alert", fxAlert.html);
+const fxContact = buildContactAlert(
+  { id: "m1", brand: TEST_BRAND_ID, topic: "delivery", name: "Jo", email: "jo@example.com", orderRef: "", message: "Hi", createdAt: new Date() },
+  null
+);
+check("contact alert: prefixed with the brand", fxContact.subject.startsWith("[Fixture & Co] Contact form:"));
+const contactTo = process.env.CONTACT_FORM_TO;
+delete process.env.CONTACT_FORM_TO;
+check("contact alert: to the brand's inbox", contactInbox(fx) === "contact@fixture.example" && contactInbox() === baclab.email.inbox);
+if (contactTo !== undefined) process.env.CONTACT_FORM_TO = contactTo;
+
+// The delivered email (reorder and gifts) on the brand's site.
+const fxDelivered = deliveredEmail({ ...alertOrder }, { offers: true, giftVials: 1 });
+check("delivered: in the brand's name", fxDelivered.subject === "Your Fixture & Co order has been delivered");
+check("delivered: links on the brand's site", fxDelivered.html.includes(`${fx.origin}/order-confirmation/ord-fx`));
+leaks("delivered", fxDelivered.html);
 
 if (failures > 0) {
   console.error(`\n${failures} mailing-list check(s) failed`);

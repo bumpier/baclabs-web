@@ -26,6 +26,9 @@ import {
 } from "@/config/funnel";
 import { dispatchDelay, formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
 import { buildShipmentRequest, cleanDeliveryInstructions, labelReference, LIMITS, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
+import { labelSender } from "@/lib/shipping/shipments";
+import { brandFor } from "@/brands/registry";
+import { registerTestBrand } from "./fixtures/test-brand";
 
 let failures = 0;
 
@@ -513,6 +516,29 @@ const input: LabelInput = {
   }
   const dublin = { ...input.receiver, address: { ...belfast.address, city: "Dublin", country: "IE", postalCode: "D02 X285" } };
   check("an item going abroad without an HS code blocks the label", buildShipmentRequest({ ...input, receiver: dublin }).request === null);
+}
+
+// ── The label's sender, per brand ────────────────────────────────
+// BacLab's label is the warehouse's exactly; another brand's carries its own
+// sender company at the same address, and the references never change.
+{
+  const fx = registerTestBrand();
+  const warehouse = input.sender;
+  check("baclab's sender is the warehouse, untouched", labelSender(warehouse, brandFor("baclab")) === warehouse);
+  const fxSender = labelSender(warehouse, fx);
+  check("a brand's sender company replaces the warehouse's", fxSender.company === "Fixture Co");
+  check("…at the warehouse's address", fxSender.addressLine1 === warehouse.addressLine1 && fxSender.postcode === warehouse.postcode);
+  check("the warehouse row itself is not changed", warehouse.company === "BacLab");
+  const baclabLabel = buildShipmentRequest(input).request;
+  const fxLabel = buildShipmentRequest({ ...input, sender: fxSender }).request;
+  check("the brand's label is bought", fxLabel !== null);
+  check("…under the brand's sender company", fxLabel?.sender_company === "Fixture Co", String(fxLabel?.sender_company));
+  check(
+    "…with the same references as BacLab's",
+    fxLabel?.order_reference === baclabLabel?.order_reference,
+    `${fxLabel?.order_reference} vs ${baclabLabel?.order_reference}`
+  );
+  check("a blank sender company falls back to the warehouse's", labelSender(warehouse, { ...fx, shipping: { senderCompany: "  " } }).company === "BacLab");
 }
 
 if (failures > 0) {

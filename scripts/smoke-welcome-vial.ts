@@ -16,6 +16,8 @@ import { prisma } from "../lib/db";
 import { fulfillPaidOrder } from "../lib/payments/fulfillment";
 import { setInventoryMode } from "../lib/inventory/mode";
 import { canonicalEmail, isWelcomeItem, mailboxOrderCount, welcomeItem } from "../lib/mailing-list";
+import { clearOptOut, isOptedOut, optedOutEmails, optOut, suppressEverywhere } from "../lib/opt-outs";
+import { registerTestBrand, TEST_BRAND_ID } from "./fixtures/test-brand";
 
 if (!process.env.DATABASE_URL || /data\/baclab\.db/.test(process.env.DATABASE_URL)) {
   console.error("Refusing to run: set DATABASE_URL to a throwaway database (see the header of this file).");
@@ -32,17 +34,20 @@ let productId = "";
 type Delivery = { name: string; line1: string; postcode: string };
 const HOME: Delivery = { name: "Jo Smith", line1: "12 High St", postcode: "SW1A 1AA" };
 
-const subscribe = (email: string) =>
-  prisma.subscriber.create({ data: { email, status: "subscribed", source: "footer", consentText: "smoke" } });
+const subscribe = (email: string, brand?: string) =>
+  prisma.subscriber.create({
+    data: { email, status: "subscribed", source: "footer", consentText: "smoke", ...(brand ? { brand } : {}) },
+  });
 
 /**
  * Pay for a 5-pack as `email`, to `to`. `welcomeFor` is the subscriber whose
  * vial checkout put on the order (a browser with their cookie); without it
- * fulfilment matches the email instead.
+ * fulfilment matches the email instead. `brand` left out is BacLab.
  */
-async function pay(email: string, to: Delivery, welcomeFor?: string) {
+async function pay(email: string, to: Delivery, welcomeFor?: string, brand?: string) {
   const order = await prisma.order.create({
     data: {
+      ...(brand ? { brand } : {}),
       status: "pending",
       customerName: to.name,
       customerEmail: email,
@@ -117,6 +122,60 @@ async function main() {
   assert((await claimedBy(fresh.id)) === freshPaid.order.id, "…and claims it");
   const neighbour = await pay((await subscribe("pat@outlook.com")).email, { name: "Pat Lee", line1: "14 High St", postcode: "SW1A 1AA" });
   assert(neighbour.vial, "a neighbour at the same postcode gets their own vial");
+
+  // ── A second brand ─────────────────────────────────────────────────
+  // Each brand has its own list and gives its own subscribers the vial, but
+  // it is the same vial: a mailbox or household that has ordered from one
+  // brand has had its first order everywhere, and the note names no brand.
+  registerTestBrand();
+  const samBaclab = await subscribe("sam.two@outlook.com");
+  const samFx = await subscribe("sam.two@outlook.com", TEST_BRAND_ID);
+  assert(samBaclab.id !== samFx.id, "one address can be on two brands' lists");
+  const samFirst = await pay(samFx.email, { name: "Sam Two", line1: "7 Elm Road", postcode: "BS1 4DD" }, undefined, TEST_BRAND_ID);
+  assert(samFirst.vial, "a brand's subscriber gets the vial on that brand's first order");
+  assert((await claimedBy(samFx.id)) === samFirst.order.id, "…claimed by that brand's subscriber");
+  assert((await claimedBy(samBaclab.id)) === null, "…not by the same address on BacLab's list");
+  const samBaclabOrder = await pay(samBaclab.email, { name: "Sam Two", line1: "9 Ash Road", postcode: "BS2 5EE" });
+  assert(!samBaclabOrder.vial, "after an order with one brand, no vial from another: the mailbox check spans brands");
+  assert(
+    (samBaclabOrder.order.notes ?? "") === "" || !/fixture|baclab/i.test(samBaclabOrder.order.notes ?? ""),
+    "…and nothing on the order names a brand"
+  );
+  const fxOnly = await subscribe("only.fx@outlook.com", TEST_BRAND_ID);
+  const fxOnlyOnBaclab = await pay(fxOnly.email, { name: "Only Fx", line1: "3 Pine Way", postcode: "CF10 1AA" });
+  assert(!fxOnlyOnBaclab.vial, "another brand's subscriber gets no vial on a BacLab order");
+  assert((await claimedBy(fxOnly.id)) === null, "…and their own brand's gift stays waiting");
+  const fxHome = { name: "Fx Home", line1: "21 Birch Close", postcode: "EH1 1AA" };
+  await pay("first.fx@outlook.com", fxHome, undefined, TEST_BRAND_ID);
+  const fxDoorBaclab = await pay((await subscribe("second.fx@outlook.com")).email, fxHome);
+  assert(!fxDoorBaclab.vial, "a household that ordered from another brand gets no BacLab vial");
+  assert(
+    (fxDoorBaclab.order.notes ?? "").includes("No welcome vial") && !/fixture|baclab/i.test(fxDoorBaclab.order.notes ?? ""),
+    "…and the note says why without naming a brand"
+  );
+
+  // ── Opt-outs are per brand; a suppression is for every brand ──────────
+  await optOut("leave.fx@outlook.com", TEST_BRAND_ID);
+  assert(await isOptedOut("Leave.Fx@Outlook.com", TEST_BRAND_ID), "an opt-out stops that brand");
+  assert(!(await isOptedOut("leave.fx@outlook.com", "baclab")), "…and not another");
+  await suppressEverywhere("bounced@outlook.com");
+  assert(
+    (await isOptedOut("bounced@outlook.com", "baclab")) && (await isOptedOut("bounced@outlook.com", TEST_BRAND_ID)),
+    "a suppression stops every brand"
+  );
+  await clearOptOut("bounced@outlook.com", "baclab");
+  assert(await isOptedOut("bounced@outlook.com", "baclab"), "a fresh signup does not lift a suppression");
+  await optOut("back@outlook.com", "baclab");
+  await optOut("back@outlook.com", TEST_BRAND_ID);
+  await clearOptOut("back@outlook.com", "baclab");
+  assert(
+    !(await isOptedOut("back@outlook.com", "baclab")) && (await isOptedOut("back@outlook.com", TEST_BRAND_ID)),
+    "a fresh signup lifts only its own brand's opt-out"
+  );
+  const fxOptOuts = await optedOutEmails(TEST_BRAND_ID);
+  assert(fxOptOuts.has("leave.fx@outlook.com") && fxOptOuts.has("bounced@outlook.com") && fxOptOuts.has("back@outlook.com"), "a brand's audience leaves out its opt-outs and every suppression");
+  assert(!(await optedOutEmails("baclab")).has("leave.fx@outlook.com"), "…and not another brand's opt-outs");
+  await prisma.emailOptOut.deleteMany({ where: { email: { endsWith: "@outlook.com" } } });
 
   // ── mailboxOrderCount's SQL agrees with canonicalEmail() ────────────
   const emails = ["A.B+x@GoogleMail.com", "ab@gmail.com", " Spaced@Foo.com ", "x+1@foo.com", "+x@foo.com", "x@foo.com", "x.y@foo.com", "noat", ""];

@@ -189,12 +189,22 @@ export async function getBrandMetaPixelId(b: {
   analytics?: { metaPixelId?: string };
 }): Promise<string | null> {
   const stored = await readSetting(brandSettingKey(SETTING_KEYS.metaPixelId, b.id));
+  const choice = brandPixelChoice(stored, b.analytics?.metaPixelId);
+  if (choice !== undefined) return choice;
+  return b.id === DEFAULT_BRAND ? getMetaPixelId() : null;
+}
+
+/**
+ * Steps 1 and 2 of getBrandMetaPixelId, pure for scripts/test-meta-capi.ts:
+ * the id, null for a saved "off", or undefined to go on to step 3. A
+ * malformed saved id is passed over, as for the shared key.
+ */
+export function brandPixelChoice(stored: string | null, profileId: string | undefined): string | null | undefined {
   if (stored !== null) {
     const trimmed = stored.trim();
     if (trimmed === "") return null;
     if (isValidPixelId(trimmed)) return trimmed;
   }
-  const profileId = b.analytics?.metaPixelId?.trim() ?? "";
-  if (isValidPixelId(profileId)) return profileId;
-  return b.id === DEFAULT_BRAND ? getMetaPixelId() : null;
+  const fromProfile = profileId?.trim() ?? "";
+  return isValidPixelId(fromProfile) ? fromProfile : undefined;
 }

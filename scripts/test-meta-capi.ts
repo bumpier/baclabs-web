@@ -17,6 +17,10 @@ import {
   splitName,
   type PurchaseOrder,
 } from "@/lib/meta-capi-event";
+import { capiAccessToken } from "@/lib/meta-capi";
+import { brandPixelChoice, brandSettingKey } from "@/lib/settings";
+import { brandFor } from "@/brands/registry";
+import { bacLabLeaks, registerTestBrand, TEST_BRAND_ID } from "./fixtures/test-brand";
 
 let failures = 0;
 
@@ -127,6 +131,56 @@ const noContact = buildPurchaseEvent(
   opts
 );
 check("blank contact fields are omitted, not hashed", noContact !== null && !("em" in noContact.user_data) && !("ph" in noContact.user_data));
+
+// ── A second brand ─────────────────────────────────────────────────
+// Its own content ids, token and pixel; never BacLab's catalogue or dataset.
+const fx = registerTestBrand();
+check("baclab ids are unchanged without a brand", purchaseContents(items)[0]?.id === "baclab-10ml-x5");
+check("baclab ids are unchanged with it", purchaseContents(items, "baclab")[0]?.id === "baclab-10ml-x5");
+const fxItems = JSON.stringify([
+  { sku: "FX-10ML-X5", bundleId: "five", bundleQty: 2, qty: 10 },
+  { bundleId: "fx-trio", qty: 3 },
+  { qty: 1, welcome: true },
+  { qty: 1, gift: true },
+]);
+const fxContents = purchaseContents(fxItems, TEST_BRAND_ID);
+check("a line's own SKU is its content id", fxContents[0]?.id === "FX-10ML-X5" && fxContents[0]?.quantity === 2, JSON.stringify(fxContents));
+check("a line without a SKU keeps its bundle id", fxContents[1]?.id === "fx-trio");
+check("a bare line is the neutral vial", fxContents[2]?.id === "vial-10ml");
+check("gifts are still left out", fxContents.length === 3);
+check("no BacLab SKU in another brand's ids", fxContents.every((c) => bacLabLeaks(c.id).length === 0), JSON.stringify(fxContents));
+const fxEvent = buildPurchaseEvent({ ...order, brand: TEST_BRAND_ID, items: fxItems }, { ...opts, eventSourceUrl: `${fx.origin}/order-confirmation` });
+check("the event carries the brand's ids", JSON.stringify(fxEvent?.custom_data.content_ids) === JSON.stringify(["FX-10ML-X5", "fx-trio", "vial-10ml"]));
+check("the event id is the same rule for every brand", fxEvent?.event_id === purchaseEventId(ORDER_ID));
+
+const env = process.env as Record<string, string | undefined>;
+const saved = { shared: env.META_CAPI_ACCESS_TOKEN, own: env.META_CAPI_ACCESS_TOKEN__TESTBRAND, baclab: env.META_CAPI_ACCESS_TOKEN__BACLAB };
+env.META_CAPI_ACCESS_TOKEN = "shared-token";
+delete env.META_CAPI_ACCESS_TOKEN__TESTBRAND;
+delete env.META_CAPI_ACCESS_TOKEN__BACLAB;
+check("baclab uses the shared token", capiAccessToken(brandFor("baclab")) === "shared-token");
+check("a brand without its own token falls back to the shared one", capiAccessToken(fx) === "shared-token");
+env.META_CAPI_ACCESS_TOKEN__TESTBRAND = "  own-token ";
+check("a brand's own token wins", capiAccessToken(fx) === "own-token");
+check("…and is not BacLab's", capiAccessToken(brandFor("baclab")) === "shared-token");
+delete env.META_CAPI_ACCESS_TOKEN;
+delete env.META_CAPI_ACCESS_TOKEN__TESTBRAND;
+check("no token at all sends nothing", capiAccessToken(fx) === undefined);
+for (const [key, value] of [
+  ["META_CAPI_ACCESS_TOKEN", saved.shared],
+  ["META_CAPI_ACCESS_TOKEN__TESTBRAND", saved.own],
+  ["META_CAPI_ACCESS_TOKEN__BACLAB", saved.baclab],
+] as const) {
+  if (value === undefined) delete env[key];
+  else env[key] = value;
+}
+
+check("pixel: a saved brand setting wins", brandPixelChoice("111111111111111", "999999999999999") === "111111111111111");
+check("pixel: a saved empty setting is off", brandPixelChoice("", "999999999999999") === null);
+check("pixel: then the brand's profile", brandPixelChoice(null, fx.analytics?.metaPixelId) === "999999999999999");
+check("pixel: a malformed saved id is passed over", brandPixelChoice("abc", "999999999999999") === "999999999999999");
+check("pixel: nothing set goes on to the next source", brandPixelChoice(null, undefined) === undefined);
+check("pixel setting key is per brand", brandSettingKey("meta_pixel_id", TEST_BRAND_ID) === "meta_pixel_id:testbrand");
 
 if (failures > 0) {
   console.error(`\n${failures} Meta CAPI check(s) failed.`);

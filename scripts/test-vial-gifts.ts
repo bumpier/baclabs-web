@@ -27,6 +27,7 @@ import { buildOrderItems } from "@/lib/order-items";
 import { bundleById, priceOrder } from "@/config/funnel";
 import { checkCompliance } from "@/lib/content-rules";
 import { shopDayKey } from "@/lib/saleTime";
+import { bacLabLeaks, registerTestBrand, TEST_BRAND_ID } from "./fixtures/test-brand";
 
 let failures = 0;
 
@@ -158,6 +159,18 @@ check(
   contents.length === tenPack.length && contents.every((c) => c.id !== "baclab-10ml" || c.quantity === 1),
   JSON.stringify(contents)
 );
+
+// ── A second brand's gift ───────────────────────────────────────────
+// A gift is one brand's promise: its email is in that brand's name, sends to
+// that brand's site, and gives that brand's contact.
+const fx = registerTestBrand();
+const fxGift = giftEmail({ vials: 2, expiresAt: expires, reason: "thanks", brand: TEST_BRAND_ID }, "Sam");
+check("brand gift: subject names the brand", fxGift.subject === "2 free vials on your next Fixture & Co order, as a thank you", fxGift.subject);
+check("brand gift: orders on the brand's site", fxGift.html.includes(`${fx.origin}/#buy`));
+check("brand gift: the brand's contact", fxGift.html.includes("mailto:help@fixture.example"));
+check("brand gift: signed by the brand, escaped", fxGift.html.includes("The Fixture &amp; Co team"));
+check("brand gift: nothing of BacLab's", bacLabLeaks(fxGift.html + fxGift.subject).length === 0, bacLabLeaks(fxGift.html).join(", "));
+check("a gift without a brand is BacLab's", email.subject.includes("BacLab"));
 
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed`);
