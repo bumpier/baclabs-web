@@ -59,6 +59,21 @@ export async function suppressEverywhere(email: string, db: Db = prisma): Promis
 }
 
 /**
+ * A UK GDPR erasure: the address comes off every brand's mailing list and is
+ * suppressed for every brand. Every brand is the same company, so a request
+ * to one is a request to all. Orders keep their email: they are the shop's
+ * accounting records. Returns how many list entries were erased.
+ */
+export async function eraseEverywhere(email: string): Promise<number> {
+  const e = normEmail(email);
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.subscriber.deleteMany({ where: { email: e } });
+    await suppressEverywhere(e, tx);
+    return count;
+  });
+}
+
+/**
  * A fresh, explicit opt-in to `brand` overrides that brand's earlier
  * unsubscribe. Leaves other brands' rows and any every-brand suppression.
  */

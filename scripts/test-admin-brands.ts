@@ -383,6 +383,23 @@ async function databaseChecks() {
   check("db: a subscriber's orders are their own brand's", fxSubs[0]?.orderCount === 2 && blSubs[0]?.orderCount === 2, `${fxSubs[0]?.orderCount}/${blSubs[0]?.orderCount}`);
   check("db: all brands list both", (await subscriberRows({ filter: "all" })).length === 2);
   check("db: stats follow the brand", (await subscriberStats(TEST_BRAND_ID)).subscribed === 1 && (await subscriberStats()).subscribed === 2);
+
+  // An admin unsubscribe is one brand's; an erasure is every brand's.
+  const { eraseEverywhere, isOptedOut, optOut } = await import("@/lib/opt-outs");
+  await prisma.subscriber.create({ data: { brand: "baclab", email: "stay@example.com", status: "subscribed", source: "admin", consentText: "x" } });
+  await optOut("same@example.com", TEST_BRAND_ID);
+  check(
+    "db: a per-brand opt-out leaves the other brand",
+    (await isOptedOut("same@example.com", TEST_BRAND_ID)) && !(await isOptedOut("same@example.com", "baclab"))
+  );
+  const erased = await eraseEverywhere("Same@Example.com");
+  check("db: erasure takes the address off every brand's list", erased === 2 && (await prisma.subscriber.count({ where: { email: "same@example.com" } })) === 0);
+  check(
+    "db: erasure suppresses every brand",
+    (await isOptedOut("same@example.com", "baclab")) && (await isOptedOut("same@example.com", TEST_BRAND_ID)) && (await isOptedOut("same@example.com", "a-later-brand"))
+  );
+  check("db: erasure leaves other people alone", (await prisma.subscriber.count({ where: { email: "stay@example.com" } })) === 1 && !(await isOptedOut("stay@example.com", "baclab")));
+  check("db: erasure keeps the orders (accounting records)", (await prisma.order.count({ where: { customerEmail: "same@example.com" } })) > 0);
   await prisma.$disconnect();
 }
 

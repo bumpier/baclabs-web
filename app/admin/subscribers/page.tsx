@@ -215,7 +215,7 @@ export default async function AdminSubscribersPage({
                         <button
                           type="submit"
                           className="text-xs font-semibold text-red-600 hover:text-red-700"
-                          title="Erase this subscriber. The address stays opted out."
+                          title="Erase this address from every brand's list. It stays opted out of every brand."
                         >
                           Delete
                         </button>
