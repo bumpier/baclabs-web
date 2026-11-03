@@ -17,6 +17,7 @@ import {
   type KitTier,
 } from "@/config/funnel";
 import { planFreeLine, type PlanPrice } from "@/config/plans";
+import { DEFAULT_BRAND } from "@/brands/types";
 
 let _stripe: Stripe | null = null;
 
@@ -182,8 +183,11 @@ export async function createBundleCheckout(
     shippingOptions = rate && !shipsFree(orderValueMinor) ? [{ shipping_rate: rate }] : [];
   }
 
+  // BacLab's checkout: other brands build their sessions elsewhere. The
+  // webhook checks the brand against the order's (app/api/webhooks/stripe).
   const metadata = {
     orderId,
+    brand: DEFAULT_BRAND,
     bundleId: params.bundleId,
     extraVials: String(params.extras?.quantity ?? 0),
     kits: String(params.kits?.quantity ?? 0),
@@ -328,7 +332,7 @@ export async function createPlanCheckout(params: PlanCheckoutParams): Promise<{ 
 
   const allowedCountries =
     shippingCountries as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[];
-  const metadata = { orderId, plan: plan.key, kind: "plan" };
+  const metadata = { orderId, brand: DEFAULT_BRAND, plan: plan.key, kind: "plan" };
 
   const session = await getStripe().checkout.sessions.create(
     {
@@ -448,7 +452,7 @@ export async function createPlanUpgradeCheckout(params: {
     return { paymentUrl: `${origin}/dev/stripe?session=${ref}&order=${orderId}`, paymentRef: ref };
   }
   const ref = originalOrderId.slice(0, 8).toUpperCase();
-  const metadata = { orderId, upgradeOf: originalOrderId, plan: plan.key, kind: "plan_upgrade" };
+  const metadata = { orderId, brand: DEFAULT_BRAND, upgradeOf: originalOrderId, plan: plan.key, kind: "plan_upgrade" };
   const session = await getStripe().checkout.sessions.create(
     {
       mode: "payment",

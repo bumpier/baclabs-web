@@ -107,6 +107,8 @@ export async function createPlanBox(plan: Plan, now: Date): Promise<"created" | 
         data: {
           status: "paid",
           kind: "plan_box",
+          // A box ships from the brand the plan was bought on.
+          brand: plan.brand,
           planId: plan.id,
           planBox: boxNumber,
           customerName: first.customerName,

@@ -102,6 +102,17 @@ export async function POST(req: Request) {
       }
       const orderId = order.id;
 
+      // Same rule as the amount check below: never strand a paid order, but
+      // a session that names a different brand from its order is a bug in
+      // whichever checkout built it. Sessions from before brands existed
+      // carry no brand and are skipped.
+      const sessionBrand = session.metadata?.brand;
+      if (sessionBrand && sessionBrand !== order.brand) {
+        console.error(
+          `[stripe] BRAND MISMATCH on order ${orderId}: session ${session.id} says "${sessionBrand}" but the order is "${order.brand}".`
+        );
+      }
+
       // Reconcile what Stripe actually captured against what we recorded.
       // This does not block fulfilment — the money is already taken, and
       // refusing here would only strand a paid order — but a mismatch means
