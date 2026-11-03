@@ -10,6 +10,10 @@
  * row written before the brand column existed reads as BacLab.
  */
 import { baclabProfile } from "./baclab/profile";
+import { beautyProfile } from "./beauty/profile";
+import { gymProfile } from "./gym/profile";
+import { wholesaleProfile } from "./wholesale/profile";
+import { luxuryProfile } from "./luxury/profile";
 import { BRAND_IDS, DEFAULT_BRAND, type BrandId, type BrandProfile } from "./types";
 
 export { BRAND_IDS, DEFAULT_BRAND } from "./types";
@@ -17,6 +21,10 @@ export type { BrandId, BrandProfile } from "./types";
 
 const PROFILES: Record<BrandId, () => BrandProfile> = {
   baclab: baclabProfile,
+  beauty: beautyProfile,
+  gym: gymProfile,
+  wholesale: wholesaleProfile,
+  luxury: luxuryProfile,
 };
 
 /**

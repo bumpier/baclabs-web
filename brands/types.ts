@@ -8,8 +8,13 @@
  * without touching a single row: Order.brand and friends store the id.
  */
 
-/** Every registered brand. Add the id here when a brand is registered. */
-export const BRAND_IDS = ["baclab"] as const;
+/**
+ * Every registered brand. Add the id here when a brand is registered (and,
+ * for any brand but BacLab, its hosts to brands/hosts.json and its tree to
+ * app/<id>/). Registered is not live: a brand serves only on the hosts in
+ * hosts.json, which are development hosts until it launches.
+ */
+export const BRAND_IDS = ["baclab", "beauty", "gym", "wholesale", "luxury"] as const;
 export type BrandId = (typeof BRAND_IDS)[number];
 
 /** The brand every existing row and unknown host belongs to. */

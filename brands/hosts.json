@@ -1,0 +1,6 @@
+{
+  "beauty": ["beauty.localhost"],
+  "gym": ["gym.localhost"],
+  "wholesale": ["wholesale.localhost"],
+  "luxury": ["luxury.localhost"]
+}

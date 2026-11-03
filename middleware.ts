@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { SignJWT, jwtVerify } from "jose";
 import { originFromHeaders } from "@/lib/site-url";
 import { blogOrigin, isMigratedPath } from "@/lib/blog-migration";
+import { brandRewrite } from "@/lib/brand/resolve";
 
-// Server-side gatekeeper for /admin/*.
+// Server-side gatekeeper for /admin/*, and the host router for the brands
+// (lib/brand/resolve.ts). Brand routing reads brands/hosts.json and nothing
+// else: never the brand registry or Prisma.
 //
 // The affiliate referral capture (?ref= / ?recruiter= cookies) and the
 // /dashboard guard have been removed along with the affiliate programme.
@@ -37,6 +40,18 @@ async function getAdminTokenRole(token: string | undefined): Promise<"ADMIN" | "
 
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
+
+  // ── Brands first. A brand host is served from its own tree for every
+  // path, so nothing below (the blog redirect, the admin gate) ever runs
+  // for it: its /admin is a 404 in its own style. A brand's tree asked for
+  // directly on BacLab's host is a 404 too. The Host header is the one
+  // nginx passes through, and the one the matcher's host condition reads.
+  const rewrite = brandRewrite(req.headers.get("host"), pathname);
+  if (rewrite) {
+    const url = req.nextUrl.clone();
+    url.pathname = rewrite;
+    return NextResponse.rewrite(url);
+  }
 
   // ── The blog and guides have moved to their own domain (see
   // lib/blog-migration.ts). 301, not 307: these are permanent moves and a
@@ -89,6 +104,26 @@ export async function middleware(req: NextRequest) {
 // middleware on it would make every visit dynamic. /guides and /blog are added
 // only because they are already force-dynamic (they read the database), so
 // matching them costs nothing that was not already being paid.
+//
+// The last two entries are the brands. BacLab's funnel still never runs
+// middleware: the brand-tree entry matches only /beauty, /gym, /wholesale and
+// /luxury paths, and the catch-all only on a brand host. Next reads this
+// config statically, so both are literals: `npm run test:hosts` checks them
+// against brands/hosts.json (brandHostPattern() in lib/brand/resolve.ts).
 export const config = {
-  matcher: ["/admin/:path*", "/guides/:path*", "/blog/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/guides/:path*",
+    "/blog/:path*",
+    "/(beauty|gym|wholesale|luxury)/:path*",
+    {
+      source: "/((?!_next/|api/).*)",
+      has: [
+        {
+          type: "host",
+          value: "(?:beauty\\.localhost|gym\\.localhost|wholesale\\.localhost|luxury\\.localhost)",
+        },
+      ],
+    },
+  ],
 };

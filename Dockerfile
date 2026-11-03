@@ -101,6 +101,8 @@ COPY --from=builder --chown=baclab:baclab /app/scripts        ./scripts
 COPY --from=builder --chown=baclab:baclab /app/config         ./config
 COPY --from=builder --chown=baclab:baclab /app/lib            ./lib
 COPY --from=builder --chown=baclab:baclab /app/content        ./content
+# The brand registry and host map: lib/email.ts and friends import them.
+COPY --from=builder --chown=baclab:baclab /app/brands         ./brands
 COPY --from=builder --chown=baclab:baclab /app/tsconfig.json  ./tsconfig.json
 COPY --chown=baclab:baclab deploy/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
