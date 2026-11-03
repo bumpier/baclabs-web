@@ -9,8 +9,8 @@ import {
   SUBSCRIBER_COOKIE_MAX_AGE,
   bonusOffer,
   hashIp,
+  mailboxOrderCount,
   normEmail,
-  previousOrderCount,
   signSubscriberToken,
   subscriberFromCookie,
   welcomeEligible,
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     // A fresh, explicit opt-in overrides an earlier unsubscribe.
     await prisma.emailOptOut.deleteMany({ where: { email } });
 
-    const withOffer = welcomeEligible(sub, await previousOrderCount(email));
+    const withOffer = welcomeEligible(sub, await mailboxOrderCount(email));
     void sendWelcomeEmail(sub, { withOffer });
 
     const res = OK();
@@ -104,7 +104,7 @@ export async function GET(req: Request) {
     if (!sub || sub.status !== "subscribed") {
       return NextResponse.json(none, { headers });
     }
-    const welcome = welcomeVialOn() && welcomeEligible(sub, await previousOrderCount(sub.email));
+    const welcome = welcomeVialOn() && welcomeEligible(sub, await mailboxOrderCount(sub.email));
     return NextResponse.json({ subscribed: true, welcome, bonus: welcome ? bonusOffer(sub) : null }, { headers });
   } catch {
     return NextResponse.json(none, { headers });

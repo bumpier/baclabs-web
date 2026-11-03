@@ -20,6 +20,8 @@ import {
   welcomeLink,
   welcomeVialCount,
   addressKey,
+  canonicalEmail,
+  sameHousehold,
 } from "@/lib/mailing-list";
 import {
   applyMergeFields,
@@ -225,6 +227,22 @@ const a1 = JSON.stringify({ line1: "12 High St", postalCode: "SW1A 1AA" });
 const a2 = JSON.stringify({ line1: "12 high st.", postalCode: "sw1a1aa" });
 check("same address, different spelling, same key", addressKey(a1) === addressKey(a2));
 check("unreadable address has no key", addressKey("not json") === null);
+
+// ── One gift per mailbox and per household ─────────────────────────
+check("Gmail dots and + are one mailbox", canonicalEmail(" J.O.Smith+vial2@GoogleMail.com") === "josmith@gmail.com");
+check("+ is dropped for any provider", canonicalEmail("jo+2@outlook.com") === "jo@outlook.com");
+check("dots count outside Gmail", canonicalEmail("j.o@outlook.com") === "j.o@outlook.com");
+check("a leading + is kept", canonicalEmail("+jo@outlook.com") === "+jo@outlook.com");
+const to = (line1: string, postalCode: string, customerName: string) => ({
+  shippingAddress: JSON.stringify({ line1, postalCode }),
+  customerName,
+});
+check("same door, another name", sameHousehold(to("12 High St", "SW1A 1AA", "Jo Smith"), to("12 high st.", "sw1a1aa", "Sam Jones")));
+check("same name, street spelt out", sameHousehold(to("12 High St", "SW1A 1AA", "Jo Smith"), to("12 High Street", "SW1A1AA", "jo smith")));
+check("a neighbour is not the household", !sameHousehold(to("12 High St", "SW1A 1AA", "Jo Smith"), to("14 High St", "SW1A 1AA", "Sam Jones")));
+check("same street, other postcode", !sameHousehold(to("12 High St", "SW1A 1AA", "Jo Smith"), to("12 High St", "LS1 1AA", "Jo Smith")));
+check("no postcode, no match", !sameHousehold(to("12 High St", "", "Jo Smith"), to("12 High St", "", "Jo Smith")));
+check("an unread address matches nothing", !sameHousehold({ shippingAddress: "", customerName: "Jo" }, to("12 High St", "SW1A 1AA", "Jo")));
 
 // ── Audiences ───────────────────────────────────────────────────────
 const now = new Date("2026-09-29T12:00:00Z");

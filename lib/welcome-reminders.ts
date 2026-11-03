@@ -4,7 +4,7 @@ import { ctaButton, emailEnabled, escapeHtml, layout, sendBatch } from "@/lib/em
 import { marketingFooter, marketingHeaders } from "@/lib/customer-email";
 import {
   bonusDeadlineText,
-  previousOrderCount,
+  mailboxOrderCount,
   welcomeEligible,
   welcomeLink,
   welcomeVialOn,
@@ -178,7 +178,7 @@ export async function runWelcomeReminders(now: Date = new Date()): Promise<Remin
       // EmailOptOut is what every marketing sender checks.
       if (await prisma.emailOptOut.findUnique({ where: { email: sub.email } })) continue;
       // Ordered without the vial (an existing customer who then signed up).
-      if (!welcomeEligible(sub, await previousOrderCount(sub.email))) continue;
+      if (!welcomeEligible(sub, await mailboxOrderCount(sub.email))) continue;
 
       const outcome = await sendReminder(sub, step, now);
       if (outcome === "failed") run.failed++;

@@ -21,6 +21,11 @@ import { isKitLine } from "@/lib/order-items";
 // Either way the line is on the order before stock is allocated, so the pick
 // list, the pick label and the packing slip all carry it.
 //
+// It is one gift per household, not per address typed: Gmail dots and "+"
+// variants count as one mailbox, and fulfilment takes the vial back off any
+// order whose payer or delivery address has ordered before. See
+// settleWelcomeVial().
+//
 // A subscriber who has had the second reminder (lib/welcome-reminders.ts)
 // gets extra vials on a big enough first order: the same line, with a larger
 // quantity. See welcomeVialCount().
@@ -31,6 +36,30 @@ export const SUBSCRIBER_COOKIE_MAX_AGE = 365 * 24 * 3600;
 /** Every email is stored and compared lower-cased and trimmed. */
 export function normEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+const GMAIL_DOMAINS = new Set(["gmail.com", "googlemail.com"]);
+
+/**
+ * The mailbox an address delivers to, so one person's several sign-ups count
+ * as one when judging the welcome gift: "+anything" is dropped from the name
+ * (jo+2@ arrives at jo@), and for Gmail the dots as well, which Gmail
+ * ignores. Only for that judgement: addresses are stored and mailed as typed.
+ * mailboxOrderCount() does the same in SQL, and the two must agree.
+ */
+export function canonicalEmail(email: string): string {
+  const e = normEmail(email);
+  const at = e.indexOf("@");
+  if (at <= 0) return e;
+  let name = e.slice(0, at);
+  let domain = e.slice(at + 1);
+  const plus = name.indexOf("+");
+  if (plus > 0) name = name.slice(0, plus);
+  if (GMAIL_DOMAINS.has(domain)) {
+    name = name.replace(/\./g, "");
+    domain = "gmail.com";
+  }
+  return `${name}@${domain}`;
 }
 
 function key(): string {
@@ -261,6 +290,71 @@ export async function previousOrderCount(email: string, excludeOrderId = "", db:
   return Number(rows[0]?.n ?? 0);
 }
 
+/**
+ * Orders placed from this email's mailbox (canonicalEmail): the address
+ * itself, any "+" variant of it, and for Gmail any dotted spelling. The
+ * welcome gift is judged on this, so a customer cannot sign up again as
+ * jo+2@ and have a second "first order". canonicalEmail() spelled in SQLite.
+ */
+export async function mailboxOrderCount(email: string, excludeOrderId = "", db: Db = prisma): Promise<number> {
+  const rows = await db.$queryRaw<{ n: bigint | number }[]>`
+    SELECT COUNT(*) AS n FROM (
+      SELECT CASE WHEN instr(local, '+') > 1 THEN substr(local, 1, instr(local, '+') - 1) ELSE local END AS name, domain
+      FROM (
+        SELECT substr(e, 1, instr(e, '@') - 1) AS local, substr(e, instr(e, '@') + 1) AS domain
+        FROM (
+          SELECT lower(trim("customerEmail")) AS e FROM "Order"
+          WHERE "status" NOT IN ('pending', 'cancelled') AND "id" != ${excludeOrderId}
+        )
+        WHERE instr(e, '@') > 1
+      )
+    )
+    WHERE CASE WHEN domain IN ('gmail.com', 'googlemail.com') THEN replace(name, '.', '') || '@gmail.com'
+               ELSE name || '@' || domain END = ${canonicalEmail(email)}`;
+  return Number(rows[0]?.n ?? 0);
+}
+
+type Delivery = { shippingAddress: string; customerName: string };
+
+const squash = (s: unknown): string => (typeof s === "string" ? s.toLowerCase().replace(/[^a-z0-9]/g, "") : "");
+
+function household(d: Delivery): { postcode: string; line1: string; name: string } | null {
+  try {
+    const a = JSON.parse(d.shippingAddress) as { line1?: unknown; postalCode?: unknown };
+    const postcode = squash(a.postalCode);
+    return postcode ? { postcode, line1: squash(a.line1), name: squash(d.customerName) } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Two deliveries to the same household: the same postcode, and either the
+ * same first line or the same name. One person signing up under several
+ * emails still wants the parcels at their own door, under their own name,
+ * however they spell the street. Pure, for the test script.
+ */
+export function sameHousehold(a: Delivery, b: Delivery): boolean {
+  const x = household(a);
+  const y = household(b);
+  if (!x || !y || x.postcode !== y.postcode) return false;
+  return (x.line1.length > 2 && x.line1 === y.line1) || (x.name.length > 2 && x.name === y.name);
+}
+
+/**
+ * Orders already paid for delivery to this order's household (sameHousehold).
+ * Read in full and compared here: addresses are JSON typed by customers and
+ * by Stripe, so SQL cannot compare them, and this runs once per paid order.
+ */
+export async function householdOrderCount(order: Delivery & { id: string }, db: Db = prisma): Promise<number> {
+  if (!household(order)) return 0;
+  const others = await db.order.findMany({
+    where: { id: { not: order.id }, status: { notIn: ["pending", "cancelled"] }, shippingAddress: { not: "" } },
+    select: { shippingAddress: true, customerName: true },
+  });
+  return others.filter((o) => sameHousehold(order, o)).length;
+}
+
 /** The subscriber a browser's cookie names, or null. */
 export async function subscriberFromCookie(cookieHeader: string | null): Promise<Subscriber | null> {
   const id = readSubscriberToken(cookieFrom(cookieHeader, SUBSCRIBER_COOKIE));
@@ -282,7 +376,7 @@ export async function welcomeForCheckout(opts: {
       (await subscriberFromCookie(opts.cookieHeader)) ??
       (opts.email ? await prisma.subscriber.findUnique({ where: { email: normEmail(opts.email) } }) : null);
     if (!sub) return null;
-    return welcomeEligible(sub, await previousOrderCount(sub.email)) ? sub : null;
+    return welcomeEligible(sub, await mailboxOrderCount(sub.email)) ? sub : null;
   } catch (err) {
     // A lookup failure costs the customer a gift, never the sale.
     console.error("[mailing-list] welcome check failed at checkout", err);
@@ -302,17 +396,44 @@ export async function welcomeForCheckout(opts: {
  *    when checkout began. Legacy stock that cannot cover the bonus gives the
  *    one vial; stock that cannot cover that gives none, so the gift never
  *    oversells.
+ *
+ * Either way it is a household's first order or no gift. Checkout only knew
+ * the subscriber; this is the first point that knows who paid and where the
+ * parcel goes, and the signup's email alone let one person sign up under
+ * fresh addresses (or open one's email link, which leaves Stripe's email
+ * free) and take a vial on every order. So the paying mailbox
+ * (mailboxOrderCount) and the delivery household (householdOrderCount) must
+ * have no paid order before this one.
  */
 export async function settleWelcomeVial(
   tx: Prisma.TransactionClient,
-  order: { id: string; items: string; customerEmail: string; welcomeSubscriberId: string | null; createdAt: Date },
+  order: {
+    id: string;
+    items: string;
+    customerEmail: string;
+    customerName: string;
+    shippingAddress: string;
+    welcomeSubscriberId: string | null;
+    createdAt: Date;
+  },
   opts: { legacyStockCheck: boolean }
 ): Promise<{ items: string; note: string | null; subscriberId: string | null }> {
   const items = JSON.parse(order.items) as OrderItemLike[];
   const unchanged = { items: order.items, note: null, subscriberId: order.welcomeSubscriberId };
   const now = new Date();
+  const orderedBefore = async () =>
+    (await mailboxOrderCount(order.customerEmail, order.id, tx)) > 0 ||
+    (await householdOrderCount(order, tx)) > 0;
+  const BEEN_BEFORE = "this email or delivery address has ordered before.";
 
   if (items.some(isWelcomeItem)) {
+    const removed = (note: string) => ({
+      items: JSON.stringify(items.filter((i) => !isWelcomeItem(i))),
+      note,
+      subscriberId: null,
+    });
+    // Not claimed: the subscriber's gift stays theirs for a first order.
+    if (await orderedBefore()) return removed(`Welcome vial removed: ${BEEN_BEFORE}`);
     const claimed = order.welcomeSubscriberId
       ? (
           await tx.subscriber.updateMany({
@@ -322,18 +443,16 @@ export async function settleWelcomeVial(
         ).count === 1
       : false;
     if (claimed) return unchanged;
-    return {
-      items: JSON.stringify(items.filter((i) => !isWelcomeItem(i))),
-      note: "Welcome vial removed: this subscriber's gift was already used on another order.",
-      subscriberId: null,
-    };
+    return removed("Welcome vial removed: this subscriber's gift was already used on another order.");
   }
 
   if (!welcomeVialOn() || !order.customerEmail) return unchanged;
   const sub = await tx.subscriber.findUnique({ where: { email: normEmail(order.customerEmail) } });
-  if (!sub || !welcomeEligible(sub, await previousOrderCount(order.customerEmail, order.id, tx))) {
+  if (!sub || !welcomeEligible(sub, await mailboxOrderCount(order.customerEmail, order.id, tx))) {
     return unchanged;
   }
+  // Said on the order, so whoever answers "where is my free vial?" knows.
+  if ((await householdOrderCount(order, tx)) > 0) return { ...unchanged, note: `No welcome vial: ${BEEN_BEFORE}` };
   const vial = items[0];
   if (!vial) return unchanged;
 

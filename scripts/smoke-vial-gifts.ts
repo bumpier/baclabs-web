@@ -29,14 +29,14 @@ function assert(cond: boolean, msg: string) {
 const HOUR = 3_600_000;
 let productId = "";
 
-async function pendingOrder(email: string, opts: { kind?: string; createdAt?: Date } = {}) {
+async function pendingOrder(email: string, opts: { kind?: string; createdAt?: Date; postcode?: string } = {}) {
   return prisma.order.create({
     data: {
       status: "pending",
       kind: opts.kind ?? "sale",
       customerName: "Smoke Test",
       customerEmail: email,
-      shippingAddress: JSON.stringify({ line1: "1 Test St", line2: null, city: "Leeds", country: "GB", postalCode: "LS1 1AA" }),
+      shippingAddress: JSON.stringify({ line1: "1 Test St", line2: null, city: "Leeds", country: "GB", postalCode: opts.postcode ?? "LS1 1AA" }),
       items: JSON.stringify([
         {
           productId,
@@ -58,7 +58,7 @@ async function pendingOrder(email: string, opts: { kind?: string; createdAt?: Da
   });
 }
 
-async function pay(email: string, opts: { kind?: string; createdAt?: Date } = {}) {
+async function pay(email: string, opts: { kind?: string; createdAt?: Date; postcode?: string } = {}) {
   const order = await pendingOrder(email, opts);
   await fulfillPaidOrder(order.id, { provider: "stripe" });
   const paid = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
@@ -130,7 +130,9 @@ async function main() {
   // ── The welcome vial and a gift on the same first order ─────────────
   await prisma.subscriber.create({ data: { email: "new@smoke-gifts.test", status: "subscribed", source: "admin", consentText: "smoke" } });
   await gift("new@smoke-gifts.test", 2);
-  const both = await pay("new@smoke-gifts.test");
+  // Its own postcode: every other order here went to the same door, and the
+  // welcome vial is for a household's first order.
+  const both = await pay("new@smoke-gifts.test", { postcode: "LS2 2BB" });
   assert(both.welcome.length === 1 && both.gift[0]?.qty === 2, "a subscriber's first order gets the welcome vial and the gift");
   assert(both.items.findIndex(isWelcomeItem) < both.items.findIndex(isGiftItem), "…welcome line first");
 
