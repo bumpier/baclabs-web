@@ -9,6 +9,16 @@
 @source "../components";
 @source "../app";
 
+/* The brands build their own stylesheets (brands/<id>/styles.css), so their
+   folders stay out of this one: otherwise every class a brand page uses
+   would ship in BacLab's CSS. Add a brand's app/<id> here when it is
+   registered. */
+@source not "../app/beauty";
+@source not "../app/gym";
+@source not "../app/wholesale";
+@source not "../app/luxury";
+@source not "../brands";
+
 /* ──────────────────────────────────────────────────────────────────────
    THE PALETTE
    Values live in lib/theme.ts and are injected onto <html> as custom
