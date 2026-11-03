@@ -3,13 +3,15 @@ import Link from "next/link";
 import { brand } from "@/config/brand";
 import { BUNDLES, MAX_QUANTITY, PRODUCT } from "@/config/funnel";
 import { JsonLd } from "@/components/JsonLd";
+import { ContactForm } from "@/components/contact/ContactForm";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
 import { contentHref } from "@/lib/blog-migration";
+import { CONTACT_EMAIL } from "@/lib/contact";
 
 export const metadata: Metadata = pageMetadata({
   title: "Contact",
   description:
-    "How to reach BacLab about an order, a return, a product question or a wholesale quote for bacteriostatic water.",
+    "Message BacLab about an order, delivery, a return or a complaint, a product question or a wholesale quote for bacteriostatic water.",
   path: "/contact",
 });
 
@@ -17,84 +19,61 @@ export const metadata: Metadata = pageMetadata({
 const MAX_ORDER_VIALS = Math.max(...BUNDLES.map((b) => b.vials)) * MAX_QUANTITY;
 
 /**
- * Not a form — deliberately. A contact form needs spam handling, a privacy
- * notice covering what it stores, and somewhere for the message to go. An
- * email address does the same job with none of that, and it is honest about
- * where the message actually lands.
+ * The contact form, and the address for anyone who would rather email.
+ * A message from the form is stored (/admin/messages) and emailed to the
+ * same inbox the address reaches (lib/contact-inbox.ts), with the customer
+ * as Reply-To, so both routes end in one place.
  *
- * No response-time promise is made here: that is a commitment only the
- * operator can give, so, like every other unconfirmed fact on the site, it
- * is absent rather than guessed.
+ * No general response-time promise is made: that is a commitment only the
+ * operator can give. The one exception is complaints, whose acknowledgement
+ * time is already published in the terms (COMPLAINT_ACK_DAYS).
  */
 export default function ContactPage() {
   const { company } = brand;
-  // Set here rather than in brand.contact.email, which also feeds the footer
-  // and home page — the address is meant to appear on this page and the terms.
-  const email = "contact@baclab.co.uk";
-  const hasEmail = Boolean(email);
-  const wholesaleHref = hasEmail
-    ? `mailto:${email}?subject=${encodeURIComponent("Wholesale enquiry: bacteriostatic water")}`
-    : null;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-16 sm:px-8 sm:py-24">
       <JsonLd data={breadcrumbSchema("Contact", "/contact")} />
       <h1 className="text-3xl">Contact</h1>
       <p className="measure mt-3 text-base text-ink-soft">
-        Questions about an order, delivery or a return, product questions before you buy, and
-        wholesale enquiries.
+        Questions about an order, delivery or a return, complaints, product questions before you
+        buy, and wholesale enquiries. Send us a message here, or email{" "}
+        <a href={`mailto:${CONTACT_EMAIL}`} className="link">
+          {CONTACT_EMAIL}
+        </a>
+        .
       </p>
 
-      {/* The page used to say "get in touch" three times while brand.contact
-          .email was empty, so it told visitors to do something the site gave
-          them no way to do — and the footer pointed here for the details.
-          Nothing below now instructs contact unless there is a route to make
-          it with. Set NEXT_PUBLIC_CONTACT_EMAIL and every one of them comes
-          back on. */}
-      {!hasEmail ? (
-        <p className="measure mt-4 rounded-panel border border-line bg-neutral px-5 py-4 text-base text-ink">
-          We are not published as reachable by email at the moment. Order
-          questions are handled from the confirmation email for that order,
-          and the{" "}
-          <Link href="/returns" className="link">
-            returns and refunds page
-          </Link>{" "}
-          sets out how to cancel or return without needing to reach us first.
-        </p>
+      <section id="contact-form" className="mt-10 scroll-mt-24" aria-labelledby="form-heading">
+        <h2 id="form-heading" className="sr-only">
+          Send us a message
+        </h2>
+        <ContactForm />
+      </section>
+
+      {company.registeredAddress || company.legalName ? (
+        <dl className="mt-14 divide-y divide-line border-y border-line">
+          {company.registeredAddress ? (
+            <div className="grid gap-1 py-5 sm:grid-cols-[10rem_1fr] sm:gap-4">
+              <dt className="text-sm font-medium text-ink-soft">Registered address</dt>
+              <dd className="text-base text-ink">{company.registeredAddress}</dd>
+            </div>
+          ) : null}
+
+          {company.legalName ? (
+            <div className="grid gap-1 py-5 sm:grid-cols-[10rem_1fr] sm:gap-4">
+              <dt className="text-sm font-medium text-ink-soft">Company details</dt>
+              <dd className="text-base text-ink">
+                {company.legalName}
+                {company.companyNumber ? `, no. ${company.companyNumber}` : ""}
+                {company.vatNumber ? `, VAT ${company.vatNumber}` : ""}
+              </dd>
+            </div>
+          ) : null}
+        </dl>
       ) : null}
 
-      <dl className="mt-10 divide-y divide-line border-y border-line">
-        {hasEmail ? (
-          <div className="grid gap-1 py-5 sm:grid-cols-[10rem_1fr] sm:gap-4">
-            <dt className="text-sm font-medium text-ink-soft">Email</dt>
-            <dd className="text-base text-ink">
-              <a href={`mailto:${email}`} className="link">
-                {email}
-              </a>
-            </dd>
-          </div>
-        ) : null}
-
-        {company.registeredAddress ? (
-          <div className="grid gap-1 py-5 sm:grid-cols-[10rem_1fr] sm:gap-4">
-            <dt className="text-sm font-medium text-ink-soft">Registered address</dt>
-            <dd className="text-base text-ink">{company.registeredAddress}</dd>
-          </div>
-        ) : null}
-
-        {company.legalName ? (
-          <div className="grid gap-1 py-5 sm:grid-cols-[10rem_1fr] sm:gap-4">
-            <dt className="text-sm font-medium text-ink-soft">Company details</dt>
-            <dd className="text-base text-ink">
-              {company.legalName}
-              {company.companyNumber ? `, no. ${company.companyNumber}` : ""}
-              {company.vatNumber ? `, VAT ${company.vatNumber}` : ""}
-            </dd>
-          </div>
-        ) : null}
-      </dl>
-
-      <section className="mt-12" aria-labelledby="order-heading">
+      <section className="mt-14" aria-labelledby="order-heading">
         <h2 id="order-heading" className="text-lg">
           About an order
         </h2>
@@ -128,8 +107,8 @@ export default function ContactPage() {
           <Link href="/safety-data-sheet" className="link">
             safety data sheet
           </Link>
-          .{hasEmail ? " If yours is not there, get in touch." : ""} We can answer questions about
-          the product as sold, a laboratory and research diluent; we cannot advise on any other use.
+          . If yours is not there, send us a message. We can answer questions about the product as
+          sold, a laboratory and research diluent; we cannot advise on any other use.
         </p>
       </section>
 
@@ -139,30 +118,16 @@ export default function ContactPage() {
         </h2>
         <p className="measure mt-3 text-base text-ink-soft">
           The order form takes up to <span className="tabular">{MAX_ORDER_VIALS}</span> vials in one
-          order.{" "}
-          {hasEmail ? (
-            <>
-              For more than that, for a standing order, or for an institutional purchase order, get
-              in touch with the quantity you need, the delivery postcode and whether it is a
-              one-off or recurring, and we will reply with a quote.
-            </>
-          ) : (
-            <>
-              Pack prices, per-vial costs and the order limits are set out in full on the{" "}
-              <Link href="/bulk-bacteriostatic-water" className="link">
-                bulk and wholesale page
-              </Link>
-              .
-            </>
-          )}
+          order. For more than that, for a standing order, or for an institutional purchase order,
+          send us the quantity you need, the delivery postcode and whether it is a one-off or
+          recurring, and we will reply with a quote.
         </p>
-        {wholesaleHref ? (
-          <p className="mt-4">
-            <a href={wholesaleHref} className="btn-quiet sm:w-auto">
-              Email a wholesale enquiry
-            </a>
-          </p>
-        ) : null}
+        <p className="mt-4">
+          {/* A full load, not a client navigation: the form reads ?topic once, on mount. */}
+          <a href="/contact?topic=wholesale#contact-form" className="btn-quiet sm:w-auto">
+            Send a wholesale enquiry
+          </a>
+        </p>
       </section>
 
       <p className="mt-12 text-sm text-ink-soft">

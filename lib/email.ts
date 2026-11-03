@@ -30,14 +30,14 @@ export async function send(
   to: string,
   subject: string,
   html: string,
-  opts?: { bcc?: string; headers?: Record<string, string> }
+  opts?: { bcc?: string; replyTo?: string; headers?: Record<string, string> }
 ) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     if (process.env.NODE_ENV !== "production") {
       // Dev: surface the email body so flows are testable without a mail provider.
       console.log(
-        `[dev email] to=${to}${opts?.bcc ? ` bcc=${opts.bcc}` : ""} subject="${subject}"\n${html}`
+        `[dev email] to=${to}${opts?.bcc ? ` bcc=${opts.bcc}` : ""}${opts?.replyTo ? ` reply-to=${opts.replyTo}` : ""} subject="${subject}"\n${html}`
       );
     }
     // Blank in production → email intentionally disabled → stay silent.
@@ -60,6 +60,7 @@ export async function send(
       subject,
       html,
       ...(opts?.bcc ? { bcc: opts.bcc } : {}),
+      ...(opts?.replyTo ? { replyTo: opts.replyTo } : {}),
       ...(opts?.headers ? { headers: opts.headers } : {}),
     });
     if (error) {

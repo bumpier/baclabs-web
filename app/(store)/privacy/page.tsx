@@ -40,6 +40,9 @@ export const metadata: Metadata = pageMetadata({
  *    in a welcome email or reminder (app/api/subscribe/link); campaigns
  *    (/admin/campaigns) go to subscribers and, under the soft opt-in, past
  *    customers.
+ *  - The contact form (app/api/contact) stores each message (ContactMessage,
+ *    /admin/messages) and emails it to the contact inbox through Resend.
+ *    Nothing is sent back to the sender.
  *
  * If any of those change, this page must change with them.
  */
@@ -155,8 +158,13 @@ export default async function PrivacyPage() {
                     </dd>
                   </>
                 ) : null}
-                <dt>Correspondence</dt>
-                <dd>Messages you send us, and our replies.</dd>
+                <dt id="contact">Correspondence</dt>
+                <dd>
+                  Messages you send us, by email or through our contact form, and our replies. From
+                  the form we keep your name, your email address, what the message is about, any
+                  order number you give and what you wrote. We use it only to reply to you and deal
+                  with what you raised.
+                </dd>
                 <dt>Email delivery records</dt>
                 <dd>
                   Which order emails were sent to which address and when, so we do not send the same
@@ -370,7 +378,8 @@ export default async function PrivacyPage() {
                   <strong>Stripe</strong> &mdash; payment processing and refunds.
                 </li>
                 <li>
-                  <strong>Resend</strong> &mdash; sending order and reminder emails.
+                  <strong>Resend</strong> &mdash; sending order and reminder emails, and passing
+                  contact form messages to our inbox.
                 </li>
                 <li>
                   <strong>Trustpilot</strong> &mdash; your name, email address and order reference,

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PLAN_PACK_IDS } from "@/config/plans";
+import { CONTACT_MESSAGE_MAX, CONTACT_TOPIC_IDS } from "@/lib/contact";
 import {
   BUNDLES,
   DELIVERY_OPTIONS,
@@ -138,6 +139,22 @@ export const SubscribeSchema = z
   .object({
     email: z.string().trim().email().max(254),
     source: z.enum(["popup", "footer", "inline"]),
+    website: z.string().max(200).optional(),
+  })
+  .strict();
+
+/**
+ * The contact form (components/contact/ContactForm.tsx). The order
+ * reference is free text: customers paste the full id from their
+ * confirmation, or the short reference off the parcel label.
+ */
+export const ContactSchema = z
+  .object({
+    topic: z.enum(CONTACT_TOPIC_IDS),
+    name: z.string().trim().min(2).max(100),
+    email: z.string().trim().email().max(254),
+    orderRef: z.string().trim().max(60).optional().or(z.literal("")),
+    message: z.string().trim().min(10).max(CONTACT_MESSAGE_MAX),
     website: z.string().max(200).optional(),
   })
   .strict();

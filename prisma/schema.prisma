@@ -716,3 +716,31 @@ model CostRate {
   // A second price for the same day replaces the first.
   @@unique([kind, key, effectiveFrom])
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// A message sent from the contact form (/contact, app/api/contact). Stored
+// first and then emailed to the contact inbox, so a mail outage cannot lose
+// a complaint: /admin/messages lists every one, emailed or not. Replies go
+// from the inbox (the alert's Reply-To is the customer), not from here.
+// Kept up to 2 years after it is closed, as /privacy says.
+// ─────────────────────────────────────────────────────────────────────────
+model ContactMessage {
+  id       String @id @default(cuid())
+  // CONTACT_TOPICS in lib/contact.ts: delivery | problem | return | complaint | product | wholesale | other
+  topic    String
+  name     String
+  email    String // lower-cased
+  // As the customer typed it: the full order id, or the 8-character label
+  // reference. Blank when not given.
+  orderRef String @default("") @map("order_ref")
+  message  String
+
+  status    String    @default("open") // open | closed
+  // When the alert reached Resend. Null means it was never emailed, and
+  // the message is only in /admin/messages.
+  emailedAt DateTime? @map("emailed_at")
+  closedAt  DateTime? @map("closed_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+}
