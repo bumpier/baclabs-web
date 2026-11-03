@@ -72,6 +72,19 @@ export interface BrandProfile {
   disclaimer: string;
   /** Printed at the foot of every packing slip. */
   packingSlipThankYou: string;
+  /**
+   * Parcels. Every brand ships from the same warehouse, so the label's
+   * address is always the warehouse's; only the name on it can differ.
+   */
+  shipping?: {
+    /**
+     * The sender company on the carrier label instead of Warehouse.company.
+     * 25 characters or fewer (SmartTrack's limit). Unset: the warehouse's.
+     */
+    senderCompany?: string;
+    /** What the packer puts in with this brand's orders (its box or insert), for the slip and packing screen. */
+    packingNote?: string;
+  };
   /** Registered company name for legal lines. "" renders nothing. */
   legalName: string;
 }

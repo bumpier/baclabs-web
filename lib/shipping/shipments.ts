@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { brandFor, type BrandProfile } from "@/brands/registry";
 import { parseAddress } from "@/lib/orderAddress";
 import { readSetting, SETTING_KEYS } from "@/lib/settings";
 import { planOrderShipment } from "@/lib/shipping/order-parcel";
@@ -62,6 +63,16 @@ export async function getDeliveryInstructions(): Promise<string> {
 /** On unless someone switched it off on the Shipping page. */
 export async function getAutoLabels(): Promise<boolean> {
   return (await readSetting(SETTING_KEYS.autoLabels)) !== "off";
+}
+
+/**
+ * The label's sender: the warehouse's address and contact, under the
+ * order's brand's sender company when it has one (BacLab has none, so its
+ * labels carry Warehouse.company as always). Pure, for scripts/test-shipping.ts.
+ */
+export function labelSender<W extends { company: string }>(warehouse: W, b: BrandProfile): W {
+  const company = b.shipping?.senderCompany?.trim();
+  return company ? { ...warehouse, company } : warehouse;
 }
 
 /**
@@ -171,7 +182,8 @@ export async function createShipmentLabel(input: {
   }
 
   // The label's sender is the warehouse the stock was picked from; before
-  // allocation exists (legacy mode) it is the first warehouse set up.
+  // allocation exists (legacy mode) it is the first warehouse set up. The
+  // name on it is the order's brand's (labelSender).
   const warehouse =
     order.pickLines.find((l) => l.location)?.location?.warehouse ??
     (await prisma.warehouse.findFirst({ where: { active: true }, orderBy: { createdAt: "asc" } }));
@@ -187,7 +199,7 @@ export async function createShipmentLabel(input: {
     orderRef: order.id.slice(0, 8).toUpperCase(),
     serviceCode: service.code,
     labelSize: cfg.labelSize,
-    sender: warehouse,
+    sender: labelSender(warehouse, brandFor(order.brand)),
     receiver: {
       name: order.customerName,
       email: order.customerEmail,
