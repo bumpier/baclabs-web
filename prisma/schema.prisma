@@ -36,6 +36,8 @@ model Product {
 
 model Order {
   id     String @id @default(uuid())
+  // The storefront brand (brands/registry.ts). Rows from before brands existed are BacLab.
+  brand  String @default("baclab")
   status String @default("pending") // pending | paid | packed | shipped | delivered | cancelled
 
   // For the card path these are blank until the Stripe webhook backfills them
@@ -64,8 +66,8 @@ model Order {
   // config/funnel.ts) and what it cost them, in pence. Card orders learn both
   // from the Stripe webhook; crypto orders at checkout. Null on orders from
   // before there was a choice. Label buying only picks services linked to it.
-  deliveryOption String?
-  deliveryMinor  Int?
+  deliveryOption       String?
+  deliveryMinor        Int?
   // What the customer asked the carrier to do ("Leave with neighbour at 12"),
   // at most 30 characters: it travels in SmartTrack's description field.
   // Null = the shop's default instructions (Shipping page).
@@ -147,6 +149,7 @@ model Order {
   pickLines PickLine[]
   shipments Shipment[]
 
+  @@unique([planId, planBox])
   // "Is this their first order?" and the campaign audiences look orders up
   // by email.
   @@index([customerEmail])
@@ -156,7 +159,7 @@ model Order {
   // per address.
   @@index([paymentRef])
   @@index([recoveryEmail, recoveryEmailSentAt])
-  @@unique([planId, planBox])
+  @@index([brand, status, createdAt])
 }
 
 model AdminUser {
@@ -197,6 +200,8 @@ model EmailOptOut {
 // (onDelete: Cascade), which is why clear-pending can still delete it.
 model Plan {
   id     String @id @default(cuid())
+  // The storefront brand (brands/registry.ts). Rows from before brands existed are BacLab.
+  brand  String @default("baclab")
   status String @default("pending") // pending | active | completed | cancelled
 
   packId           String @map("pack_id") // BundleId: five | ten | twenty
@@ -218,8 +223,8 @@ model Plan {
 
   // The order whose payment bought the plan: box 1 for a checkout plan, the
   // kind "plan_upgrade" payment for an upgrade.
-  purchaseOrderId String @unique @map("purchase_order_id")
-  purchaseOrder   Order  @relation("PlanPurchase", fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  purchaseOrderId  String  @unique @map("purchase_order_id")
+  purchaseOrder    Order   @relation("PlanPurchase", fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   // For an upgrade: the one-off order that becomes box 1 when it is paid.
   upgradeOfOrderId String? @map("upgrade_of_order_id")
 
@@ -256,15 +261,17 @@ model Plan {
 // Unsubscribing also writes an EmailOptOut row, which is what every sender
 // checks: the opt-out list stays the one source of "never email this person".
 model Subscriber {
-  id          String    @id @default(cuid())
-  email       String    @unique // lower-cased
-  status      String    @default("subscribed") // subscribed | unsubscribed
-  source      String    @default("footer") // popup | footer | inline | admin
-  consentText String    @default("") @map("consent_text")
-  consentAt   DateTime  @default(now()) @map("consent_at")
+  id          String   @id @default(cuid())
+  // The storefront brand (brands/registry.ts). Rows from before brands existed are BacLab.
+  brand       String   @default("baclab")
+  email       String   @unique // lower-cased
+  status      String   @default("subscribed") // subscribed | unsubscribed
+  source      String   @default("footer") // popup | footer | inline | admin
+  consentText String   @default("") @map("consent_text")
+  consentAt   DateTime @default(now()) @map("consent_at")
   // SHA-256 of the IP with JWT_SECRET, never the address itself: enough to
   // spot one machine signing up a hundred addresses, not enough to locate it.
-  ipHash      String    @default("") @map("ip_hash")
+  ipHash      String   @default("") @map("ip_hash")
 
   // The order that received the welcome vial. Unique, and claimed with a
   // conditional update, so a subscriber can never get a second one.
@@ -291,6 +298,8 @@ model Subscriber {
 // resolved at send time. lib/campaigns.ts sends it.
 model Campaign {
   id           String @id @default(cuid())
+  // The storefront brand (brands/registry.ts). Rows from before brands existed are BacLab.
+  brand        String @default("baclab")
   subject      String
   preheader    String @default("")
   bodyMarkdown String @default("") @map("body_markdown")
@@ -588,6 +597,8 @@ model VialDelivery {
 // expired are read from the columns; a row with none of them is waiting.
 model VialGift {
   id          String    @id @default(cuid())
+  // The storefront brand (brands/registry.ts). Rows from before brands existed are BacLab.
+  brand       String    @default("baclab")
   email       String // lower-cased and trimmed (lib/mailing-list.ts normEmail)
   vials       Int
   reason      String    @default("apology") // apology | thanks: picks the email and order line wording (GIFT_REASONS)
@@ -636,13 +647,13 @@ model PostalService {
   deliveryCountries String @default("[]") @map("delivery_countries")
 
   // Operator's columns. Lower priority wins when several services fit.
-  active   Boolean   @default(true)
-  priority Int       @default(100)
+  active         Boolean   @default(true)
+  priority       Int       @default(100)
   // The checkout delivery option this service fulfils ("economy", "standard",
   // "next_day"), or "" for none. An order that paid for an option is only
   // offered the services linked to it.
-  deliveryOption String @default("") @map("delivery_option")
-  syncedAt DateTime? @map("synced_at")
+  deliveryOption String    @default("") @map("delivery_option")
+  syncedAt       DateTime? @map("synced_at")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -726,6 +737,8 @@ model CostRate {
 // ─────────────────────────────────────────────────────────────────────────
 model ContactMessage {
   id       String @id @default(cuid())
+  // The storefront brand (brands/registry.ts). Rows from before brands existed are BacLab.
+  brand    String @default("baclab")
   // CONTACT_TOPICS in lib/contact.ts: delivery | problem | return | complaint | product | wholesale | other
   topic    String
   name     String
