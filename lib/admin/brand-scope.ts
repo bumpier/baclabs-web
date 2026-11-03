@@ -106,6 +106,22 @@ export function keepBrandParam(param: ParamValue): (href: string) => string {
   };
 }
 
+/**
+ * Where the switcher goes once the cookie is set: the admin page it was used
+ * on, with that page's own ?brand= dropped, since it would outrank the new
+ * choice. Anything that is not a path inside /admin is /admin, so the form's
+ * `next` field cannot send anyone off the site.
+ */
+export function afterBrandSwitch(next: string | null | undefined): string {
+  const fallback = "/admin";
+  if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return fallback;
+  const base = "http://admin.invalid";
+  const url = new URL(next, base);
+  if (url.origin !== base || !(url.pathname === "/admin" || url.pathname.startsWith("/admin/"))) return fallback;
+  url.searchParams.delete("brand");
+  return `${url.pathname}${url.search}`;
+}
+
 /** Registry order, BacLab first; an id no longer registered sorts last. For grouping rows by brand. */
 export function brandRank(id: string): number {
   const i = allBrands().findIndex((b) => b.id === id);

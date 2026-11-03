@@ -12,6 +12,7 @@ import {
   ADMIN_BRAND_COOKIE,
   ALL_BRANDS_SCOPE,
   adminBrandScope,
+  afterBrandSwitch,
   brandParam,
   brandRank,
   brandWhere,
@@ -95,6 +96,17 @@ async function main() {
   check("a param is added with ?", keepBrandParam("baclab")("/admin/takings") === "/admin/takings?brand=baclab");
   check("a param is added with &", keepBrandParam("all")("/admin/finance?range=7d") === "/admin/finance?range=7d&brand=all");
   check("a hash stays last", keepBrandParam("baclab")("/admin/orders#x") === "/admin/orders?brand=baclab#x");
+
+  // ── The switcher goes back where it was used, minus its ?brand=, and never off the admin.
+  check("back to the page", afterBrandSwitch("/admin/orders?status=paid") === "/admin/orders?status=paid");
+  check("the page's ?brand= is dropped", afterBrandSwitch("/admin/takings?date=2026-11-01&brand=baclab") === "/admin/takings?date=2026-11-01");
+  check("the dashboard is fine", afterBrandSwitch("/admin") === "/admin");
+  check("no next is the dashboard", afterBrandSwitch(null) === "/admin" && afterBrandSwitch("") === "/admin");
+  check("another site is refused", afterBrandSwitch("https://evil.example/admin") === "/admin");
+  check("a protocol-relative URL is refused", afterBrandSwitch("//evil.example/admin") === "/admin");
+  check("a backslash trick is refused", afterBrandSwitch("/\\evil.example") === "/admin");
+  check("a storefront path is refused", afterBrandSwitch("/checkout") === "/admin");
+  check("an admin look-alike is refused", afterBrandSwitch("/administrator") === "/admin");
 
   // ── First order or repeat: within one brand, BacLab's keys unchanged.
   check("BacLab's customer key is the bare email", customerKey(" A@Example.com ", "baclab") === "a@example.com");

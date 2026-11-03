@@ -3,13 +3,19 @@
 import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { canonicalOrigin } from "@/lib/site-url";
 import { MANUAL_MOVES } from "@/lib/order-status";
+import {
+  ADMIN_BRAND_COOKIE,
+  ADMIN_BRAND_COOKIE_MAX_AGE,
+  afterBrandSwitch,
+  isBrandScope,
+} from "@/lib/admin/brand-scope";
 import bcrypt from "bcryptjs";
 import {
   createAdminSession,
@@ -86,6 +92,28 @@ export async function adminLoginAction(
 export async function adminLogoutAction(): Promise<void> {
   await destroyAdminSession();
   redirect("/admin/login");
+}
+
+// ── Brand scope ──────────────────────────────────────────────────
+
+/**
+ * The header's brand switcher (components/admin/BrandSwitcher.tsx). Packers
+ * too: it only changes what they see. Goes back to the page it was used on.
+ */
+export async function setAdminBrandAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const brand = formData.get("brand");
+  if (isBrandScope(brand)) {
+    (await cookies()).set(ADMIN_BRAND_COOKIE, brand, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: ADMIN_BRAND_COOKIE_MAX_AGE,
+      path: "/admin",
+    });
+  }
+  const next = formData.get("next");
+  redirect(afterBrandSwitch(typeof next === "string" ? next : null));
 }
 
 // ── Orders ───────────────────────────────────────────────────────

@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { brand } from "@/config/brand";
+import { Suspense } from "react";
+import { allBrands } from "@/brands/registry";
 import { getAdminSession } from "@/lib/adminAuth";
+import { adminBrandScope, ALL_BRANDS_SCOPE } from "@/lib/admin/brand-scope";
 import { adminLogoutAction } from "@/app/admin/actions";
 import { AdminNav, type NavEntry, type NavLink } from "@/components/admin/AdminNav";
+import { BrandSwitcher, type BrandOption } from "@/components/admin/BrandSwitcher";
 
 // robots.txt already disallows /admin/, but a disallow stops crawling, not
 // indexing: a URL linked from elsewhere can still appear as a bare result.
@@ -87,6 +90,14 @@ export default async function AdminLayout({
     "items" in e ? { ...e, items: e.items.filter(visible) } : e
   );
 
+  // One admin for every brand: the switcher picks which one the pages show
+  // (lib/admin/brand-scope.ts). Shown even with one brand registered.
+  const brandOptions: BrandOption[] = [
+    { id: ALL_BRANDS_SCOPE, label: "All brands" },
+    ...allBrands().map((b) => ({ id: b.id, label: b.name })),
+  ];
+  const brandScope = session ? await adminBrandScope() : ALL_BRANDS_SCOPE;
+
   return (
     <div className="relative z-10 flex min-h-screen flex-col">
       <header className="no-print relative border-b border-line bg-brand-deep text-white">
@@ -96,7 +107,8 @@ export default async function AdminLayout({
               href={isAdminRole ? "/admin" : "/admin/orders"}
               className="flex items-center gap-2"
             >
-              <span className="font-display text-lg font-semibold">{brand.name}</span>
+              {/* Neutral: the admin serves every brand. */}
+              <span className="font-display text-lg font-semibold">Ops</span>
               <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
                 {session?.role === "PACKER" ? "Packer" : "Admin"}
               </span>
@@ -104,11 +116,17 @@ export default async function AdminLayout({
             {session && <AdminNav entries={nav} />}
           </div>
           {session && (
-            <form action={adminLogoutAction}>
-              <button type="submit" className="text-sm text-white/75 hover:text-white">
-                Sign out
-              </button>
-            </form>
+            <div className="flex items-center gap-4">
+              {/* useSearchParams: a boundary keeps any static render whole. */}
+              <Suspense fallback={null}>
+                <BrandSwitcher options={brandOptions} current={brandScope} />
+              </Suspense>
+              <form action={adminLogoutAction}>
+                <button type="submit" className="text-sm text-white/75 hover:text-white">
+                  Sign out
+                </button>
+              </form>
+            </div>
           )}
         </div>
       </header>
