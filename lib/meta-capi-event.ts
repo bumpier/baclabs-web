@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { isIP } from "node:net";
 import { bundleById } from "@/config/funnel";
+import { DEFAULT_BRAND } from "@/brands/types";
 
 /**
  * Meta Purchase event — the pure half. No network, no database, so it can be
@@ -46,10 +47,29 @@ export function paidMinor(order: {
 }
 
 /**
- * One content entry per order line, keyed by the bundle's SKU. Free vials
- * staff promised (lib/vial-gifts.ts) are left out: nothing was bought.
+ * A line's content id, from the order itself: the SKU recorded on the line
+ * when there is one (how other brands' checkouts write their lines). BacLab's
+ * lines record a bundle of BacLab's own catalogue instead, so its ids stay
+ * exactly as they were ("baclab-10ml-x5", parent "baclab-10ml"). BacLab's
+ * catalogue is never consulted for another brand's order: its SKU names
+ * would land in that brand's dataset.
  */
-export function purchaseContents(itemsJson: string): { id: string; quantity: number }[] {
+function contentId(item: { sku?: unknown; bundleId?: string }, brand: string): string {
+  if (typeof item.sku === "string" && item.sku) return item.sku;
+  if (brand === DEFAULT_BRAND) {
+    const bundle = item.bundleId ? bundleById(item.bundleId) : undefined;
+    return bundle?.sku ?? item.bundleId ?? "baclab-10ml";
+  }
+  // The shared, unbranded vial (the neutral VIAL-10ML stock every pack is built from).
+  return item.bundleId ?? "vial-10ml";
+}
+
+/**
+ * One content entry per order line, keyed by its SKU (contentId). Free vials
+ * staff promised (lib/vial-gifts.ts) are left out: nothing was bought.
+ * `brand` is the order's (Order.brand); left out, BacLab.
+ */
+export function purchaseContents(itemsJson: string, brand: string = DEFAULT_BRAND): { id: string; quantity: number }[] {
   let items: unknown;
   try {
     items = JSON.parse(itemsJson);
@@ -58,10 +78,9 @@ export function purchaseContents(itemsJson: string): { id: string; quantity: num
   }
   if (!Array.isArray(items)) return [];
   return items.filter((raw) => (raw as { gift?: unknown })?.gift !== true).map((raw) => {
-    const item = raw as { bundleId?: string; bundleQty?: number };
-    const bundle = item.bundleId ? bundleById(item.bundleId) : undefined;
+    const item = raw as { sku?: unknown; bundleId?: string; bundleQty?: number };
     return {
-      id: bundle?.sku ?? item.bundleId ?? "baclab-10ml",
+      id: contentId(item, brand),
       quantity: item.bundleQty ?? 1,
     };
   });
@@ -161,6 +180,8 @@ export function attributionFor(
 
 export interface PurchaseOrder {
   id: string;
+  /** Order.brand. Left out, BacLab. */
+  brand?: string;
   items: string;
   totalAmount: { toString(): string };
   amountPaidMinor: number | null;
@@ -229,7 +250,7 @@ export function buildPurchaseEvent(
   if (order.fbp) user_data.fbp = order.fbp;
   if (order.fbc) user_data.fbc = order.fbc;
 
-  const contents = purchaseContents(order.items);
+  const contents = purchaseContents(order.items, order.brand ?? DEFAULT_BRAND);
   return {
     event_name: "Purchase",
     event_time: opts.eventTime,

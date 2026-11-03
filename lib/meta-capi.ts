@@ -1,5 +1,5 @@
-import { getMetaPixelId } from "@/lib/settings";
-import { canonicalOrigin } from "@/lib/site-url";
+import { getBrandMetaPixelId } from "@/lib/settings";
+import { brandFor, type BrandProfile } from "@/brands/registry";
 import { buildPurchaseEvent, type PurchaseOrder } from "@/lib/meta-capi-event";
 
 /**
@@ -16,9 +16,14 @@ import { buildPurchaseEvent, type PurchaseOrder } from "@/lib/meta-capi-event";
  *                                 "Test events" tab instead of live reporting.
  *                                 Remove once verified.
  *  - META_GRAPH_API_VERSION     — optional, defaults below.
+ *  - META_CAPI_ACCESS_TOKEN__<BRAND> — optional, per brand (e.g. __GYM): a
+ *                                 token for that brand's own dataset. Unset
+ *                                 falls back to META_CAPI_ACCESS_TOKEN.
  *
- * The pixel id is the one in force for the browser (lib/settings.ts), so the
- * two reports always land on the same dataset.
+ * Each order reports to its own brand's pixel (getBrandMetaPixelId in
+ * lib/settings.ts), the one in force for that brand's browser pages, so the
+ * two reports always land on the same dataset and no brand's sales show up
+ * in another's.
  */
 
 const DEFAULT_GRAPH_API_VERSION = "v26.0";
@@ -28,6 +33,15 @@ function graphApiVersion(): string {
   return /^v\d+\.\d+$/.test(configured) ? configured : DEFAULT_GRAPH_API_VERSION;
 }
 
+/** The access token for one brand's events, or undefined when it has none. Read at call time. */
+export function capiAccessToken(b: Pick<BrandProfile, "id">): string | undefined {
+  return (
+    process.env[`META_CAPI_ACCESS_TOKEN__${b.id.toUpperCase()}`]?.trim() ||
+    process.env.META_CAPI_ACCESS_TOKEN?.trim() ||
+    undefined
+  );
+}
+
 /**
  * Report a paid order to Meta. NEVER THROWS and never needs awaiting: the
  * order is already paid, and a Meta outage must not fail the payment webhook
@@ -35,17 +49,19 @@ function graphApiVersion(): string {
  */
 export async function sendMetaPurchase(order: PurchaseOrder): Promise<void> {
   try {
-    const token = process.env.META_CAPI_ACCESS_TOKEN?.trim();
+    const b = brandFor(order.brand);
+    const token = capiAccessToken(b);
     if (!token) return;
 
     const event = buildPurchaseEvent(order, {
       eventTime: Math.floor(Date.now() / 1000),
-      // Deliberately without the order id — see purchaseEventId().
-      eventSourceUrl: `${canonicalOrigin()}/order-confirmation`,
+      // On the brand's own site. Deliberately without the order id — see
+      // purchaseEventId().
+      eventSourceUrl: `${b.origin}/order-confirmation`,
     });
     if (!event) return;
 
-    const pixelId = await getMetaPixelId();
+    const pixelId = await getBrandMetaPixelId(b);
     if (!pixelId) return;
 
     const testEventCode = process.env.META_CAPI_TEST_EVENT_CODE?.trim();

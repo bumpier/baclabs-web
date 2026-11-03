@@ -87,4 +87,16 @@ export interface BrandProfile {
   };
   /** Registered company name for legal lines. "" renders nothing. */
   legalName: string;
+  /**
+   * The brand's own tracking ids. Each brand reports to its own Meta dataset
+   * and GA4 property, never another brand's. The Setting
+   * `meta_pixel_id:<brand>` beats metaPixelId (lib/settings.ts); the
+   * Conversions API token is env META_CAPI_ACCESS_TOKEN__<BRAND>, falling back
+   * to META_CAPI_ACCESS_TOKEN (lib/meta-capi.ts). BacLab sets none here: its
+   * pixel comes from /admin/settings and NEXT_PUBLIC_META_PIXEL_ID as before.
+   */
+  analytics?: {
+    metaPixelId?: string;
+    ga4Id?: string;
+  };
 }

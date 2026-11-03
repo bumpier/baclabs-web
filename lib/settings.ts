@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { DEFAULT_BRAND } from "@/brands/types";
 
 /**
  * Operator-editable runtime settings, stored one row per key in `Setting`.
@@ -164,4 +165,36 @@ export async function getMetaPixelStatus(): Promise<MetaPixelStatus> {
 /** The pixel id to serve, or null. Convenience wrapper over the status. */
 export async function getMetaPixelId(): Promise<string | null> {
   return (await getMetaPixelStatus()).pixelId;
+}
+
+/** One brand's own value of a setting: "meta_pixel_id:gym". */
+export function brandSettingKey(key: (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS], brand: string): string {
+  return `${key}:${brand}`;
+}
+
+/**
+ * The pixel id for one brand's pages and Conversions API events, or null.
+ *
+ *  1. The Setting `meta_pixel_id:<brand>`, if one exists. Saved empty is a
+ *     deliberate "off", as for the shared key above.
+ *  2. The brand profile's analytics.metaPixelId.
+ *  3. BacLab only: getMetaPixelId() above, unchanged, which is where BacLab's
+ *     pixel has always come from.
+ *
+ * Another brand never falls through to step 3: its conversions would land in
+ * BacLab's dataset, and one Meta account would see both shops as one.
+ */
+export async function getBrandMetaPixelId(b: {
+  id: string;
+  analytics?: { metaPixelId?: string };
+}): Promise<string | null> {
+  const stored = await readSetting(brandSettingKey(SETTING_KEYS.metaPixelId, b.id));
+  if (stored !== null) {
+    const trimmed = stored.trim();
+    if (trimmed === "") return null;
+    if (isValidPixelId(trimmed)) return trimmed;
+  }
+  const profileId = b.analytics?.metaPixelId?.trim() ?? "";
+  if (isValidPixelId(profileId)) return profileId;
+  return b.id === DEFAULT_BRAND ? getMetaPixelId() : null;
 }
