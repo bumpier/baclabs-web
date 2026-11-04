@@ -1,7 +1,8 @@
 /**
- * Aurelle's catalogue: the consumer sets (1, 3 and 5 vials) and, for the
- * "For clinics" page, the larger clinic packs. Delivery is BacLab's own
- * options and threshold, by the same ids.
+ * Aurelle's catalogue: sets of 1, 5, 10 and 20 vials, the same four sizes
+ * as the gym and luxury brands sell, on the home page and on the "For
+ * clinics" page alike. Delivery is BacLab's own options and threshold, by
+ * the same ids.
  *
  * Prices are illustrative until confirmed. TODO(confirm) every figure
  * marked so before launch. Per-vial price falls as the pack grows
@@ -15,14 +16,11 @@ export const beautyCatalogue: BrandCatalogue = {
   // TODO(confirm): the gift-ready pouch's SKU and its packed weight (scripts/seed-brand-skus.ts).
   boxSku: "BEA-BOX",
   packs: [
-    // TODO(confirm): all six prices.
+    // TODO(confirm): all four prices.
     { id: "x1", sku: "BEA-10ML-X1", vials: 1, priceMinor: 699, label: "", available: true },
-    { id: "x3", sku: "BEA-10ML-X3", vials: 3, priceMinor: 1899, label: "", available: true },
     { id: "x5", sku: "BEA-10ML-X5", vials: 5, priceMinor: 2999, label: "", available: true },
-    // The clinic packs.
-    { id: "x25", sku: "BEA-10ML-X25", vials: 25, priceMinor: 12499, label: "For clinics", available: true },
-    { id: "x50", sku: "BEA-10ML-X50", vials: 50, priceMinor: 22999, label: "For clinics", available: true },
-    { id: "x100", sku: "BEA-10ML-X100", vials: 100, priceMinor: 42999, label: "For clinics", available: true },
+    { id: "x10", sku: "BEA-10ML-X10", vials: 10, priceMinor: 5499, label: "", available: true },
+    { id: "x20", sku: "BEA-10ML-X20", vials: 20, priceMinor: 9999, label: "", available: true },
   ],
   addOns: [],
   delivery: { options: DELIVERY_OPTIONS, freeFromMinor: DELIVERY.freeFromMinor },

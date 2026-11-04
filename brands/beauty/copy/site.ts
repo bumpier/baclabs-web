@@ -20,9 +20,10 @@ export const NAV = {
 /** What each pack is called on the page and in the basket, by its vial count. */
 export function packName(vials: number): string {
   if (vials === 1) return "A single vial";
-  if (vials === 3) return "A set of three";
   if (vials === 5) return "A set of five";
-  return `Clinic pack of ${vials}`;
+  if (vials === 10) return "A set of ten";
+  if (vials === 20) return "A set of twenty";
+  return `A set of ${vials}`;
 }
 
 export function vialCount(n: number): string {

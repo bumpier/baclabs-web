@@ -228,7 +228,7 @@ async function main() {
           ],
         })
       : undefined;
-  const created = await paypalAdapter.createPayment(paymentOrder(lux, [{ sku: "LUX-10ML-X3", qty: 1 }]), { brand: lux });
+  const created = await paypalAdapter.createPayment(paymentOrder(lux, [{ sku: "LUX-10ML-X5", qty: 1 }]), { brand: lux });
   const createCall = paypal.calls.find((c) => c.url.pathname === "/v2/checkout/orders")!;
   check("createPayment: the buyer goes to PayPal's payer-action page", created.url === "https://www.sandbox.paypal.com/checkoutnow?token=PPORDER1" && created.ref === "PPORDER1");
   check("createPayment: on the brand's environment", createCall.url.origin === "https://api-m.sandbox.paypal.com");
@@ -237,7 +237,7 @@ async function main() {
   const tokenCall = paypal.calls.find((c) => c.url.pathname === "/v1/oauth2/token")!;
   check("token: the brand's own client id and secret", tokenCall.headers.get("authorization") === `Basic ${Buffer.from(`client-${lux.id}:secret-${lux.id}`).toString("base64")}`);
   check("token: client credentials", tokenCall.body === "grant_type=client_credentials");
-  await paypalAdapter.createPayment(paymentOrder(lux, [{ sku: "LUX-10ML-X3", qty: 1 }]), { brand: lux });
+  await paypalAdapter.createPayment(paymentOrder(lux, [{ sku: "LUX-10ML-X5", qty: 1 }]), { brand: lux });
   check("token: cached per brand", paypal.tokens() === 1);
   await paypalAdapter.createPayment(paymentOrder(bea, [{ sku: "BEA-10ML-X1", qty: 1 }]), { brand: bea });
   check("token: another brand gets its own", paypal.tokens() === 2);

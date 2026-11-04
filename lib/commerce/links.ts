@@ -4,7 +4,7 @@
  * storefront reads it back with parseBuyParam. BacLab's own links are
  * lib/pack-link.ts and never this.
  *
- *   /?buy=LUX-10ML-X3:2,LUX-10ML-X1:1
+ *   /?buy=LUX-10ML-X5:2,LUX-10ML-X1:1
  *
  * Site-relative; the email puts the brand's origin in front. Imports
  * nothing, so a client component may use it.

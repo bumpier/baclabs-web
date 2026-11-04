@@ -8,14 +8,14 @@ import { gbpShort } from "./home";
 export const CLINICS = {
   metaTitle: "For clinics and salons",
   metaDescription:
-    "Bacteriostatic water in sealed 10ml vials, in packs of 25, 50 and 100 for clinics and salons. Order online, or enquire about a larger or regular order.",
+    "Bacteriostatic water in sealed 10ml vials, in packs of 1, 5, 10 and 20 for clinics and salons. Order online, or enquire about a larger or regular order.",
   title: "For clinics and salons",
-  lead: "The same sealed 10ml vial as our Essentials, packed in number for practitioners and salons. Order a pack online in a few minutes, or write to us about a larger or regular order.",
+  lead: "The same sealed 10ml vial as our Essentials, in the same packs, for practitioners and salons. Order a pack online in a few minutes, or write to us about a larger or regular order.",
   // TODO(launch): photography. The drawn tray stands in for a photograph of a
   // clinic pack, opened, seen from above.
   orderTitle: "Order a clinic pack",
   legend: "Pack size",
-  packOption: (vials: number) => `${vials} vials`,
+  packOption: (vials: number) => (vials === 1 ? "1 vial" : `${vials} vials`),
   quantity: "How many packs",
   add: "Add to basket",
   freeDelivery: "Delivery is free on every clinic pack.",

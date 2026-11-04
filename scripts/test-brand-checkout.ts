@@ -136,7 +136,7 @@ check(
   cat("wholesale").packs.every((p) => p.available === p.vials < 250)
 );
 check("gym: the Lab Kit ships as BacLab's kit", cat("gym").addOns.length === 1 && cat("gym").addOns[0]!.ships === "lab-kit");
-check("lookups ignore case and space", catalogueItem(cat("luxury"), "  lux-10ml-x3 ")?.kind === "pack");
+check("lookups ignore case and space", catalogueItem(cat("luxury"), "  lux-10ml-x5 ")?.kind === "pack");
 
 // SKU seed: each pack is N × the shared vial + 1 × the brand's box.
 const specs = brandSkuSpecs();
@@ -152,11 +152,11 @@ for (const s of specs) {
 
 // ── Pricing ───────────────────────────────────────────────────────────
 {
-  const p = priced("luxury", [{ sku: "LUX-10ML-X3", qty: 2 }, { sku: "lux-10ml-x1", qty: 1 }]);
-  check("pricing: goods are the catalogue's prices", p.goodsMinor === 2 * 2199 + 799, String(p.goodsMinor));
-  check("pricing: vials counted", p.vials === 7);
-  check("pricing: lines in the catalogue's order", p.lines.map((l) => l.sku).join() === "LUX-10ML-X1,LUX-10ML-X3");
-  const merged = priced("luxury", [{ sku: "LUX-10ML-X3", qty: 1 }, { sku: "LUX-10ML-X3", qty: 2 }]);
+  const p = priced("luxury", [{ sku: "LUX-10ML-X5", qty: 2 }, { sku: "lux-10ml-x1", qty: 1 }]);
+  check("pricing: goods are the catalogue's prices", p.goodsMinor === 2 * 3499 + 799, String(p.goodsMinor));
+  check("pricing: vials counted", p.vials === 11);
+  check("pricing: lines in the catalogue's order", p.lines.map((l) => l.sku).join() === "LUX-10ML-X1,LUX-10ML-X5");
+  const merged = priced("luxury", [{ sku: "LUX-10ML-X5", qty: 1 }, { sku: "LUX-10ML-X5", qty: 2 }]);
   check("pricing: the same SKU twice is one line", merged.lines.length === 1 && merged.lines[0]!.quantity === 3);
   const gym = priced("gym", [{ sku: "GYM-10ML-X10", qty: 1 }, { sku: "GYM-LAB-KIT", qty: 3 }]);
   check("pricing: kits priced from the catalogue", gym.goodsMinor === 4999 + 3 * 499 && gym.kits === 3);
@@ -234,19 +234,19 @@ check("refused: the kit while it is switched off", refusal("gym", [{ sku: "GYM-1
       shipments: [],
     }) as unknown as LedgerOrder;
   const ctx = { rates: [], vatFrom: null, firstOrderByEmail: new Map<string, string>() };
-  const lux = buildBrandOrderItems({ vial: { productId: "v", slug: "baclab-10ml" }, lines: priced("luxury", [{ sku: "LUX-10ML-X3", qty: 1 }]).lines, goodsUsd: "1.00" });
+  const lux = buildBrandOrderItems({ vial: { productId: "v", slug: "baclab-10ml" }, lines: priced("luxury", [{ sku: "LUX-10ML-X5", qty: 1 }]).lines, goodsUsd: "1.00" });
   const rows = [
     ledgerRow(row("luxury", lux, "l1"), ctx),
     ledgerRow(row("baclab", [{ qty: 10, bundleId: "ten", bundleQty: 1, lineTotal: "34.99" }], "b1"), ctx),
     ledgerRow(row("baclab", [{ qty: 5, bundleId: "five", bundleQty: 1, lineTotal: "21.99" }], "b2"), ctx),
   ];
   const mix = packMix(rows);
-  check("finance: BacLab's ladder first, then the brand's", mix.map((l) => l.pack).join() === "five,ten,LUX-10ML-X3", mix.map((l) => l.pack).join());
-  check("finance: a brand pack is named from its catalogue", mix[2]?.label === "Reserve No.10 3-vial pack", mix[2]?.label);
+  check("finance: BacLab's ladder first, then the brand's", mix.map((l) => l.pack).join() === "five,ten,LUX-10ML-X5", mix.map((l) => l.pack).join());
+  check("finance: a brand pack is named from its catalogue", mix[2]?.label === "Reserve No.10 5-vial pack", mix[2]?.label);
   check("finance: BacLab's names unchanged", packName("ten") === "10-vial pack" && packName("single") === "Single vial" && packName("loose") === "Single vials (before packs)");
   check(
     "finance: a brand's pack is named only for its own orders",
-    packName("LUX-10ML-X3", "baclab") === "LUX-10ML-X3" && packName("LUX-10ML-X3", "gym") === "LUX-10ML-X3"
+    packName("LUX-10ML-X5", "baclab") === "LUX-10ML-X5" && packName("LUX-10ML-X5", "gym") === "LUX-10ML-X5"
   );
 }
 
@@ -254,14 +254,14 @@ check("refused: the kit while it is switched off", refusal("gym", [{ sku: "GYM-1
 {
   const items = buildBrandOrderItems({
     vial: { productId: "v", slug: "baclab-10ml" },
-    lines: priced("luxury", [{ sku: "LUX-10ML-X3", qty: 2 }]).lines,
+    lines: priced("luxury", [{ sku: "LUX-10ML-X5", qty: 2 }]).lines,
     goodsUsd: "1.00",
   });
   const offer = brandReorderOffer(JSON.stringify([...items, { qty: 1, welcome: true, name: "Free vial" }]), cat("luxury"));
-  check("reorder: the same packs at catalogue prices", offer?.goodsMinor === 4398 && offer.vials === 6, JSON.stringify(offer));
-  check("reorder: a link that fills the brand's basket", offer?.link === "/?buy=LUX-10ML-X3:2");
+  check("reorder: the same packs at catalogue prices", offer?.goodsMinor === 6998 && offer.vials === 10, JSON.stringify(offer));
+  check("reorder: a link that fills the brand's basket", offer?.link === "/?buy=LUX-10ML-X5:2");
   check("reorder: luxury's delivery is free", offer?.shipsFree === true && offer.freeDelivery === "next-day delivery");
-  check("reorder: links parse back", JSON.stringify(parseBuyParam("LUX-10ML-X3:2,nope,lux-10ml-x1:1")) === '[{"sku":"LUX-10ML-X3","qty":2},{"sku":"LUX-10ML-X1","qty":1}]');
+  check("reorder: links parse back", JSON.stringify(parseBuyParam("LUX-10ML-X5:2,nope,lux-10ml-x1:1")) === '[{"sku":"LUX-10ML-X5","qty":2},{"sku":"LUX-10ML-X1","qty":1}]');
   check("reorder: link and parser agree", JSON.stringify(parseBuyParam(brandBuyLink([{ sku: "A-1", qty: 3 }]).split("=")[1])) === '[{"sku":"A-1","qty":3}]');
   check("reorder: nothing for a pack no longer sold", brandReorderOffer(JSON.stringify([{ sku: "LUX-10ML-X99", bundleQty: 1, qty: 99 }]), cat("luxury")) === null);
 }
@@ -684,7 +684,7 @@ async function stripeAdapterChecks() {
   check("stripe adapter: its orders are card orders, as BacLab's are", stripeAdapter.id === "stripe" && stripeAdapter.paymentMethod === "card");
 
   const created = await fakeStripeSessions();
-  const order = paymentOrder(lux, [{ sku: "LUX-10ML-X3", qty: 2 }]);
+  const order = paymentOrder(lux, [{ sku: "LUX-10ML-X5", qty: 2 }]);
   const made = await stripeAdapter.createPayment(order, { brand: lux });
   check("stripe adapter: one session made", created.length === 1);
   check("stripe adapter: the buyer goes to Stripe's page", made.url === "https://checkout.stripe.com/c/pay/cs_test_fixture_1" && made.ref === "cs_test_fixture_1", JSON.stringify(made));
@@ -785,11 +785,11 @@ async function databaseChecks() {
   const seeded = await seedBrandSkus(prisma, { apply: true });
   check("db: the seed creates every box and pack", seeded.created.includes("LUX-BOX") && seeded.created.includes("GYM-10ML-X10"));
   check("db: the seed is idempotent", (await seedBrandSkus(prisma, { apply: true })).created.length === 0);
-  const luxKit = await prisma.sku.findUnique({ where: { code: "LUX-10ML-X3" }, include: { components: { include: { component: true } } } });
+  const luxKit = await prisma.sku.findUnique({ where: { code: "LUX-10ML-X5" }, include: { components: { include: { component: true } } } });
   check(
     "db: a pack's kit is N shared vials + the brand's box",
     JSON.stringify(Object.fromEntries(luxKit?.components.map((c) => [c.component.code, c.quantity]) ?? [])) ===
-      JSON.stringify(Object.fromEntries([[VIAL_SKU_CODE, 3], ["LUX-BOX", 1]].sort())),
+      JSON.stringify(Object.fromEntries([[VIAL_SKU_CODE, 5], ["LUX-BOX", 1]].sort())),
     JSON.stringify(luxKit?.components.map((c) => [c.component.code, c.quantity]))
   );
 
@@ -812,11 +812,11 @@ async function databaseChecks() {
   // none whatever is on.
   process.env.STRIPE_ENABLED = "false";
   for (const host of ["gym.localhost:3000", "luxury.localhost:3000"]) {
-    const res = await post(host, { lines: [{ sku: host.startsWith("gym") ? "GYM-10ML-X10" : "LUX-10ML-X3", qty: 1 }] });
+    const res = await post(host, { lines: [{ sku: host.startsWith("gym") ? "GYM-10ML-X10" : "LUX-10ML-X5", qty: 1 }] });
     check(`db: ${host} with BacLab's cards off is a 503`, res.status === 503);
   }
   process.env.STRIPE_ENABLED = "true";
-  const noprovRes = await post("noprov.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 1 }] });
+  const noprovRes = await post("noprov.localhost:3000", { lines: [{ sku: "LUX-10ML-X5", qty: 1 }] });
   check("db: a brand that lists no provider is a 503 with Stripe on", noprovRes.status === 503);
   check("db: no order is written without a way to pay", (await prisma.order.count()) === 0);
 
@@ -827,26 +827,26 @@ async function databaseChecks() {
   const { receiveStock } = await import("@/lib/inventory/store");
   const asked: PaymentOrder[] = [];
   __registerTestPaymentAdapter(standInAdapter(asked));
-  const noprovStandIn = await post("noprov.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 1 }] });
+  const noprovStandIn = await post("noprov.localhost:3000", { lines: [{ sku: "LUX-10ML-X5", qty: 1 }] });
   check("db: a brand that lists none takes no payment, whatever is configured", noprovStandIn.status === 503 && (await prisma.order.count()) === 0);
 
   // Legacy stock: luxury's 3-pack twice, by next day, the only option it offers.
-  const luxRes = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 2 }], consent: { tracking: false } });
+  const luxRes = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X5", qty: 2 }], consent: { tracking: false } });
   const luxBody = (await luxRes.json()) as { url?: string; error?: string };
   check("db: luxury checks out to the provider's page", luxRes.status === 200 && luxBody.url === "https://pay.example.test/approve/1", JSON.stringify(luxBody));
   const luxOrder = await prisma.order.findFirst({ where: { brand: "luxury" } });
-  check("db: the order is luxury's, pending, priced from its catalogue", luxOrder?.status === "pending" && Number(luxOrder.totalAmount) === 43.98);
+  check("db: the order is luxury's, pending, priced from its catalogue", luxOrder?.status === "pending" && Number(luxOrder.totalAmount) === 69.98);
   check("db: the order names its provider, and card as BacLab's do", luxOrder?.paymentProvider === "stripe" && luxOrder.paymentMethod === "card");
   check("db: the order holds the provider's reference", luxOrder?.paymentRef === "stand-in-1");
   check("db: the delivery is recorded at checkout", luxOrder?.deliveryOption === "next_day" && luxOrder.deliveryMinor === 0);
-  check("db: the provider is asked for the order as priced", asked[0]?.id === luxOrder?.id && asked[0]?.goodsMinor === 4398 && asked[0]?.lines.length === 1);
+  check("db: the provider is asked for the order as priced", asked[0]?.id === luxOrder?.id && asked[0]?.goodsMinor === 6998 && asked[0]?.lines.length === 1);
   check("db: the provider is told the delivery", asked[0]?.delivery.id === "next_day" && asked[0]?.delivery.priceMinor === 0);
-  const paid = await fulfillPaidOrder(luxOrder!.id, { paymentRef: "pi_stand_in_lux", provider: "stripe", deliveryMinor: 0, amountPaidMinor: 4398 });
+  const paid = await fulfillPaidOrder(luxOrder!.id, { paymentRef: "pi_stand_in_lux", provider: "stripe", deliveryMinor: 0, amountPaidMinor: 6998 });
   const luxAfter = await prisma.order.findUnique({ where: { id: luxOrder!.id } });
   check("db: fulfilment marks it paid, by its provider", !paid.alreadyPaid && luxAfter?.status === "paid" && luxAfter.paymentProvider === "stripe");
   check("db: and keeps the brand", luxAfter?.brand === "luxury");
   const vial = await prisma.product.findUniqueOrThrow({ where: { slug: "baclab-10ml" } });
-  check("db: the shared vials came off the shelf", vial.stock === 194, String(vial.stock));
+  check("db: the shared vials came off the shelf", vial.stock === 190, String(vial.stock));
 
   // Beauty: two delivery options, so the buyer's choice is sent and charged.
   const beaRes = await post("beauty.localhost:3000", { lines: [{ sku: "BEA-10ML-X1", qty: 1 }], deliveryOption: "standard" });
@@ -887,15 +887,15 @@ async function databaseChecks() {
     await receiveStock({ skuId: sku.id, locationId: shelf.id, quantity, reference: "test", actor: "test" });
   }
   await setInventoryMode("warehouse");
-  const shelfRes = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 2 }] });
+  const shelfRes = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X5", qty: 2 }] });
   check("db: luxury checks out against the shelves", shelfRes.status === 200);
-  const tooMany = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 6 }] });
+  const tooMany = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X5", qty: 6 }] });
   check("db: the brand's boxes limit what it can sell", tooMany.status === 409);
   const shelfOrder = await prisma.order.findFirst({ where: { brand: "luxury", paymentRef: `stand-in-${asked.length}` } });
   await fulfillPaidOrder(shelfOrder!.id, { paymentRef: "pi_stand_in_shelf", provider: "stripe", deliveryMinor: 0 });
   const picks = await prisma.pickLine.findMany({ where: { orderId: shelfOrder!.id }, include: { sku: true } });
   const picked = Object.fromEntries(picks.map((p) => [p.sku.code, p.quantity]));
-  check("db: allocated as 6 shared vials and 2 brand boxes", picked[VIAL_SKU_CODE] === 6 && picked["LUX-BOX"] === 2, JSON.stringify(picked));
+  check("db: allocated as 10 shared vials and 2 brand boxes", picked[VIAL_SKU_CODE] === 10 && picked["LUX-BOX"] === 2, JSON.stringify(picked));
   await setInventoryMode("legacy");
   __clearTestPaymentAdapters();
 
@@ -1025,11 +1025,11 @@ async function stripeDatabaseChecks(post: (host: string, body: unknown) => Promi
 
   // 1. Luxury, to Stripe's page: the session is the order, exactly.
   const lux = brandFor("luxury");
-  const one = await checkoutAs("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 1 }, { sku: "LUX-10ML-X1", qty: 1 }], consent: { tracking: false } });
+  const one = await checkoutAs("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X5", qty: 1 }, { sku: "LUX-10ML-X1", qty: 1 }], consent: { tracking: false } });
   check("stripe db: luxury checks out to Stripe's page", one.res.status === 200 && one.data.url === `https://checkout.stripe.com/c/pay/${one.ref}` && created.length === 1, JSON.stringify(one.data));
   const o1 = one.order!;
   check("stripe db: the order is pending, luxury's, by Stripe, a card order", o1?.status === "pending" && o1.brand === "luxury" && o1.paymentProvider === "stripe" && o1.paymentMethod === "card");
-  check("stripe db: priced from the catalogue, delivery recorded", Number(o1.totalAmount) === 29.98 && o1.deliveryOption === "next_day" && o1.deliveryMinor === 0);
+  check("stripe db: priced from the catalogue, delivery recorded", Number(o1.totalAmount) === 42.98 && o1.deliveryOption === "next_day" && o1.deliveryMinor === 0);
   const s1 = one.session!;
   check("stripe db: the session is keyed on the order", s1.options?.idempotencyKey === `checkout:${o1.id}`);
   check("stripe db: it names the order", s1.params.metadata?.orderId === o1.id && s1.params.client_reference_id === o1.id && s1.params.payment_intent_data?.metadata?.orderId === o1.id);
@@ -1037,20 +1037,20 @@ async function stripeDatabaseChecks(post: (host: string, body: unknown) => Promi
   check(
     "stripe db: catalogue amounts, neutral names",
     JSON.stringify(s1.params.line_items?.map((l) => [l.price_data?.product_data?.name, l.price_data?.unit_amount, l.quantity])) ===
-      JSON.stringify([["10ml bacteriostatic water × 1", 799, 1], ["10ml bacteriostatic water × 3", 2199, 1]]),
+      JSON.stringify([["10ml bacteriostatic water × 1", 799, 1], ["10ml bacteriostatic water × 5", 3499, 1]]),
     JSON.stringify(s1.params.line_items)
   );
   check("stripe db: the chosen delivery as the one rate", s1.params.shipping_options?.length === 1 && s1.params.shipping_options[0]!.shipping_rate_data?.fixed_amount?.amount === 0);
   check("stripe db: the descriptor suffix", s1.params.payment_intent_data?.statement_descriptor_suffix === lux.statementDescriptor);
   check("stripe db: no promotion codes", s1.params.allow_promotion_codes === false);
   check("stripe db: back to luxury's own origin", s1.params.success_url === `${lux.origin}/order-confirmation/${o1.id}?session_id={CHECKOUT_SESSION_ID}` && s1.params.cancel_url === `${lux.origin}/#buy`);
-  const luxDelivery = catalogueDeliveryOptions(lux.catalogue!, 2998)[0]!;
+  const luxDelivery = catalogueDeliveryOptions(lux.catalogue!, 4298)[0]!;
   const expected = brandSessionParams({
     brand: lux,
     order: {
       id: o1.id,
-      lines: priced("luxury", [{ sku: "LUX-10ML-X3", qty: 1 }, { sku: "LUX-10ML-X1", qty: 1 }]).lines,
-      goodsMinor: 2998,
+      lines: priced("luxury", [{ sku: "LUX-10ML-X5", qty: 1 }, { sku: "LUX-10ML-X1", qty: 1 }]).lines,
+      goodsMinor: 4298,
       delivery: { id: luxDelivery.option.id, label: luxDelivery.option.label, priceMinor: luxDelivery.priceMinor },
     },
     now: new Date(),
@@ -1075,11 +1075,11 @@ async function stripeDatabaseChecks(post: (host: string, body: unknown) => Promi
   for (const [sessionId, session] of [[one.ref, s1], [two.ref, two.session!], [three.ref, three.session!]] as const) {
     rates.set(`shr_${sessionId}`, String(session.params.shipping_options?.[0]?.shipping_rate_data?.metadata?.deliveryOption));
   }
-  const event1 = completedEvent("evt_test_lux", one.ref, o1, { amountTotal: 2998, amountShipping: 0, rate: `shr_${one.ref}`, paymentIntent: "pi_test_lux" });
+  const event1 = completedEvent("evt_test_lux", one.ref, o1, { amountTotal: 4298, amountShipping: 0, rate: `shr_${one.ref}`, paymentIntent: "pi_test_lux" });
   const forged = signed(event1, "whsec_not_ours");
   check("stripe db: an event signed with another secret is a 400", (await deliver(forged.payload, forged.header)).status === 400);
   const tampered = signed(event1);
-  check("stripe db: a body changed after signing is a 400", (await deliver(tampered.payload.replace("2998", "1"), tampered.header)).status === 400);
+  check("stripe db: a body changed after signing is a 400", (await deliver(tampered.payload.replace("4298", "1"), tampered.header)).status === 400);
   check("stripe db: and neither touches the order", (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).status === "pending");
 
   // 5. Signed properly: paid, the address and instructions on, the stock taken.
@@ -1091,18 +1091,18 @@ async function stripeDatabaseChecks(post: (host: string, body: unknown) => Promi
   const p1 = await prisma.order.findUniqueOrThrow({ where: { id: o1.id } });
   check("stripe db: the webhook marks the brand's order paid", r1.status === 200 && p1.status === "paid" && p1.paymentProvider === "stripe" && p1.paymentRef === "pi_test_lux", `${r1.status} ${p1.status} ${p1.paymentRef}`);
   check("stripe db: it stays luxury's", p1.brand === "luxury");
-  check("stripe db: the amount charged is Stripe's total", p1.amountPaidMinor === 2998 && p1.deliveryMinor === 0 && p1.deliveryOption === "next_day");
+  check("stripe db: the amount charged is Stripe's total", p1.amountPaidMinor === 4298 && p1.deliveryMinor === 0 && p1.deliveryOption === "next_day");
   check(
     "stripe db: the buyer's details from Stripe",
     p1.customerEmail === "card.buyer@example.com" && p1.customerName === "Card Buyer" && p1.customerPhone === "+447700900456" &&
       p1.shippingAddress === JSON.stringify({ line1: "2 Mill Lane", line2: null, city: "York", country: "GB", postalCode: "YO1 7HH" })
   );
   check("stripe db: the delivery instructions onto the order", p1.deliveryInstructions === "Leave in the porch", String(p1.deliveryInstructions));
-  check("stripe db: the shared vials came off the shelf", (await vials()) === before - 4, `${before} → ${await vials()}`);
+  check("stripe db: the shared vials came off the shelf", (await vials()) === before - 6, `${before} → ${await vials()}`);
   check("stripe db: the amount check accepts a brand order", !logged.some((l) => /AMOUNT MISMATCH|BRAND MISMATCH/.test(l)), logged.join(" | "));
   const again = signed(event1);
   check("stripe db: a repeat delivery is acknowledged", (await deliver(again.payload, again.header)).status === 200);
-  check("stripe db: and does nothing", (await vials()) === before - 4 && (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).paymentRef === "pi_test_lux");
+  check("stripe db: and does nothing", (await vials()) === before - 6 && (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).paymentRef === "pi_test_lux");
 
   // 6. Beauty with £5 delivery: the goods check subtracts it, so no alarm.
   listen();
@@ -1230,7 +1230,7 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
   const vials = async () => (await prisma.product.findUniqueOrThrow({ where: { slug: "baclab-10ml" } })).stock;
 
   // 1. Checkout → PayPal's page, the order pending with PayPal's order on it.
-  const first = await checkoutFor({ lines: [{ sku: "LUX-10ML-X3", qty: 1 }] });
+  const first = await checkoutFor({ lines: [{ sku: "LUX-10ML-X5", qty: 1 }] });
   check("paypal db: checkout sends the buyer to PayPal", first.res.status === 200 && first.ref === "PPDB1");
   const o1 = first.order!;
   check("paypal db: the order is pending, by PayPal", o1?.status === "pending" && o1.paymentProvider === "paypal" && o1.brand === "pplux");
@@ -1255,13 +1255,13 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
   const p1 = await prisma.order.findUniqueOrThrow({ where: { id: o1.id } });
   check("paypal db: the return captures and goes to the confirmation", paidBack.status === 303 && paidBack.headers.get("location") === `http://pplux.localhost:3000/order-confirmation/${o1.id}?paid=1`, String(paidBack.headers.get("location")));
   check("paypal db: paid, by PayPal, against the capture", p1.status === "paid" && p1.paymentProvider === "paypal" && p1.paymentRef === "CAPPPDB1");
-  check("paypal db: the amount charged is the capture's", p1.amountPaidMinor === 2199);
+  check("paypal db: the amount charged is the capture's", p1.amountPaidMinor === 3499);
   check(
     "paypal db: the buyer's details from PayPal, in the Stripe webhook's shape",
     p1.customerEmail === "buyer@example.com" && p1.customerName === "Sam Buyer" && p1.customerPhone === "07700900123" &&
       p1.shippingAddress === JSON.stringify({ line1: "1 Mill Lane", line2: "Flat 2", city: "Leeds", country: "GB", postalCode: "LS1 1AA" })
   );
-  check("paypal db: the stock came off the shared shelf", (await vials()) === before - 3, `${before} → ${await vials()}`);
+  check("paypal db: the stock came off the shared shelf", (await vials()) === before - 5, `${before} → ${await vials()}`);
 
   // 5. Every repeat is a no-op: the return again, and the webhooks for it.
   const capturesAfter = captures();
@@ -1270,7 +1270,7 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
   const completed = { id: "WH-DB-1", event_type: "PAYMENT.CAPTURE.COMPLETED", resource_type: "capture", resource: { id: "CAPPPDB1", custom_id: o1.id, supplementary_data: { related_ids: { order_id: "PPDB1" } } } };
   const approvedEvent = { id: "WH-DB-2", event_type: "CHECKOUT.ORDER.APPROVED", resource_type: "checkout-order", resource: { id: "PPDB1", purchase_units: [{ custom_id: o1.id }] } };
   for (const event of [completed, completed, approvedEvent]) check(`paypal db: a duplicate ${event.event_type} is acknowledged`, (await hook(event)).status === 200);
-  check("paypal db: and does nothing", captures() === capturesAfter && (await vials()) === before - 3 && (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).paymentRef === "CAPPPDB1");
+  check("paypal db: and does nothing", captures() === capturesAfter && (await vials()) === before - 5 && (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).paymentRef === "CAPPPDB1");
 
   // 6. The webhook as the backup, for a buyer who closed the tab.
   const second = await checkoutFor({ lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
@@ -1325,11 +1325,11 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
   check("paypal db: and leaves the order unpaid", (await prisma.order.findUniqueOrThrow({ where: { id: fifth.order!.id } })).status === "pending");
 
   // 10. A refund is noted on the order, once per event.
-  const refund = { id: "WH-DB-9", event_type: "PAYMENT.CAPTURE.REFUNDED", resource_type: "refund", resource: { id: "REF1", amount: { value: "21.99", currency_code: "GBP" }, links: [{ rel: "up", href: "https://api.sandbox.paypal.com/v2/payments/captures/CAPPPDB1" }] } };
+  const refund = { id: "WH-DB-9", event_type: "PAYMENT.CAPTURE.REFUNDED", resource_type: "refund", resource: { id: "REF1", amount: { value: "34.99", currency_code: "GBP" }, links: [{ rel: "up", href: "https://api.sandbox.paypal.com/v2/payments/captures/CAPPPDB1" }] } };
   await hook(refund);
   await hook(refund);
   const refundedNotes = (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).notes ?? "";
-  check("paypal db: a refund is noted on its order", refundedNotes.includes("PayPal refunded: 21.99 GBP (event WH-DB-9"), refundedNotes);
+  check("paypal db: a refund is noted on its order", refundedNotes.includes("PayPal refunded: 34.99 GBP (event WH-DB-9"), refundedNotes);
   check("paypal db: once, however often it is sent", refundedNotes.split("WH-DB-9").length === 2);
 
   // 11. An event for an order that is not PayPal's is never acted on.

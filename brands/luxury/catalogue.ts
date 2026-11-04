@@ -1,6 +1,7 @@
 /**
- * Reserve No.10's catalogue: few choices, a signature box, next-day delivery
- * included on every order, and never a promotion code.
+ * Reserve No.10's catalogue: few choices (1, 5, 10 and 20 vials, the same
+ * four sizes as the beauty and gym brands sell), a signature box, next-day
+ * delivery included on every order, and never a promotion code.
  *
  * Prices are illustrative until confirmed. TODO(confirm) every figure
  * marked so before launch. Per-vial price falls as the pack grows
@@ -18,9 +19,9 @@ export const luxuryCatalogue: BrandCatalogue = {
   packs: [
     // TODO(confirm): all four prices.
     { id: "x1", sku: "LUX-10ML-X1", vials: 1, priceMinor: 799, label: "Single", available: true },
-    { id: "x3", sku: "LUX-10ML-X3", vials: 3, priceMinor: 2199, label: "Trio", available: true },
-    { id: "x6", sku: "LUX-10ML-X6", vials: 6, priceMinor: 3999, label: "Six", available: true },
-    { id: "x12", sku: "LUX-10ML-X12", vials: 12, priceMinor: 7499, label: "Twelve", available: true },
+    { id: "x5", sku: "LUX-10ML-X5", vials: 5, priceMinor: 3499, label: "Five", available: true },
+    { id: "x10", sku: "LUX-10ML-X10", vials: 10, priceMinor: 6499, label: "Ten", available: true },
+    { id: "x20", sku: "LUX-10ML-X20", vials: 20, priceMinor: 11999, label: "Twenty", available: true },
   ],
   addOns: [],
   delivery: {

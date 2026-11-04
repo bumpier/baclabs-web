@@ -17,7 +17,7 @@ export function gbpShort(minor: number): string {
 
 export const HERO = {
   title: "Your ritual, done properly.",
-  lead: "Sterile water with a bacteriostatic preservative, in a sealed 10ml vial. Sets of one, three or five, packed with care and sent to your door.",
+  lead: "Sterile water with a bacteriostatic preservative, in a sealed 10ml vial. Sets of one, five, ten or twenty, packed with care and sent to your door.",
   cta: "Choose your set",
   clinics: "For clinics and salons",
   from: (minor: number) => `A single vial is ${gbpShort(minor)}.`,
@@ -83,7 +83,7 @@ export const CLINICS_TEASER = {
   cta: "See the clinic packs",
 } as const;
 
-/** "25, 50 and 100". */
+/** "1, 5, 10 and 20". */
 export function listSizes(sizes: readonly number[]): string {
   if (sizes.length <= 1) return sizes.join("");
   return `${sizes.slice(0, -1).join(", ")} and ${sizes[sizes.length - 1]}`;

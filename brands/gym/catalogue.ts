@@ -1,7 +1,8 @@
 /**
- * Brute Lab's catalogue: the stock-up ladder (5, 10, 20 and 50 vials) and
- * the Lab Kit beside it. Delivery is BacLab's own options and threshold, by
- * the same ids.
+ * Brute Lab's catalogue: the stock-up ladder (1, 5, 10 and 20 vials, the
+ * same four sizes as the beauty and luxury brands sell) and the Lab Kit
+ * beside it. Delivery is BacLab's own options and threshold, by the same
+ * ids.
  *
  * The Lab Kit is BacLab's kit (config/funnel.ts LAB_KIT): the same parts,
  * the same Product row and the same kit SKU, so the packer counts the same
@@ -21,14 +22,14 @@ export const gymCatalogue: BrandCatalogue = {
   boxSku: "GYM-BOX",
   packs: [
     // TODO(confirm): all four prices.
+    { id: "x1", sku: "GYM-10ML-X1", vials: 1, priceMinor: 649, label: "", available: true },
     { id: "x5", sku: "GYM-10ML-X5", vials: 5, priceMinor: 2799, label: "", available: true },
     { id: "x10", sku: "GYM-10ML-X10", vials: 10, priceMinor: 4999, label: "", available: true },
     { id: "x20", sku: "GYM-10ML-X20", vials: 20, priceMinor: 8999, label: "", available: true },
-    { id: "x50", sku: "GYM-10ML-X50", vials: 50, priceMinor: 19999, label: "", available: true },
   ],
   addOns: [
     // TODO(confirm): one flat price per kit. BacLab prices its kit by pack
-    // (£5.99 to £3.99); this ladder starts at five vials, so one price.
+    // (£5.99 to £3.99); this brand has one price, whatever the pack.
     { id: "lab-kit", sku: "GYM-LAB-KIT", name: LAB_KIT.name, priceMinor: 499, available: true, ships: "lab-kit" },
   ],
   delivery: { options: DELIVERY_OPTIONS, freeFromMinor: DELIVERY.freeFromMinor },

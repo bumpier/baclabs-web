@@ -133,7 +133,7 @@ is design work, not this runbook.
 ## 3. Seed its SKUs and weigh them (once the code is deployed)
 
 Every pack is a warehouse kit: N × the shared vial + 1 × the brand's box
-(for example `LUX-10ML-X3` = 3 × `BACLAB-10ML` + 1 × `LUX-BOX`). In the
+(for example `LUX-10ML-X5` = 5 × `BACLAB-10ML` + 1 × `LUX-BOX`). In the
 container, after a deploy that contains the brand's catalogue:
 
 ```bash

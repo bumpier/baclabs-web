@@ -17,7 +17,7 @@ export const brand = beautyProfile();
 export const LIVE = false;
 
 export const DESCRIPTION =
-  "Bacteriostatic water in sealed 10ml vials, in sets of one, three and five, and in packs of 25, 50 and 100 for clinics and salons.";
+  "Bacteriostatic water in sealed 10ml vials, in sets of one, five, ten and twenty, for you and for clinics and salons.";
 
 /** Every public page, for the sitemap. Not the order confirmation: it is per order, and noindex. */
 export const PAGES: readonly string[] = ["/", "/clinics", "/contact", "/terms", "/privacy", "/returns", "/disclaimer"];
@@ -30,13 +30,12 @@ export const PAGES: readonly string[] = ["/", "/clinics", "/contact", "/terms", 
 export const STOREFRONT = storefrontView(brand);
 
 /**
- * The catalogue's packs of 25 and more are the clinic packs, sold on
- * /clinics; the smaller ones are the Essentials, sold on the home page.
- * Split here, on the server, so each page hands its picker only its own.
+ * The home page's Essentials and the /clinics page sell the same packs, the
+ * catalogue's four sizes. Named apart, so each page hands its picker its
+ * own list.
  */
-const CLINIC_FROM_VIALS = 25;
-export const ESSENTIAL_PACKS = STOREFRONT.packs.filter((p) => p.vials < CLINIC_FROM_VIALS);
-export const CLINIC_PACKS = STOREFRONT.packs.filter((p) => p.vials >= CLINIC_FROM_VIALS);
+export const ESSENTIAL_PACKS = STOREFRONT.packs;
+export const CLINIC_PACKS = STOREFRONT.packs;
 
 /**
  * The basket's localStorage key. Each brand's domain has its own storage, so
