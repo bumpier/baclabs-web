@@ -18,6 +18,12 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import * as React from "react";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ContactForm } from "@/components/commerce/ContactForm";
+import { cookieBannerBody } from "@/components/commerce/CookieBanner";
+import { DEFAULT_QUIET_PATHS } from "@/components/commerce/SignupPopup";
 import { brandFor, type BrandProfile } from "@/brands/registry";
 import { BRAND_IDS, type BrandId } from "@/brands/types";
 import { PAYPAL_PAYMENT, STRIPE_PAYMENT } from "@/brands/payment-methods";
@@ -351,6 +357,34 @@ for (const id of BRANDS) {
     check(`on PayPal ${doc.path}: never names Stripe or cards`, !/stripe|apple pay|google pay|\bcards?\b/i.test(text), text.match(/.{40}(?:stripe|\bcards?\b).{40}/i)?.[0] ?? "");
     for (const rulesOf of BRANDS) check(`on PayPal ${doc.path}: passes ${rulesOf}'s copy rules`, checkBrandCopy(rulesOf as BrandId, legalDocText(doc)).length === 0);
   }
+}
+
+// ── The kit components' props ───────────────────────────────────────
+// The app's JSX compiles to React.createElement here (tsconfig "jsx":
+// "preserve" leaves it to Next), so React must be in scope to render.
+(globalThis as unknown as { React: typeof React }).React = React;
+{
+  const topics = brandContactTopics({ trade: { label: "Clinic and salon orders" } });
+  const form = (props: Partial<React.ComponentProps<typeof ContactForm>> = {}) =>
+    renderToStaticMarkup(createElement(ContactForm, { topics, complaintAckDays: 5, messageMax: 2000, ...props }));
+  const chosen = (html: string) => [...html.matchAll(/<option value="([^"]*)"[^>]*selected=""/g)].map((m) => m[1]);
+  const plain = form();
+  check("contact form: its own words by default", ["What is it about?", "Choose a topic", "Your name", "Email", "Message", "Send message"].every((w) => plain.includes(w)));
+  check("contact form: opens on no topic by default", chosen(plain).join() === "", JSON.stringify(chosen(plain)));
+  const clinic = form({ defaultTopic: "wholesale", text: { topic: "What would you like to order?", submit: "Send enquiry" } });
+  check("contact form: opens on its default topic, with no ?topic= link", chosen(clinic).join() === "wholesale", JSON.stringify(chosen(clinic)));
+  check(
+    "contact form: the words given replace the kit's, the rest stay",
+    clinic.includes("What would you like to order?") && clinic.includes("Send enquiry") && !clinic.includes("Send message") && clinic.includes("Your name")
+  );
+  check("contact form: a default topic it does not offer opens on none", chosen(form({ defaultTopic: "not-a-topic" })).join() === "");
+  check("cookie banner: a plain string names the companies", cookieBannerBody("{companies} cookies tell us how the site is used.", "Meta and Google") === "Meta and Google cookies tell us how the site is used.");
+  check("cookie banner: a function still works", cookieBannerBody((c: string) => `Cookies from ${c}.`, "Google") === "Cookies from Google.");
+  check("cookie banner: no body, the kit's own words", cookieBannerBody(undefined, "Google") === null);
+  check(
+    "signup popup: its quiet pages are exported, paying, receipt, legal and contact",
+    ["/checkout", "/order-confirmation", "/privacy", "/terms", "/returns", "/disclaimer", "/contact"].every((p) => DEFAULT_QUIET_PATHS.includes(p))
+  );
 }
 
 // ── The brand pages' source against the brand's own rules ───────────

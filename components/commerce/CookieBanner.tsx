@@ -7,6 +7,20 @@ import { setConsent, useConsent, useConsentSettingsOpen } from "@/components/con
 import { anyTracker, useBrandTrackers, type TrackingConfig } from "@/components/commerce/tracking";
 
 /**
+ * Where a plain-string body names the companies: "{companies} cookies tell
+ * us...". Written out in the brand's copy, not imported: a server layout
+ * that imports a value from this client module gets a reference to it, not
+ * the string.
+ */
+const COMPANIES = "{companies}";
+
+/** The brand's body for these companies (`copy.body`, either form), or null for the kit's own words. */
+export function cookieBannerBody(body: string | ((companies: string) => ReactNode) | undefined, companies: string): ReactNode {
+  if (typeof body === "string") return body.replaceAll(COMPANIES, companies);
+  return body ? body(companies) : null;
+}
+
+/**
  * A brand's cookie banner: the same store and the same rules as BacLab's
  * (components/consent/CookieBanner.tsx), built to the ICO's reading of PECR:
  *  - nothing loads until Accept, and undecided counts as a refusal;
@@ -18,7 +32,10 @@ import { anyTracker, useBrandTrackers, type TrackingConfig } from "@/components/
  * nothing to ask.
  *
  * The look is the brand's: every element takes a class, and the words can be
- * replaced through `copy` (the body is given the companies' names).
+ * replaced through `copy`. The body must still name the companies, so it is
+ * given their names: as a function of them, or as a plain string with
+ * {companies} where they go, which a server layout can pass (a function
+ * cannot cross to the browser).
  */
 export function CookieBanner({
   ga4Id,
@@ -32,7 +49,7 @@ export function CookieBanner({
   /** The outer, fixed region. */
   className?: string;
   classNames?: Partial<Record<"panel" | "heading" | "text" | "link" | "actions" | "button", string>>;
-  copy?: { heading?: string; body?: (companies: string) => ReactNode; reject?: string; accept?: string };
+  copy?: { heading?: string; body?: string | ((companies: string) => ReactNode); reject?: string; accept?: string };
 }) {
   const choice = useConsent();
   const trackers = useBrandTrackers({ ga4Id, metaPixel });
@@ -62,7 +79,7 @@ export function CookieBanner({
         </h2>
         <p className={classNames.text ?? "mt-2 text-sm"}>
           {copy.body ? (
-            copy.body(companies)
+            cookieBannerBody(copy.body, companies)
           ) : (
             <>
               We&rsquo;d like to use cookies from {companies} to measure how the site is used and how our adverts

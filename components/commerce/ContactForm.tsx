@@ -15,6 +15,35 @@ export interface ContactTopicOption {
 
 type Slot = "form" | "field" | "label" | "input" | "hint" | "error" | "button" | "note" | "link" | "sent" | "sentHeading" | "sentText" | "again";
 
+/** The form's own labels and buttons, which a page may put in its own words (`text`). */
+export interface ContactFormText {
+  /** The topic's label. */
+  topic: string;
+  /** The topic list's empty choice. */
+  topicPrompt: string;
+  name: string;
+  email: string;
+  orderRef: string;
+  message: string;
+  submit: string;
+  /** The submit button while the message is on its way. */
+  sending: string;
+  /** The button that brings the form back after sending. */
+  again: string;
+}
+
+const TEXT: ContactFormText = {
+  topic: "What is it about?",
+  topicPrompt: "Choose a topic",
+  name: "Your name",
+  email: "Email",
+  orderRef: "Order number (optional)",
+  message: "Message",
+  submit: "Send message",
+  sending: "Sending…",
+  again: "Send another message",
+};
+
 /**
  * A brand's contact form, posting to /api/contact, which stores the message
  * against the Host's brand and sends it to that brand's inbox. BacLab's is
@@ -26,12 +55,18 @@ type Slot = "form" | "field" | "label" | "input" | "hint" | "error" | "button" |
  *    (lib/legal.ts COMPLAINT_ACK_DAYS);
  *  - `replyTime`: a general reply promise ("two working days"), only if the
  *    operator has made one. Empty promises nothing, as on BacLab;
- *  - `messageMax`: the route's limit (lib/contact.ts CONTACT_MESSAGE_MAX).
+ *  - `messageMax`: the route's limit (lib/contact.ts CONTACT_MESSAGE_MAX);
+ *  - `defaultTopic`: the topic it opens on, so a page about one subject (a
+ *    clinic enquiry) needs no ?topic= link and no full page load to get it;
+ *  - `text`: its labels and buttons in the page's own words, each one
+ *    optional, the rest as below.
  *
- * A topic can be preselected with ?topic=<id>. The browser's own validation
+ * A topic can also be preselected with ?topic=<id>, which wins over
+ * `defaultTopic`, for links from other pages. The browser's own validation
  * runs first, with ContactSchema's rules, so the route's 400 is only for a
  * request that skipped it. After sending, the confirmation replaces the form
- * and takes focus, for screen readers.
+ * and takes focus, for screen readers; "send another" opens it on
+ * `defaultTopic` again.
  */
 export function ContactForm({
   topics,
@@ -39,6 +74,8 @@ export function ContactForm({
   messageMax,
   replyTime = "",
   privacyHref = "/privacy#contact",
+  defaultTopic,
+  text = {},
   classNames = {},
 }: {
   topics: readonly ContactTopicOption[];
@@ -46,10 +83,15 @@ export function ContactForm({
   messageMax: number;
   replyTime?: string;
   privacyHref?: string;
+  /** One of `topics`' ids. Any other opens on no topic, as when it is left out. */
+  defaultTopic?: string;
+  text?: Partial<ContactFormText>;
   classNames?: Partial<Record<Slot, string>>;
 }) {
   const id = useId();
-  const [topicId, setTopicId] = useState("");
+  const words = { ...TEXT, ...text };
+  const openingTopic = defaultTopic && topics.some((t) => t.id === defaultTopic) ? defaultTopic : "";
+  const [topicId, setTopicId] = useState(openingTopic);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<{ name: string; email: string; topic: string } | null>(null);
@@ -122,10 +164,10 @@ export function ContactForm({
           className={c("again", "link mt-4 text-sm")}
           onClick={() => {
             setSent(null);
-            setTopicId("");
+            setTopicId(openingTopic);
           }}
         >
-          Send another message
+          {words.again}
         </button>
       </div>
     );
@@ -135,7 +177,7 @@ export function ContactForm({
     <form onSubmit={submit} className={c("form", "space-y-6")}>
       <div className={c("field", "")}>
         <label className={c("label", "label")} htmlFor={`${id}-topic`}>
-          What is it about?
+          {words.topic}
         </label>
         <select
           id={`${id}-topic`}
@@ -147,7 +189,7 @@ export function ContactForm({
           className={c("input", "field")}
         >
           <option value="" disabled>
-            Choose a topic
+            {words.topicPrompt}
           </option>
           {topics.map((t) => (
             <option key={t.id} value={t.id}>
@@ -164,7 +206,7 @@ export function ContactForm({
 
       <div className={c("field", "")}>
         <label className={c("label", "label")} htmlFor={`${id}-name`}>
-          Your name
+          {words.name}
         </label>
         <input
           id={`${id}-name`}
@@ -179,7 +221,7 @@ export function ContactForm({
 
       <div className={c("field", "")}>
         <label className={c("label", "label")} htmlFor={`${id}-email`}>
-          Email
+          {words.email}
         </label>
         <input
           id={`${id}-email`}
@@ -196,7 +238,7 @@ export function ContactForm({
       {topic?.asksOrder ? (
         <div className={c("field", "")}>
           <label className={c("label", "label")} htmlFor={`${id}-order`}>
-            Order number (optional)
+            {words.orderRef}
           </label>
           <input
             id={`${id}-order`}
@@ -215,7 +257,7 @@ export function ContactForm({
 
       <div className={c("field", "")}>
         <label className={c("label", "label")} htmlFor={`${id}-message`}>
-          Message
+          {words.message}
         </label>
         <textarea
           id={`${id}-message`}
@@ -242,7 +284,7 @@ export function ContactForm({
 
       <div>
         <button type="submit" disabled={pending} aria-busy={pending} className={c("button", "btn-cta")}>
-          {pending ? "Sending…" : "Send message"}
+          {pending ? words.sending : words.submit}
         </button>
         <p className={c("note", "mt-3 text-xs")}>
           We use what you send only to reply to you.{" "}

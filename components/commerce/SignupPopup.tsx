@@ -18,7 +18,15 @@ export interface SignupPopupConfig {
   quietPaths?: readonly string[];
 }
 
-const QUIET_PATHS = ["/checkout", "/order-confirmation", "/privacy", "/terms", "/returns", "/disclaimer", "/contact"];
+/**
+ * The pages it never interrupts unless told otherwise: paying, the receipt,
+ * the legal pages and the contact page. A brand with pages of its own to
+ * keep quiet adds them to these rather than copying them:
+ * `quietPaths: [...DEFAULT_QUIET_PATHS, "/clinics"]`, in a client component
+ * (the brand's own popup): this is a client module, so a server component
+ * that imports it gets a reference, not the list.
+ */
+export const DEFAULT_QUIET_PATHS: readonly string[] = ["/checkout", "/order-confirmation", "/privacy", "/terms", "/returns", "/disclaimer", "/contact"];
 
 /**
  * A brand's mailing-list offer as a modal, with BacLab's manners
@@ -46,7 +54,7 @@ export function SignupPopup({
   className?: string;
   children: (close: () => void) => ReactNode;
 }) {
-  const { entryDelayMs = 4000, exitIntent = true, dismissDays = 14, quietPaths = QUIET_PATHS } = config;
+  const { entryDelayMs = 4000, exitIntent = true, dismissDays = 14, quietPaths = DEFAULT_QUIET_PATHS } = config;
   const pathname = useBrandPathname();
   const status = useMailingStatus();
   const choice = useConsent();
