@@ -214,18 +214,20 @@ const run = async () => {
     headers.find((h) => h.source === source)?.headers.find((x) => x.key === "Content-Security-Policy")?.value ?? "";
   const imgSrcOf = (csp: string) =>
     (csp.split(";").map((d) => d.trim()).find((d) => d.startsWith("img-src")) ?? "").split(/\s+/).slice(1);
+  // The packing slip inlines another brand's logo as a data: URI
+  // (lib/brand/logo.ts), so no header names a brand's domain: a CSP listing
+  // them on baclab.co.uk would tie the brands together for anyone reading it.
+  const siteCsp = cspOf("/:path*");
+  const siteImgSrc = imgSrcOf(siteCsp);
+  check("img-src allows data: (the slip's inlined logo)", siteImgSrc.includes("data:"), siteImgSrc.join(" "));
+  check("img-src has no wildcard host", !siteImgSrc.some((s) => s === "*" || /^https?:$/.test(s) || s.includes("//*")), siteImgSrc.join(" "));
+  check("the CSP allows no brand's origin", !allBrands().some((b) => b.id !== DEFAULT_BRAND && siteImgSrc.some((s) => cspAllows(s, b.origin))));
+  const allHeaderValues = JSON.stringify(headers);
+  for (const h of allHosts) check(`no header names ${h}`, !allHeaderValues.includes(h));
   for (const source of ["/admin", "/admin/:path*"]) {
-    const imgSrc = imgSrcOf(cspOf(source));
-    for (const b of allBrands()) {
-      if (b.id === DEFAULT_BRAND) continue;
-      check(`${source} img-src allows ${b.origin}`, imgSrc.some((s) => cspAllows(s, b.origin)), imgSrc.join(" "));
-    }
-    check(`${source} img-src has no wildcard host`, !imgSrc.some((s) => s === "*" || /^https?:$/.test(s) || s.includes("//*")), imgSrc.join(" "));
+    check(`${source} sets no CSP of its own (the site's applies)`, cspOf(source) === "");
+    check(`${source} is noindex`, headers.find((x) => x.source === source)?.headers.some((x) => x.key === "X-Robots-Tag") === true);
   }
-  const siteImgSrc = imgSrcOf(cspOf("/:path*"));
-  check("the storefront img-src allows no brand", !allBrands().some((b) => b.id !== DEFAULT_BRAND && siteImgSrc.some((s) => cspAllows(s, b.origin))));
-  const adminCsp = cspOf("/admin/:path*").replace(/img-src[^;]*/, "");
-  check("the admin CSP is the storefront's but for img-src", adminCsp === cspOf("/:path*").replace(/img-src[^;]*/, ""));
 
   if (failures > 0) {
     console.error(`\n${failures} host check(s) failed.`);

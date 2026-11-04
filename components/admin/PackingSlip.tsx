@@ -4,6 +4,7 @@ import { formatPrice, type Currency } from "@/config/brand";
 import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { parseAddress, type Address } from "@/lib/orderAddress";
 import { isKitLine, kitPartsFor } from "@/lib/order-items";
+import { brandLogoDataUri } from "@/lib/brand/logo";
 
 interface OrderItem {
   name: string;
@@ -20,14 +21,15 @@ interface OrderItem {
 }
 
 /**
- * The brand's logo as the admin can load it. A brand's logo is served on its
- * own domain, and the admin runs on BacLab's, where the same path could be
- * BacLab's own file, so another brand's is fetched from its origin. BacLab's
- * is used as it always was.
+ * The brand's logo as the admin can show it. BacLab's is its own path, as it
+ * always was. Another brand's is served on that brand's domain, so it is
+ * inlined from public/<id>/ instead (lib/brand/logo.ts): the admin's CSP
+ * allows img-src data:, and never has to name another brand's domain. null
+ * when the file cannot be read: the slip then prints the name alone.
  */
-function slipLogo(b: BrandProfile): string {
+function slipLogo(b: BrandProfile): string | null {
   if (b.id === DEFAULT_BRAND || !b.logo.startsWith("/")) return b.logo;
-  return `${b.origin}${b.logo}`;
+  return brandLogoDataUri(b);
 }
 
 /**
@@ -47,13 +49,14 @@ export function PackingSlip({ order }: { order: Order }) {
     postalCode: "",
   };
   const currency = order.currency as Currency;
+  const logo = slipLogo(b);
 
   return (
     <div className="card print-area p-10">
       <div className="flex items-start justify-between border-b border-line pb-6">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={slipLogo(b)} alt="" className="h-10 w-10" />
+          {logo ? <img src={logo} alt="" className="h-10 w-10" /> : null}
           <div>
             <p className="font-display text-xl font-semibold text-brand-deep">{b.name}</p>
             <p className="text-xs text-ink-soft">{b.email.contact}</p>

@@ -24,15 +24,11 @@ const BRAND_HOST_PATTERN = `(?:${ALL_BRAND_HOSTS.map(escapeRegex).join("|")})`;
 // /cart or /refunds would redirect on a brand's domain too.
 const NOT_ON_BRAND_HOSTS = [{ type: "host", value: BRAND_HOST_PATTERN }];
 
-// Where the admin may load another brand's images from: a packing slip
-// carries the order's brand logo, served on that brand's own domain
-// (components/admin/PackingSlip.tsx). Registered brand hosts only, never a
-// wildcard host. A development host (*.localhost) runs on any port.
-const BRAND_IMG_ORIGINS = ALL_BRAND_HOSTS.map((h) =>
-  h.endsWith(".localhost") ? `http://${h}:*` : `https://${h}`
-);
-
-function contentSecurityPolicy({ extraImgSrc = [] } = {}) {
+// No header ever names a brand's domain: a CSP on baclab.co.uk listing the
+// brands' hosts would tie them together for anyone who reads it. The one
+// place the admin shows another brand's image, the packing slip, inlines it
+// as a data: URI (lib/brand/logo.ts), which img-src already allows.
+function contentSecurityPolicy() {
   return [
     "default-src 'self'",
     // unsafe-eval is required in dev because webpack uses eval() for source maps.
@@ -43,7 +39,7 @@ function contentSecurityPolicy({ extraImgSrc = [] } = {}) {
     `frame-src ${TRUSTPILOT}`,
     // next/font self-hosts, so no external font host is needed.
     "font-src 'self'",
-    [`img-src 'self' data: blob: ${ANALYTICS}`, ...extraImgSrc].join(" "),
+    `img-src 'self' data: blob: ${ANALYTICS}`,
     `connect-src 'self' ${ANALYTICS}`,
     // Card checkout is a top-level navigation to Stripe (window.location),
     // not a form POST, so Stripe does not need a form-action entry.
@@ -67,12 +63,8 @@ const securityHeaders = [
   },
 ];
 
-// The admin's own headers. Its entries come after the site-wide one, so its
-// CSP replaces that one (Next keeps the last value set for a header).
-const adminHeaders = [
-  { key: "X-Robots-Tag", value: "noindex, nofollow" },
-  { key: "Content-Security-Policy", value: contentSecurityPolicy({ extraImgSrc: BRAND_IMG_ORIGINS }) },
-];
+// The admin's own headers, on top of the site-wide ones (its CSP is theirs).
+const adminHeaders = [{ key: "X-Robots-Tag", value: "noindex, nofollow" }];
 
 // Host of the canonical origin, for the www → apex redirect below. Empty when
 // NEXT_PUBLIC_SITE_URL is unset or already a www host, in which case no

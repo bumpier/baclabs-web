@@ -13,6 +13,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { Order } from "@prisma/client";
 import { brandFor, DEFAULT_BRAND } from "@/brands/registry";
 import { PackingSlip } from "@/components/admin/PackingSlip";
+import { brandLogoDataUri } from "@/lib/brand/logo";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { brandChip, contrastRatio, textOn } from "@/lib/admin/brand-chip";
 import {
   ADMIN_BRAND_COOKIE,
@@ -279,8 +282,21 @@ async function main() {
   check("the fixture's slip has its name, escaped", fxSlip.includes("Fixture &amp; Co"));
   check("the fixture's slip has its contact and thank-you", fxSlip.includes("help@fixture.example") && fxSlip.includes("Thanks from the fixture."));
   check("the fixture's slip says what to pack it in", fxSlip.includes("Pack in: Fixture box"));
-  check("the fixture's logo comes from its own origin", fxSlip.includes('src="https://fixture.example/fixture/logo.svg"'));
+  // A brand's logo is inlined from public/<id>/ (lib/brand/logo.ts), so the
+  // admin never loads it from the brand's domain. A logo that is not a file
+  // there prints no image at all, rather than a broken one.
+  check("the fixture's slip, whose logo is no local file, has no image", !fxSlip.includes("<img"));
   check("nothing of BacLab's is on the fixture's slip", bacLabLeaks(fxSlip).length === 0, bacLabLeaks(fxSlip).join());
+  check("BacLab's slip keeps its own logo path", blSlip.includes(`src="${brandFor("baclab").logo}"`));
+  for (const id of ["beauty", "gym", "wholesale", "luxury"]) {
+    const b = brandFor(id);
+    const real = slip(id);
+    const inlined = `data:image/svg+xml;base64,${readFileSync(path.join(process.cwd(), "public", id, b.logo.slice(1))).toString("base64")}`;
+    check(`${id}'s slip inlines its own logo`, real.includes(`src="${inlined}"`));
+    check(`${id}'s slip loads nothing from its domain`, !real.includes(b.origin) && !b.domains.some((d) => real.includes(d)));
+  }
+  check("a logo path cannot leave the brand's folder", brandLogoDataUri({ id: "luxury", logo: "/../baclab-logo.svg" }) === null);
+  check("a logo that is not an image type is refused", brandLogoDataUri({ id: "luxury", logo: "/icon.txt" }) === null);
 
   if (process.env.ADMIN_BRANDS_DB === "1") await databaseChecks();
   else console.log("  (database checks skipped: set ADMIN_BRANDS_DB=1 and DATABASE_URL to a throwaway database)");
