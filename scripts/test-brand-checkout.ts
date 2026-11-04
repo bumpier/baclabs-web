@@ -12,10 +12,15 @@
  *   BRAND_CHECKOUT_DB=1 npm run -s test:brand-checkout
  *
  * It migrates that file itself, seeds the brand SKUs and checks out through
- * the real route.
+ * the real route: with a stand-in provider, then with PayPal faked
+ * (scripts/fixtures/fake-paypal.ts) through the real return and webhook
+ * routes, and checks the order is paid by the right provider, its stock
+ * taken, and that every repeat does nothing. npm run test:paypal covers the
+ * PayPal adapter itself without a database.
  */
 // First: it counts every Stripe client made from here on (see the file).
 import { stripeClientsMade } from "./fixtures/stripe-trap";
+import { clearPayPalEnv, fakePayPal, json, paypalOrderJson, setPayPalEnv, webhookHeaders } from "./fixtures/fake-paypal";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -581,15 +586,221 @@ async function databaseChecks() {
   await setInventoryMode("legacy");
   __clearTestPaymentAdapters();
 
+  await paypalChecks(post, () => `192.0.2.${++ip}`);
+
   // The confirmations go out after fulfilment answers; wait for them.
-  for (let i = 0; i < 60 && (await prisma.emailLog.count({ where: { type: "confirmation" } })) < 2; i++) {
+  const paidOrders = await prisma.order.count({ where: { status: "paid" } });
+  for (let i = 0; i < 60 && (await prisma.emailLog.count({ where: { type: "confirmation" } })) < paidOrders; i++) {
     await new Promise((r) => setTimeout(r, 250));
   }
-  check("db: each paid order is confirmed by email", (await prisma.emailLog.count({ where: { type: "confirmation" } })) === 2);
+  check("db: each paid order is confirmed by email", (await prisma.emailLog.count({ where: { type: "confirmation" } })) === paidOrders, String(paidOrders));
   check("db: and no Stripe client is made", stripeClientsMade() === made);
   console.log = log;
   console.error = error;
   await prisma.$disconnect();
+}
+
+/**
+ * PayPal, end to end against the database, with PayPal faked
+ * (scripts/fixtures/fake-paypal.ts): the checkout, the buyer's return, and
+ * the webhook as the backup. The fake keeps each PayPal order's state and
+ * replays a repeated PayPal-Request-Id as PayPal does, so idempotency is
+ * PayPal's own rule here, not an assumption.
+ */
+async function paypalChecks(post: (host: string, body: unknown) => Promise<Response>, nextIp: () => string) {
+  const { prisma } = await import("@/lib/db");
+  const { GET: paypalReturn } = await import("@/app/api/payments/paypal/return/route");
+  const { POST: paypalWebhook } = await import("@/app/api/webhooks/paypal/route");
+  const paypal = fakePayPal();
+  setPayPalEnv("luxury", "sandbox");
+
+  type Fake = { customId: string; status: string; country: string; captureValue?: string; capture?: string };
+  const orders = new Map<string, Fake>();
+  const replays = new Map<string, Response>();
+  let verification = "SUCCESS";
+  let declineNext = false;
+  const show = (id: string) => {
+    const o = orders.get(id)!;
+    return paypalOrderJson({
+      id,
+      status: o.status,
+      customId: o.customId,
+      country: o.country,
+      ...(o.capture ? { capture: { id: o.capture, status: "COMPLETED", value: o.captureValue! } } : {}),
+    });
+  };
+  paypal.respond = (c) => {
+    const key = c.headers.get("paypal-request-id");
+    if (key && replays.has(key)) return replays.get(key)!.clone();
+    let res: Response | undefined;
+    const path = c.url.pathname;
+    if (path === "/v2/checkout/orders" && c.method === "POST") {
+      const body = JSON.parse(c.body) as { purchase_units: { custom_id: string; amount: { value: string } }[] };
+      const id = `PPDB${orders.size + 1}`;
+      orders.set(id, { customId: body.purchase_units[0]!.custom_id, status: "PAYER_ACTION_REQUIRED", country: "GB", captureValue: body.purchase_units[0]!.amount.value });
+      res = json(201, { id, status: "PAYER_ACTION_REQUIRED", links: [{ rel: "payer-action", href: `https://www.sandbox.paypal.com/checkoutnow?token=${id}` }] });
+    } else if (path.startsWith("/v2/checkout/orders/") && path.endsWith("/capture")) {
+      const id = path.split("/")[4]!;
+      const o = orders.get(id);
+      if (!o) res = json(404, { name: "RESOURCE_NOT_FOUND" });
+      else if (declineNext) {
+        declineNext = false;
+        res = json(422, { name: "UNPROCESSABLE_ENTITY", details: [{ issue: "INSTRUMENT_DECLINED" }] });
+      } else if (o.status === "COMPLETED") res = json(422, { name: "UNPROCESSABLE_ENTITY", details: [{ issue: "ORDER_ALREADY_CAPTURED" }] });
+      else if (o.status !== "APPROVED") res = json(422, { name: "UNPROCESSABLE_ENTITY", details: [{ issue: "ORDER_NOT_APPROVED" }] });
+      else {
+        o.status = "COMPLETED";
+        o.capture = `CAP${id}`;
+        res = json(201, show(id));
+      }
+    } else if (path.startsWith("/v2/checkout/orders/") && c.method === "GET") {
+      const id = path.split("/")[4]!;
+      res = orders.has(id) ? json(200, show(id)) : json(404, { name: "RESOURCE_NOT_FOUND" });
+    } else if (path === "/v1/notifications/verify-webhook-signature") {
+      res = json(200, { verification_status: verification });
+    }
+    if (res && key) replays.set(key, res.clone());
+    return res;
+  };
+  const captures = () => paypal.calls.filter((c) => c.url.pathname.endsWith("/capture")).length;
+  const verifies = () => paypal.calls.filter((c) => c.url.pathname.endsWith("/verify-webhook-signature")).length;
+  const back = (host: string, id: string) =>
+    paypalReturn(new Request(`http://${host}/api/payments/paypal/return?order=${id}&token=x&PayerID=y`, { headers: { host, "x-forwarded-for": nextIp() } }));
+  const hook = (event: unknown, environment: "sandbox" | "live" = "sandbox") =>
+    paypalWebhook(new Request("http://luxury.localhost:3000/api/webhooks/paypal", { method: "POST", headers: webhookHeaders(environment), body: JSON.stringify(event) }));
+  const checkoutFor = async (body: unknown) => {
+    const res = await post("luxury.localhost:3000", body);
+    const data = (await res.json()) as { url?: string };
+    const ref = data.url?.split("token=")[1] ?? "";
+    return { res, ref, order: await prisma.order.findFirst({ where: { paymentRef: ref } }) };
+  };
+  const vials = async () => (await prisma.product.findUniqueOrThrow({ where: { slug: "baclab-10ml" } })).stock;
+
+  // 1. Checkout → PayPal's page, the order pending with PayPal's order on it.
+  const first = await checkoutFor({ lines: [{ sku: "LUX-10ML-X3", qty: 1 }] });
+  check("paypal db: checkout sends the buyer to PayPal", first.res.status === 200 && first.ref === "PPDB1");
+  const o1 = first.order!;
+  check("paypal db: the order is pending, by PayPal", o1?.status === "pending" && o1.paymentProvider === "paypal" && o1.brand === "luxury");
+  check("paypal db: PayPal was given our order id", orders.get("PPDB1")?.customId === o1.id);
+
+  // 2. The return on any other host is refused, and PayPal is not called.
+  const callsBefore = paypal.calls.length;
+  for (const host of ["beauty.localhost:3000", "baclab.co.uk", "gym.localhost:3000"]) {
+    check(`paypal db: the return on ${host} is refused`, (await back(host, o1.id)).status === 404);
+  }
+  check("paypal db: a refused return never calls PayPal", paypal.calls.length === callsBefore);
+  check("paypal db: nor touches the order", (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).status === "pending");
+
+  // 3. Back without approving: to the buy section, nothing taken.
+  const notYet = await back("luxury.localhost:3000", o1.id);
+  check("paypal db: back before approving reads as cancelled", notYet.headers.get("location")?.endsWith("/?payment=cancelled#buy") === true && captures() === 0);
+
+  // 4. Approved, back on the brand's host: captured and paid.
+  const before = await vials();
+  orders.get("PPDB1")!.status = "APPROVED";
+  const paidBack = await back("luxury.localhost:3000", o1.id);
+  const p1 = await prisma.order.findUniqueOrThrow({ where: { id: o1.id } });
+  check("paypal db: the return captures and goes to the confirmation", paidBack.status === 303 && paidBack.headers.get("location") === `http://luxury.localhost:3000/order-confirmation/${o1.id}?paid=1`, String(paidBack.headers.get("location")));
+  check("paypal db: paid, by PayPal, against the capture", p1.status === "paid" && p1.paymentProvider === "paypal" && p1.paymentRef === "CAPPPDB1");
+  check("paypal db: the amount charged is the capture's", p1.amountPaidMinor === 2199);
+  check(
+    "paypal db: the buyer's details from PayPal, in the Stripe webhook's shape",
+    p1.customerEmail === "buyer@example.com" && p1.customerName === "Sam Buyer" && p1.customerPhone === "07700900123" &&
+      p1.shippingAddress === JSON.stringify({ line1: "1 Mill Lane", line2: "Flat 2", city: "Leeds", country: "GB", postalCode: "LS1 1AA" })
+  );
+  check("paypal db: the stock came off the shared shelf", (await vials()) === before - 3, `${before} → ${await vials()}`);
+
+  // 5. Every repeat is a no-op: the return again, and the webhooks for it.
+  const capturesAfter = captures();
+  const again = await back("luxury.localhost:3000", o1.id);
+  check("paypal db: a second return goes to the confirmation without capturing", again.headers.get("location")?.includes(`/order-confirmation/${o1.id}`) === true && captures() === capturesAfter);
+  const completed = { id: "WH-DB-1", event_type: "PAYMENT.CAPTURE.COMPLETED", resource_type: "capture", resource: { id: "CAPPPDB1", custom_id: o1.id, supplementary_data: { related_ids: { order_id: "PPDB1" } } } };
+  const approvedEvent = { id: "WH-DB-2", event_type: "CHECKOUT.ORDER.APPROVED", resource_type: "checkout-order", resource: { id: "PPDB1", purchase_units: [{ custom_id: o1.id }] } };
+  for (const event of [completed, completed, approvedEvent]) check(`paypal db: a duplicate ${event.event_type} is acknowledged`, (await hook(event)).status === 200);
+  check("paypal db: and does nothing", captures() === capturesAfter && (await vials()) === before - 3 && (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).paymentRef === "CAPPPDB1");
+
+  // 6. The webhook as the backup, for a buyer who closed the tab.
+  const second = await checkoutFor({ lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
+  const o2 = second.order!;
+  orders.get(second.ref)!.status = "APPROVED";
+  const approved2 = { id: "WH-DB-3", event_type: "CHECKOUT.ORDER.APPROVED", resource_type: "checkout-order", resource: { id: second.ref, purchase_units: [{ custom_id: o2.id }] } };
+  verification = "FAILURE";
+  const verifiesBefore = verifies();
+  check("paypal db: an unverified event is refused", (await hook(approved2)).status === 400 && verifies() === verifiesBefore + 1);
+  check("paypal db: and never acted on", (await prisma.order.findUniqueOrThrow({ where: { id: o2.id } })).status === "pending" && orders.get(second.ref)!.status === "APPROVED");
+  verification = "SUCCESS";
+  const wrongEnv = await hook(approved2, "live");
+  check("paypal db: an event from live for a sandbox brand is ignored", wrongEnv.status === 200 && ((await wrongEnv.json()) as { ignored?: string }).ignored === "environment-mismatch");
+  check("paypal db: without even being verified or acted on", verifies() === verifiesBefore + 1 && (await prisma.order.findUniqueOrThrow({ where: { id: o2.id } })).status === "pending");
+  const bareHeaders = webhookHeaders("sandbox");
+  bareHeaders.delete("paypal-transmission-sig");
+  const unsigned = await paypalWebhook(new Request("http://luxury.localhost:3000/api/webhooks/paypal", { method: "POST", headers: bareHeaders, body: JSON.stringify(approved2) }));
+  check("paypal db: an unsigned event is refused", unsigned.status === 400 && (await prisma.order.findUniqueOrThrow({ where: { id: o2.id } })).status === "pending");
+  check("paypal db: the verified approval captures and pays", (await hook(approved2)).status === 200 && (await prisma.order.findUniqueOrThrow({ where: { id: o2.id } })).status === "paid");
+  const lateReturn = await back("luxury.localhost:3000", o2.id);
+  check("paypal db: the buyer's late return finds it paid", lateReturn.headers.get("location")?.includes("/order-confirmation/") === true);
+
+  // 7. A capture for a different amount is logged, never blocked.
+  const third = await checkoutFor({ lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
+  orders.get(third.ref)!.status = "APPROVED";
+  orders.get(third.ref)!.captureValue = "1.00";
+  const logged: string[] = [];
+  const error = console.error;
+  console.error = (...a: unknown[]) => {
+    logged.push(a.map(String).join(" "));
+  };
+  await back("luxury.localhost:3000", third.order!.id);
+  console.error = error;
+  check("paypal db: an amount mismatch is logged", logged.some((l) => l.includes(`AMOUNT MISMATCH on order ${third.order!.id}`)), logged.join(" | "));
+  check("paypal db: and the order is still paid", (await prisma.order.findUniqueOrThrow({ where: { id: third.order!.id } })).status === "paid");
+
+  // 8. An address we do not deliver to: nothing is captured.
+  const fourth = await checkoutFor({ lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
+  orders.get(fourth.ref)!.status = "APPROVED";
+  orders.get(fourth.ref)!.country = "FR";
+  const capturesBeforeFr = captures();
+  const fr = await back("luxury.localhost:3000", fourth.order!.id);
+  check("paypal db: a non-UK address is sent back, not captured", fr.headers.get("location")?.endsWith("/?payment=address#buy") === true && captures() === capturesBeforeFr);
+  check("paypal db: and the order stays unpaid", (await prisma.order.findUniqueOrThrow({ where: { id: fourth.order!.id } })).status === "pending");
+
+  // 9. Declined at capture: back to the buy section, unpaid.
+  const fifth = await checkoutFor({ lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
+  orders.get(fifth.ref)!.status = "APPROVED";
+  declineNext = true;
+  const declined = await back("luxury.localhost:3000", fifth.order!.id);
+  check("paypal db: a declined capture says so", declined.headers.get("location")?.endsWith("/?payment=declined#buy") === true);
+  check("paypal db: and leaves the order unpaid", (await prisma.order.findUniqueOrThrow({ where: { id: fifth.order!.id } })).status === "pending");
+
+  // 10. A refund is noted on the order, once per event.
+  const refund = { id: "WH-DB-9", event_type: "PAYMENT.CAPTURE.REFUNDED", resource_type: "refund", resource: { id: "REF1", amount: { value: "21.99", currency_code: "GBP" }, links: [{ rel: "up", href: "https://api.sandbox.paypal.com/v2/payments/captures/CAPPPDB1" }] } };
+  await hook(refund);
+  await hook(refund);
+  const refundedNotes = (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).notes ?? "";
+  check("paypal db: a refund is noted on its order", refundedNotes.includes("PayPal refunded: 21.99 GBP (event WH-DB-9"), refundedNotes);
+  check("paypal db: once, however often it is sent", refundedNotes.split("WH-DB-9").length === 2);
+
+  // 11. An event for an order that is not PayPal's is never acted on.
+  const stripeOrder = await prisma.order.create({
+    data: { status: "pending", items: "[]", currency: "GBP", totalAmount: 1, paymentMethod: "card", paymentProvider: "stripe", paymentRef: "cs_test_x" },
+  });
+  const foreign = { ...approvedEvent, id: "WH-DB-10", resource: { id: "PPX", purchase_units: [{ custom_id: stripeOrder.id }] } };
+  const foreignRes = await hook(foreign);
+  check("paypal db: an event naming a Stripe order is ignored", foreignRes.status === 200 && ((await foreignRes.json()) as { ignored?: string }).ignored === "unknown-order");
+  await prisma.order.delete({ where: { id: stripeOrder.id } });
+
+  // 12. The nightly clear-up asks PayPal, with the brand's own credentials, and never Stripe.
+  const { clearAbandonedCheckouts } = await import("@/lib/payments/abandoned");
+  orders.delete(fourth.ref);
+  const cleared = await clearAbandonedCheckouts();
+  check("paypal db: the clear-up removes an order PayPal no longer has", cleared.cleared >= 1 && !(await prisma.order.findUnique({ where: { id: fourth.order!.id } })));
+  check("paypal db: and keeps one PayPal still has open", !!(await prisma.order.findUnique({ where: { id: fifth.order!.id } })));
+
+  paypal.restore();
+  clearPayPalEnv();
+  // Back to the network-free fetch the rest of the checks run with.
+  globalThis.fetch = (async () => {
+    throw new Error("no network in test-brand-checkout");
+  }) as typeof fetch;
 }
 
 async function main() {

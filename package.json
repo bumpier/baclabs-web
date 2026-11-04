@@ -28,6 +28,7 @@
     "test:hosts": "tsx scripts/test-hosts.ts",
     "test:admin-brands": "tsx scripts/test-admin-brands.ts",
     "test:brand-checkout": "tsx scripts/test-brand-checkout.ts",
+    "test:paypal": "tsx scripts/test-paypal.ts",
     "test:kit": "tsx scripts/test-commerce-kit.ts",
     "test:bundle": "tsx scripts/test-bundle-guard.ts",
     "test:meta": "tsx scripts/test-meta-capi.ts",
