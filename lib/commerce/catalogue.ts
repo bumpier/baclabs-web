@@ -10,7 +10,7 @@
  * sold without one.
  */
 import type { BrandCatalogue, CatalogueAddOn, CataloguePack } from "@/brands/types";
-import type { DeliveryOption } from "@/config/funnel";
+import { VIAL_ML, type DeliveryOption } from "@/config/funnel";
 import { normaliseCode } from "@/lib/inventory/codes";
 
 export type CatalogueItem = { kind: "pack"; pack: CataloguePack } | { kind: "addOn"; addOn: CatalogueAddOn };
@@ -40,6 +40,35 @@ export function packPerVialMinor(pack: CataloguePack): number {
 /** "3-vial pack", "single vial": the pack as the order, the slip and finance name it. */
 export function packSizeName(vials: number): string {
   return vials === 1 ? "single vial" : `${vials}-vial pack`;
+}
+
+/**
+ * A line's name on Stripe's page, the receipt Stripe keeps and its reports:
+ * neutral, whatever the brand's own voice. Never slang, never marketing
+ * copy, never the brand's name. The checkout names inline lines with it and
+ * scripts/stripe-setup.ts names the brand's Products with it, so the two
+ * read the same.
+ */
+export function brandLineName(line: { kind: "pack" | "addOn"; vials?: number; name?: string }): string {
+  return line.kind === "pack" ? `${VIAL_ML}ml bacteriostatic water × ${line.vials}` : (line.name ?? "");
+}
+
+/**
+ * A line's persistent Stripe Product: `<stem>_<catalogue id>`, the stem
+ * being the brand's STRIPE_PRODUCT__<ID>. Created by
+ * `scripts/stripe-setup.ts --brand <id>` with the brand in its metadata, so
+ * coupons and reports can be scoped to one brand. One Product per pack
+ * rather than one per brand, because a Product's name IS the line's name on
+ * Stripe's page: one Product would show a 3-pack and a 12-pack as the same
+ * item.
+ */
+export function brandStripeProductId(stem: string, catalogueId: string): string {
+  return `${stem}_${catalogueId}`;
+}
+
+/** The stem stripe-setup gives a brand's Products, and prints as STRIPE_PRODUCT__<ID>. */
+export function defaultBrandProductStem(brandId: string): string {
+  return `brand_${brandId}`;
 }
 
 /** Whether goods of this value clear the brand's free-delivery threshold. */

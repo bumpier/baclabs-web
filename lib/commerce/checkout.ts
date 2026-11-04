@@ -34,14 +34,13 @@ import type { BrandCatalogue } from "@/brands/types";
 import {
   LAB_KIT,
   SHIPPING_COUNTRIES,
-  VIAL_ML,
   deliveryDetailAt,
   dispatchNoticeAt,
   labKitEnabled,
   type DeliveryOptionId,
 } from "@/config/funnel";
-import { buildBrandOrderItems, type BrandPricedLine } from "@/lib/order-items";
-import { catalogueDeliveryOptions } from "@/lib/commerce/catalogue";
+import { buildBrandOrderItems } from "@/lib/order-items";
+import { brandLineName, brandStripeProductId, catalogueDeliveryOptions } from "@/lib/commerce/catalogue";
 import { MAX_BRAND_LINES, MAX_LINE_QTY, priceBrandLines, type PricedBrandOrder } from "@/lib/commerce/pricing";
 import { DELIVERY_INSTRUCTIONS_FIELD, stripeFor, stripeKeyFor } from "@/lib/payments/stripe";
 import { getPaymentConfig, providerForMethod } from "@/lib/payments/config";
@@ -203,28 +202,6 @@ export async function brandCheckout(req: Request, brand: BrandProfile): Promise<
 }
 
 // ── The Stripe session, pure ───────────────────────────────────────
-
-/**
- * A line's name on Stripe's page, the card statement's receipt and Stripe's
- * reports: neutral, whatever the brand's own voice. Never slang, never
- * marketing copy, never the brand's name (scripts/stripe-setup.ts names the
- * brand's Products the same way).
- */
-export function brandLineName(line: Pick<BrandPricedLine, "kind"> & { vials?: number; name?: string }): string {
-  return line.kind === "pack" ? `${VIAL_ML}ml bacteriostatic water × ${line.vials}` : (line.name ?? "");
-}
-
-/**
- * A line's persistent Stripe Product: `<stem>_<catalogue id>`, created by
- * `scripts/stripe-setup.ts --brand <id>` with the brand in its metadata, so
- * coupons and reports can be scoped to one brand. One Product per pack
- * rather than one per brand, because the Product's name IS the line's name
- * on Stripe's page: a single Product would show a 3-pack and a 12-pack as
- * the same item.
- */
-export function brandStripeProductId(stem: string, catalogueId: string): string {
-  return `${stem}_${catalogueId}`;
-}
 
 /** The company-name field on a trade buyer's Stripe page (collectBusinessDetails). */
 export const COMPANY_FIELD = "companyname";
