@@ -39,8 +39,10 @@ import { vialsOnOrder } from "@/lib/vial-stock";
 import { ledgerRow, packMix, packName, type LedgerOrder } from "@/lib/finance/ledger";
 import { brandReorderOffer } from "@/lib/reorder";
 import { purchaseContents } from "@/lib/meta-capi-event";
-import { checkCompliance } from "@/lib/content-rules";
+import { checkBrandCopy, checkCompliance } from "@/lib/content-rules";
 import type { PaymentAdapter, PaymentOrder } from "@/lib/commerce/payments";
+import { brandSessionParams } from "@/lib/commerce/payments/stripe";
+import type Stripe from "stripe";
 
 let failures = 0;
 function check(name: string, condition: boolean, detail = "") {
@@ -257,13 +259,14 @@ check("refused: the kit while it is switched off", refusal("gym", [{ sku: "GYM-1
   check("reorder: nothing for a pack no longer sold", brandReorderOffer(JSON.stringify([{ sku: "LUX-10ML-X99", bundleQty: 1, qty: 99 }]), cat("luxury")) === null);
 }
 
-// ── No brand reaches Stripe: the checkout's code never loads it ─────────
-// BacLab's Stripe account is BacLab's alone. Every module the brand checkout
-// can run, followed import by import from lib/commerce/checkout.ts, must
-// stay clear of lib/payments/stripe.ts and the SDK itself: code that is
-// never loaded cannot make a client, by a fallback or any other way. The
-// trap check in routeChecks proves the same at run time.
+// ── Stripe only through its adapter ─────────────────────────────────────
+// The brands take cards on BacLab's Stripe account, but only through
+// lib/commerce/payments/stripe.ts. Every other module the brand checkout
+// can run, followed import by import from lib/commerce/checkout.ts with the
+// adapter left out, stays clear of lib/payments/stripe.ts and the SDK: no
+// path but the adapter can make a session, by a fallback or any other way.
 const ROOT = process.cwd();
+const STRIPE_ADAPTER = resolve(ROOT, "lib/commerce/payments/stripe.ts");
 function moduleFile(spec: string, from: string): string | null {
   const base = spec.startsWith("@/") ? resolve(ROOT, spec.slice(2)) : spec.startsWith(".") ? resolve(dirname(from), spec) : null;
   if (!base) return null;
@@ -272,12 +275,17 @@ function moduleFile(spec: string, from: string): string | null {
   }
   return null;
 }
-function moduleGraph(entry: string): { files: Set<string>; packages: Set<string> } {
+function moduleGraph(entry: string, leaveOut: string): { files: Set<string>; packages: Set<string>; leftOut: boolean } {
   const files = new Set<string>();
   const packages = new Set<string>();
+  let leftOut = false;
   const queue = [resolve(ROOT, entry)];
   while (queue.length > 0) {
     const file = queue.pop()!;
+    if (file === leaveOut) {
+      leftOut = true;
+      continue;
+    }
     if (files.has(file)) continue;
     files.add(file);
     const src = readFileSync(file, "utf8");
@@ -289,14 +297,125 @@ function moduleGraph(entry: string): { files: Set<string>; packages: Set<string>
       else if (!spec.startsWith(".") && !spec.startsWith("@/")) packages.add(spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0]!);
     }
   }
-  return { files, packages };
+  return { files, packages, leftOut };
 }
 {
-  const graph = moduleGraph("lib/commerce/checkout.ts");
+  const graph = moduleGraph("lib/commerce/checkout.ts", STRIPE_ADAPTER);
   const stripeModule = resolve(ROOT, "lib/payments/stripe.ts");
-  check("no Stripe: the brand checkout's modules were followed", graph.files.size > 1, String(graph.files.size));
-  check("no Stripe: the brand checkout never loads lib/payments/stripe.ts", !graph.files.has(stripeModule));
-  check("no Stripe: the brand checkout never loads the Stripe SDK", !graph.packages.has("stripe"), [...graph.packages].join());
+  check("stripe: the brand checkout's modules were followed", graph.files.size > 1, String(graph.files.size));
+  check("stripe: the brand checkout reaches the Stripe adapter", graph.leftOut);
+  check("stripe: nothing else in it loads lib/payments/stripe.ts", !graph.files.has(stripeModule));
+  check("stripe: nothing else in it loads the Stripe SDK", !graph.packages.has("stripe"), [...graph.packages].join());
+}
+
+// ── The brands' Stripe sessions, field by field ───────────────────────
+// The order id is "ord-fixture" because Tailwind scans the whole repo: an
+// id spelled like a utility class (order, then a dash and a digit) would add
+// that class to BacLab's stylesheet.
+const NOW = new Date("2026-11-04T10:00:00Z"); // a Wednesday morning: no dispatch notice
+const SATURDAY = new Date("2026-11-07T10:00:00Z");
+function paymentOrder(b: BrandProfile, lines: { sku: string; qty: number }[], deliveryIndex = 0): PaymentOrder {
+  const r = priceBrandLines(b.catalogue!, lines, { labKitOnSale: true });
+  if (!r.ok) throw new Error(`expected ${JSON.stringify(lines)} to price: ${r.error}`);
+  const d = catalogueDeliveryOptions(b.catalogue!, r.order.goodsMinor)[deliveryIndex]!;
+  return { id: "ord-fixture", lines: r.order.lines, goodsMinor: r.order.goodsMinor, delivery: { id: d.option.id, label: d.option.label, priceMinor: d.priceMinor } };
+}
+/** Every string in a value, however deep: what Stripe would receive as text. */
+function stringsIn(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap(stringsIn);
+  if (value && typeof value === "object") return Object.values(value).flatMap(stringsIn);
+  return [];
+}
+const GYM_WORDS = (strings: string[]) => checkBrandCopy("gym", strings);
+for (const b of NEW_BRANDS) {
+  const first = b.catalogue!.packs.find((p) => p.available)!;
+  const lines = [{ sku: first.sku, qty: 2 }, ...b.catalogue!.addOns.map((a) => ({ sku: a.sku, qty: 1 }))];
+  const order = paymentOrder(b, lines);
+  const s = brandSessionParams({ brand: b, order, now: NOW });
+  const at = `${b.id} session`;
+  const items = s.line_items ?? [];
+  const names = items.map((l) => l.price_data?.product_data?.name ?? "");
+  check(`${at}: payment mode, cards only`, s.mode === "payment" && JSON.stringify(s.payment_method_types) === '["card"]');
+  check(`${at}: one line per priced line`, items.length === order.lines.length);
+  check(`${at}: neutral line names`, names.every((n) => /^10ml bacteriostatic water × \d+$/.test(n) || b.catalogue!.addOns.some((a) => a.name === n)), names.join(" | "));
+  check(`${at}: the pack's name says its vials`, names[0] === `10ml bacteriostatic water × ${first.vials}`);
+  check(`${at}: prices and quantities from the catalogue`, items.every((l, i) => l.price_data?.unit_amount === order.lines[i]!.unitMinor && l.quantity === order.lines[i]!.quantity && l.price_data.currency === "gbp"));
+  check(`${at}: the first line is the pack at its price`, items[0]?.price_data?.unit_amount === first.priceMinor && items[0]?.quantity === 2);
+  check(`${at}: inline lines, no Stripe Products`, items.every((l) => !l.price && !l.price_data?.product && !!l.price_data?.product_data));
+  check(`${at}: each line's product says brand and SKU`, items.every((l, i) => JSON.stringify(l.price_data?.product_data?.metadata) === JSON.stringify({ brand: b.id, sku: order.lines[i]!.sku })));
+  check(`${at}: metadata`, JSON.stringify(s.metadata) === JSON.stringify({ orderId: "ord-fixture", brand: b.id, kind: "brand" }));
+  check(`${at}: the same metadata on the PaymentIntent`, JSON.stringify(s.payment_intent_data?.metadata) === JSON.stringify(s.metadata));
+  check(`${at}: our order id for reference`, s.client_reference_id === "ord-fixture");
+  check(`${at}: descriptor suffix from the profile`, !!b.statementDescriptor && s.payment_intent_data?.statement_descriptor_suffix === b.statementDescriptor);
+  check(`${at}: no promotion codes`, s.allow_promotion_codes === false && s.discounts === undefined);
+  check(`${at}: no tax`, s.automatic_tax?.enabled === false);
+  check(`${at}: a UK address`, JSON.stringify(s.shipping_address_collection?.allowed_countries) === '["GB"]');
+  const rates = s.shipping_options ?? [];
+  const rate = rates[0]?.shipping_rate_data;
+  check(`${at}: one shipping rate, the delivery chosen on our page`, rates.length === 1 && rate?.metadata?.deliveryOption === order.delivery.id, JSON.stringify(rates));
+  check(`${at}: charged at the chosen delivery's price`, rate?.type === "fixed_amount" && rate.fixed_amount?.amount === order.delivery.priceMinor && rate.fixed_amount.currency === "gbp");
+  check(`${at}: the rate's id is one the webhook knows`, deliveryOptionById(String(rate?.metadata?.deliveryOption))?.id === order.delivery.id);
+  check(`${at}: the rate is named for the option`, String(rate?.display_name).startsWith(`${order.delivery.label}: `), String(rate?.display_name));
+  const fields = s.custom_fields ?? [];
+  check(
+    `${at}: the delivery instructions field, and nothing else asked`,
+    fields.length === 1 && fields[0]!.key === "deliveryinstructions" && fields[0]!.optional === true && fields[0]!.text?.maximum_length === 30,
+    JSON.stringify(fields)
+  );
+  check(`${at}: business details are taken on our page, not Stripe's`, s.tax_id_collection === undefined);
+  check(`${at}: no dispatch notice midweek`, s.custom_text === undefined);
+  check(`${at}: Stripe's 24 hours, no recovery`, s.expires_at === undefined && s.after_expiration === undefined && s.customer_email === undefined);
+  check(`${at}: no branding while the origin is http`, s.branding_settings === undefined);
+  check(`${at}: success URL on the brand's origin`, s.success_url === `${b.origin}/order-confirmation/ord-fixture?session_id={CHECKOUT_SESSION_ID}`);
+  check(`${at}: cancel URL on the brand's origin`, s.cancel_url === `${b.origin}/#buy`);
+  // Everything Stripe receives as text, branding aside: never the brand's
+  // name, never BacLab's, never another brand's, and clean of every brand's
+  // words, the gym's slang included.
+  const text = stringsIn({ ...s, branding_settings: undefined, success_url: undefined, cancel_url: undefined });
+  check(`${at}: never the brand's name`, text.every((t) => !t.includes(b.name)), text.filter((t) => t.includes(b.name)).join(" | "));
+  check(`${at}: never BacLab`, text.every((t) => !/baclab/i.test(t)), text.filter((t) => /baclab/i.test(t)).join(" | "));
+  for (const other of NEW_BRANDS.filter((o) => o.id !== b.id)) check(`${at}: never names ${other.id}`, text.every((t) => !t.includes(other.name)));
+  check(`${at}: passes the content rules`, checkCompliance(text).length === 0, JSON.stringify(checkCompliance(text)));
+  check(`${at}: passes its own copy rules`, checkBrandCopy(b.id, text).length === 0, JSON.stringify(checkBrandCopy(b.id, text)));
+  check(`${at}: carries no gym slang`, GYM_WORDS(text).length === 0, JSON.stringify(GYM_WORDS(text)));
+}
+{
+  // The delivery charged is the one chosen, at its price: beauty's next day.
+  const beauty = brandFor("beauty");
+  const order = paymentOrder(beauty, [{ sku: "BEA-10ML-X1", qty: 1 }], 1);
+  const rate = brandSessionParams({ brand: beauty, order, now: NOW }).shipping_options?.[0]?.shipping_rate_data;
+  check("session: the second option, when chosen, is the one charged", order.delivery.id === "next_day" && rate?.fixed_amount?.amount === 500 && rate.metadata?.deliveryOption === "next_day", JSON.stringify(rate));
+  // Free delivery is still a rate, at nothing, so the webhook records it.
+  const lux = brandFor("luxury");
+  const free = brandSessionParams({ brand: lux, order: paymentOrder(lux, [{ sku: "LUX-10ML-X1", qty: 1 }]), now: NOW }).shipping_options?.[0]?.shipping_rate_data;
+  check("session: free delivery is a rate at nothing", free?.fixed_amount?.amount === 0 && free.metadata?.deliveryOption === "next_day");
+  // The weekend notice, as on BacLab's sessions.
+  const weekend = brandSessionParams({ brand: lux, order: paymentOrder(lux, [{ sku: "LUX-10ML-X1", qty: 1 }]), now: SATURDAY });
+  check("session: the dispatch notice at the weekend", /ship/i.test(JSON.stringify(weekend.custom_text?.shipping_address ?? "")), JSON.stringify(weekend.custom_text));
+  check("session: the weekend notice passes the gym's rules", GYM_WORDS(stringsIn(weekend)).length === 0);
+  // A catalogue that asked for codes still gets none.
+  const coded = { ...lux, catalogue: { ...lux.catalogue!, allowPromotionCodes: true } };
+  check("session: promotion codes stay off whatever the catalogue says", brandSessionParams({ brand: coded, order: paymentOrder(coded, [{ sku: "LUX-10ML-X1", qty: 1 }]), now: NOW }).allow_promotion_codes === false);
+  // Branding only on https, with the images only when the profile has them.
+  const https: BrandProfile = { ...lux, origin: "https://reserve.example", paymentPage: { logo: "/checkout/logo.png" } };
+  const live = brandSessionParams({ brand: https, order: paymentOrder(https, [{ sku: "LUX-10ML-X1", qty: 1 }]), now: NOW });
+  check("session: branding once the origin is https", live.branding_settings?.display_name === lux.name);
+  check("session: the brand's colours", live.branding_settings?.background_color === lux.colours.paper && live.branding_settings.button_color === lux.colours.cta);
+  check("session: the logo is a public https URL", JSON.stringify(live.branding_settings?.logo) === '{"type":"url","url":"https://reserve.example/checkout/logo.png"}');
+  check("session: no icon when the profile has none", live.branding_settings?.icon === undefined);
+  check("session: URLs on the https origin", live.success_url?.startsWith("https://reserve.example/order-confirmation/") === true && live.cancel_url === "https://reserve.example/#buy");
+  const plain = brandSessionParams({ brand: { ...https, statementDescriptor: undefined }, order: paymentOrder(https, [{ sku: "LUX-10ML-X1", qty: 1 }]), now: NOW });
+  check("session: no descriptor suffix when the profile has none", plain.payment_intent_data?.statement_descriptor_suffix === undefined);
+  check("session: a long descriptor is cut to Stripe's 22", brandSessionParams({ brand: { ...lux, statementDescriptor: "RESERVE NUMBER TEN LIMITED" }, order: paymentOrder(lux, [{ sku: "LUX-10ML-X1", qty: 1 }]), now: NOW }).payment_intent_data?.statement_descriptor_suffix === "RESERVE NUMBER TEN LIM");
+  let threw = false;
+  try {
+    const o = paymentOrder(lux, [{ sku: "LUX-10ML-X1", qty: 1 }]);
+    brandSessionParams({ brand: lux, order: { ...o, goodsMinor: o.goodsMinor + 1 }, now: NOW });
+  } catch {
+    threw = true;
+  }
+  check("session: lines that do not sum to the order are refused", threw);
 }
 
 // ── Public routes: a row only on its own brand's host ───────────────────
@@ -437,6 +556,88 @@ async function routeChecks() {
   const { getStripe } = await import("@/lib/payments/stripe");
   getStripe();
   check("no Stripe: the trap counts a client when one is made", stripeClientsMade() === before + 1);
+  for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
+  Object.assign(process.env, saved);
+}
+
+type CreatedSession = { params: Stripe.Checkout.SessionCreateParams; options?: Stripe.RequestOptions };
+
+/**
+ * BacLab's own Stripe client (getStripe), with its Checkout Session calls
+ * answered here: create records what it was asked and returns a session on
+ * Stripe's page; nothing is sent. Makes the client if it is not made yet.
+ */
+async function fakeStripeSessions(): Promise<CreatedSession[]> {
+  const { getStripe } = await import("@/lib/payments/stripe");
+  const sessions = getStripe().checkout.sessions as unknown as Record<string, unknown>;
+  const created: CreatedSession[] = [];
+  sessions.create = async (params: Stripe.Checkout.SessionCreateParams, options?: Stripe.RequestOptions) => {
+    created.push({ params, options });
+    const id = `cs_test_fixture_${created.length}`;
+    return { id, object: "checkout.session", url: `https://checkout.stripe.com/c/pay/${id}` };
+  };
+  return created;
+}
+
+/** A session's params without the two texts that read the clock (next day's arrival day, the weekend notice). */
+function withoutClock(p: Stripe.Checkout.SessionCreateParams) {
+  return {
+    ...p,
+    custom_text: undefined,
+    shipping_options: p.shipping_options?.map((o) => ({ ...o, shipping_rate_data: o.shipping_rate_data && { ...o.shipping_rate_data, display_name: "" } })),
+  };
+}
+
+/**
+ * The Stripe adapter: when it is on, and the session it makes against
+ * BacLab's own client, with Stripe answered here.
+ */
+async function stripeAdapterChecks() {
+  const saved = { ...process.env };
+  const { stripeAdapter } = await import("@/lib/commerce/payments/stripe");
+  const lux = brandFor("luxury");
+  for (const k of ["STRIPE_ENABLED", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"]) delete process.env[k];
+  check("stripe adapter: off without BacLab's Stripe settings", !stripeAdapter.configured(lux));
+  process.env.STRIPE_ENABLED = "true";
+  check("stripe adapter: never the keyless dev simulator", !stripeAdapter.configured(lux));
+  process.env.STRIPE_SECRET_KEY = "sk_test_adapter_fixture";
+  check("stripe adapter: off without the webhook secret, which confirms the payment", !stripeAdapter.configured(lux));
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_adapter_fixture";
+  check("stripe adapter: on with BacLab's switch and both keys", stripeAdapter.configured(lux));
+  check("stripe adapter: the same account for every brand, with no key of its own", NEW_BRANDS.every((b) => stripeAdapter.configured(b)));
+  process.env.STRIPE_ENABLED = "false";
+  check("stripe adapter: off when BacLab's cards are switched off", !stripeAdapter.configured(lux));
+  process.env.STRIPE_ENABLED = "true";
+  check("stripe adapter: its orders are card orders, as BacLab's are", stripeAdapter.id === "stripe" && stripeAdapter.paymentMethod === "card");
+
+  const created = await fakeStripeSessions();
+  const order = paymentOrder(lux, [{ sku: "LUX-10ML-X3", qty: 2 }]);
+  const made = await stripeAdapter.createPayment(order, { brand: lux });
+  check("stripe adapter: one session made", created.length === 1);
+  check("stripe adapter: the buyer goes to Stripe's page", made.url === "https://checkout.stripe.com/c/pay/cs_test_fixture_1" && made.ref === "cs_test_fixture_1", JSON.stringify(made));
+  check("stripe adapter: keyed on the order, as BacLab's sessions are", created[0]?.options?.idempotencyKey === "checkout:ord-fixture", JSON.stringify(created[0]?.options));
+  check(
+    "stripe adapter: exactly the session brandSessionParams describes",
+    JSON.stringify(withoutClock(created[0]!.params)) === JSON.stringify(withoutClock(brandSessionParams({ brand: lux, order, now: new Date() })))
+  );
+  const { getStripe } = await import("@/lib/payments/stripe");
+  const sessions = getStripe().checkout.sessions as unknown as Record<string, unknown>;
+  sessions.create = async () => ({ id: "cs_test_nourl", url: null });
+  let threw = false;
+  try {
+    await stripeAdapter.createPayment(order, { brand: lux });
+  } catch {
+    threw = true;
+  }
+  check("stripe adapter: a session with nowhere to send the buyer throws", threw);
+  sessions.create = async () => Promise.reject(new Error("card_declined"));
+  threw = false;
+  try {
+    await stripeAdapter.createPayment(order, { brand: lux });
+  } catch {
+    threw = true;
+  }
+  check("stripe adapter: Stripe's refusal throws, so the order stays unpaid", threw);
   for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
   Object.assign(process.env, saved);
 }
@@ -805,6 +1006,7 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
 
 async function main() {
   await routeChecks();
+  await stripeAdapterChecks();
   if (process.env.BRAND_CHECKOUT_DB === "1") await databaseChecks();
   else console.log("  (database checks skipped: set BRAND_CHECKOUT_DB=1 and DATABASE_URL to a throwaway SQLite file)");
   if (failures > 0) {

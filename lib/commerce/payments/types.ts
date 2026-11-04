@@ -6,12 +6,14 @@
  * order (Order.paymentRef) until the payment is captured.
  *
  * Every provider confirms a payment through fulfillPaidOrder
- * (lib/payments/fulfillment.ts), as Stripe and the crypto gateway do, so a
- * paid order is the same row whoever took the money.
+ * (lib/payments/fulfillment.ts), as BacLab's Stripe and crypto paths do, so
+ * a paid order is the same row whoever took the money.
  *
- * Credentials are the brand's own and nothing else: never a shared default,
- * never another brand's, never BacLab's. A brand with none for a provider is
- * simply not offered it (configured() is false).
+ * Credentials: Stripe is BacLab's own account and key, shared by every
+ * brand that lists it (lib/commerce/payments/stripe.ts). Every other
+ * provider's are the brand's own and nothing else: never a shared default,
+ * never another brand's, never BacLab's. A brand a provider is not
+ * configured for is simply not offered it (configured() is false).
  */
 import type { BrandPaymentProviderId, BrandProfile } from "@/brands/types";
 import type { DeliveryOptionId } from "@/config/funnel";
@@ -43,9 +45,15 @@ export interface CreatedPayment {
 
 export interface PaymentAdapter {
   id: BrandPaymentProviderId;
-  /** What the buy section calls it: "PayPal". */
+  /** What the buy section calls it when the profile has no words of its own: "PayPal". */
   label: string;
-  /** Whether every credential this brand needs for it is set: its own, by its id. */
+  /**
+   * Order.paymentMethod for its orders, as BacLab records the same payment:
+   * "card" for Stripe, so a brand's card order reads like BacLab's in the
+   * admin, the exports and the owner's alert. Unset: the provider's id.
+   */
+  paymentMethod?: string;
+  /** Whether every credential this brand needs for it is set: its own by its id, or BacLab's for Stripe. */
   configured(brand: Pick<BrandProfile, "id">): boolean;
   /** Start a payment for the order. Throws when the provider refuses; the order then stays unpaid. */
   createPayment(order: PaymentOrder, ctx: PaymentContext): Promise<CreatedPayment>;

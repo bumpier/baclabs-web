@@ -7,8 +7,9 @@ import type { BrandPaymentProviderId } from "@/brands/types";
 
 export type PaymentMethodId = "card" | "btc" | "eth" | "usdt" | "xmr";
 /**
- * Order.paymentProvider. "stripe" and the crypto gateway are BacLab's; the
- * brands' providers (lib/commerce/payments) are never BacLab's and BacLab
+ * Order.paymentProvider. "stripe" is BacLab's account, which the brands that
+ * list it share (lib/commerce/payments/stripe.ts); the crypto gateway is
+ * BacLab's alone; the brands' other providers are never BacLab's and BacLab
  * never uses them.
  */
 export type PaymentProvider = "stripe" | typeof GATEWAY_PROVIDER | BrandPaymentProviderId;

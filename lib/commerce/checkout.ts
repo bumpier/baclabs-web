@@ -6,10 +6,10 @@
  * exactly as it was.
  *
  * SERVER ONLY. It reads the brand registry's profile (passed in), Prisma and
- * the brand's payment providers (lib/commerce/payments). It never loads
- * Stripe: BacLab's Stripe account is BacLab's alone, and no brand may reach
- * it by any path, a fallback included (npm run test:brand-checkout traps
- * every Stripe client made).
+ * the brand's payment providers (lib/commerce/payments). A brand reaches
+ * BacLab's Stripe account only through the Stripe adapter, and only when
+ * its profile lists "stripe": a brand that lists nothing makes no Stripe
+ * client at all (npm run test:brand-checkout traps every one made).
  *
  * THE CONTRACT the storefronts are built against:
  *   POST /api/checkout
@@ -143,9 +143,9 @@ export async function brandCheckout(req: Request, brand: BrandProfile): Promise<
       );
     }
 
-    // ── The provider: listed on the profile and given the brand's own
-    // credentials (lib/commerce/payments). Checked before any stock is
-    // read or any order is written.
+    // ── The provider: listed on the profile and configured
+    // (lib/commerce/payments). Checked before any stock is read or any
+    // order is written.
     const choice = choosePaymentAdapter(brand, input.method, CHECKOUT_UNAVAILABLE);
     if (!choice.ok) {
       if (choice.status === 503) console.warn(`[internal] brand checkout (${brand.id}) refused: no payment provider is configured`);
@@ -185,7 +185,7 @@ export async function brandCheckout(req: Request, brand: BrandProfile): Promise<
 
     // ── The order, in the brand's name, with the delivery the buyer chose.
     // The provider collects the name and address; its confirmation writes
-    // them on before fulfilment, as Stripe's webhook does on BacLab's.
+    // them on before fulfilment (for Stripe, BacLab's own webhook).
     const total = new Prisma.Decimal((priced.goodsMinor / 100).toFixed(2));
     const rates = await fetchFxRates();
     const subtotalUsd = new Prisma.Decimal(priceIn({ priceGbp: total.toFixed(2) }, "USD", rates).toFixed(2));
@@ -208,7 +208,7 @@ export async function brandCheckout(req: Request, brand: BrandProfile): Promise<
         currency: "GBP",
         totalAmount: total,
         subtotalUsd,
-        paymentMethod: adapter.id,
+        paymentMethod: adapter.paymentMethod ?? adapter.id,
         paymentProvider: adapter.id,
         deliveryOption: delivery.option.id,
         deliveryMinor: delivery.priceMinor,

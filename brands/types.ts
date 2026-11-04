@@ -23,10 +23,11 @@ export const DEFAULT_BRAND: BrandId = "baclab";
 
 /**
  * Every payment provider a brand checkout can take payment through
- * (lib/commerce/payments). Never Stripe: that is BacLab's account, on
- * BacLab's own checkout. A new provider gets an id here and an adapter there.
+ * (lib/commerce/payments). "stripe" is BacLab's own Stripe account, which
+ * every brand that lists it shares; every other provider is on the brand's
+ * own account. A new provider gets an id here and an adapter there.
  */
-export const BRAND_PAYMENT_PROVIDERS = ["paypal"] as const;
+export const BRAND_PAYMENT_PROVIDERS = ["stripe", "paypal"] as const;
 export type BrandPaymentProviderId = (typeof BRAND_PAYMENT_PROVIDERS)[number];
 
 import type { DeliveryOption } from "@/config/funnel";
@@ -138,13 +139,19 @@ export interface BrandProfile {
   mailingList?: { consentText: string };
   /**
    * The payment providers the brand's checkout may take payment through, in
-   * the order its buy section offers them (lib/commerce/payments). Each is
-   * used only while the brand's OWN credentials for it are set (there is no
-   * shared or fallback account of any kind), so a provider reaches a brand
-   * only by deliberate config: listed here and given credentials by the
-   * brand's id. Empty or unset: the brand takes no payment, its storefront
-   * shows no checkout button and its checkout answers 503. Never Stripe:
-   * BacLab's Stripe account is BacLab's alone.
+   * the order its buy section offers them (lib/commerce/payments), so a
+   * provider reaches a brand only by being listed here. Then:
+   *  - "stripe" is BacLab's own Stripe account and key, used while BacLab's
+   *    card payments are on (STRIPE_ENABLED and both keys). There is no
+   *    per-brand key: the brand is one more website of that account, and
+   *    must be declared to Stripe before it is listed here
+   *    (deploy/BRAND-PAYMENTS.md).
+   *  - any other provider is used only while the brand's OWN credentials for
+   *    it are set, by the brand's id, with no shared or fallback account.
+   * Moving a brand from one to another is this list plus that provider's
+   * credentials, and nothing else. Empty or unset: the brand takes no
+   * payment, its storefront shows no checkout button and its checkout
+   * answers 503.
    */
   paymentProviders?: readonly BrandPaymentProviderId[];
   /**
@@ -160,11 +167,22 @@ export interface BrandProfile {
    * What the customer's statement shows for the brand, after the payment
    * provider's own prefix: the brand checkout sends it with every payment
    * (lib/commerce/payments). 22 characters at most, letters required, none of
-   * < > \ ' " *. Neutral, like the line items. Unset: the provider's account
-   * default. BacLab sets none: its Stripe sessions are built as they always
-   * were.
+   * < > \ ' " *. On Stripe it follows the account's shortened descriptor,
+   * "<prefix>* <this>", and the whole must fit in 22 (npm run check:brands
+   * holds it to that). Neutral, like the line items. Unset: the provider's
+   * account default. BacLab sets none: its Stripe sessions are built as they
+   * always were.
    */
   statementDescriptor?: string;
+  /**
+   * The brand's images on a payment provider's own page, in place of the
+   * account's: Stripe's Checkout shows BacLab's logo and icon (the account's
+   * branding) unless a session sends others, so a Stripe brand needs both
+   * before launch. Paths on the brand's origin, served from public/<id>/,
+   * PNG or JPG (Stripe takes no SVG, so `logo` cannot stand in), the icon
+   * square. Sent only once the origin is https, because Stripe fetches them.
+   */
+  paymentPage?: { logo?: string; icon?: string };
   /**
    * What the brand sells and how it is delivered (brands/<id>/catalogue.ts):
    * the brand checkout (lib/commerce/checkout.ts) prices every line from it,
@@ -281,7 +299,11 @@ export interface BrandCatalogue {
    * available; this keeps several smaller packs from adding up past it.
    */
   maxVials: number;
-  /** Whether the checkout takes promotion codes. false for every brand: no brand checkout takes one yet. */
+  /**
+   * Whether the checkout takes promotion codes. false for every brand. The
+   * Stripe sessions never take one whatever this says: the codes on that
+   * account are BacLab's, and none may discount another brand's order.
+   */
   allowPromotionCodes: boolean;
   /** Ask trade buyers for a company name and VAT number with the order. */
   collectBusinessDetails: boolean;

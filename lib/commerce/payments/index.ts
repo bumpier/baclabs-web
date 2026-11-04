@@ -1,24 +1,27 @@
 /**
  * Which payment providers a brand may use right now: the ones its profile
  * lists (BrandProfile.paymentProviders), in that order, that have an adapter
- * here and whose credentials are set for that brand. The checkout takes
- * payment only through these, and the storefront offers only these
+ * here and are configured for that brand. The checkout takes payment only
+ * through these, and the storefront offers only these
  * (lib/commerce/storefront.ts), so a brand with none shows no checkout
  * button and its checkout answers 503.
  *
- * SERVER ONLY: configured() reads the brand's credentials from env.
+ * SERVER ONLY: configured() reads credentials from env.
  *
- * BacLab is never here. Its card payments are Stripe's, on its own path
- * (app/api/checkout/route.ts), and no brand ever reaches that account.
+ * BacLab is never here. Its own card checkout is app/api/checkout/route.ts
+ * below the brand branch, with its Stripe Prices, as it always was. The
+ * Stripe adapter here makes the other brands' sessions on the same account,
+ * from their own catalogues.
  */
 import { DEFAULT_BRAND, type BrandPaymentProviderId, type BrandProfile } from "@/brands/types";
 import type { PaymentAdapter } from "@/lib/commerce/payments/types";
 import { paypalAdapter } from "@/lib/commerce/payments/paypal";
+import { stripeAdapter } from "@/lib/commerce/payments/stripe";
 
 export type { PaymentAdapter, PaymentOrder, PaymentContext, CreatedPayment } from "@/lib/commerce/payments/types";
 
-/** Every adapter there is, by provider id. Card processors join once an account is approved. */
-const ADAPTERS: Partial<Record<BrandPaymentProviderId, PaymentAdapter>> = { paypal: paypalAdapter };
+/** Every adapter there is, by provider id. Listed on no brand, an adapter is never used. */
+const ADAPTERS: Record<BrandPaymentProviderId, PaymentAdapter> = { stripe: stripeAdapter, paypal: paypalAdapter };
 
 /**
  * Stand-ins registered by test scripts (__registerTestPaymentAdapter). Empty
@@ -47,9 +50,9 @@ export function paymentAdapter(id: string): PaymentAdapter | null {
 
 /**
  * The providers this brand can take payment through now, in its profile's
- * order. Listed on the profile AND configured with the brand's own
- * credentials: neither alone is enough, so a brand with an empty list (the
- * gym brand) never takes payment however its env is set.
+ * order. Listed on the profile AND configured: neither alone is enough, so
+ * a brand with an empty list never takes payment however env is set, and
+ * BacLab's Stripe keys reach only the brands that list "stripe".
  */
 export function brandPaymentAdapters(brand: Pick<BrandProfile, "id" | "paymentProviders">): PaymentAdapter[] {
   if (brand.id === DEFAULT_BRAND) return [];
