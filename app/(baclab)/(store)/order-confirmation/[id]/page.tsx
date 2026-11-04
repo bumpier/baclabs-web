@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { brandFor, DEFAULT_BRAND } from "@/brands/registry";
 import { brand } from "@/config/brand";
 import { deliveryOptionById, dispatchNoticeAt, formatMinor, labKitContents } from "@/config/funnel";
 import { formatDeliveryDay, nextDayDeadline, ukDayKey } from "@/lib/delivery-date";
@@ -37,7 +38,10 @@ export default async function OrderConfirmationPage({
   if (!z.string().uuid().safeParse(id).success) notFound();
 
   const order = await prisma.order.findUnique({ where: { id } });
-  if (!order) notFound();
+  // BacLab's page, on BacLab's hosts only (a brand's host is rewritten to its
+  // own tree): another brand's order does not exist here, as on
+  // /api/order-status, so no brand's order shows under BacLab's name.
+  if (!order || brandFor(order.brand).id !== DEFAULT_BRAND) notFound();
 
   // What this row is (lib/plans/kinds.ts): a sale, a prepaid plan box, or the
   // payment that turned a one-off order into box 1 of a plan.

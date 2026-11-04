@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { brandFor, DEFAULT_BRAND } from "@/brands/registry";
 import { parsePendingNote } from "@/lib/crypto-gateway";
 import { PayStatus } from "./PayStatus";
 
@@ -22,7 +23,9 @@ export default async function PayPage({
   if (!z.string().uuid().safeParse(id).success) notFound();
 
   const order = await prisma.order.findUnique({ where: { id } });
-  if (!order) notFound();
+  // BacLab's pay page, on BacLab's hosts only: another brand's order does not
+  // exist here (as on /api/order-status).
+  if (!order || brandFor(order.brand).id !== DEFAULT_BRAND) notFound();
 
   // Already settled (or no longer payable) → send to the confirmation page.
   if (order.status !== "pending") redirect(`/order-confirmation/${id}`);
