@@ -922,7 +922,7 @@ export function brandPrivacy(brand: BrandProfile, tracking: BrandTrackingFacts):
           p(
             "We receive only what we need to fulfil the order: whether the payment cleared, a payment reference and the method used",
             trade ? ", and any business details you gave" : "",
-            "."
+            ", with the name, email address, phone number and delivery address you give on the provider’s page. We never see your bank or account details."
           ),
         ],
       },

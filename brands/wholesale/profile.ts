@@ -6,6 +6,7 @@
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
+import { PAYPAL_PAYMENT } from "../payment-methods";
 import { wholesaleCatalogue } from "./catalogue";
 
 export function wholesaleProfile(): BrandProfile {
@@ -50,6 +51,7 @@ export function wholesaleProfile(): BrandProfile {
     // PayPal, on this brand's own account (PAYPAL_*__WHOLESALE; see
     // deploy/BRAND-PAYMENTS.md). A card processor joins once one approves it.
     paymentProviders: ["paypal"],
+    payment: PAYPAL_PAYMENT,
     catalogue: wholesaleCatalogue,
   };
 }

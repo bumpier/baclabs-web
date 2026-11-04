@@ -212,7 +212,9 @@ for (const id of BRANDS) {
     const text = legalDocText(doc).join("\n");
     const where = `${id} ${doc.path}`;
     for (const re of foreignMarkers(id)) check(`${where}: never names ${re}`, !re.test(text));
-    check(`${where}: names no payment provider`, !/stripe|paypal|apple pay|google pay/i.test(text));
+    // A provider is named only when the brand's own profile takes it.
+    const ownPayPal = (b.paymentProviders ?? []).includes("paypal") && !!b.payment?.methods.some((m) => m.id === "paypal");
+    check(`${where}: names no payment provider but its own`, !/stripe|apple pay|google pay/i.test(text) && (ownPayPal || !/paypal/i.test(text)));
     check(`${where}: is not card-only`, !/\bcards?\b/i.test(text), text.match(/.{40}\bcards?\b.{40}/i)?.[0] ?? "");
     check(`${where}: no crypto, plan or welcome vial`, !/crypto|monthly plan|welcome (?:vial|gift)/i.test(text));
     // Shared wording, so every brand's text must pass every brand's rules.
@@ -265,6 +267,22 @@ const payPrivacy = legalDocText(brandPrivacy(paying, TRACKING_VARIANTS[0]!)).joi
 check("a configured processor is named", payPrivacy.includes("Example Payments Ltd"));
 check("a separate controller is said to be one", payPrivacy.includes("except Example Payments Ltd, which is a separate controller"));
 check("an unconfigured brand names its provider generically", legalDocText(brandPrivacy(profiles.gym!, TRACKING_VARIANTS[0]!)).join("\n").includes("Our payment provider"));
+
+// PayPal's own words, on each brand that takes it.
+for (const id of ["beauty", "wholesale", "luxury"]) {
+  const b = profiles[id]!;
+  const terms = legalDocText(brandTerms(b)).join("\n");
+  const returns = legalDocText(brandReturns(b)).join("\n");
+  const privacy = legalDocText(brandPrivacy(b, TRACKING_VARIANTS[0]!)).join("\n");
+  check(`${id}: the terms say how PayPal takes payment`, terms.includes("PayPal: you approve the payment on PayPal’s own pages"));
+  check(`${id}: the returns policy says how PayPal refunds`, returns.includes("PayPal: we refund through PayPal, to the PayPal account you paid from."));
+  check(`${id}: the privacy notice names PayPal UK Ltd`, privacy.includes("PayPal UK Ltd") && privacy.includes("paypal.com/uk/legalhub/paypal/privacy-full"));
+  check(`${id}: as a separate controller`, privacy.includes("except PayPal UK Ltd, which is a separate controller"));
+  check(`${id}: PayPal's own cookies are its own`, privacy.includes("set PayPal’s own cookies under PayPal’s own notice"));
+}
+for (const doc of docsFor(profiles.gym!)) {
+  check(`gym ${doc.path}: never names PayPal`, !/paypal/i.test(legalDocText(doc).join("\n")));
+}
 
 // ── The brand pages' source against the brand's own rules ───────────
 function filesUnder(dir: string): string[] {

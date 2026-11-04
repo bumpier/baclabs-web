@@ -6,6 +6,7 @@
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
+import { PAYPAL_PAYMENT } from "../payment-methods";
 import { luxuryCatalogue } from "./catalogue";
 
 export function luxuryProfile(): BrandProfile {
@@ -53,6 +54,7 @@ export function luxuryProfile(): BrandProfile {
     // PayPal, on this brand's own account (PAYPAL_*__LUXURY; see
     // deploy/BRAND-PAYMENTS.md). A card processor joins once one approves it.
     paymentProviders: ["paypal"],
+    payment: PAYPAL_PAYMENT,
     catalogue: luxuryCatalogue,
   };
 }
