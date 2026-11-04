@@ -5,7 +5,7 @@ import { trackEvent } from "@/lib/analytics";
 import { hasTrackingConsent } from "@/components/consent/consent-core";
 import { useCart } from "@/components/commerce/cart";
 import { startCheckout } from "@/lib/commerce/start-checkout";
-import { priceBasket, type BasketLine } from "@/lib/commerce/view";
+import { paymentReturnMessage, priceBasket, type BasketLine } from "@/lib/commerce/view";
 
 /**
  * Pay for the basket, or for lines given directly (a "buy now" button):
@@ -36,6 +36,23 @@ export function useBrandCheckout() {
     };
     window.addEventListener("pageshow", onShow);
     return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
+  // Back from paying without finishing (`?payment=<outcome>`): say why, in
+  // the provider-neutral words of lib/commerce/view.ts, then drop the
+  // marker (and the provider's own return parameters) so a reload or a
+  // shared link does not repeat it.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const message = paymentReturnMessage(url.searchParams.get("payment"));
+    if (!url.searchParams.has("payment")) return;
+    url.searchParams.delete("payment");
+    url.searchParams.delete("token");
+    url.searchParams.delete("PayerID");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    if (!message) return;
+    setError(message);
+    document.getElementById("buy")?.scrollIntoView();
   }, []);
 
   const { lines: basket, storefront } = cart;

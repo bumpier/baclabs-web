@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getStripe } from "@/lib/payments/stripe";
 import { GATEWAY_PROVIDER, parsePendingNote } from "@/lib/crypto-gateway";
+import { getPayPalOrder, paypalCredentials } from "@/lib/commerce/payments/paypal";
 
 /**
  * Abandoned checkouts: pending orders that can no longer be paid.
@@ -19,6 +20,14 @@ import { GATEWAY_PROVIDER, parsePendingNote } from "@/lib/crypto-gateway";
  * - Crypto: the gateway sets a payment window, kept in the order's notes. The
  *   order clears a day after it closes, so a deposit sent in time can still
  *   confirm.
+ * - PayPal (the brands; never Stripe): money moves only when we capture, so
+ *   PayPal is asked about its order with the brand's own credentials. One it
+ *   no longer has clears; one it has completed is paid with our side
+ *   unconfirmed, logged and kept. Otherwise it is kept until PayPal's
+ *   longest window has passed (an order can be captured for at most 72
+ *   hours, per its docs), then cleared: by then nothing can take payment for
+ *   it. Without the brand's credentials nothing can capture it either, so the
+ *   same 72 hours apply.
  * - No payment attached (checkout failed before reaching a provider): after
  *   an hour, long enough that the checkout is not still in progress.
  * - Anything else that cannot be asked (the dev Stripe simulator, a crypto
@@ -40,6 +49,9 @@ const RECOVERY_GRACE_MS = 25 * HOUR_MS;
 
 export type StripeSessionStatus = "open" | "complete" | "expired" | null;
 
+/** A brand's PayPal order as the clear-up reads it (paypalOrderState). */
+export type PayPalOrderState = "completed" | "approved" | "open" | "gone" | "unconfigured";
+
 export type Verdict = { clear: true } | { clear: false; reason: string };
 
 const CLEAR: Verdict = { clear: true };
@@ -47,6 +59,8 @@ const keep = (reason: string): Verdict => ({ clear: false, reason });
 
 export interface PendingOrder {
   id: string;
+  /** Order.brand: whose PayPal account a PayPal order is asked of. */
+  brand?: string;
   paymentProvider: string | null;
   paymentRef: string | null;
   notes: string | null;
@@ -56,11 +70,16 @@ export interface PendingOrder {
   recoveryExpiresAt?: Date | null;
 }
 
-/** Whether one pending order can be cleared. `stripeStatus` looks up a Checkout Session. */
+/**
+ * Whether one pending order can be cleared. `stripeStatus` looks up a
+ * Checkout Session; `paypalStatus` a brand's PayPal order, and is only ever
+ * asked about one (paymentProvider "paypal").
+ */
 export async function abandonedVerdict(
   order: PendingOrder,
   now: Date,
-  stripeStatus: (sessionId: string) => Promise<StripeSessionStatus>
+  stripeStatus: (sessionId: string) => Promise<StripeSessionStatus>,
+  paypalStatus: (order: PendingOrder & { paymentRef: string }) => Promise<PayPalOrderState> = async () => "unconfigured"
 ): Promise<Verdict> {
   const age = now.getTime() - order.createdAt.getTime();
 
@@ -98,6 +117,22 @@ export async function abandonedVerdict(
     return keep("payment page still open");
   }
 
+  if (order.paymentProvider === "paypal") {
+    let state: PayPalOrderState;
+    try {
+      state = await paypalStatus({ ...order, paymentRef: order.paymentRef });
+    } catch (err) {
+      console.error(`[internal] could not check PayPal for pending order ${order.id}`, err);
+      return keep("could not check with PayPal");
+    }
+    if (state === "gone") return CLEAR;
+    if (state === "completed") {
+      console.error(`[internal] order ${order.id} is paid at PayPal but still pending here — check the PayPal webhook`);
+      return keep("paid at PayPal but not confirmed here");
+    }
+    return age > FALLBACK_AGE_MS ? CLEAR : keep("PayPal order still open");
+  }
+
   if (order.paymentProvider === GATEWAY_PROVIDER) {
     const closes = Date.parse(parsePendingNote(order.notes)?.expiresAt ?? "");
     if (Number.isFinite(closes)) {
@@ -120,6 +155,7 @@ export async function clearAbandonedCheckouts(now = new Date()): Promise<ClearRe
     where: { status: "pending" },
     select: {
       id: true,
+      brand: true,
       paymentProvider: true,
       paymentRef: true,
       notes: true,
@@ -132,13 +168,23 @@ export async function clearAbandonedCheckouts(now = new Date()): Promise<ClearRe
 
   const stripeStatus = async (sessionId: string): Promise<StripeSessionStatus> =>
     (await getStripe().checkout.sessions.retrieve(sessionId)).status;
+  // Asked of the order's own brand's PayPal account, and only for a PayPal
+  // order: Stripe is never asked about one, nor PayPal about Stripe's.
+  const paypalStatus = async (o: PendingOrder & { paymentRef: string }): Promise<PayPalOrderState> => {
+    const creds = paypalCredentials(o.brand ?? "");
+    if (!creds) return "unconfigured";
+    const pp = await getPayPalOrder(creds, o.paymentRef);
+    if (!pp || pp.status === "VOIDED") return "gone";
+    if (pp.status === "COMPLETED") return "completed";
+    return pp.status === "APPROVED" ? "approved" : "open";
+  };
 
   const ids: string[] = [];
   const kept: Record<string, number> = {};
   // Ten Stripe lookups at a time: the first run can meet a long backlog.
   for (let i = 0; i < pending.length; i += 10) {
     const batch = pending.slice(i, i + 10);
-    const verdicts = await Promise.all(batch.map((o) => abandonedVerdict(o, now, stripeStatus)));
+    const verdicts = await Promise.all(batch.map((o) => abandonedVerdict(o, now, stripeStatus, paypalStatus)));
     verdicts.forEach((v, j) => {
       if (v.clear) ids.push(batch[j]!.id);
       else kept[v.reason] = (kept[v.reason] ?? 0) + 1;

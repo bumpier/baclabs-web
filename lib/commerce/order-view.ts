@@ -95,9 +95,11 @@ interface StoredLine {
 
 /**
  * Whether the confirmation page was reached on the way back from paying:
- * the checkout's return address carries a marker. Today's checkout adds
- * `session_id`; `paid` is the marker an on-site pay page sends (BacLab's
- * PayStatus convention). TODO(payments): add the new method's marker here.
+ * the return address carries a marker. `paid` is the one PayPal's return
+ * route sends once it has captured (lib/commerce/payments/paypal-settle.ts),
+ * as an on-site pay page does (BacLab's PayStatus convention); `session_id`
+ * is a Stripe Checkout return's, kept for orders from before brands left
+ * Stripe. A new provider's return uses `paid` too.
  */
 export function returnedFromPayment(searchParams: Record<string, string | string[] | undefined>): boolean {
   return Boolean(searchParams.session_id || searchParams.paid);

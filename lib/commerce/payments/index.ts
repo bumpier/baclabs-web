@@ -13,11 +13,12 @@
  */
 import { DEFAULT_BRAND, type BrandPaymentProviderId, type BrandProfile } from "@/brands/types";
 import type { PaymentAdapter } from "@/lib/commerce/payments/types";
+import { paypalAdapter } from "@/lib/commerce/payments/paypal";
 
 export type { PaymentAdapter, PaymentOrder, PaymentContext, CreatedPayment } from "@/lib/commerce/payments/types";
 
-/** Every adapter there is, by provider id. */
-const ADAPTERS: Partial<Record<BrandPaymentProviderId, PaymentAdapter>> = {};
+/** Every adapter there is, by provider id. Card processors join once an account is approved. */
+const ADAPTERS: Partial<Record<BrandPaymentProviderId, PaymentAdapter>> = { paypal: paypalAdapter };
 
 /**
  * Stand-ins registered by test scripts (__registerTestPaymentAdapter). Empty

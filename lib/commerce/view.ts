@@ -103,6 +103,26 @@ export interface BasketLine {
   qty: number;
 }
 
+/**
+ * What the buy section says when a payment comes back to it unfinished:
+ * the return route's `?payment=<outcome>` (lib/commerce/payments/
+ * paypal-settle.ts) and the provider's cancel address. Neutral: it names no
+ * provider, so it reads the same for every way to pay.
+ */
+const PAYMENT_RETURN_MESSAGES: Record<string, string> = {
+  cancelled: "Payment was cancelled. Your basket is still here.",
+  declined: "The payment was declined. Please try again, or pay another way.",
+  pending:
+    "Your payment is still being confirmed. We will email you as soon as it clears, so there is no need to pay again.",
+  address: "We deliver to UK addresses only. Please choose a UK delivery address when you pay.",
+  failed: "The payment could not be completed. Please try again.",
+};
+
+/** The sentence for a `?payment=` code, or null for none or one we do not know. */
+export function paymentReturnMessage(code: string | null | undefined): string | null {
+  return (code && Object.hasOwn(PAYMENT_RETURN_MESSAGES, code) ? PAYMENT_RETURN_MESSAGES[code] : null) ?? null;
+}
+
 /** "£7.99", "£2,699.99". The same on the server and in the browser, so it hydrates. */
 export function formatGbp(minor: number): string {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(minor / 100);
