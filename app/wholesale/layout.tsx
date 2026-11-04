@@ -11,7 +11,7 @@ import { SiteFooter } from "./SiteFooter";
 import "@/brands/wholesale/styles.css";
 
 /**
- * The brand's own root layout: its stylesheet, its font, its metadata,
+ * The brand's own root layout: its stylesheet, its fonts, its metadata,
  * nothing of BacLab's. Bounded like BacLab's store layout, so no cache in
  * front can hold a page (and its prices) for more than five minutes.
  *
@@ -23,21 +23,30 @@ import "@/brands/wholesale/styles.css";
 export const revalidate = 300;
 
 /**
- * Archivo, by Omnibus-Type, under the SIL Open Font License 1.1: the latin
- * subset of the variable font with both its axes, weight (100 to 900) and
- * width (62% to 125%), from the @fontsource-variable/archivo package. It
- * is in the repo and self-hosted, never fetched at build time: the CSP
- * allows fonts from this site only (font-src 'self'), and a Google fetch
- * once failed a deploy (app/fonts.ts). The width range is declared so
- * font-stretch drives the width axis: the title and the pack sizes are set
- * expanded, text at normal width.
+ * Overpass, by Delve Withrington, Dave Bailey and Thomas Jockin, under the
+ * SIL Open Font License 1.1: the latin subset of the variable font (weight
+ * 100 to 900), from the @fontsource-variable/overpass package. A signage
+ * grotesk in the Highway Gothic line, the lettering of aisle markers and
+ * carton stencils. Self-hosted, never fetched at build time: the CSP allows
+ * fonts from this site only (font-src 'self').
  */
-const archivo = localFont({
-  src: "../../brands/wholesale/fonts/archivo-latin.woff2",
-  variable: "--font-archivo",
+const overpass = localFont({
+  src: "../../brands/wholesale/fonts/overpass-latin-wght.woff2",
+  variable: "--font-overpass",
   display: "swap",
   weight: "100 900",
-  declarations: [{ prop: "font-stretch", value: "62% 125%" }],
+});
+
+/**
+ * Overpass Mono, same family and licence (@fontsource-variable/overpass-mono,
+ * weight 300 to 700): for pack codes and nothing else, the way a code is
+ * printed on a label.
+ */
+const overpassMono = localFont({
+  src: "../../brands/wholesale/fonts/overpass-mono-latin-wght.woff2",
+  variable: "--font-overpass-mono",
+  display: "swap",
+  weight: "300 700",
 });
 
 export const metadata: Metadata = brandRootMetadata(brand, { description: DESCRIPTION, live: LIVE });
@@ -46,11 +55,11 @@ export const viewport: Viewport = brandViewport(brand);
 
 export default function BrandLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-GB" className={archivo.variable}>
+    <html lang="en-GB" className={`${overpass.variable} ${overpassMono.variable}`}>
       <body>
         <BrandPathnameProvider id={brand.id}>
           <CartProvider storageKey={BASKET_KEY} storefront={STOREFRONT}>
-            <a href="#main" className="wh-skip">
+            <a href="#main" className="vh-skip">
               Skip to content
             </a>
             <SiteHeader />
@@ -60,9 +69,9 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
           <CookieBanner
             ga4Id={STOREFRONT.tracking.ga4Id}
             classNames={{
-              panel: "wh-banner mx-auto max-w-2xl p-5",
-              heading: "text-lg font-bold text-steel",
-              button: "btn-quiet flex-1",
+              panel: "vh-banner",
+              heading: "vh-banner-title",
+              button: "vh-btn-outline flex-1",
             }}
           />
           <Analytics ga4Id={STOREFRONT.tracking.ga4Id} />
