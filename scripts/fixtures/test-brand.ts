@@ -9,9 +9,29 @@
  * "&" to prove it is escaped in HTML.
  */
 import { __registerTestBrand, type BrandProfile } from "@/brands/registry";
+import { PAYPAL_PAYMENT } from "@/brands/payment-methods";
 
 // A plain string, not a literal: it is deliberately not a BrandId.
 export const TEST_BRAND_ID: string = "testbrand";
+
+/**
+ * A brand on PayPal: `source`'s profile and catalogue under a fixture id and
+ * development host of its own, listing PayPal in PayPal's words, as a brand
+ * moved to PayPal would be (deploy/BRAND-PAYMENTS.md). No real brand lists
+ * PayPal, so the PayPal tests run on these. The id must not contain a real
+ * brand's id, or its host would read as that brand's ("pplux", not
+ * "ppluxury"). Its credentials are PAYPAL_*__<ID>, by the fixture's id.
+ */
+export function registerPayPalTestBrand(source: BrandProfile, id: string): BrandProfile {
+  return __registerTestBrand({
+    ...source,
+    id,
+    origin: `http://${id}.localhost:3000`,
+    domains: [`${id}.localhost`],
+    paymentProviders: ["paypal"],
+    payment: PAYPAL_PAYMENT,
+  });
+}
 
 export function registerTestBrand(): BrandProfile {
   return __registerTestBrand({

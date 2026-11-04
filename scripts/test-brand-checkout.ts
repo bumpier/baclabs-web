@@ -1,10 +1,12 @@
 /**
  * The new brands' commerce backend: catalogues, pricing, order lines, the
  * brand checks on the public routes, that BacLab never reaches any of it,
- * and that no brand ever reaches BacLab's Stripe account. Run with
+ * and that the brands take cards on BacLab's Stripe account only through
+ * the Stripe adapter: the session it makes, field by field, and that a
+ * brand that lists no provider never makes a Stripe client. Run with
  * `npm run test:brand-checkout`. Exits non-zero on any failure, like the
- * other tsx test scripts. Never calls Stripe, and no request leaves the
- * process.
+ * other tsx test scripts. Never calls Stripe: its calls are answered in the
+ * process, and no request leaves it.
  *
  * The database part is opt-in. It writes rows, so give it a fresh file:
  *
@@ -12,11 +14,13 @@
  *   BRAND_CHECKOUT_DB=1 npm run -s test:brand-checkout
  *
  * It migrates that file itself, seeds the brand SKUs and checks out through
- * the real route: with a stand-in provider, then with PayPal faked
- * (scripts/fixtures/fake-paypal.ts) through the real return and webhook
- * routes, and checks the order is paid by the right provider, its stock
- * taken, and that every repeat does nothing. npm run test:paypal covers the
- * PayPal adapter itself without a database.
+ * the real route: with a stand-in provider; then on Stripe, through to
+ * BacLab's own webhook route with events signed by a test secret; then with
+ * PayPal faked (scripts/fixtures/fake-paypal.ts) on a test brand that lists
+ * it, through the real return and webhook routes. It checks each order is
+ * paid by the right provider, its stock taken, and that every repeat does
+ * nothing. npm run test:paypal covers the PayPal adapter itself without a
+ * database.
  */
 // First: it counts every Stripe client made from here on (see the file).
 import { stripeClientsMade } from "./fixtures/stripe-trap";
@@ -24,7 +28,8 @@ import { clearPayPalEnv, fakePayPal, json, paypalOrderJson, setPayPalEnv, webhoo
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { allBrands, belongsToHost, brandFor, brandFromHost, BRAND_IDS, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
+import { __registerTestBrand, allBrands, belongsToHost, brandFor, brandFromHost, BRAND_IDS, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
+import { registerPayPalTestBrand } from "./fixtures/test-brand";
 import type { BrandCatalogue } from "@/brands/types";
 import { DELIVERY, DELIVERY_OPTIONS, LAB_KIT, PRODUCT, SINGLE_BUNDLE, bundleById, deliveryOptionById, priceOrder } from "@/config/funnel";
 import { catalogueDeliveryOptions, catalogueItem, packPerVialMinor } from "@/lib/commerce/catalogue";
@@ -445,12 +450,14 @@ for (const host of ["baclab.co.uk", "www.baclab.co.uk", "BACLAB.CO.UK:443", "loc
 
 /**
  * A provider that takes nothing anywhere: it records each order it is asked
- * to take payment for and answers with a page on a reserved test domain.
+ * to take payment for and answers with a page on a reserved test domain. It
+ * stands in for the Stripe adapter, which every brand lists.
  */
 function standInAdapter(asked: PaymentOrder[]): PaymentAdapter {
   return {
-    id: "paypal",
+    id: "stripe",
     label: "Stand-in",
+    paymentMethod: "card",
     configured: () => true,
     createPayment: async (order) => {
       asked.push(order);
@@ -459,14 +466,20 @@ function standInAdapter(asked: PaymentOrder[]): PaymentAdapter {
   };
 }
 
+/**
+ * A brand that lists no provider at all: luxury's catalogue on a host of its
+ * own. It must never take payment, nor make a Stripe client, whatever is set.
+ */
+function registerNoProviderBrand(): BrandProfile {
+  return __registerTestBrand({ ...brandFor("luxury"), id: "noprov", origin: "http://noprov.localhost:3000", domains: ["noprov.localhost"], paymentProviders: [] });
+}
+
 async function routeChecks() {
   const { brandCheckout, businessDetailsNote, CHECKOUT_UNAVAILABLE } = await import("@/lib/commerce/checkout");
   const saved = { ...process.env };
-  // BacLab's Stripe fully configured, as in production: a brand must still
-  // never come near it.
-  process.env.STRIPE_ENABLED = "true";
-  process.env.STRIPE_SECRET_KEY = "sk_test_route_fixture";
-  process.env.STRIPE_WEBHOOK_SECRET = "whsec_route_fixture";
+  // BacLab's Stripe switched off here: no brand has a way to pay, and every
+  // refusal below comes before the database.
+  for (const k of ["STRIPE_ENABLED", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"]) delete process.env[k];
   const post = (b: BrandProfile, body: unknown) =>
     brandCheckout(
       new Request(`${b.origin}/api/checkout`, {
@@ -499,24 +512,26 @@ async function routeChecks() {
   const big = await answer(await post(brandFor("wholesale"), { lines: [{ sku: "WHL-10ML-X100", qty: 2 }] }));
   check("brandCheckout: too many vials is a 400 { error }", big.status === 400 && /up to 100 vials/.test(big.body.error ?? ""));
   const none = await answer(await post(lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] }));
-  check("brandCheckout: no way to pay is a 503, before any order is written", none.status === 503 && none.body.error === CHECKOUT_UNAVAILABLE);
+  check("brandCheckout: with BacLab's Stripe off, a 503 before any order is written", none.status === 503 && none.body.error === CHECKOUT_UNAVAILABLE);
   check("brandCheckout: the refusal names no provider or method", !/stripe|paypal|card/i.test(CHECKOUT_UNAVAILABLE));
 
-  // A stand-in provider, "configured" for every brand: what the profile
-  // lists still decides, and the request's choices are checked before any
-  // order is written (these would need the database past that point).
+  // A stand-in for the Stripe adapter, "configured" for every brand: what
+  // the profile lists still decides, and the request's choices are checked
+  // before any order is written (these would need the database past that
+  // point).
+  const noprov = registerNoProviderBrand();
   const { __registerTestPaymentAdapter, __clearTestPaymentAdapters, brandPaymentAdapters, choosePaymentAdapter } = await import("@/lib/commerce/payments");
   __registerTestPaymentAdapter(standInAdapter([]));
-  check("providers: listed and configured is offered", brandPaymentAdapters(lux).map((a) => a.id).join() === "paypal");
-  check("providers: the gym lists none, so none is offered whatever is set", brandPaymentAdapters(brandFor("gym")).length === 0);
+  for (const b of NEW_BRANDS) check(`providers: ${b.id} lists Stripe and is offered it`, brandPaymentAdapters(b).map((a) => a.id).join() === "stripe");
+  check("providers: a brand that lists none is offered none whatever is set", brandPaymentAdapters(noprov).length === 0);
   check("providers: BacLab is never offered one", brandPaymentAdapters(brandFor(DEFAULT_BRAND)).length === 0);
-  const two = { ...lux, paymentProviders: ["paypal", "paypal"] as const };
+  const two = { ...lux, paymentProviders: ["stripe", "stripe"] as const };
   check("providers: a provider listed twice is offered once", brandPaymentAdapters(two).length === 1);
   check("providers: the only one needs no method", choosePaymentAdapter(lux, undefined, "x").ok);
-  const gymPay = await answer(await post(brandFor("gym"), { lines: [{ sku: "GYM-10ML-X10", qty: 1 }] }));
-  check("brandCheckout: the gym is a 503 even with a provider configured", gymPay.status === 503 && gymPay.body.error === CHECKOUT_UNAVAILABLE);
+  const noPay = await answer(await post(noprov, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] }));
+  check("brandCheckout: a brand that lists none is a 503 even with a provider configured", noPay.status === 503 && noPay.body.error === CHECKOUT_UNAVAILABLE);
   const refusals: [string, BrandProfile, unknown, RegExp][] = [
-    ["a method the brand does not offer", lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], method: "stripe" }, /^That payment method is not available\.$/],
+    ["a method the brand does not offer", lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], method: "paypal" }, /^That payment method is not available\.$/],
     ["no delivery choice while there are two", brandFor("beauty"), { lines: [{ sku: "BEA-10ML-X1", qty: 1 }] }, /^Choose a delivery option\.$/],
     ["business details on a consumer site", lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], business: { company: "Acme" } }, /Invalid order details/],
     ["an unknown business field", brandFor("wholesale"), { lines: [{ sku: "WHL-10ML-X50", qty: 1 }], business: { iban: "x" } }, /Invalid order details/],
@@ -532,30 +547,41 @@ async function routeChecks() {
   check("business details: nothing when none given", businessDetailsNote(undefined) === "" && businessDetailsNote({ company: "  " }) === "");
   __clearTestPaymentAdapters();
 
-  // Every brand's host, through the real route, with BacLab's Stripe keys
-  // set: not one Stripe client is made. The route itself loads the SDK (for
-  // BacLab), so this is the trap's word, not just the import graph's.
+  // Through the real route, before anything in this run has made a Stripe
+  // client. First with BacLab's Stripe off: every brand is a 503. Then with
+  // it fully configured, as in production: the brand that lists no provider
+  // is still a 503, and not one client is made. The route loads the SDK for
+  // BacLab, so this is the trap's word, not just the import graph's. (The
+  // brands that list Stripe would go on to the database here; the database
+  // checks take them through to Stripe's page.)
   const { POST: route } = await import("@/app/api/checkout/route");
-  const before = stripeClientsMade();
+  const viaRoute = (host: string, body: unknown, n: number) =>
+    route(
+      new Request(`http://${host}/api/checkout`, {
+        method: "POST",
+        headers: { "content-type": "application/json", host, origin: `http://${host}`, "x-forwarded-for": `198.51.100.${n}` },
+        body: JSON.stringify(body),
+      })
+    );
+  check("trap: no Stripe client made before these checks", stripeClientsMade() === 0, String(stripeClientsMade()));
   let n = 0;
   for (const b of NEW_BRANDS) {
     const first = b.catalogue!.packs.find((p) => p.available)!;
     const deliveryOption = catalogueDeliveryOptions(b.catalogue!, first.priceMinor)[0]!.option.id;
-    const host = new URL(b.origin).host;
-    const res = await route(
-      new Request(`http://${host}/api/checkout`, {
-        method: "POST",
-        headers: { "content-type": "application/json", host, origin: `http://${host}`, "x-forwarded-for": `198.51.100.${++n}` },
-        body: JSON.stringify({ lines: [{ sku: first.sku, qty: 1 }], deliveryOption }),
-      })
-    );
-    check(`no Stripe: ${b.id}'s checkout is answered without BacLab's`, res.status === 503, String(res.status));
+    const res = await viaRoute(new URL(b.origin).host, { lines: [{ sku: first.sku, qty: 1 }], deliveryOption }, ++n);
+    check(`route: ${b.id} with BacLab's Stripe off is a 503`, res.status === 503, String(res.status));
   }
-  check("no Stripe: no brand's checkout made a Stripe client", stripeClientsMade() === before, `${stripeClientsMade() - before} made`);
+  process.env.STRIPE_ENABLED = "true";
+  process.env.STRIPE_SECRET_KEY = "sk_test_route_fixture";
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_route_fixture";
+  const noprovRes = await viaRoute("noprov.localhost:3000", { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] }, ++n);
+  const noprovBody = (await noprovRes.json()) as { error?: string };
+  check("route: a brand that lists no provider is the neutral 503 with Stripe configured", noprovRes.status === 503 && noprovBody.error === CHECKOUT_UNAVAILABLE, JSON.stringify(noprovBody));
+  check("trap: and makes no Stripe client", stripeClientsMade() === 0, `${stripeClientsMade()} made`);
   // The control: the trap does see a client being made.
   const { getStripe } = await import("@/lib/payments/stripe");
   getStripe();
-  check("no Stripe: the trap counts a client when one is made", stripeClientsMade() === before + 1);
+  check("trap: it counts a client when one is made", stripeClientsMade() === 1);
   for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
   Object.assign(process.env, saved);
 }
@@ -565,11 +591,21 @@ type CreatedSession = { params: Stripe.Checkout.SessionCreateParams; options?: S
 /**
  * BacLab's own Stripe client (getStripe), with its Checkout Session calls
  * answered here: create records what it was asked and returns a session on
- * Stripe's page; nothing is sent. Makes the client if it is not made yet.
+ * Stripe's page; nothing is sent. Any other call the test has not answered
+ * fails at once, before a request is made. Makes the client if it is not
+ * made yet.
  */
 async function fakeStripeSessions(): Promise<CreatedSession[]> {
   const { getStripe } = await import("@/lib/payments/stripe");
-  const sessions = getStripe().checkout.sessions as unknown as Record<string, unknown>;
+  const client = getStripe();
+  // Every resource method goes through the request sender's _request; its
+  // callback is the first function among its arguments.
+  const sender = (client as unknown as { _requestSender: { _request: (...args: unknown[]) => void } })._requestSender;
+  sender._request = (...args: unknown[]) => {
+    const done = args.find((a) => typeof a === "function") as ((err: Error) => void) | undefined;
+    done?.(new Error(`no network in test-brand-checkout: Stripe ${String(args[0])} ${String(args[2])} is not answered here`));
+  };
+  const sessions = client.checkout.sessions as unknown as Record<string, unknown>;
   const created: CreatedSession[] = [];
   sessions.create = async (params: Stripe.Checkout.SessionCreateParams, options?: Stripe.RequestOptions) => {
     created.push({ params, options });
@@ -638,6 +674,31 @@ async function stripeAdapterChecks() {
     threw = true;
   }
   check("stripe adapter: Stripe's refusal throws, so the order stays unpaid", threw);
+
+  // The nightly clear-up judges a brand's Stripe order as it judges
+  // BacLab's: by asking Stripe about its session, never PayPal.
+  const { abandonedVerdict } = await import("@/lib/payments/abandoned");
+  const now = new Date("2026-11-04T12:00:00Z");
+  const pending = (hours: number, ref = "cs_test_brand") => ({
+    id: "ord-fixture",
+    brand: "luxury",
+    paymentProvider: "stripe",
+    paymentRef: ref,
+    notes: "Payment by card",
+    createdAt: new Date(now.getTime() - hours * 3600_000),
+  });
+  const asked: string[] = [];
+  const stripeSays = (status: "open" | "complete" | "expired") => async (id: string) => {
+    asked.push(id);
+    return status;
+  };
+  const neverPayPal = async (): Promise<never> => {
+    throw new Error("PayPal asked about a Stripe order");
+  };
+  check("clear-up: a brand's expired session clears", (await abandonedVerdict(pending(2), now, stripeSays("expired"), neverPayPal)).clear && asked.at(-1) === "cs_test_brand");
+  check("clear-up: a brand's open session is kept", !(await abandonedVerdict(pending(200), now, stripeSays("open"), neverPayPal)).clear);
+  check("clear-up: a brand's paid session with no webhook is kept", !(await abandonedVerdict(pending(200), now, stripeSays("complete"), neverPayPal)).clear);
+  check("clear-up: checkout failed before Stripe: the hour rule", (await abandonedVerdict({ ...pending(2), paymentRef: null }, now, stripeSays("open"), neverPayPal)).clear);
   for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
   Object.assign(process.env, saved);
 }
@@ -709,23 +770,28 @@ async function databaseChecks() {
   const bl = await post("baclab.co.uk", { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
   check("db: on BacLab's host a brand body is BacLab's to refuse", bl.status === 400 && (await prisma.order.count()) === 0);
 
-  // No brand has a way to pay: refused, and nothing is written.
-  const made = stripeClientsMade();
+  // No way to pay: refused, and nothing is written. BacLab's cards switched
+  // off take every brand's with them; a brand that lists no provider has
+  // none whatever is on.
+  process.env.STRIPE_ENABLED = "false";
   for (const host of ["gym.localhost:3000", "luxury.localhost:3000"]) {
     const res = await post(host, { lines: [{ sku: host.startsWith("gym") ? "GYM-10ML-X10" : "LUX-10ML-X3", qty: 1 }] });
-    check(`db: ${host} without a way to pay is a 503`, res.status === 503);
+    check(`db: ${host} with BacLab's cards off is a 503`, res.status === 503);
   }
+  process.env.STRIPE_ENABLED = "true";
+  const noprovRes = await post("noprov.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 1 }] });
+  check("db: a brand that lists no provider is a 503 with Stripe on", noprovRes.status === 503);
   check("db: no order is written without a way to pay", (await prisma.order.count()) === 0);
 
-  // A stand-in provider for every brand: the gym still takes nothing.
+  // A stand-in for the Stripe adapter: the brand that lists none still takes nothing.
   const { __registerTestPaymentAdapter, __clearTestPaymentAdapters } = await import("@/lib/commerce/payments");
   const { fulfillPaidOrder } = await import("@/lib/payments/fulfillment");
   const { setInventoryMode } = await import("@/lib/inventory/mode");
   const { receiveStock } = await import("@/lib/inventory/store");
   const asked: PaymentOrder[] = [];
   __registerTestPaymentAdapter(standInAdapter(asked));
-  const gymRes = await post("gym.localhost:3000", { lines: [{ sku: "GYM-10ML-X10", qty: 1 }] });
-  check("db: the gym takes no payment, whatever is configured", gymRes.status === 503 && (await prisma.order.count()) === 0);
+  const noprovStandIn = await post("noprov.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 1 }] });
+  check("db: a brand that lists none takes no payment, whatever is configured", noprovStandIn.status === 503 && (await prisma.order.count()) === 0);
 
   // Legacy stock: luxury's 3-pack twice, by next day, the only option it offers.
   const luxRes = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 2 }], consent: { tracking: false } });
@@ -733,14 +799,14 @@ async function databaseChecks() {
   check("db: luxury checks out to the provider's page", luxRes.status === 200 && luxBody.url === "https://pay.example.test/approve/1", JSON.stringify(luxBody));
   const luxOrder = await prisma.order.findFirst({ where: { brand: "luxury" } });
   check("db: the order is luxury's, pending, priced from its catalogue", luxOrder?.status === "pending" && Number(luxOrder.totalAmount) === 43.98);
-  check("db: the order names its provider", luxOrder?.paymentProvider === "paypal" && luxOrder.paymentMethod === "paypal");
+  check("db: the order names its provider, and card as BacLab's do", luxOrder?.paymentProvider === "stripe" && luxOrder.paymentMethod === "card");
   check("db: the order holds the provider's reference", luxOrder?.paymentRef === "stand-in-1");
   check("db: the delivery is recorded at checkout", luxOrder?.deliveryOption === "next_day" && luxOrder.deliveryMinor === 0);
   check("db: the provider is asked for the order as priced", asked[0]?.id === luxOrder?.id && asked[0]?.goodsMinor === 4398 && asked[0]?.lines.length === 1);
   check("db: the provider is told the delivery", asked[0]?.delivery.id === "next_day" && asked[0]?.delivery.priceMinor === 0);
-  const paid = await fulfillPaidOrder(luxOrder!.id, { paymentRef: "capture-lux", provider: "paypal", deliveryMinor: 0, amountPaidMinor: 4398 });
+  const paid = await fulfillPaidOrder(luxOrder!.id, { paymentRef: "pi_stand_in_lux", provider: "stripe", deliveryMinor: 0, amountPaidMinor: 4398 });
   const luxAfter = await prisma.order.findUnique({ where: { id: luxOrder!.id } });
-  check("db: fulfilment marks it paid, by its provider", !paid.alreadyPaid && luxAfter?.status === "paid" && luxAfter.paymentProvider === "paypal");
+  check("db: fulfilment marks it paid, by its provider", !paid.alreadyPaid && luxAfter?.status === "paid" && luxAfter.paymentProvider === "stripe");
   check("db: and keeps the brand", luxAfter?.brand === "luxury");
   const vial = await prisma.product.findUniqueOrThrow({ where: { slug: "baclab-10ml" } });
   check("db: the shared vials came off the shelf", vial.stock === 194, String(vial.stock));
@@ -780,13 +846,14 @@ async function databaseChecks() {
   const tooMany = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 6 }] });
   check("db: the brand's boxes limit what it can sell", tooMany.status === 409);
   const shelfOrder = await prisma.order.findFirst({ where: { brand: "luxury", paymentRef: `stand-in-${asked.length}` } });
-  await fulfillPaidOrder(shelfOrder!.id, { paymentRef: "capture-shelf", provider: "paypal", deliveryMinor: 0 });
+  await fulfillPaidOrder(shelfOrder!.id, { paymentRef: "pi_stand_in_shelf", provider: "stripe", deliveryMinor: 0 });
   const picks = await prisma.pickLine.findMany({ where: { orderId: shelfOrder!.id }, include: { sku: true } });
   const picked = Object.fromEntries(picks.map((p) => [p.sku.code, p.quantity]));
   check("db: allocated as 6 shared vials and 2 brand boxes", picked[VIAL_SKU_CODE] === 6 && picked["LUX-BOX"] === 2, JSON.stringify(picked));
   await setInventoryMode("legacy");
   __clearTestPaymentAdapters();
 
+  await stripeDatabaseChecks(post);
   await paypalChecks(post, () => `192.0.2.${++ip}`);
 
   // The confirmations go out after fulfilment answers; wait for them.
@@ -795,10 +862,222 @@ async function databaseChecks() {
     await new Promise((r) => setTimeout(r, 250));
   }
   check("db: each paid order is confirmed by email", (await prisma.emailLog.count({ where: { type: "confirmation" } })) === paidOrders, String(paidOrders));
-  check("db: and no Stripe client is made", stripeClientsMade() === made);
+  check("db: one Stripe client in the whole run, BacLab's own", stripeClientsMade() === 1, String(stripeClientsMade()));
   console.log = log;
   console.error = error;
   await prisma.$disconnect();
+}
+
+/**
+ * A checkout.session.completed event for a brand's session, as Stripe sends
+ * it (API 2026-07-29.dahlia): the address under collected_information, the
+ * delivery's rate by id, the delivery instructions as a custom field.
+ */
+function completedEvent(
+  eventId: string,
+  sessionId: string,
+  order: { id: string; brand: string },
+  opts: { amountTotal: number; amountShipping: number; rate: string; paymentIntent: string; sessionBrand?: string }
+) {
+  const address = { line1: "2 Mill Lane", line2: null, city: "York", country: "GB", postal_code: "YO1 7HH", state: null };
+  return {
+    id: eventId,
+    object: "event",
+    api_version: "2026-07-29.dahlia",
+    created: Math.floor(Date.now() / 1000),
+    livemode: false,
+    pending_webhooks: 1,
+    request: { id: null, idempotency_key: null },
+    type: "checkout.session.completed",
+    data: {
+      object: {
+        id: sessionId,
+        object: "checkout.session",
+        mode: "payment",
+        status: "complete",
+        payment_status: "paid",
+        client_reference_id: order.id,
+        metadata: { orderId: order.id, brand: opts.sessionBrand ?? order.brand, kind: "brand" },
+        currency: "gbp",
+        amount_subtotal: opts.amountTotal - opts.amountShipping,
+        amount_total: opts.amountTotal,
+        total_details: { amount_discount: 0, amount_shipping: opts.amountShipping, amount_tax: 0 },
+        shipping_cost: { amount_subtotal: opts.amountShipping, amount_tax: 0, amount_total: opts.amountShipping, shipping_rate: opts.rate },
+        payment_intent: opts.paymentIntent,
+        customer_details: { email: "card.buyer@example.com", name: "Card Buyer", phone: "+447700900456", address },
+        collected_information: { shipping_details: { name: "Card Buyer", address } },
+        custom_fields: [
+          { key: "deliveryinstructions", type: "text", optional: true, label: { type: "custom", custom: "Delivery instructions" }, text: { value: "Leave in the porch" } },
+        ],
+        recovered_from: null,
+      },
+    },
+  };
+}
+
+/**
+ * Stripe, end to end against the database: the real route makes each
+ * brand's session on BacLab's client (answered here, nothing sent), and
+ * BacLab's own webhook route confirms it from an event signed locally with
+ * the test's webhook secret, as Stripe would sign it. The nightly clear-up
+ * asks the same account about a brand's pending session.
+ */
+async function stripeDatabaseChecks(post: (host: string, body: unknown) => Promise<Response>) {
+  const { prisma } = await import("@/lib/db");
+  const { getStripe } = await import("@/lib/payments/stripe");
+  const { POST: webhook } = await import("@/app/api/webhooks/stripe/route");
+  const created = await fakeStripeSessions();
+  const client = getStripe();
+  // The rate the webhook looks up is the session's own, by the id Stripe gave it.
+  const rates = new Map<string, string>();
+  (client.shippingRates as unknown as Record<string, unknown>).retrieve = async (id: string) => ({ id, object: "shipping_rate", metadata: { deliveryOption: rates.get(id) ?? "" } });
+  const sessionStatus = new Map<string, string>();
+  (client.checkout.sessions as unknown as Record<string, unknown>).retrieve = async (id: string) => ({ id, object: "checkout.session", status: sessionStatus.get(id) ?? "open" });
+  const vials = async () => (await prisma.product.findUniqueOrThrow({ where: { slug: "baclab-10ml" } })).stock;
+  const signed = (event: unknown, secret = process.env.STRIPE_WEBHOOK_SECRET!) => {
+    const payload = JSON.stringify(event);
+    return { payload, header: client.webhooks.generateTestHeaderString({ payload, secret }) };
+  };
+  const deliver = (payload: string, header: string) =>
+    webhook(new Request("http://luxury.localhost:3000/api/webhooks/stripe", { method: "POST", headers: { "content-type": "application/json", "stripe-signature": header }, body: payload }));
+  const logged: string[] = [];
+  const error = console.error;
+  const listen = () => {
+    logged.length = 0;
+    console.error = (...a: unknown[]) => {
+      logged.push(a.map(String).join(" "));
+    };
+  };
+  const stopListening = () => {
+    console.error = error;
+  };
+  // Each session the fake made is cs_test_fixture_<n>, the nth created.
+  const checkoutAs = async (host: string, body: unknown) => {
+    const res = await post(host, body);
+    const data = (await res.json()) as { url?: string; error?: string };
+    const ref = data.url?.split("/").pop() ?? "";
+    const session = created[Number(ref.split("_").pop()) - 1];
+    return { res, data, ref, session, order: await prisma.order.findFirst({ where: { paymentRef: ref } }) };
+  };
+
+  // 1. Luxury, to Stripe's page: the session is the order, exactly.
+  const lux = brandFor("luxury");
+  const one = await checkoutAs("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 1 }, { sku: "LUX-10ML-X1", qty: 1 }], consent: { tracking: false } });
+  check("stripe db: luxury checks out to Stripe's page", one.res.status === 200 && one.data.url === `https://checkout.stripe.com/c/pay/${one.ref}` && created.length === 1, JSON.stringify(one.data));
+  const o1 = one.order!;
+  check("stripe db: the order is pending, luxury's, by Stripe, a card order", o1?.status === "pending" && o1.brand === "luxury" && o1.paymentProvider === "stripe" && o1.paymentMethod === "card");
+  check("stripe db: priced from the catalogue, delivery recorded", Number(o1.totalAmount) === 29.98 && o1.deliveryOption === "next_day" && o1.deliveryMinor === 0);
+  const s1 = one.session!;
+  check("stripe db: the session is keyed on the order", s1.options?.idempotencyKey === `checkout:${o1.id}`);
+  check("stripe db: it names the order", s1.params.metadata?.orderId === o1.id && s1.params.client_reference_id === o1.id && s1.params.payment_intent_data?.metadata?.orderId === o1.id);
+  check("stripe db: it says luxury, as a brand session", s1.params.metadata?.brand === "luxury" && s1.params.metadata?.kind === "brand");
+  check(
+    "stripe db: catalogue amounts, neutral names",
+    JSON.stringify(s1.params.line_items?.map((l) => [l.price_data?.product_data?.name, l.price_data?.unit_amount, l.quantity])) ===
+      JSON.stringify([["10ml bacteriostatic water × 1", 799, 1], ["10ml bacteriostatic water × 3", 2199, 1]]),
+    JSON.stringify(s1.params.line_items)
+  );
+  check("stripe db: the chosen delivery as the one rate", s1.params.shipping_options?.length === 1 && s1.params.shipping_options[0]!.shipping_rate_data?.fixed_amount?.amount === 0);
+  check("stripe db: the descriptor suffix", s1.params.payment_intent_data?.statement_descriptor_suffix === lux.statementDescriptor);
+  check("stripe db: no promotion codes", s1.params.allow_promotion_codes === false);
+  check("stripe db: back to luxury's own origin", s1.params.success_url === `${lux.origin}/order-confirmation/${o1.id}?session_id={CHECKOUT_SESSION_ID}` && s1.params.cancel_url === `${lux.origin}/#buy`);
+  const luxDelivery = catalogueDeliveryOptions(lux.catalogue!, 2998)[0]!;
+  const expected = brandSessionParams({
+    brand: lux,
+    order: {
+      id: o1.id,
+      lines: priced("luxury", [{ sku: "LUX-10ML-X3", qty: 1 }, { sku: "LUX-10ML-X1", qty: 1 }]).lines,
+      goodsMinor: 2998,
+      delivery: { id: luxDelivery.option.id, label: luxDelivery.option.label, priceMinor: luxDelivery.priceMinor },
+    },
+    now: new Date(),
+  });
+  check("stripe db: exactly the session brandSessionParams describes", JSON.stringify(withoutClock(s1.params)) === JSON.stringify(withoutClock(expected)), JSON.stringify(withoutClock(s1.params)));
+
+  // 2. Beauty, next day chosen at £5: charged as the one rate.
+  const two = await checkoutAs("beauty.localhost:3000", { lines: [{ sku: "BEA-10ML-X1", qty: 1 }], deliveryOption: "next_day" });
+  const o2 = two.order!;
+  const rate2 = two.session?.params.shipping_options?.[0]?.shipping_rate_data;
+  check("stripe db: beauty's chosen next day is the rate charged", two.res.status === 200 && rate2?.fixed_amount?.amount === 500 && rate2.metadata?.deliveryOption === "next_day", JSON.stringify(rate2));
+  check("stripe db: and on the order", o2?.deliveryOption === "next_day" && o2.deliveryMinor === 500);
+
+  // 3. The gym: nothing of its copy goes to Stripe.
+  const three = await checkoutAs("gym.localhost:3000", { lines: [{ sku: "GYM-10ML-X10", qty: 1 }, { sku: "GYM-LAB-KIT", qty: 1 }], deliveryOption: "next_day" });
+  const gymText = stringsIn({ ...three.session?.params, branding_settings: undefined });
+  check("stripe db: the gym checks out on Stripe", three.res.status === 200 && !!three.order, JSON.stringify(three.data));
+  check("stripe db: its session passes the gym's rules and the content rules", GYM_WORDS(gymText).length === 0 && checkCompliance(gymText).length === 0, JSON.stringify(GYM_WORDS(gymText)));
+  check("stripe db: and never names the gym brand", gymText.every((t) => !t.includes(brandFor("gym").name)));
+
+  // 4. The webhook: a bad signature is refused and nothing changes.
+  for (const [sessionId, session] of [[one.ref, s1], [two.ref, two.session!], [three.ref, three.session!]] as const) {
+    rates.set(`shr_${sessionId}`, String(session.params.shipping_options?.[0]?.shipping_rate_data?.metadata?.deliveryOption));
+  }
+  const event1 = completedEvent("evt_test_lux", one.ref, o1, { amountTotal: 2998, amountShipping: 0, rate: `shr_${one.ref}`, paymentIntent: "pi_test_lux" });
+  const forged = signed(event1, "whsec_not_ours");
+  check("stripe db: an event signed with another secret is a 400", (await deliver(forged.payload, forged.header)).status === 400);
+  const tampered = signed(event1);
+  check("stripe db: a body changed after signing is a 400", (await deliver(tampered.payload.replace("2998", "1"), tampered.header)).status === 400);
+  check("stripe db: and neither touches the order", (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).status === "pending");
+
+  // 5. Signed properly: paid, the address and instructions on, the stock taken.
+  const before = await vials();
+  listen();
+  const good = signed(event1);
+  const r1 = await deliver(good.payload, good.header);
+  stopListening();
+  const p1 = await prisma.order.findUniqueOrThrow({ where: { id: o1.id } });
+  check("stripe db: the webhook marks the brand's order paid", r1.status === 200 && p1.status === "paid" && p1.paymentProvider === "stripe" && p1.paymentRef === "pi_test_lux", `${r1.status} ${p1.status} ${p1.paymentRef}`);
+  check("stripe db: it stays luxury's", p1.brand === "luxury");
+  check("stripe db: the amount charged is Stripe's total", p1.amountPaidMinor === 2998 && p1.deliveryMinor === 0 && p1.deliveryOption === "next_day");
+  check(
+    "stripe db: the buyer's details from Stripe",
+    p1.customerEmail === "card.buyer@example.com" && p1.customerName === "Card Buyer" && p1.customerPhone === "+447700900456" &&
+      p1.shippingAddress === JSON.stringify({ line1: "2 Mill Lane", line2: null, city: "York", country: "GB", postalCode: "YO1 7HH" })
+  );
+  check("stripe db: the delivery instructions onto the order", p1.deliveryInstructions === "Leave in the porch", String(p1.deliveryInstructions));
+  check("stripe db: the shared vials came off the shelf", (await vials()) === before - 4, `${before} → ${await vials()}`);
+  check("stripe db: the amount check accepts a brand order", !logged.some((l) => /AMOUNT MISMATCH|BRAND MISMATCH/.test(l)), logged.join(" | "));
+  const again = signed(event1);
+  check("stripe db: a repeat delivery is acknowledged", (await deliver(again.payload, again.header)).status === 200);
+  check("stripe db: and does nothing", (await vials()) === before - 4 && (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).paymentRef === "pi_test_lux");
+
+  // 6. Beauty with £5 delivery: the goods check subtracts it, so no alarm.
+  listen();
+  const goods2 = Math.round(Number(o2.totalAmount) * 100);
+  const event2 = signed(completedEvent("evt_test_bea", two.ref, o2, { amountTotal: goods2 + 500, amountShipping: 500, rate: `shr_${two.ref}`, paymentIntent: "pi_test_bea" }));
+  const r2 = await deliver(event2.payload, event2.header);
+  stopListening();
+  const p2 = await prisma.order.findUniqueOrThrow({ where: { id: o2.id } });
+  check("stripe db: beauty paid, with its delivery", r2.status === 200 && p2.status === "paid" && p2.deliveryMinor === 500 && p2.amountPaidMinor === goods2 + 500 && p2.deliveryOption === "next_day");
+  check("stripe db: no mismatch with delivery charged", !logged.some((l) => /MISMATCH/.test(l)), logged.join(" | "));
+
+  // 7. A real mismatch is still flagged, and never strands the order.
+  listen();
+  const goods3 = Math.round(Number(three.order!.totalAmount) * 100);
+  const event3 = signed(completedEvent("evt_test_gym", three.ref, three.order!, { amountTotal: goods3 - 100, amountShipping: 0, rate: `shr_${three.ref}`, paymentIntent: "pi_test_gym" }));
+  await deliver(event3.payload, event3.header);
+  stopListening();
+  check("stripe db: an amount short of the order is flagged", logged.some((l) => l.includes(`AMOUNT MISMATCH on order ${three.order!.id}`)), logged.join(" | "));
+  check("stripe db: and the order is still paid", (await prisma.order.findUniqueOrThrow({ where: { id: three.order!.id } })).status === "paid");
+
+  // 8. A session naming another brand is flagged too.
+  const four = await checkoutAs("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
+  listen();
+  const event4 = signed(completedEvent("evt_test_mixed", four.ref, four.order!, { amountTotal: 799, amountShipping: 0, rate: `shr_${four.ref}`, paymentIntent: "pi_test_mixed", sessionBrand: "beauty" }));
+  await deliver(event4.payload, event4.header);
+  stopListening();
+  check("stripe db: a session naming another brand is flagged", logged.some((l) => l.includes(`BRAND MISMATCH on order ${four.order!.id}`)), logged.join(" | "));
+
+  // 9. The nightly clear-up asks Stripe about a brand's pending session, as about BacLab's.
+  const five = await checkoutAs("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
+  const six = await checkoutAs("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
+  sessionStatus.set(five.ref, "expired");
+  sessionStatus.set(six.ref, "open");
+  const { clearAbandonedCheckouts } = await import("@/lib/payments/abandoned");
+  await clearAbandonedCheckouts();
+  check("stripe db: the clear-up removes a brand order whose session expired", !(await prisma.order.findUnique({ where: { id: five.order!.id } })));
+  check("stripe db: and keeps one whose session is still open", !!(await prisma.order.findUnique({ where: { id: six.order!.id } })));
+  await prisma.order.delete({ where: { id: six.order!.id } });
 }
 
 /**
@@ -806,14 +1085,17 @@ async function databaseChecks() {
  * (scripts/fixtures/fake-paypal.ts): the checkout, the buyer's return, and
  * the webhook as the backup. The fake keeps each PayPal order's state and
  * replays a repeated PayPal-Request-Id as PayPal does, so idempotency is
- * PayPal's own rule here, not an assumption.
+ * PayPal's own rule here, not an assumption. No real brand lists PayPal, so
+ * this runs on a test brand that does: luxury's catalogue on pplux's host
+ * (registerPayPalTestBrand), with Stripe configured all the while.
  */
 async function paypalChecks(post: (host: string, body: unknown) => Promise<Response>, nextIp: () => string) {
   const { prisma } = await import("@/lib/db");
   const { GET: paypalReturn } = await import("@/app/api/payments/paypal/return/route");
   const { POST: paypalWebhook } = await import("@/app/api/webhooks/paypal/route");
+  registerPayPalTestBrand(brandFor("luxury"), "pplux");
   const paypal = fakePayPal();
-  setPayPalEnv("luxury", "sandbox");
+  setPayPalEnv("pplux", "sandbox");
 
   type Fake = { customId: string; status: string; country: string; captureValue?: string; capture?: string };
   const orders = new Map<string, Fake>();
@@ -868,9 +1150,9 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
   const back = (host: string, id: string) =>
     paypalReturn(new Request(`http://${host}/api/payments/paypal/return?order=${id}&token=x&PayerID=y`, { headers: { host, "x-forwarded-for": nextIp() } }));
   const hook = (event: unknown, environment: "sandbox" | "live" = "sandbox") =>
-    paypalWebhook(new Request("http://luxury.localhost:3000/api/webhooks/paypal", { method: "POST", headers: webhookHeaders(environment), body: JSON.stringify(event) }));
+    paypalWebhook(new Request("http://pplux.localhost:3000/api/webhooks/paypal", { method: "POST", headers: webhookHeaders(environment), body: JSON.stringify(event) }));
   const checkoutFor = async (body: unknown) => {
-    const res = await post("luxury.localhost:3000", body);
+    const res = await post("pplux.localhost:3000", body);
     const data = (await res.json()) as { url?: string };
     const ref = data.url?.split("token=")[1] ?? "";
     return { res, ref, order: await prisma.order.findFirst({ where: { paymentRef: ref } }) };
@@ -881,27 +1163,27 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
   const first = await checkoutFor({ lines: [{ sku: "LUX-10ML-X3", qty: 1 }] });
   check("paypal db: checkout sends the buyer to PayPal", first.res.status === 200 && first.ref === "PPDB1");
   const o1 = first.order!;
-  check("paypal db: the order is pending, by PayPal", o1?.status === "pending" && o1.paymentProvider === "paypal" && o1.brand === "luxury");
+  check("paypal db: the order is pending, by PayPal", o1?.status === "pending" && o1.paymentProvider === "paypal" && o1.brand === "pplux");
   check("paypal db: PayPal was given our order id", orders.get("PPDB1")?.customId === o1.id);
 
   // 2. The return on any other host is refused, and PayPal is not called.
   const callsBefore = paypal.calls.length;
-  for (const host of ["beauty.localhost:3000", "baclab.co.uk", "gym.localhost:3000"]) {
+  for (const host of ["luxury.localhost:3000", "beauty.localhost:3000", "baclab.co.uk", "gym.localhost:3000"]) {
     check(`paypal db: the return on ${host} is refused`, (await back(host, o1.id)).status === 404);
   }
   check("paypal db: a refused return never calls PayPal", paypal.calls.length === callsBefore);
   check("paypal db: nor touches the order", (await prisma.order.findUniqueOrThrow({ where: { id: o1.id } })).status === "pending");
 
   // 3. Back without approving: to the buy section, nothing taken.
-  const notYet = await back("luxury.localhost:3000", o1.id);
+  const notYet = await back("pplux.localhost:3000", o1.id);
   check("paypal db: back before approving reads as cancelled", notYet.headers.get("location")?.endsWith("/?payment=cancelled#buy") === true && captures() === 0);
 
   // 4. Approved, back on the brand's host: captured and paid.
   const before = await vials();
   orders.get("PPDB1")!.status = "APPROVED";
-  const paidBack = await back("luxury.localhost:3000", o1.id);
+  const paidBack = await back("pplux.localhost:3000", o1.id);
   const p1 = await prisma.order.findUniqueOrThrow({ where: { id: o1.id } });
-  check("paypal db: the return captures and goes to the confirmation", paidBack.status === 303 && paidBack.headers.get("location") === `http://luxury.localhost:3000/order-confirmation/${o1.id}?paid=1`, String(paidBack.headers.get("location")));
+  check("paypal db: the return captures and goes to the confirmation", paidBack.status === 303 && paidBack.headers.get("location") === `http://pplux.localhost:3000/order-confirmation/${o1.id}?paid=1`, String(paidBack.headers.get("location")));
   check("paypal db: paid, by PayPal, against the capture", p1.status === "paid" && p1.paymentProvider === "paypal" && p1.paymentRef === "CAPPPDB1");
   check("paypal db: the amount charged is the capture's", p1.amountPaidMinor === 2199);
   check(
@@ -913,7 +1195,7 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
 
   // 5. Every repeat is a no-op: the return again, and the webhooks for it.
   const capturesAfter = captures();
-  const again = await back("luxury.localhost:3000", o1.id);
+  const again = await back("pplux.localhost:3000", o1.id);
   check("paypal db: a second return goes to the confirmation without capturing", again.headers.get("location")?.includes(`/order-confirmation/${o1.id}`) === true && captures() === capturesAfter);
   const completed = { id: "WH-DB-1", event_type: "PAYMENT.CAPTURE.COMPLETED", resource_type: "capture", resource: { id: "CAPPPDB1", custom_id: o1.id, supplementary_data: { related_ids: { order_id: "PPDB1" } } } };
   const approvedEvent = { id: "WH-DB-2", event_type: "CHECKOUT.ORDER.APPROVED", resource_type: "checkout-order", resource: { id: "PPDB1", purchase_units: [{ custom_id: o1.id }] } };
@@ -935,10 +1217,10 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
   check("paypal db: without even being verified or acted on", verifies() === verifiesBefore + 1 && (await prisma.order.findUniqueOrThrow({ where: { id: o2.id } })).status === "pending");
   const bareHeaders = webhookHeaders("sandbox");
   bareHeaders.delete("paypal-transmission-sig");
-  const unsigned = await paypalWebhook(new Request("http://luxury.localhost:3000/api/webhooks/paypal", { method: "POST", headers: bareHeaders, body: JSON.stringify(approved2) }));
+  const unsigned = await paypalWebhook(new Request("http://pplux.localhost:3000/api/webhooks/paypal", { method: "POST", headers: bareHeaders, body: JSON.stringify(approved2) }));
   check("paypal db: an unsigned event is refused", unsigned.status === 400 && (await prisma.order.findUniqueOrThrow({ where: { id: o2.id } })).status === "pending");
   check("paypal db: the verified approval captures and pays", (await hook(approved2)).status === 200 && (await prisma.order.findUniqueOrThrow({ where: { id: o2.id } })).status === "paid");
-  const lateReturn = await back("luxury.localhost:3000", o2.id);
+  const lateReturn = await back("pplux.localhost:3000", o2.id);
   check("paypal db: the buyer's late return finds it paid", lateReturn.headers.get("location")?.includes("/order-confirmation/") === true);
 
   // 7. A capture for a different amount is logged, never blocked.
@@ -950,7 +1232,7 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
   console.error = (...a: unknown[]) => {
     logged.push(a.map(String).join(" "));
   };
-  await back("luxury.localhost:3000", third.order!.id);
+  await back("pplux.localhost:3000", third.order!.id);
   console.error = error;
   check("paypal db: an amount mismatch is logged", logged.some((l) => l.includes(`AMOUNT MISMATCH on order ${third.order!.id}`)), logged.join(" | "));
   check("paypal db: and the order is still paid", (await prisma.order.findUniqueOrThrow({ where: { id: third.order!.id } })).status === "paid");
@@ -960,7 +1242,7 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
   orders.get(fourth.ref)!.status = "APPROVED";
   orders.get(fourth.ref)!.country = "FR";
   const capturesBeforeFr = captures();
-  const fr = await back("luxury.localhost:3000", fourth.order!.id);
+  const fr = await back("pplux.localhost:3000", fourth.order!.id);
   check("paypal db: a non-UK address is sent back, not captured", fr.headers.get("location")?.endsWith("/?payment=address#buy") === true && captures() === capturesBeforeFr);
   check("paypal db: and the order stays unpaid", (await prisma.order.findUniqueOrThrow({ where: { id: fourth.order!.id } })).status === "pending");
 
@@ -968,7 +1250,7 @@ async function paypalChecks(post: (host: string, body: unknown) => Promise<Respo
   const fifth = await checkoutFor({ lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
   orders.get(fifth.ref)!.status = "APPROVED";
   declineNext = true;
-  const declined = await back("luxury.localhost:3000", fifth.order!.id);
+  const declined = await back("pplux.localhost:3000", fifth.order!.id);
   check("paypal db: a declined capture says so", declined.headers.get("location")?.endsWith("/?payment=declined#buy") === true);
   check("paypal db: and leaves the order unpaid", (await prisma.order.findUniqueOrThrow({ where: { id: fifth.order!.id } })).status === "pending");
 

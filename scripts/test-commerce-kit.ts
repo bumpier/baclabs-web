@@ -20,6 +20,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { brandFor, type BrandProfile } from "@/brands/registry";
 import { BRAND_IDS, type BrandId } from "@/brands/types";
+import { PAYPAL_PAYMENT, STRIPE_PAYMENT } from "@/brands/payment-methods";
 import { checkBrandCopy } from "@/lib/content-rules";
 import { storefrontView } from "@/lib/commerce/storefront";
 import { __clearTestPaymentAdapters, __registerTestPaymentAdapter } from "@/lib/commerce/payments";
@@ -73,17 +74,17 @@ for (const id of BRANDS) {
   for (const pack of view.packs) check(`${id}: ${pack.sku} saves nothing negative`, packSavingMinor(view, pack) >= 0);
 }
 check("wholesale runs no list", storefrontView(profiles.wholesale!).mailingList === null);
-// A provider with credentials is offered, in the profile's words when it
-// has some; the gym lists none, so it is offered none whatever is set.
-__registerTestPaymentAdapter({ id: "paypal", label: "Stand-in", configured: () => true, createPayment: () => Promise.reject(new Error("never")) });
+// A configured provider is offered, in the profile's words when it has
+// some; a brand that lists none is offered none whatever is set.
+__registerTestPaymentAdapter({ id: "stripe", label: "Stand-in", configured: () => true, createPayment: () => Promise.reject(new Error("never")) });
 for (const id of BRANDS) {
   const methods = storefrontView(profiles[id]!).payment.methods;
   const listed = profiles[id]!.paymentProviders ?? [];
   check(`${id}: the view offers what is listed and configured`, methods.map((m) => m.id).join() === listed.join(), JSON.stringify(methods));
-  const words = profiles[id]!.payment?.methods.find((m) => m.id === "paypal");
+  const words = profiles[id]!.payment?.methods.find((m) => m.id === "stripe");
   if (methods[0]) check(`${id}: the method is in the profile's words`, methods[0].label === (words?.label ?? "Stand-in") && methods[0].terms === (words?.terms ?? ""));
 }
-check("the gym is offered no way to pay", storefrontView(profiles.gym!).payment.methods.length === 0);
+check("a brand that lists no provider is offered no way to pay", storefrontView({ ...profiles.gym!, paymentProviders: [] }).payment.methods.length === 0);
 __clearTestPaymentAdapters();
 let threw = false;
 try {
@@ -212,10 +213,11 @@ for (const id of BRANDS) {
     const text = legalDocText(doc).join("\n");
     const where = `${id} ${doc.path}`;
     for (const re of foreignMarkers(id)) check(`${where}: never names ${re}`, !re.test(text));
-    // A provider is named only when the brand's own profile takes it.
-    const ownPayPal = (b.paymentProviders ?? []).includes("paypal") && !!b.payment?.methods.some((m) => m.id === "paypal");
-    check(`${where}: names no payment provider but its own`, !/stripe|apple pay|google pay/i.test(text) && (ownPayPal || !/paypal/i.test(text)));
-    check(`${where}: is not card-only`, !/\bcards?\b/i.test(text), text.match(/.{40}\bcards?\b.{40}/i)?.[0] ?? "");
+    // A provider, and cards, are named only when the brand's own profile takes it.
+    const takes = (provider: "stripe" | "paypal") =>
+      (b.paymentProviders ?? []).includes(provider) && !!b.payment?.methods.some((m) => m.id === provider);
+    check(`${where}: names no payment provider but its own`, (takes("stripe") || !/stripe|apple pay|google pay/i.test(text)) && (takes("paypal") || !/paypal/i.test(text)));
+    check(`${where}: names cards only if it takes them`, takes("stripe") || !/\bcards?\b/i.test(text), text.match(/.{40}\bcards?\b.{40}/i)?.[0] ?? "");
     check(`${where}: no crypto, plan or welcome vial`, !/crypto|monthly plan|welcome (?:vial|gift)/i.test(text));
     // Shared wording, so every brand's text must pass every brand's rules.
     for (const rulesOf of BRAND_IDS.filter((r) => r !== "baclab")) {
@@ -266,22 +268,43 @@ check("a method's refund line is in the returns policy", legalDocText(brandRetur
 const payPrivacy = legalDocText(brandPrivacy(paying, TRACKING_VARIANTS[0]!)).join("\n");
 check("a configured processor is named", payPrivacy.includes("Example Payments Ltd"));
 check("a separate controller is said to be one", payPrivacy.includes("except Example Payments Ltd, which is a separate controller"));
-check("an unconfigured brand names its provider generically", legalDocText(brandPrivacy(profiles.gym!, TRACKING_VARIANTS[0]!)).join("\n").includes("Our payment provider"));
+const unpaid: BrandProfile = { ...profiles.gym!, paymentProviders: [], payment: undefined };
+check("an unconfigured brand names its provider generically", legalDocText(brandPrivacy(unpaid, TRACKING_VARIANTS[0]!)).join("\n").includes("Our payment provider"));
+for (const doc of docsFor(unpaid)) {
+  check(`unconfigured ${doc.path}: names no provider and no card`, !/stripe|paypal|apple pay|google pay|\bcards?\b/i.test(legalDocText(doc).join("\n")));
+}
 
-// PayPal's own words, on each brand that takes it.
-for (const id of ["beauty", "wholesale", "luxury"]) {
+// Stripe's own words, on every brand: all four take it.
+for (const id of BRANDS) {
   const b = profiles[id]!;
+  check(`${id}: takes Stripe, in Stripe's words`, (b.paymentProviders ?? []).join() === "stripe" && b.payment === STRIPE_PAYMENT);
   const terms = legalDocText(brandTerms(b)).join("\n");
   const returns = legalDocText(brandReturns(b)).join("\n");
   const privacy = legalDocText(brandPrivacy(b, TRACKING_VARIANTS[0]!)).join("\n");
-  check(`${id}: the terms say how PayPal takes payment`, terms.includes("PayPal: you approve the payment on PayPal’s own pages"));
-  check(`${id}: the returns policy says how PayPal refunds`, returns.includes("PayPal: we refund through PayPal, to the PayPal account you paid from."));
-  check(`${id}: the privacy notice names PayPal UK Ltd`, privacy.includes("PayPal UK Ltd") && privacy.includes("paypal.com/uk/legalhub/paypal/privacy-full"));
-  check(`${id}: as a separate controller`, privacy.includes("except PayPal UK Ltd, which is a separate controller"));
-  check(`${id}: PayPal's own cookies are its own`, privacy.includes("set PayPal’s own cookies under PayPal’s own notice"));
+  check(`${id}: the terms say how Stripe takes payment`, terms.includes("card, Apple Pay or Google Pay: you pay on Stripe’s own hosted checkout page. Your card details are entered there and never reach us"));
+  check(`${id}: the returns policy says how Stripe refunds`, returns.includes("card, Apple Pay or Google Pay: we refund through Stripe, to the card you paid with"));
+  check(`${id}: the privacy notice names Stripe`, privacy.includes("Stripe Payments Europe, Ltd.") && privacy.includes("stripe.com/gb/privacy"));
+  check(`${id}: as a separate controller`, privacy.includes("except Stripe Payments Europe, Ltd., which is a separate controller"));
+  check(`${id}: Stripe's own cookies are its own`, privacy.includes("Stripe sets its own cookies there, including for fraud prevention"));
+  for (const doc of docsFor(b)) check(`${id} ${doc.path}: never names PayPal`, !/paypal/i.test(legalDocText(doc).join("\n")));
 }
-for (const doc of docsFor(profiles.gym!)) {
-  check(`gym ${doc.path}: never names PayPal`, !/paypal/i.test(legalDocText(doc).join("\n")));
+
+// PayPal's own words, on a brand moved to PayPal by its profile alone.
+{
+  const moved: BrandProfile = { ...profiles.luxury!, paymentProviders: ["paypal"], payment: PAYPAL_PAYMENT };
+  const terms = legalDocText(brandTerms(moved)).join("\n");
+  const returns = legalDocText(brandReturns(moved)).join("\n");
+  const privacy = legalDocText(brandPrivacy(moved, TRACKING_VARIANTS[0]!)).join("\n");
+  check("on PayPal: the terms say how PayPal takes payment", terms.includes("PayPal: you approve the payment on PayPal’s own pages"));
+  check("on PayPal: the returns policy says how PayPal refunds", returns.includes("PayPal: we refund through PayPal, to the PayPal account you paid from."));
+  check("on PayPal: the privacy notice names PayPal UK Ltd", privacy.includes("PayPal UK Ltd") && privacy.includes("paypal.com/uk/legalhub/paypal/privacy-full"));
+  check("on PayPal: as a separate controller", privacy.includes("except PayPal UK Ltd, which is a separate controller"));
+  check("on PayPal: PayPal's own cookies are its own", privacy.includes("set PayPal’s own cookies under PayPal’s own notice"));
+  for (const doc of docsFor(moved)) {
+    const text = legalDocText(doc).join("\n");
+    check(`on PayPal ${doc.path}: never names Stripe or cards`, !/stripe|apple pay|google pay|\bcards?\b/i.test(text), text.match(/.{40}(?:stripe|\bcards?\b).{40}/i)?.[0] ?? "");
+    for (const rulesOf of BRANDS) check(`on PayPal ${doc.path}: passes ${rulesOf}'s copy rules`, checkBrandCopy(rulesOf as BrandId, legalDocText(doc)).length === 0);
+  }
 }
 
 // ── The brand pages' source against the brand's own rules ───────────

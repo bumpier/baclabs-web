@@ -63,9 +63,10 @@ export function templateProfile(): BrandProfile {
     //
     // TODO(launch): the final name's statement descriptor (22 characters at most).
     statementDescriptor: "TEMPLATE BRAND",
-    // None until the brand has a payment account of its own: its site shows
-    // no checkout button and its checkout answers 503. A provider is added
-    // here and given the brand's own credentials (deploy/NEW-BRAND.md).
+    // None until the site has been declared to Stripe as one of BacLab's
+    // account's (or the brand has an account of its own with another
+    // provider): its site shows no checkout button and its checkout answers
+    // 503. Then ["stripe"] and STRIPE_PAYMENT (deploy/BRAND-PAYMENTS.md).
     paymentProviders: [],
     catalogue: templateCatalogue,
   };

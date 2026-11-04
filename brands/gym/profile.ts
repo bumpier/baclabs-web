@@ -6,6 +6,7 @@
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
+import { STRIPE_PAYMENT } from "../payment-methods";
 import { gymCatalogue } from "./catalogue";
 
 export function gymProfile(): BrandProfile {
@@ -50,14 +51,14 @@ export function gymProfile(): BrandProfile {
     },
     // TODO(launch): the final name's statement descriptor.
     statementDescriptor: "BRUTE LAB",
-    // None, on purpose: checkout stays off until a specialist high-risk
-    // processor takes this brand on, with its copy disclosed. Never PayPal,
-    // and never an account another brand uses: PayPal's Acceptable Use
-    // Policy bans what this brand's coded copy alludes to (the wording is
-    // quoted in deploy/BRAND-PAYMENTS.md), so a freeze over it would take
-    // every brand on that account down with it. An empty list wins over any
-    // credentials in env.
-    paymentProviders: [],
+    // Stripe, on BacLab's own account and key, as every brand is (the
+    // owner's decision, 4 Nov 2026): the site is declared to Stripe before
+    // it takes a payment, and only neutral words reach Stripe (the line
+    // names, the descriptor, the delivery), never this brand's copy. Never
+    // PayPal: its Acceptable Use Policy bans what this brand's coded copy
+    // alludes to (quoted in deploy/BRAND-PAYMENTS.md).
+    paymentProviders: ["stripe"],
+    payment: STRIPE_PAYMENT,
     catalogue: gymCatalogue,
   };
 }

@@ -5,8 +5,16 @@
  * leaves the process. Run with `npm run test:paypal`. No database: the
  * checkout, return and webhook against real rows are in test:brand-checkout's
  * opt-in database checks.
+ *
+ * No brand takes PayPal today: all four are on Stripe. PayPal stays built
+ * so a brand can move to it by its profile and its own PAYPAL_*__<ID>, so
+ * these checks run on test brands that list it (registerPayPalTestBrand),
+ * one made from each real brand, and check that moving a real brand takes
+ * nothing more than that.
  */
 import { clearPayPalEnv, fakePayPal, json, paypalOrderJson, setPayPalEnv, webhookHeaders, type PayPalCall } from "./fixtures/fake-paypal";
+import { registerPayPalTestBrand } from "./fixtures/test-brand";
+import { PAYPAL_PAYMENT } from "@/brands/payment-methods";
 import { brandFor, BRAND_IDS, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import type { BrandId } from "@/brands/types";
 import { checkBrandCopy, checkCompliance } from "@/lib/content-rules";
@@ -39,7 +47,14 @@ function check(name: string, condition: boolean, detail = "") {
   failures++;
 }
 
-const PAYPAL_BRANDS = BRAND_IDS.filter((id) => id !== DEFAULT_BRAND && (brandFor(id).paymentProviders ?? []).includes("paypal")).map((id) => brandFor(id));
+const REAL_BRANDS = BRAND_IDS.filter((id) => id !== DEFAULT_BRAND).map((id) => brandFor(id));
+/** A PayPal test brand per real brand but the gym, which never goes on PayPal: fixture id -> the brand it is made from. */
+const SOURCE = new Map<string, string>([
+  ["ppbea", "beauty"],
+  ["ppwho", "wholesale"],
+  ["pplux", "luxury"],
+]);
+const PAYPAL_BRANDS = [...SOURCE].map(([id, from]) => registerPayPalTestBrand(brandFor(from), id));
 const ORDER_ID = "5f1c2e1a-0000-4000-8000-000000000001";
 
 function paymentOrder(b: BrandProfile, lines: { sku: string; qty: number }[], deliveryIndex = 0): PaymentOrder {
@@ -54,40 +69,42 @@ async function main() {
   clearPayPalEnv();
 
   // ── Which brands: listed on the profile ─────────────────────────────
-  check("PayPal brands: beauty, luxury and wholesale", PAYPAL_BRANDS.map((b) => b.id).join() === "beauty,wholesale,luxury", PAYPAL_BRANDS.map((b) => b.id).join());
-  check("the gym lists no provider at all", (brandFor("gym").paymentProviders ?? ["?"]).length === 0);
+  check("no real brand lists PayPal: all four are on Stripe", REAL_BRANDS.every((b) => (b.paymentProviders ?? []).join() === "stripe"), REAL_BRANDS.map((b) => `${b.id}:${b.paymentProviders}`).join(" "));
   check("BacLab lists none", (brandFor(DEFAULT_BRAND).paymentProviders ?? []).length === 0);
+  check("the test brands list PayPal, in PayPal's words", PAYPAL_BRANDS.every((b) => (b.paymentProviders ?? []).join() === "paypal" && b.payment === PAYPAL_PAYMENT));
 
   // ── Credentials: the brand's own, all four, no fallback ─────────────
-  const lux = brandFor("luxury");
-  check("no credentials: not configured", paypalCredentials("luxury") === null && !paypalAdapter.configured(lux));
+  // Fixture ids are not BrandIds: compared as plain strings.
+  const lux = PAYPAL_BRANDS.find((b) => (b.id as string) === "pplux")!;
+  const bea = PAYPAL_BRANDS.find((b) => (b.id as string) === "ppbea")!;
+  const LUX = lux.id.toUpperCase();
+  check("no credentials: not configured", paypalCredentials(lux.id) === null && !paypalAdapter.configured(lux));
   for (const k of ["CLIENT_ID", "CLIENT_SECRET", "WEBHOOK_ID", "ENV"]) process.env[`PAYPAL_${k}`] = k === "ENV" ? "sandbox" : "shared";
-  check("no fallback: unsuffixed PAYPAL_* is never read", paypalCredentials("luxury") === null);
-  setPayPalEnv("beauty");
-  check("no fallback: another brand's credentials are never lent", paypalCredentials("luxury") === null && paypalCredentials("beauty") !== null);
-  setPayPalEnv("luxury");
-  delete process.env.PAYPAL_ENV__LUXURY;
-  check("PAYPAL_ENV__<ID> is required: no default environment", paypalCredentials("luxury") === null);
-  process.env.PAYPAL_ENV__LUXURY = "production";
-  check("PAYPAL_ENV__<ID> is sandbox or live only", paypalCredentials("luxury") === null);
-  process.env.PAYPAL_ENV__LUXURY = "live";
-  check("all four set: configured, live", paypalCredentials("luxury")?.apiBase === "https://api-m.paypal.com");
-  process.env.PAYPAL_ENV__LUXURY = "sandbox";
-  check("sandbox talks to the sandbox", paypalCredentials("luxury")?.apiBase === "https://api-m.sandbox.paypal.com");
+  check("no fallback: unsuffixed PAYPAL_* is never read", paypalCredentials(lux.id) === null);
+  setPayPalEnv(bea.id);
+  check("no fallback: another brand's credentials are never lent", paypalCredentials(lux.id) === null && paypalCredentials(bea.id) !== null);
+  setPayPalEnv(lux.id);
+  delete process.env[`PAYPAL_ENV__${LUX}`];
+  check("PAYPAL_ENV__<ID> is required: no default environment", paypalCredentials(lux.id) === null);
+  process.env[`PAYPAL_ENV__${LUX}`] = "production";
+  check("PAYPAL_ENV__<ID> is sandbox or live only", paypalCredentials(lux.id) === null);
+  process.env[`PAYPAL_ENV__${LUX}`] = "live";
+  check("all four set: configured, live", paypalCredentials(lux.id)?.apiBase === "https://api-m.paypal.com");
+  process.env[`PAYPAL_ENV__${LUX}`] = "sandbox";
+  check("sandbox talks to the sandbox", paypalCredentials(lux.id)?.apiBase === "https://api-m.sandbox.paypal.com");
   for (const k of ["CLIENT_ID", "CLIENT_SECRET", "WEBHOOK_ID"]) {
-    const saved = process.env[`PAYPAL_${k}__LUXURY`];
-    delete process.env[`PAYPAL_${k}__LUXURY`];
-    check(`PAYPAL_${k}__<ID> is required`, paypalCredentials("luxury") === null);
-    process.env[`PAYPAL_${k}__LUXURY`] = saved;
+    const saved = process.env[`PAYPAL_${k}__${LUX}`];
+    delete process.env[`PAYPAL_${k}__${LUX}`];
+    check(`PAYPAL_${k}__<ID> is required`, paypalCredentials(lux.id) === null);
+    process.env[`PAYPAL_${k}__${LUX}`] = saved;
   }
   setPayPalEnv("baclab");
   check("BacLab never has PayPal credentials, even if set", paypalCredentials(DEFAULT_BRAND) === null);
 
-  // The gym: credentials set on purpose, still nothing. Its list is empty.
-  setPayPalEnv("gym");
-  const gym = brandFor("gym");
-  check("gym: not offered PayPal with credentials set", brandPaymentAdapters(gym).length === 0);
-  check("gym: its storefront shows no way to pay", storefrontView(gym).payment.methods.length === 0);
+  // The real brands: PayPal credentials set on purpose, still no PayPal,
+  // because none lists it. With BacLab's Stripe off here, none takes
+  // payment at all, and PayPal is never called.
+  for (const b of REAL_BRANDS) setPayPalEnv(b.id);
   const callsBefore = paypal.calls.length;
   const { brandCheckout, CHECKOUT_UNAVAILABLE } = await import("@/lib/commerce/checkout");
   const post = (b: BrandProfile, body: unknown) =>
@@ -99,10 +116,20 @@ async function main() {
       }),
       b
     );
-  const gymRes = await post(gym, { lines: [{ sku: "GYM-10ML-X10", qty: 1 }] });
-  const gymBody = (await gymRes.json()) as { error?: string };
-  check("gym: checkout is a 503 in neutral words", gymRes.status === 503 && gymBody.error === CHECKOUT_UNAVAILABLE, JSON.stringify(gymBody));
-  check("gym: and PayPal is never called", paypal.calls.length === callsBefore);
+  for (const b of REAL_BRANDS) {
+    check(`${b.id}: not offered PayPal with PayPal credentials set`, brandPaymentAdapters(b).every((a) => a.id !== "paypal"));
+    check(`${b.id}: its storefront never offers PayPal`, storefrontView(b).payment.methods.every((m) => m.id !== "paypal"));
+    const first = b.catalogue!.packs.find((p) => p.available)!;
+    const deliveryOption = catalogueDeliveryOptions(b.catalogue!, first.priceMinor)[0]!.option.id;
+    const res = await post(b, { lines: [{ sku: first.sku, qty: 1 }], deliveryOption });
+    const body = (await res.json()) as { error?: string };
+    check(`${b.id}: without Stripe, checkout is a 503 in neutral words`, res.status === 503 && body.error === CHECKOUT_UNAVAILABLE, JSON.stringify(body));
+    check(`${b.id}: a method of "paypal" is refused`, (await post(b, { lines: [{ sku: first.sku, qty: 1 }], deliveryOption, method: "paypal" })).status !== 200);
+  }
+  check("the real brands: PayPal is never called", paypal.calls.length === callsBefore);
+  // Moving a real brand to PayPal is its profile and its credentials: nothing else.
+  const moved: BrandProfile = { ...brandFor("luxury"), paymentProviders: ["paypal"], payment: PAYPAL_PAYMENT };
+  check("moved by its profile, a real brand is offered PayPal on its own credentials", brandPaymentAdapters(moved).map((a) => a.id).join() === "paypal" && paypalCredentials("luxury")?.clientId === "client-luxury");
   clearPayPalEnv();
   const off = await post(lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
   check("a PayPal brand without credentials is a 503", off.status === 503);
@@ -161,7 +188,8 @@ async function main() {
     check(`${at}: cancel_url on the brand's origin`, ctx.cancel_url === `${b.origin}/?payment=cancelled`, ctx.cancel_url);
     const text = JSON.stringify(body);
     check(`${at}: never BacLab's name or Stripe`, !/baclab|stripe/i.test(text));
-    for (const other of BRAND_IDS.filter((o) => o !== b.id && o !== DEFAULT_BRAND)) {
+    // The brand it was made from is itself; every other brand is another.
+    for (const other of BRAND_IDS.filter((o) => o !== SOURCE.get(b.id) && o !== DEFAULT_BRAND)) {
       check(`${at}: never names ${other}`, !text.includes(brandFor(other).name) && !text.includes(`${other}.localhost`));
     }
   }
@@ -171,13 +199,12 @@ async function main() {
     check("create: a long descriptor is cut to 22", unit.soft_descriptor === "RESERVE NUMBER TEN LIM");
     const none = paypalOrderBody(paymentOrder(lux, [{ sku: "LUX-10ML-X1", qty: 1 }]), { ...lux, statementDescriptor: undefined }) as { purchase_units: Record<string, unknown>[] };
     check("create: no descriptor when the profile has none", !("soft_descriptor" in none.purchase_units[0]!));
-    const beauty = brandFor("beauty");
-    const bea = paymentOrder(beauty, [{ sku: "BEA-10ML-X1", qty: 1 }], 1);
-    const charged = (paypalOrderBody(bea, beauty) as { purchase_units: { amount: { value: string; breakdown: { shipping: { value: string } } } }[] }).purchase_units[0]!.amount;
-    check("create: the delivery the buyer chose is what is charged", charged.breakdown.shipping.value === "5.00" && charged.value === (bea.goodsMinor / 100 + 5).toFixed(2), JSON.stringify(charged));
+    const chosen = paymentOrder(bea, [{ sku: "BEA-10ML-X1", qty: 1 }], 1);
+    const charged = (paypalOrderBody(chosen, bea) as { purchase_units: { amount: { value: string; breakdown: { shipping: { value: string } } } }[] }).purchase_units[0]!.amount;
+    check("create: the delivery the buyer chose is what is charged", charged.breakdown.shipping.value === "5.00" && charged.value === (chosen.goodsMinor / 100 + 5).toFixed(2), JSON.stringify(charged));
     let threw = false;
     try {
-      paypalOrderBody({ ...bea, goodsMinor: bea.goodsMinor + 1 }, beauty);
+      paypalOrderBody({ ...chosen, goodsMinor: chosen.goodsMinor + 1 }, bea);
     } catch {
       threw = true;
     }
@@ -205,11 +232,11 @@ async function main() {
   check("createPayment: a PayPal-Request-Id keyed on our order", createCall.headers.get("paypal-request-id") === `create-${ORDER_ID}`);
   check("createPayment: with the brand's own token", createCall.headers.get("authorization") === "Bearer token-1");
   const tokenCall = paypal.calls.find((c) => c.url.pathname === "/v1/oauth2/token")!;
-  check("token: the brand's own client id and secret", tokenCall.headers.get("authorization") === `Basic ${Buffer.from("client-luxury:secret-luxury").toString("base64")}`);
+  check("token: the brand's own client id and secret", tokenCall.headers.get("authorization") === `Basic ${Buffer.from(`client-${lux.id}:secret-${lux.id}`).toString("base64")}`);
   check("token: client credentials", tokenCall.body === "grant_type=client_credentials");
   await paypalAdapter.createPayment(paymentOrder(lux, [{ sku: "LUX-10ML-X3", qty: 1 }]), { brand: lux });
   check("token: cached per brand", paypal.tokens() === 1);
-  await paypalAdapter.createPayment(paymentOrder(brandFor("beauty"), [{ sku: "BEA-10ML-X1", qty: 1 }]), { brand: brandFor("beauty") });
+  await paypalAdapter.createPayment(paymentOrder(bea, [{ sku: "BEA-10ML-X1", qty: 1 }]), { brand: bea });
   check("token: another brand gets its own", paypal.tokens() === 2);
   let refusedOnce = false;
   paypal.respond = (c) => {
@@ -237,7 +264,7 @@ async function main() {
 
   // ── Capture: the same request id every time ─────────────────────────
   paypal.calls.length = 0;
-  const creds = paypalCredentials("luxury")!;
+  const creds = paypalCredentials(lux.id)!;
   paypal.respond = (c) =>
     c.url.pathname === "/v2/checkout/orders/PPORDER1/capture"
       ? json(201, paypalOrderJson({ id: "PPORDER1", status: "COMPLETED", customId: ORDER_ID, capture: { id: "CAPTURE1", status: "COMPLETED", value: "21.99" } }))
@@ -289,7 +316,7 @@ async function main() {
   check("verify: asked of the brand's own environment", sent.url.origin === "https://api-m.sandbox.paypal.com");
   check("verify: the event goes back exactly as it arrived", sent.body.endsWith(`"webhook_event":${raw}}`));
   const parsed = JSON.parse(sent.body) as Record<string, string>;
-  check("verify: with the brand's own webhook id", parsed.webhook_id === "webhook-luxury");
+  check("verify: with the brand's own webhook id", parsed.webhook_id === `webhook-${lux.id}`);
   check(
     "verify: every transmission header",
     parsed.auth_algo === "SHA256withRSA" && parsed.transmission_id === "transmission-fixture" && parsed.transmission_sig === "signature-fixture" && parsed.transmission_time === "2026-11-04T10:00:00Z" && /certs\/CERT-fixture$/.test(parsed.cert_url ?? "")
@@ -341,7 +368,7 @@ async function main() {
   // ── The nightly clear-up, for PayPal orders ─────────────────────────
   const now = new Date("2026-11-04T12:00:00Z");
   const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600_000);
-  const pending = (createdAt: Date) => ({ id: ORDER_ID, brand: "luxury", paymentProvider: "paypal", paymentRef: "PPORDER1", notes: null, createdAt });
+  const pending = (createdAt: Date) => ({ id: ORDER_ID, brand: lux.id, paymentProvider: "paypal", paymentRef: "PPORDER1", notes: null, createdAt });
   const neverStripe = async () => {
     throw new Error("Stripe asked about a PayPal order");
   };

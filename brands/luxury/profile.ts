@@ -6,7 +6,7 @@
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
-import { PAYPAL_PAYMENT } from "../payment-methods";
+import { STRIPE_PAYMENT } from "../payment-methods";
 import { luxuryCatalogue } from "./catalogue";
 
 export function luxuryProfile(): BrandProfile {
@@ -51,10 +51,12 @@ export function luxuryProfile(): BrandProfile {
     },
     // TODO(launch): the final name's statement descriptor.
     statementDescriptor: "RESERVE NO10",
-    // PayPal, on this brand's own account (PAYPAL_*__LUXURY; see
-    // deploy/BRAND-PAYMENTS.md). A card processor joins once one approves it.
-    paymentProviders: ["paypal"],
-    payment: PAYPAL_PAYMENT,
+    // Stripe, on BacLab's own account and key, as every brand is: the site
+    // is declared to Stripe before it takes a payment. Moving to PayPal is
+    // this list and PAYPAL_PAYMENT, plus PAYPAL_*__LUXURY
+    // (deploy/BRAND-PAYMENTS.md).
+    paymentProviders: ["stripe"],
+    payment: STRIPE_PAYMENT,
     catalogue: luxuryCatalogue,
   };
 }
