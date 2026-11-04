@@ -15,7 +15,12 @@ export const brand = luxuryProfile();
  */
 export const LIVE = false;
 
-export const DESCRIPTION = "Coming soon.";
+/**
+ * The one-line summary: root metadata, the Open Graph card and llms.txt.
+ * Delivery in the catalogue's own words (next day, on every order, at no
+ * charge: brands/luxury/catalogue.ts).
+ */
+export const DESCRIPTION = `10ml bacteriostatic water in the ${brand.name} box, with next-day delivery included on every order. Supplied as a laboratory reagent.`;
 
 /** Every public page, for the sitemap. Not the order confirmation: it is per order, and noindex. */
 export const PAGES: readonly string[] = ["/", "/contact", "/terms", "/privacy", "/returns", "/disclaimer"];
