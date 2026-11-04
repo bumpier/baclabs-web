@@ -109,7 +109,8 @@ export function orderCsvLine(r: LedgerRow): string[] {
     r.customerName,
     r.customerEmail,
     r.customer,
-    packName(r.pack),
+    // Read against the order's own brand's catalogue (lib/finance/ledger.ts).
+    packName(r.pack, r.brand),
     String(r.vials),
     String(r.welcomeVials),
     String(r.giftVials),

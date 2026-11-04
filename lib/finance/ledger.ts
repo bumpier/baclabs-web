@@ -1,5 +1,7 @@
 import { DEFAULT_BRAND } from "@/brands/types";
+import { allBrands, brandFor, type BrandProfile } from "@/brands/registry";
 import { BUNDLES } from "@/config/funnel";
+import { packSizeName } from "@/lib/commerce/catalogue";
 import { goodsMinor, optionRank, type TakingsOrder } from "@/lib/dailyTakings";
 import { paidMinor } from "@/lib/meta-capi-event";
 import { isKitLine } from "@/lib/order-items";
@@ -452,30 +454,65 @@ export interface PackMixLine {
   goodsMinor: number;
 }
 
-const packRank = (pack: string) => {
+/**
+ * Another brand's pack, found in that brand's own catalogue by the SKU its
+ * lines record as bundleId (lib/order-items.ts buildBrandOrderItems). Never
+ * BacLab's ladder: a brand's 10-pack is not BacLab's. Null for BacLab's own
+ * orders and for anything the brand's catalogue does not list.
+ */
+function cataloguePackOf(pack: string, brand: string | undefined): { brand: BrandProfile; index: number; vials: number } | null {
+  if (!brand || brand === DEFAULT_BRAND) return null;
+  const b = brandFor(brand);
+  const packs = b.id === brand ? b.catalogue?.packs : undefined;
+  const index = packs ? packs.findIndex((p) => p.sku === pack) : -1;
+  return packs && index !== -1 ? { brand: b, index, vials: packs[index]!.vials } : null;
+}
+
+/**
+ * BacLab's ladder first, then its retired packs, then each other brand's
+ * catalogue in registry order. BacLab's own lines sort exactly as before.
+ */
+const packRank = (pack: string, brand?: string) => {
   const i = BUNDLES.findIndex((b) => b.id === pack);
-  return i === -1 ? BUNDLES.length : i;
+  if (i !== -1) return i;
+  const own = cataloguePackOf(pack, brand);
+  if (!own) return BUNDLES.length;
+  const brandAt = allBrands().findIndex((b) => b.id === own.brand.id);
+  return BUNDLES.length + 1 + brandAt * 1000 + own.index;
 };
 
-export function packName(pack: string): string {
+/** A pack's name in finance and the CSVs. `brand` is the order's; left out, BacLab. */
+export function packName(pack: string, brand: string = DEFAULT_BRAND): string {
+  // Named with its brand: the all-brands view lists every brand's packs together.
+  const own = cataloguePackOf(pack, brand);
+  if (own) return `${own.brand.name} ${packSizeName(own.vials)}`;
   const bundle = BUNDLES.find((b) => b.id === pack);
   if (bundle) return bundle.vials === 1 ? "Single vial" : `${bundle.vials}-vial pack`;
   if (pack === "loose") return "Single vials (before packs)";
   return pack;
 }
 
-/** Orders, vials and goods by the pack bought, in the shop's order, smallest first. */
+/**
+ * Orders, vials and goods by the pack bought, in the shop's order, smallest
+ * first. Each order's pack is read against its own brand's catalogue
+ * (packName, packRank), so another brand's packs are named and ordered as
+ * that brand sells them. Their SKUs are unique to the brand, so they never
+ * share a line with BacLab's.
+ */
 export function packMix(rows: readonly LedgerRow[]): PackMixLine[] {
   const lines = new Map<string, PackMixLine>();
+  const brandOf = new Map<string, string>();
   for (const r of rows) {
     if (r.cancelled || r.kind !== "sale") continue;
-    const line = lines.get(r.pack) ?? { pack: r.pack, label: packName(r.pack), orders: 0, vials: 0, goodsMinor: 0 };
+    const line = lines.get(r.pack) ?? { pack: r.pack, label: packName(r.pack, r.brand), orders: 0, vials: 0, goodsMinor: 0 };
     line.orders += 1;
     line.vials += r.vials;
     line.goodsMinor += r.goodsMinor;
     lines.set(r.pack, line);
+    if (!brandOf.has(r.pack)) brandOf.set(r.pack, r.brand);
   }
-  return [...lines.values()].sort((a, b) => packRank(a.pack) - packRank(b.pack) || a.label.localeCompare(b.label));
+  const rank = (pack: string) => packRank(pack, brandOf.get(pack));
+  return [...lines.values()].sort((a, b) => rank(a.pack) - rank(b.pack) || a.label.localeCompare(b.label));
 }
 
 export interface CustomerMixLine {
