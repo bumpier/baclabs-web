@@ -99,8 +99,8 @@ export function QuoteForm({
 
   if (sent) {
     return (
-      <div role="status" className="wh-notice text-base">
-        <h3 ref={sentHeading} tabIndex={-1} className="wh-h2 outline-none">
+      <div role="status" className="vh-sent">
+        <h3 ref={sentHeading} tabIndex={-1} className="vh-sent-title">
           {QUOTE_FORM.sentHeading}
         </h3>
         <p className="text-ink">{QUOTE_FORM.sent(sent.name, sent.email)}</p>
@@ -112,7 +112,7 @@ export function QuoteForm({
   }
 
   return (
-    <form onSubmit={submit} className="wh-form grid gap-5">
+    <form onSubmit={submit} className="vh-form grid gap-5">
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor={`${id}-pack`} className="label">
@@ -164,7 +164,7 @@ export function QuoteForm({
 
       <fieldset>
         <legend className="label">{QUOTE_FORM.frequency}</legend>
-        <div className="wh-segment">
+        <div className="vh-segment">
           <label>
             <input type="radio" name={`${id}-frequency`} checked={!recurring} onChange={() => setRecurring(false)} />
             <span>{QUOTE_FORM.oneOff}</span>
@@ -182,7 +182,7 @@ export function QuoteForm({
             {QUOTE_FORM.often}
           </label>
           <input id={`${id}-often`} name="often" maxLength={100} aria-describedby={`${id}-often-hint`} className="field" />
-          <p id={`${id}-often-hint`} className="wh-form-hint mt-2">
+          <p id={`${id}-often-hint`} className="vh-form-hint mt-2">
             {QUOTE_FORM.oftenHint}
           </p>
         </div>
@@ -238,10 +238,10 @@ export function QuoteForm({
       ) : null}
 
       <div>
-        <button type="submit" disabled={pending} aria-busy={pending} className="btn-cta w-full sm:w-auto sm:min-w-56">
+        <button type="submit" disabled={pending} aria-busy={pending} className="btn-cta vh-btn-lg w-full sm:w-auto sm:min-w-56">
           {pending ? QUOTE_FORM.sending : QUOTE_FORM.send}
         </button>
-        <p className="wh-form-note mt-3">
+        <p className="vh-form-note mt-3">
           {QUOTE_FORM.privacy}{" "}
           <a href={privacyHref} className="link">
             {QUOTE_FORM.privacyLink}

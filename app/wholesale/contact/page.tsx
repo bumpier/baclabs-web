@@ -5,7 +5,7 @@ import { ContactForm } from "@/components/commerce/ContactForm";
 import { brandContactTopics, CONTACT_MESSAGE_MAX } from "@/lib/commerce/contact";
 import { COMPLAINT_ACK_DAYS } from "@/lib/legal";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
-import { CONTACT } from "@/brands/wholesale/copy/pages";
+import { CONTACT, CRUMBS } from "@/brands/wholesale/copy/pages";
 import { FORM_CLASSES } from "@/brands/wholesale/components/form-classes";
 import { brand, TRADE_TOPIC } from "../site";
 
@@ -24,61 +24,76 @@ const TOPICS = brandContactTopics(TRADE_TOPIC ? { trade: TRADE_TOPIC } : {});
  * under this brand (from the Host) and sends it to this brand's inbox. No
  * general reply time is promised: only the operator can make that promise
  * (ContactForm's replyTime). The trade topic is offered here too, and the
- * quote page is the same form with that topic alone.
+ * quote page is the same route with that topic alone. The company's details
+ * show once the profile holds them, and not before.
  */
 export default function ContactPage() {
   const inbox = brand.email.inbox;
   const company = brand.company ?? {};
   return (
-    <main id="main" className="wh-wrap">
+    <main id="main" className="vh-page">
       <JsonLd data={breadcrumbSchema(CONTACT.title, "/contact", brand.id)} />
-      <div className="wh-page-head">
-        <h1 className="wh-page-title">{CONTACT.title}</h1>
-        <p className="wh-page-lede">
-          {CONTACT.lede}{" "}
-          {inbox ? (
-            <>
-              Send us a message here, or email{" "}
-              <a href={`mailto:${inbox}`} className="link">
-                {inbox}
-              </a>
-              .
-            </>
-          ) : (
-            "Send us a message here."
-          )}
-        </p>
-        <p className="wh-page-lede mt-3">
-          {CONTACT.quoteAside}{" "}
-          <Link href="/quote" className="link font-semibold text-navy">
-            {CONTACT.quoteLink}
-          </Link>
-          .
-        </p>
-      </div>
+      <nav aria-label="Breadcrumb" className="vh-wrap vh-crumbs">
+        <ol>
+          <li>
+            <Link href="/">{CRUMBS.catalogue}</Link>
+          </li>
+          <li aria-current="page">{CONTACT.title}</li>
+        </ol>
+      </nav>
+      <div className="vh-wrap">
+        <div className="vh-page-head">
+          <h1 className="vh-page-title">{CONTACT.title}</h1>
+          <p className="vh-page-lede">{CONTACT.lede}</p>
+        </div>
 
-      <div className="grid max-w-3xl gap-6 pb-14 md:pb-20">
-        <section aria-labelledby="form-heading" className="wh-sheet">
-          <h2 id="form-heading" className="wh-sheet-head">
-            {CONTACT.formHeading}
-          </h2>
-          <div className="wh-sheet-body">
-            <ContactForm
-              topics={TOPICS}
-              complaintAckDays={COMPLAINT_ACK_DAYS}
-              messageMax={CONTACT_MESSAGE_MAX}
-              classNames={FORM_CLASSES}
-            />
-          </div>
-        </section>
-        {brand.legalName ? (
-          <p className="text-sm text-ink-soft">
-            {brand.legalName}
-            {company.number ? `, no. ${company.number}` : ""}
-            {company.registeredAddress ? `, ${company.registeredAddress}` : ""}
-            {company.vatNumber ? `, VAT ${company.vatNumber}` : ""}
-          </p>
-        ) : null}
+        <div className="vh-two vh-two-flip">
+          <section aria-labelledby="form-heading" className="vh-panel">
+            <h2 id="form-heading" className="vh-panel-head">
+              {CONTACT.formHeading}
+            </h2>
+            <div className="vh-panel-body">
+              <ContactForm topics={TOPICS} complaintAckDays={COMPLAINT_ACK_DAYS} messageMax={CONTACT_MESSAGE_MAX} classNames={FORM_CLASSES} />
+            </div>
+          </section>
+
+          <aside aria-labelledby="side-heading">
+            <h2 id="side-heading" className="vh-h3">
+              {CONTACT.sideHeading}
+            </h2>
+            <ul className="vh-doc-list">
+              <li>{CONTACT.orderAside}</li>
+              <li>
+                <span>
+                  {CONTACT.quoteAside}{" "}
+                  <Link href="/quote" className="link font-semibold text-spruce">
+                    {CONTACT.quoteLink}
+                  </Link>
+                  .
+                </span>
+              </li>
+              {inbox ? (
+                <li>
+                  <span>
+                    {CONTACT.emailAside}{" "}
+                    <a href={`mailto:${inbox}`} className="link">
+                      {inbox}
+                    </a>
+                    .
+                  </span>
+                </li>
+              ) : null}
+            </ul>
+            {brand.legalName ? (
+              <p className="mt-6 text-sm text-ink-soft">
+                {brand.legalName}
+                {company.number ? `, no. ${company.number}` : ""}
+                {company.registeredAddress ? `, ${company.registeredAddress}` : ""}
+                {company.vatNumber ? `, VAT ${company.vatNumber}` : ""}
+              </p>
+            ) : null}
+          </aside>
+        </div>
       </div>
     </main>
   );

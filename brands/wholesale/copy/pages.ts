@@ -1,5 +1,5 @@
 /**
- * The words of every page but the home page: the masthead, the footer, the
+ * The words of every page but the product page: the header and footer, the
  * quote and contact pages, the order acknowledgement and the 404. Plain
  * strings, no imports, so any component may read them.
  *
@@ -7,25 +7,57 @@
  * promise (ContactForm's replyTime), and until then it stays unsaid.
  */
 
-/** The masthead's links. `wide`: hidden on the narrowest phones, where four do not fit. */
-export const NAV: readonly { href: string; label: string; wide?: boolean }[] = [
-  { href: "/#buy", label: "Prices" },
-  { href: "/#ordering", label: "Delivery", wide: true },
+/** The header's links, in the order a buyer reads a product page. */
+export const NAV: readonly { href: string; label: string }[] = [
+  { href: "/#product", label: "Product" },
+  { href: "/#buy", label: "Pricing" },
+  { href: "/#delivery", label: "Delivery" },
   { href: "/quote", label: "Quote" },
   { href: "/contact", label: "Contact" },
 ];
 
-export const FOOTER = {
-  links: [
-    { href: "/quote", label: "Request a quote" },
-    { href: "/contact", label: "Contact" },
-    { href: "/terms", label: "Terms" },
-    { href: "/privacy", label: "Privacy" },
-    { href: "/returns", label: "Returns" },
-    { href: "/disclaimer", label: "Product disclaimer" },
-  ],
-  summary: "10ml bacteriostatic water, sold by the pack at a price a vial.",
+export const HEADER = {
+  home: "Vialhouse, product page",
+  menu: "Menu",
+  nav: "Main",
 };
+
+export const FOOTER = {
+  summary: "Bacteriostatic water in 10ml vials, by the pack and priced per vial. Trade and public orders welcome.",
+  columns: [
+    {
+      heading: "Ordering",
+      links: [
+        { href: "/#buy", label: "Pricing and order" },
+        { href: "/#delivery", label: "Delivery" },
+        { href: "/quote", label: "Request a quote" },
+      ],
+    },
+    {
+      heading: "Help",
+      links: [
+        { href: "/contact", label: "Contact" },
+        { href: "/returns", label: "Returns" },
+        { href: "/#documents", label: "Documents" },
+      ],
+    },
+    {
+      heading: "Legal",
+      links: [
+        { href: "/terms", label: "Terms of sale" },
+        { href: "/privacy", label: "Privacy" },
+        { href: "/disclaimer", label: "Product disclaimer" },
+      ],
+    },
+  ],
+  company: "Company",
+  number: "Company no.",
+  address: "Registered office",
+  vat: "VAT no.",
+  email: "Email",
+};
+
+export const CRUMBS = { catalogue: "Catalogue" };
 
 export const QUOTE = {
   title: "Request a quote",
@@ -35,11 +67,18 @@ export const QUOTE = {
       : "Ask for a quote on a large order of 10ml bacteriostatic water, or on a standing order.",
   lede: (sizes: string) =>
     sizes
-      ? `For packs of ${sizes} vials, or a standing order. Tell us what you need and we reply by email with a price.`
-      : "For large orders, or a standing order. Tell us what you need and we reply by email with a price.",
+      ? `For packs of ${sizes} vials, or a standing order. Tell us what you need and we reply by email with a price for the goods and their delivery.`
+      : "For large orders, or a standing order. Tell us what you need and we reply by email with a price for the goods and their delivery.",
   packsHeading: "Packs sold by quote",
+  packsHead: { code: "Code", size: "Pack" },
+  stepsHeading: "How a quote works",
+  steps: [
+    "Send the pack, how many, the delivery postcode and whether it is a one-off or recurring.",
+    "We reply by email with a price for the goods and their delivery.",
+    "If it suits you, reply to the email to go ahead.",
+  ],
   formHeading: "Your request",
-  smaller: "Smaller orders go through the price list:",
+  smaller: "Smaller orders go through the price table:",
   smallerLink: "order online",
 };
 
@@ -98,8 +137,11 @@ export const CONTACT = {
   description: (name: string) => `Message ${name} about an order, delivery, a return or a question about the product.`,
   lede: "Questions about an order, delivery or a return, complaints, and questions about the product before you order.",
   formHeading: "Send a message",
-  quoteAside: "Pricing a large order?",
+  sideHeading: "Before you write",
+  quoteAside: "Pricing a large or recurring order?",
   quoteLink: "Request a quote",
+  orderAside: "Writing about an order? Include the order number from your confirmation email.",
+  emailAside: "Or email",
 };
 
 export const ACK = {
@@ -108,10 +150,10 @@ export const ACK = {
   order: "Order number",
   placed: "Placed",
   status: "Status",
+  delivery: "Delivery",
   item: "Item",
   qty: "Qty",
   amount: "Amount",
-  delivery: "Delivery",
   free: "Free",
   totalPaid: "Total paid",
   total: "Total",
@@ -120,11 +162,13 @@ export const ACK = {
   help: "Something not right?",
   helpLink: "Get in touch",
   helpTail: "quoting your order number.",
-  home: "Back to the price list",
+  home: "Back to the product page",
 };
 
 export const NOT_FOUND = {
   title: "Page not found",
-  body: "That address does not exist on this site.",
-  home: "Back to the price list",
+  body: "That address is not in our catalogue. The product page has every pack, price and code.",
+  home: "Go to the product page",
+  contact: "Contact us",
+  code: "Not found",
 };

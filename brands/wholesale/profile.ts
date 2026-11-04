@@ -1,8 +1,9 @@
 /**
- * Vialhouse, the `wholesale` brand. A skeleton: the name is a working name,
- * the palette (slate and navy with one signal green) a placeholder for the
- * design work, and nothing here is live. Empty values render nothing, as
- * everywhere else.
+ * Vialhouse, the `wholesale` brand: a trade supplier's site (the name is a
+ * working name, and nothing here is live). Spruce and white with one signal
+ * yellow, the vial-rack mark (brands/wholesale/components/logo.tsx); the
+ * stylesheet's opening comment holds the whole direction. Empty values
+ * render nothing, as everywhere else.
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
@@ -23,15 +24,15 @@ export function wholesaleProfile(): BrandProfile {
     colours: {
       paper: "#FFFFFF",
       surface: "#FFFFFF",
-      neutral: "#F1F4F7",
-      ink: "#0F1B2D",
-      inkSoft: "#4A5A70",
-      line: "#DCE2EA",
-      primary: "#1E3A5F",
-      cta: "#12784A",
-      header: "#1E2A38",
+      neutral: "#F3F6F5",
+      ink: "#13211F",
+      inkSoft: "#4B5D59",
+      line: "#D6DEDB",
+      primary: "#0D3B35",
+      cta: "#FCC72F",
+      header: "#0D3B35",
       onHeader: "#FFFFFF",
-      onCta: "#FFFFFF",
+      onCta: "#0D3B35",
     },
     email: {
       // TODO(launch): a mailbox on the brand's own domain, verified in Resend.
@@ -48,6 +49,9 @@ export function wholesaleProfile(): BrandProfile {
     // vial), so its signups are refused.
     // TODO(launch): the final name's statement descriptor.
     statementDescriptor: "VIALHOUSE",
+    // Stripe's page shows these (PNG: Stripe takes no SVG), rendered from
+    // the same shapes as the site's lockup and icon.
+    paymentPage: { logo: "/stripe-logo.png", icon: "/stripe-icon.png" },
     // Stripe, on BacLab's own account and key, as every brand is: the site
     // is declared to Stripe before it takes a payment. Moving to PayPal is
     // this list and PAYPAL_PAYMENT, plus PAYPAL_*__WHOLESALE
