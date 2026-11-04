@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { brandFor, type BrandProfile } from "@/brands/registry";
-import { PAYPAL_PAYMENT } from "@/brands/payment-methods";
+import { PAYPAL_PAYMENT, STRIPE_PAYMENT } from "@/brands/payment-methods";
 import type { BrandCatalogue } from "@/brands/types";
 import { DELIVERY, DELIVERY_OPTIONS } from "@/config/funnel";
 import { brandSkuSpecs } from "@/lib/inventory/brand-skus";
@@ -26,6 +26,7 @@ import {
   checkPayments,
   checkRegistry,
   descriptorProblems,
+  stripeDescriptorProblems,
   failuresOf,
   leakMarkers,
   profileStrings,
@@ -93,7 +94,8 @@ function registry(b: BrandProfile, over: Partial<Registry> = {}): Registry {
     hosts: { [TEST_BRAND_ID]: b.domains, luxury: luxury.domains, gym: gym.domains },
     brands: [brandFor("baclab"), luxury, gym, b],
     seeded: brandSkuSpecs([luxury, gym, b]),
-    hasAdapter: (p) => p === "paypal",
+    hasAdapter: (p) => p === "paypal" || p === "stripe",
+    stripePrefix: "FIXCO",
     ...over,
   };
 }
@@ -160,13 +162,52 @@ check("descriptor: no letter fails", fails(desc("12345"), /needs at least one le
 check("descriptor: a double space fails", fails(desc("FIXTURE  CO"), /double space/));
 check("descriptor: \".\" and \"-\" pass", noFailures(desc("NO.10 FIX-CO")));
 check("descriptor: unset with a provider warns", warns(payments({ ...good, statementDescriptor: undefined }), /has no statementDescriptor/));
+
+// Stripe: the account's prefix, then "* ", then the descriptor, 22 in all.
+const onStripe: BrandProfile = {
+  ...good,
+  paymentProviders: ["stripe"],
+  payment: STRIPE_PAYMENT,
+  paymentPage: { logo: "/checkout-logo.png", icon: "/checkout-icon.png" },
+};
+const stripeWith = (b: BrandProfile, prefix: string | null) => checkPayments(b, registry(b, { stripePrefix: prefix }));
+check("stripe: a launch-ready Stripe brand has no findings", stripeWith(onStripe, "FIXCO").length === 0, show(stripeWith(onStripe, "FIXCO")));
+const fit = (d: string, prefix: string | null) => stripeWith({ ...onStripe, statementDescriptor: d }, prefix);
+check("stripe: prefix + \"* \" + descriptor at 22 passes", noFailures(fit("RESERVE NO10", "ABCDEFGH")), show(fit("RESERVE NO10", "ABCDEFGH")));
+check(
+  "stripe: at 23 fails, showing the statement",
+  fails(fit("RESERVE NO10", "ABCDEFGHI"), /prints on Stripe as "ABCDEFGHI\* RESERVE NO10", 23 characters; Stripe allows 22 with the prefix, which leaves 11/),
+  show(fit("RESERVE NO10", "ABCDEFGHI"))
+);
+check("stripe: a short prefix leaves more room", noFailures(fit("FIXTURE COMPANY LT", "FX")));
+check("stripe: with no prefix recorded, a launch warning", noFailures(fit("FIXTURE CO", null)) && warns(fit("FIXTURE CO", null), /shortened descriptor is not recorded in STRIPE_STATEMENT_PREFIX/));
+check(
+  "stripe: and the worst case is warned of, never failed",
+  noFailures(fit("RESERVE NO10", null)) && warns(fit("RESERVE NO10", null), /is 12 characters; after Stripe's longest prefix \(10\) and "\* " there is room for 10/),
+  show(fit("RESERVE NO10", null))
+);
+check("stripe: the rule is Stripe's alone", payments({ ...good, statementDescriptor: "FIXTURE COMPANY LIMITE" }).every((f) => !/Stripe/.test(f.message)));
+check("stripe: no images for Stripe's page warns", warns(stripeWith({ ...onStripe, paymentPage: undefined }, "FIXCO"), /Stripe's page shows the account's own, which are BacLab's/));
+check("stripe: a logo without an icon warns", warns(stripeWith({ ...onStripe, paymentPage: { logo: "/checkout-logo.png" } }, "FIXCO"), /has no paymentPage\.logo and \.icon/));
+for (const b of [brandFor("beauty"), gym, brandFor("wholesale"), luxury]) {
+  // Each fits after a prefix of up to 8 characters: deploy/BRAND-PAYMENTS.md says to choose one no longer.
+  check(`${b.id}'s descriptor fits after an 8-character prefix`, stripeDescriptorProblems(b.statementDescriptor ?? "", "ABCDEFGH").length === 0, b.statementDescriptor);
+}
+const prefixed = (prefix: string) => checkRegistry(registry(good, { stripePrefix: prefix }));
+check("prefix: a good one passes", prefixed("FIXCO").length === 0, show(prefixed("FIXCO")));
+check("prefix: 1 character fails", fails(prefixed("F"), /is 1 characters; Stripe's shortened descriptor is 2 to 10/));
+check("prefix: 11 characters fails", fails(prefixed("FIXTURECOMP"), /is 11 characters/));
+check("prefix: no letter fails", fails(prefixed("12345"), /needs at least one letter/));
+check("prefix: \"*\" fails", fails(prefixed("FIX*CO"), /may only use letters, digits, spaces/));
+check("prefix: BacLab's name fails", fails(prefixed("BACLAB"), /names BacLab/) && fails(prefixed("BAC LAB CO"), /names BacLab/));
+check("prefix: unset is no registry finding", checkRegistry(registry(good, { stripePrefix: null })).length === 0);
 const sender = (s: string) => payments({ ...good, shipping: { senderCompany: s } });
 check("sender company: 26 characters fails", fails(sender("Fixture Company Trading Lt"), /is 26 characters; SmartTrack takes 25/));
 check("sender company: 25 characters passes", noFailures(sender("Fixture Company Trading L")));
 check("sender company: unset warns", warns(payments({ ...good, shipping: undefined }), /has no shipping\.senderCompany/));
 // A provider id outside BRAND_PAYMENT_PROVIDERS can only arrive by a cast: that is the mistake being caught.
-const stripe = { ...good, paymentProviders: ["stripe"] as unknown as BrandProfile["paymentProviders"] };
-check("a provider without an adapter fails", fails(payments(stripe), /payment provider "stripe" has no adapter/));
+const unknownProvider = { ...good, paymentProviders: ["airwallex"] as unknown as BrandProfile["paymentProviders"] };
+check("a provider without an adapter fails", fails(payments(unknownProvider), /payment provider "airwallex" has no adapter/));
 check("a provider listed twice fails", fails(payments({ ...good, paymentProviders: ["paypal", "paypal"] }), /lists a provider twice/));
 const wordsOnly = payments({ ...good, paymentProviders: [] });
 check("method words without the provider fail", fails(wordsOnly, /payment\.methods describes "paypal"/));
@@ -198,6 +239,11 @@ check("logo and icon present passes", checkAssets({ id: TEST_BRAND_ID, logo: "/i
 check("a missing logo fails", fails(checkAssets({ id: TEST_BRAND_ID, logo: "/logo.svg" }, [], roots, have(icon)), /logo \/logo\.svg is not in public\/fixture\//));
 check("a missing icon fails", fails(checkAssets({ id: TEST_BRAND_ID, logo: "/logo.svg" }, [], roots, have("public/fixture/logo.svg")), /icon\.svg is missing/));
 check("a logo that is not a site path fails", fails(checkAssets({ id: TEST_BRAND_ID, logo: "logo.svg" }, [], roots, have(icon)), /is not a site path/));
+const stripeImages = (paymentPage: { logo?: string; icon?: string }, ...files: string[]) =>
+  checkAssets({ id: TEST_BRAND_ID, logo: "/icon.svg", paymentPage }, [], roots, have(icon, ...files));
+check("Stripe's images present pass", stripeImages({ logo: "/pay-logo.png", icon: "/pay-icon.jpg" }, "public/fixture/pay-logo.png", "public/fixture/pay-icon.jpg").length === 0);
+check("an SVG for Stripe's page fails", fails(stripeImages({ logo: "/icon.svg" }), /paymentPage\.logo "\/icon\.svg" must be a PNG or JPG site path: Stripe takes no SVG/));
+check("a missing image for Stripe's page fails", fails(stripeImages({ icon: "/pay-icon.png" }), /paymentPage\.icon \/pay-icon\.png is not in public\/fixture\//));
 const page = sourceFacts("app/fixture/page.tsx", `export default function P() { return <main><img src="/hero.jpg" alt="Box" /><a href="/sitemap.xml">Map</a></main>; }`);
 check("a page's site paths are read", page.assets.some((a) => a.site === "/hero.jpg") && page.assets.some((a) => a.site === "/sitemap.xml"));
 const pageAssets = (exists: (p: string) => boolean) => checkAssets({ id: TEST_BRAND_ID, logo: "/icon.svg" }, page.assets, roots, exists);

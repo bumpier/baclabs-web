@@ -8,8 +8,11 @@
  *    else's, its origin is on one of them, and its mailboxes are on its own
  *    domain, never another brand's;
  *  - payments: every provider it lists has an adapter, the statement
- *    descriptor is one a card statement prints as written, and the label's
- *    sender name fits SmartTrack;
+ *    descriptor is one a card statement prints as written (on Stripe, after
+ *    the account's shortened descriptor, STRIPE_STATEMENT_PREFIX, which
+ *    must itself be Stripe's 2 to 10 characters and never BacLab's name),
+ *    a Stripe brand has its own PNG or JPG logo and icon for Stripe's page,
+ *    and the label's sender name fits SmartTrack;
  *  - catalogue: the per-vial price falls as the packs grow, and every pack
  *    and box is a SKU that scripts/seed-brand-skus.ts creates, unique across
  *    the brands;
@@ -50,6 +53,7 @@ import { BRAND_IDS, type BrandId } from "@/brands/types";
 import { templateProfile } from "@/brands/_template/profile";
 import { checkBrandCopy } from "@/lib/content-rules";
 import { paymentAdapter } from "@/lib/commerce/payments";
+import { STRIPE_STATEMENT_PREFIX } from "@/lib/commerce/payments/stripe";
 import { BRAND_ICON_PATH } from "@/lib/brand/site";
 import { brandSkuSpecs, type BrandSkuSpec } from "@/lib/inventory/brand-skus";
 import { normaliseCode, skuCodeError } from "@/lib/inventory/codes";
@@ -107,6 +111,12 @@ export interface Registry {
   /** What scripts/seed-brand-skus.ts creates (lib/inventory/brand-skus.ts). */
   seeded: readonly BrandSkuSpec[];
   hasAdapter(provider: string): boolean;
+  /**
+   * BacLab's Stripe account's shortened descriptor, as recorded in
+   * lib/commerce/payments/stripe.ts STRIPE_STATEMENT_PREFIX. null or unset:
+   * not recorded yet.
+   */
+  stripePrefix?: string | null;
 }
 
 // ── Hosts and mailboxes ─────────────────────────────────────────────
@@ -189,6 +199,9 @@ export function checkRegistry(reg: Registry): Finding[] {
     if (id === DEFAULT_BRAND) fail(`brands/hosts.json lists BacLab, which must stay off it (BacLab is every host that is not a brand's)`);
     else if (!ids.has(id)) fail(`brands/hosts.json lists "${id}", which is not a registered brand`);
   }
+  // One prefix for the whole account, so it is checked once, here.
+  const prefix = reg.stripePrefix;
+  if (prefix) for (const problem of stripePrefixProblems(prefix)) fail(`STRIPE_STATEMENT_PREFIX "${prefix}" ${problem}`);
   return out;
 }
 
@@ -271,8 +284,7 @@ const DESCRIPTOR_CHARS = /^[A-Za-z0-9 .-]+$/;
 /**
  * Why a statement descriptor cannot be used as it is; [] when it can.
  * Provider-neutral on purpose: a provider whose statement puts a prefix of
- * its own in front extends this with that rule (Stripe's: the account's
- * shortened prefix + "* " + the descriptor must fit in 22).
+ * its own in front adds that rule (Stripe's is stripeDescriptorProblems).
  */
 export function descriptorProblems(d: string): string[] {
   const out: string[] = [];
@@ -281,6 +293,51 @@ export function descriptorProblems(d: string): string[] {
   if (!/[A-Za-z]/.test(d)) out.push("needs at least one letter");
   if (d !== d.trim() || /\s{2}/.test(d)) out.push("has a leading, trailing or double space");
   return out;
+}
+
+/**
+ * Stripe's rule for a card payment with a dynamic suffix, from
+ * https://docs.stripe.com/get-started/account/statement-descriptors (read
+ * 4 Nov 2026): the statement reads "<prefix>* <suffix>", the prefix being
+ * the account's shortened descriptor, of 2 to 10 characters. The whole, "* "
+ * included, must be 5 to 22 Latin characters, with at least one letter in
+ * both the prefix and the suffix and none of < > \ ' " *. A brand's
+ * statementDescriptor is the suffix; descriptorProblems already holds it to
+ * the character rules, so what is left is the room the prefix leaves.
+ */
+export const STRIPE_PREFIX_MIN = 2;
+export const STRIPE_PREFIX_MAX = 10;
+const STRIPE_SEPARATOR = "* ";
+
+/**
+ * Why a shortened descriptor cannot be the account's prefix; [] when it
+ * can. Never BacLab's name: it would be on every brand's statements.
+ */
+export function stripePrefixProblems(prefix: string): string[] {
+  const out: string[] = [];
+  if (prefix.length < STRIPE_PREFIX_MIN || prefix.length > STRIPE_PREFIX_MAX) {
+    out.push(`is ${prefix.length} characters; Stripe's shortened descriptor is ${STRIPE_PREFIX_MIN} to ${STRIPE_PREFIX_MAX}`);
+  }
+  if (!DESCRIPTOR_CHARS.test(prefix)) out.push(`may only use letters, digits, spaces, "." and "-"`);
+  if (!/[A-Za-z]/.test(prefix)) out.push("needs at least one letter");
+  if (/bac\s*lab/i.test(prefix)) out.push("names BacLab, which would put BacLab on every brand's statements");
+  return out;
+}
+
+/**
+ * Why a descriptor will not print whole after Stripe's prefix; [] when it
+ * will. `prefix` null: the account's is not recorded, so the longest Stripe
+ * allows is assumed.
+ */
+export function stripeDescriptorProblems(suffix: string, prefix: string | null): string[] {
+  const room = STATEMENT_DESCRIPTOR_MAX - (prefix?.length ?? STRIPE_PREFIX_MAX) - STRIPE_SEPARATOR.length;
+  if (suffix.length <= room) return [];
+  const full = `${prefix ?? "<prefix>"}${STRIPE_SEPARATOR}${suffix}`;
+  return [
+    prefix
+      ? `prints on Stripe as "${full}", ${full.length} characters; Stripe allows ${STATEMENT_DESCRIPTOR_MAX} with the prefix, which leaves ${room} for it`
+      : `is ${suffix.length} characters; after Stripe's longest prefix (${STRIPE_PREFIX_MAX}) and "${STRIPE_SEPARATOR}" there is room for ${room}`,
+  ];
 }
 
 /** Payment providers, the statement descriptor and the label's sender. */
@@ -300,6 +357,25 @@ export function checkPayments(b: BrandProfile, reg: Registry): Finding[] {
   const d = b.statementDescriptor;
   if (d) for (const problem of descriptorProblems(d)) fail(`statementDescriptor "${d}" ${problem}`);
   else if (providers.length > 0) warn("has no statementDescriptor: statements show only the payment account's own descriptor");
+
+  // Stripe: BacLab's own account, so its prefix and its page's images are
+  // BacLab's unless the brand's own take their place.
+  if (providers.includes("stripe")) {
+    const prefix = reg.stripePrefix ?? null;
+    if (d && descriptorProblems(d).length === 0) {
+      const problems = stripeDescriptorProblems(d, prefix);
+      // Known prefix: a hard rule. Unknown: a launch warning, with the worst case.
+      for (const problem of problems) (prefix ? fail : warn)(`statementDescriptor "${d}" ${problem}`);
+    }
+    if (prefix === null) {
+      warn(
+        `Stripe prints "<prefix>* ${d ?? ""}", and the account's shortened descriptor is not recorded in STRIPE_STATEMENT_PREFIX (lib/commerce/payments/stripe.ts): set a neutral one in Stripe and record it there`
+      );
+    }
+    if (!b.paymentPage?.logo || !b.paymentPage.icon) {
+      warn("has no paymentPage.logo and .icon: Stripe's page shows the account's own, which are BacLab's");
+    }
+  }
 
   const sender = b.shipping?.senderCompany;
   if (!sender) warn("has no shipping.senderCompany: its carrier labels name the warehouse's company instead");
@@ -368,7 +444,7 @@ export interface BrandRoots {
 
 /** The logo, the icon and every file the brand's pages name exist. */
 export function checkAssets(
-  b: { id: string; logo: string },
+  b: Pick<BrandProfile, "logo" | "paymentPage"> & { id: string },
   refs: readonly AssetRef[],
   roots: BrandRoots,
   exists: (repoPath: string) => boolean
@@ -379,6 +455,12 @@ export function checkAssets(
   if (!b.logo.startsWith("/")) fail(`logo "${b.logo}" is not a site path`);
   else if (!exists(`${roots.public}${b.logo}`)) fail(`logo ${b.logo} is not in ${roots.public}/`);
   if (!exists(`${roots.public}${BRAND_ICON_PATH}`)) fail(`${roots.public}${BRAND_ICON_PATH} is missing: every page's icon and the web manifest point at it`);
+  // Stripe fetches these from the brand's origin, and takes PNG or JPG only.
+  for (const [field, site] of [["paymentPage.logo", b.paymentPage?.logo], ["paymentPage.icon", b.paymentPage?.icon]] as const) {
+    if (!site) continue;
+    if (!/^\/[A-Za-z0-9._/-]+\.(?:png|jpe?g)$/.test(site)) fail(`${field} "${site}" must be a PNG or JPG site path: Stripe takes no SVG`);
+    else if (!exists(`${roots.public}${site}`)) fail(`${field} ${site} is not in ${roots.public}/`);
+  }
   for (const r of refs) {
     if (r.file && !exists(r.file)) fail(`${r.where} imports ${r.file}, which does not exist`);
     if (r.site && !served(r.site)) fail(`${r.where} names ${r.site}, which is neither in ${roots.public}/ nor a route of ${roots.app}/`);
@@ -636,6 +718,7 @@ export function diskRegistry(): Registry {
     brands,
     seeded: brandSkuSpecs(brands),
     hasAdapter: (p) => paymentAdapter(p) !== null,
+    stripePrefix: STRIPE_STATEMENT_PREFIX,
   };
 }
 
