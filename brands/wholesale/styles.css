@@ -3,11 +3,33 @@
    never scans this brand's folders (see the @source not lines there).
 
    source(none) turns off Tailwind's scan of the whole repo, so only the
-   folders named here contribute classes. The palette is a placeholder from
-   brands/wholesale/profile.ts until the brand's design lands.
+   folders named here contribute classes. The shared class contract
+   (styles/commerce-contract.css) and the commerce kit's folder come with
+   it: the kit's default classes are built here, in this brand's theme.
 
-   The shared class contract (styles/commerce-contract.css) and the commerce
-   kit's folder come with it: the kit's default classes are built here. */
+   THE DIRECTION. A trade counter's printed price list that is also the
+   order form. The price list is the first thing on the page, set as a real
+   table: pack, code, price a vial, pack price, quantity. Beside it sits the
+   order label, ruled into fields like the label on an outer carton, which
+   totals the order as the quantities are set. Everything else is a sheet in
+   the same grammar: a navy title bar over a ruled white table, on a slate
+   ground. No product photography, no cards, no lifestyle anything.
+
+   PALETTE, after the industrial coatings it borrows from:
+     slate ground  #E3E8ED  the page, light grey-blue, like a painted cabinet
+     sheet         #FFFFFF  every table and form sits on one
+     steel         #1E2A38  masthead, footer, the order label's bars and rules
+     navy          #1E3A5F  title bars, headings, the price a vial
+     ink           #142131  body text
+     ink soft      #4A5A70  secondary text (7:1 on white, 5.8:1 on slate)
+     signal green  #12784A  the one colour that acts: pay buttons, savings
+   Green is never decoration: if it is green, it is an action or money saved.
+
+   TYPE. One family, Archivo (Omnibus-Type, SIL OFL 1.1), self-hosted with
+   both its axes. Expanded (font-stretch 125%) and heavy for the title and
+   the pack sizes, the way sizes are marked on a carton; normal width for
+   text; tabular figures wherever a number sits in a column. Sentence case
+   throughout, never tracked capitals. */
 @import "tailwindcss" source(none);
 @import "../../styles/commerce-contract.css";
 @source "../../app/wholesale";
@@ -15,17 +37,30 @@
 @source "../../components/commerce";
 
 @theme {
-  --color-paper: #ffffff;
+  --color-paper: #e3e8ed;
   --color-surface: #ffffff;
-  --color-neutral: #f1f4f7;
-  --color-ink: #0f1b2d;
+  --color-neutral: #f2f5f8;
+  --color-ink: #142131;
   --color-ink-soft: #4a5a70;
-  --color-line: #dce2ea;
+  --color-line: #c3ccd6;
   --color-primary: #1e3a5f;
   --color-cta: #12784a;
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-steel: #1e2a38;
+  --color-navy: #1e3a5f;
+  --color-rule: #c3ccd6;
+  /* Input and control borders: 3.5:1 on white, the non-text contrast floor. */
+  --color-edge: #7a8899;
+  --color-head: #edf1f5;
+  --color-cta-deep: #0c5e39;
+  --color-signal-tint: #e6f2eb;
+  /* A row that is in the order, and a figure that has just changed: navy,
+     never green, because green means pay or money saved. */
+  --color-row-active: #e9eef5;
+  --color-tick: #d6e0ec;
+  --color-on-steel: #c9d2dc;
+
+  --font-sans: var(--font-archivo), "Arial", sans-serif;
 }
 
 @layer base {
@@ -33,7 +68,1079 @@
     color-scheme: light;
   }
 
+  /* A short page (the 404, an empty basket's acknowledgement) still ends
+     on the footer, not on bare ground under it. */
   body {
     @apply bg-paper font-sans text-ink antialiased;
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    font-stretch: 100%;
+    font-weight: 400;
+    line-height: 1.55;
+  }
+  body > main {
+    flex: 1 0 auto;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-navy);
+    outline-offset: 2px;
+  }
+
+  /* Figures line up wherever there are figures. */
+  table,
+  dd,
+  output {
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+@layer components {
+  /* ── The contract, in this brand's hand ─────────────────────────── */
+  .btn-cta,
+  .btn-quiet,
+  .btn-secondary {
+    font-stretch: 112%;
+    font-weight: 700;
+    border-radius: 0;
+  }
+  .btn-cta:hover:not(:disabled) {
+    background: var(--color-cta-deep);
+  }
+  .btn-quiet {
+    border-color: var(--color-edge);
+  }
+  .btn-quiet:hover:not(:disabled),
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--color-head);
+  }
+  .btn-secondary {
+    border-color: var(--color-navy);
+    color: var(--color-navy);
+  }
+  .link {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  .link:hover {
+    text-decoration-thickness: 2px;
+  }
+  .field {
+    border-color: var(--color-edge);
+    border-radius: 0;
+  }
+  .field:focus-visible {
+    outline: 2px solid var(--color-navy);
+    outline-offset: 0;
+    border-color: var(--color-navy);
+  }
+  .label {
+    font-weight: 600;
+  }
+  .commerce-panel {
+    border-color: var(--color-rule);
+  }
+
+  /* The cookie banner, in the order label's border. */
+  .wh-banner {
+    border: 2px solid var(--color-steel);
+    background: var(--color-surface);
+    box-shadow: 0 10px 28px -6px rgb(20 33 49 / 0.28);
+    color: var(--color-ink);
+  }
+
+  /* ── Frame ──────────────────────────────────────────────────────── */
+  .wh-wrap {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 78rem;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 48rem) {
+    .wh-wrap {
+      padding-inline: 2rem;
+    }
+  }
+
+  .wh-skip {
+    position: absolute;
+    left: 1rem;
+    top: -4rem;
+    z-index: 50;
+    background: var(--color-surface);
+    padding: 0.5rem 0.875rem;
+    font-weight: 600;
+    color: var(--color-navy);
+  }
+  .wh-skip:focus {
+    top: 0.75rem;
+  }
+
+  .wh-masthead {
+    background: var(--color-steel);
+    color: #fff;
+  }
+  .wh-masthead :focus-visible,
+  .wh-footer :focus-visible,
+  .wh-quote-band :focus-visible {
+    outline-color: #fff;
+  }
+  .wh-masthead-row {
+    display: flex;
+    min-height: 3.5rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .wh-wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-stretch: 125%;
+    font-weight: 800;
+    font-size: 1.1875rem;
+    letter-spacing: -0.01em;
+    color: #fff;
+  }
+  .wh-wordmark svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: none;
+  }
+  .wh-nav ul {
+    display: flex;
+    gap: 0.25rem 1.25rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+  }
+  .wh-nav a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    color: #fff;
+    text-underline-offset: 6px;
+  }
+  .wh-nav a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+  @media (max-width: 29.99rem) {
+    .wh-nav .wh-nav-wide {
+      display: none;
+    }
+    .wh-nav ul {
+      gap: 1rem;
+    }
+  }
+
+  .wh-footer {
+    margin-top: 0;
+    background: var(--color-steel);
+    color: var(--color-on-steel);
+    font-size: 0.875rem;
+  }
+  .wh-footer a,
+  .wh-footer button {
+    color: #fff;
+  }
+
+  /* ── Type ───────────────────────────────────────────────────────── */
+  .wh-h1 {
+    max-width: 19ch;
+    font-stretch: 125%;
+    font-weight: 800;
+    font-size: clamp(2rem, 1.1rem + 3.7vw, 4.25rem);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    color: var(--color-navy);
+    text-wrap: balance;
+  }
+  .wh-lede {
+    margin-top: 1rem;
+    max-width: 58ch;
+    font-size: 1.0625rem;
+    color: var(--color-ink-soft);
+  }
+  @media (min-width: 48rem) {
+    .wh-lede {
+      margin-top: 1.25rem;
+      font-size: 1.1875rem;
+    }
+  }
+  .wh-h2 {
+    font-stretch: 118%;
+    font-weight: 750;
+    font-size: 1.375rem;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--color-navy);
+    text-wrap: balance;
+  }
+  @media (min-width: 48rem) {
+    .wh-h2 {
+      font-size: 1.625rem;
+    }
+  }
+
+  /* ── Sheets: a navy title bar over a ruled white table ─────────── */
+  .wh-sheet {
+    border: 1px solid var(--color-rule);
+    background: var(--color-surface);
+  }
+  .wh-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  /* The caption stays a table caption (a flex caption becomes a cell);
+     its inner span lays out the bar. */
+  .wh-caption {
+    caption-side: top;
+    padding: 0;
+    text-align: left;
+  }
+  .wh-caption-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    background: var(--color-navy);
+    padding: 0.75rem;
+    color: #fff;
+  }
+  @media (min-width: 48rem) {
+    .wh-caption-inner {
+      padding: 0.875rem 1.25rem;
+    }
+  }
+  .wh-caption-title {
+    font-stretch: 118%;
+    font-weight: 750;
+    font-size: 1.0625rem;
+  }
+  .wh-caption-detail {
+    font-size: 0.8125rem;
+    color: #d5deea;
+  }
+  .wh-table thead th {
+    border-bottom: 2px solid var(--color-navy);
+    background: var(--color-head);
+    padding: 0.5rem 0.375rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--color-ink-soft);
+  }
+  .wh-table tbody > tr > * {
+    border-bottom: 1px solid var(--color-rule);
+    padding: 0.75rem 0.375rem;
+    vertical-align: middle;
+  }
+  .wh-table tr > :first-child {
+    padding-left: 0.75rem;
+  }
+  .wh-table tr > :last-child {
+    padding-right: 0.75rem;
+  }
+  @media (min-width: 48rem) {
+    .wh-table thead th {
+      padding: 0.625rem 0.875rem;
+      font-size: 0.8125rem;
+    }
+    .wh-table tbody > tr > * {
+      padding: 1rem 0.875rem;
+    }
+    .wh-table tr > :first-child {
+      padding-left: 1.25rem;
+    }
+    .wh-table tr > :last-child {
+      padding-right: 1.25rem;
+    }
+  }
+  .wh-table .wh-num {
+    text-align: right;
+  }
+  .wh-table-notes {
+    padding: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+  @media (min-width: 48rem) {
+    .wh-table-notes {
+      padding: 0.875rem 1.25rem;
+    }
+  }
+
+  /* ── The price list ─────────────────────────────────────────────── */
+  .wh-pricelist tbody tr[data-active] > * {
+    background: var(--color-row-active);
+  }
+  .wh-pack {
+    text-align: left;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .wh-pack-n {
+    display: block;
+    font-stretch: 125%;
+    font-weight: 800;
+    font-size: 1.375rem;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--color-steel);
+  }
+  .wh-pack-unit {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+  .wh-pack-label {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-navy);
+  }
+  .wh-code {
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+    white-space: nowrap;
+  }
+  @media (max-width: 47.99rem) {
+    .wh-pricelist .wh-code {
+      display: none;
+    }
+  }
+  @media (min-width: 48rem) {
+    .wh-pack-n {
+      display: inline;
+      font-size: 2rem;
+    }
+    .wh-pack-unit {
+      display: inline;
+      margin-top: 0;
+      font-size: 0.9375rem;
+    }
+  }
+  .wh-pervial {
+    font-weight: 700;
+    font-size: 1.0625rem;
+    color: var(--color-navy);
+    white-space: nowrap;
+  }
+  .wh-price {
+    display: block;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .wh-cell-save,
+  .wh-cell-note {
+    display: block;
+    margin-top: 0.125rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  .wh-cell-save {
+    font-weight: 700;
+    color: var(--color-cta);
+  }
+  .wh-cell-note {
+    color: var(--color-ink-soft);
+  }
+  @media (min-width: 48rem) {
+    .wh-pervial {
+      font-size: 1.375rem;
+    }
+    .wh-price {
+      font-size: 1.125rem;
+    }
+    .wh-cell-save,
+    .wh-cell-note {
+      font-size: 0.8125rem;
+    }
+  }
+  /* Hatched through: listed, never sold online. */
+  .wh-pricelist .wh-quote-cell {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 7px,
+      rgb(30 58 95 / 0.09) 7px 8px
+    );
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-ink-soft);
+    text-align: center;
+  }
+  .wh-qty,
+  .wh-qty-head {
+    width: 1%;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .wh-table thead .wh-qty-head {
+    text-align: right;
+  }
+  .wh-quote-link {
+    display: inline-flex;
+    min-height: 2.5rem;
+    max-width: 6.75rem;
+    align-items: center;
+    justify-content: flex-end;
+    text-align: right;
+    white-space: normal;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-navy);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  @media (min-width: 48rem) {
+    .wh-quote-link {
+      max-width: none;
+      font-size: 0.9375rem;
+    }
+  }
+
+  /* One joined control: fewer, the count, more. */
+  .wh-stepper {
+    display: inline-flex;
+    border: 1px solid var(--color-edge);
+    background: var(--color-surface);
+  }
+  .wh-stepper-button {
+    display: inline-flex;
+    width: 2.25rem;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-neutral);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+  .wh-stepper-button:hover:not(:disabled) {
+    background: var(--color-head);
+    color: var(--color-navy);
+  }
+  .wh-stepper-button:disabled {
+    cursor: not-allowed;
+    color: #9aa6b4;
+  }
+  .wh-stepper-input {
+    width: 2.75rem;
+    height: 2.5rem;
+    border-inline: 1px solid var(--color-edge);
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-ink);
+  }
+  .wh-stepper-button:focus-visible,
+  .wh-stepper-input:focus-visible {
+    position: relative;
+    outline-offset: 0;
+  }
+  @media (min-width: 48rem) {
+    .wh-stepper-button {
+      width: 2.5rem;
+      height: 2.75rem;
+    }
+    .wh-stepper-input {
+      width: 3.25rem;
+      height: 2.75rem;
+    }
+  }
+
+  /* Phones under 400px (a 360 or 375 screen): the four columns tighten so
+     the price list still fits without scrolling. Should a narrower screen
+     still not hold it, the sheet scrolls sideways on its own and the page
+     never does (.wh-pricelist-sheet below). */
+  @media (max-width: 24.99rem) {
+    .wh-pricelist thead th,
+    .wh-pricelist tbody > tr > * {
+      padding-left: 0.25rem;
+      padding-right: 0.25rem;
+    }
+    .wh-pricelist tr > :first-child {
+      padding-left: 0.5rem;
+    }
+    .wh-pricelist tr > :last-child {
+      padding-right: 0.5rem;
+    }
+    .wh-pack-n {
+      font-size: 1.1875rem;
+    }
+    .wh-pervial,
+    .wh-price {
+      font-size: 0.9375rem;
+    }
+    .wh-cell-save,
+    .wh-cell-note {
+      font-size: 0.6875rem;
+    }
+    .wh-stepper-button {
+      width: 2rem;
+    }
+    .wh-stepper-input {
+      width: 2.25rem;
+    }
+    .wh-quote-link {
+      max-width: 5rem;
+    }
+  }
+  .wh-pricelist-sheet {
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  /* ── The order desk: price list, and the label beside it ───────── */
+  /* minmax(0, 1fr): a grid track otherwise grows to the table's widest
+     content and takes the page with it. */
+  .wh-desk {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    scroll-margin-top: 1rem;
+  }
+  @media (min-width: 64rem) {
+    .wh-desk {
+      grid-template-columns: minmax(0, 1fr) 22.5rem;
+      align-items: start;
+      gap: 2rem;
+    }
+  }
+
+  /* Ruled into fields like the label on an outer carton. */
+  .wh-label {
+    border: 2px solid var(--color-steel);
+    background: var(--color-surface);
+  }
+  @media (min-width: 64rem) {
+    .wh-desk .wh-label {
+      position: sticky;
+      top: 1.5rem;
+    }
+  }
+  .wh-label-head {
+    background: var(--color-steel);
+    padding: 0.75rem 1rem;
+    font-stretch: 118%;
+    font-weight: 750;
+    font-size: 1.0625rem;
+    color: #fff;
+  }
+  .wh-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 2px solid var(--color-steel);
+  }
+  .wh-field {
+    padding: 0.625rem 1rem 0.75rem;
+  }
+  .wh-field + .wh-field {
+    border-left: 1px solid var(--color-rule);
+  }
+  .wh-field dt {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+  }
+  .wh-field dd {
+    margin-top: 0.25rem;
+    font-weight: 700;
+    font-size: 1.5rem;
+    line-height: 1.1;
+    color: var(--color-navy);
+  }
+  .wh-field-vials dd {
+    font-stretch: 125%;
+    font-weight: 800;
+    font-size: 2.5rem;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--color-steel);
+  }
+  .wh-field-wide {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--color-rule);
+  }
+  .wh-field.wh-field-wide {
+    border-left: 0;
+  }
+  .wh-field-save dd {
+    font-size: 1.25rem;
+    color: var(--color-cta);
+  }
+  .wh-label-body {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .wh-label-empty {
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+  }
+  .wh-label-note {
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+  .wh-lines {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+  .wh-lines th,
+  .wh-lines td {
+    border-bottom: 1px solid var(--color-rule);
+    padding: 0.5rem 0;
+  }
+  .wh-lines th {
+    text-align: left;
+    font-weight: 500;
+  }
+  .wh-lines td {
+    text-align: right;
+    font-weight: 600;
+  }
+  .wh-line-code {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--color-ink-soft);
+  }
+
+  /* The phone's order bar: the label's three figures at the foot of the
+     screen while the label itself is out of view. Under the cookie banner
+     (z-40), never over it. */
+  .wh-summary-bar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-top: 2px solid var(--color-steel);
+    background: var(--color-surface);
+    padding: 0.625rem 1rem calc(0.625rem + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 20px -10px rgb(20 33 49 / 0.35);
+    color: var(--color-ink);
+  }
+  @media (min-width: 64rem) {
+    .wh-summary-bar {
+      display: none;
+    }
+  }
+  .wh-summary-figures {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.125rem 0.875rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+  .wh-summary-n {
+    font-stretch: 125%;
+    font-weight: 800;
+    font-size: 1.125rem;
+    color: var(--color-steel);
+  }
+  .wh-summary-total {
+    font-weight: 700;
+    color: var(--color-ink);
+  }
+  .wh-summary-go {
+    display: inline-flex;
+    min-height: 2.75rem;
+    flex: none;
+    align-items: center;
+    border: 1px solid var(--color-navy);
+    padding: 0 0.875rem;
+    font-stretch: 112%;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-navy);
+  }
+
+  /* Two choices as one joined control (the quote form's one-off or recurring). */
+  .wh-segment {
+    display: inline-flex;
+    border: 1px solid var(--color-edge);
+  }
+  .wh-segment label {
+    position: relative;
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    padding: 0 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .wh-segment label + label {
+    border-left: 1px solid var(--color-edge);
+  }
+  .wh-segment input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    cursor: pointer;
+  }
+  .wh-segment label:has(:checked) {
+    background: var(--color-navy);
+    color: #fff;
+  }
+  .wh-segment label:has(:focus-visible) {
+    outline: 2px solid var(--color-navy);
+    outline-offset: 2px;
+  }
+  .wh-totals {
+    display: grid;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+  }
+  .wh-totals > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .wh-totals dd {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .wh-totals-detail {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+  .wh-totals-grand {
+    border-top: 2px solid var(--color-steel);
+    padding-top: 0.75rem;
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: var(--color-steel);
+  }
+  .wh-totals-grand dd {
+    font-weight: 800;
+  }
+  .wh-delivery {
+    display: grid;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+  .wh-delivery legend {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+  }
+  .wh-delivery-option {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 0.625rem;
+  }
+  .wh-notice {
+    display: grid;
+    justify-items: start;
+    gap: 0.625rem;
+    border: 1px solid #9ccbb0;
+    background: var(--color-signal-tint);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+  .wh-btn-small {
+    min-height: 2.5rem;
+    padding: 0 0.875rem;
+    font-size: 0.875rem;
+  }
+  .wh-business {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .wh-alert {
+    margin: 0;
+  }
+  .wh-pay {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .wh-btn-pay {
+    width: 100%;
+    min-height: 3.25rem;
+    font-size: 1.0625rem;
+  }
+  .wh-clear {
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* A figure that has just changed shows it, once. */
+  .wh-tick {
+    animation: wh-tick 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes wh-tick {
+    from {
+      background-color: var(--color-tick);
+      box-shadow: 0 0 0 4px var(--color-tick);
+    }
+    to {
+      background-color: transparent;
+      box-shadow: 0 0 0 4px transparent;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wh-tick {
+      animation: none;
+    }
+  }
+
+  /* ── Terms and specification ────────────────────────────────────── */
+  .wh-split {
+    display: grid;
+    gap: 2rem;
+    padding-block: 2.5rem 3rem;
+  }
+  @media (min-width: 64rem) {
+    .wh-split {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      align-items: start;
+      padding-block: 3.5rem 4.5rem;
+    }
+  }
+  .wh-facts th {
+    width: 38%;
+    background: var(--color-neutral);
+    text-align: left;
+    vertical-align: top;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+  .wh-facts td {
+    vertical-align: top;
+    font-size: 0.9375rem;
+  }
+  .wh-facts .wh-codes {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .wh-facts .wh-codes span {
+    color: var(--color-ink-soft);
+  }
+
+  /* ── Quote band ─────────────────────────────────────────────────── */
+  .wh-quote-band {
+    background: var(--color-navy);
+    color: #fff;
+  }
+  .wh-quote-band-inner {
+    display: grid;
+    gap: 1.25rem;
+    padding-block: 2.5rem;
+  }
+  @media (min-width: 64rem) {
+    .wh-quote-band-inner {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 3rem;
+      padding-block: 3.5rem;
+    }
+  }
+  .wh-quote-band h2 {
+    font-stretch: 125%;
+    font-weight: 800;
+    font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.75rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  .wh-quote-band p {
+    margin-top: 0.75rem;
+    max-width: 60ch;
+    color: #d5deea;
+  }
+  .wh-btn-onnavy {
+    display: inline-flex;
+    min-height: 3rem;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    padding: 0 1.5rem;
+    font-stretch: 112%;
+    font-weight: 700;
+    color: var(--color-navy);
+  }
+  .wh-btn-onnavy:hover {
+    background: var(--color-head);
+  }
+
+  /* ── Inner pages ────────────────────────────────────────────────── */
+  .wh-page-head {
+    padding-block: 2rem 1.5rem;
+  }
+  @media (min-width: 48rem) {
+    .wh-page-head {
+      padding-block: 3rem 2rem;
+    }
+  }
+  .wh-page-title {
+    font-stretch: 125%;
+    font-weight: 800;
+    font-size: clamp(1.875rem, 1.3rem + 2.4vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    color: var(--color-navy);
+    text-wrap: balance;
+  }
+  .wh-page-lede {
+    margin-top: 0.875rem;
+    max-width: 62ch;
+    color: var(--color-ink-soft);
+  }
+  .wh-two {
+    display: grid;
+    gap: 1.5rem;
+    padding-bottom: 3.5rem;
+  }
+  @media (min-width: 64rem) {
+    .wh-two {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+      align-items: start;
+      gap: 2rem;
+      padding-bottom: 4.5rem;
+    }
+  }
+  .wh-sheet-head {
+    background: var(--color-navy);
+    padding: 0.75rem 1rem;
+    font-stretch: 118%;
+    font-weight: 750;
+    font-size: 1.0625rem;
+    color: #fff;
+  }
+  .wh-sheet-body {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+  @media (min-width: 48rem) {
+    .wh-sheet-body {
+      padding: 1.5rem 1.5rem 1.75rem;
+    }
+  }
+  .wh-form .field {
+    min-height: 2.75rem;
+  }
+  .wh-form-hint {
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+  .wh-form-note {
+    font-size: 0.75rem;
+    color: var(--color-ink-soft);
+  }
+  .wh-list {
+    display: grid;
+    gap: 0.75rem;
+    font-size: 0.9375rem;
+  }
+  .wh-list li {
+    border-top: 1px solid var(--color-rule);
+    padding-top: 0.75rem;
+  }
+  .wh-list li:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  /* The legal pages (components/commerce/LegalPage.tsx), on a sheet. */
+  .wh-legal-sheet .legal-prose {
+    color: var(--color-ink);
+  }
+  .wh-legal-toc {
+    border: 1px solid var(--color-rule);
+    background: var(--color-neutral);
+    padding: 1rem 1.25rem;
+  }
+
+  /* The order acknowledgement. */
+  .wh-ack-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-bottom: 2px solid var(--color-steel);
+  }
+  @media (min-width: 48rem) {
+    .wh-ack-fields {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  /* On a phone the order number takes the full width, the date and the
+     status share the row under it; from tablet width all three sit in one. */
+  .wh-ack-fields > div {
+    padding: 0.625rem 1rem 0.75rem;
+  }
+  .wh-ack-fields > div:first-child {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .wh-ack-fields > div:nth-child(2) {
+    border-right: 1px solid var(--color-rule);
+  }
+  @media (min-width: 48rem) {
+    .wh-ack-fields > div:first-child {
+      grid-column: auto;
+      border-bottom: 0;
+    }
+    .wh-ack-fields > div:nth-child(2) {
+      border-right: 0;
+    }
+    .wh-ack-fields > div + div {
+      border-left: 1px solid var(--color-rule);
+    }
+  }
+  .wh-ack-fields dt {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+  }
+  .wh-ack-fields dd {
+    margin-top: 0.25rem;
+    overflow-wrap: anywhere;
+    font-weight: 700;
+    color: var(--color-steel);
+  }
+  .wh-steps {
+    display: grid;
+    gap: 0;
+    counter-reset: step;
+  }
+  .wh-steps li {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.75rem;
+    border-top: 1px solid var(--color-rule);
+    padding-block: 0.875rem;
+    counter-increment: step;
+  }
+  .wh-steps li::before {
+    content: counter(step);
+    font-stretch: 125%;
+    font-weight: 800;
+    font-size: 1.25rem;
+    line-height: 1.2;
+    color: var(--color-navy);
   }
 }
