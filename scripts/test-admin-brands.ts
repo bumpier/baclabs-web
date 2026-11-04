@@ -13,6 +13,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { Order } from "@prisma/client";
 import { BRAND_IDS, brandFor, DEFAULT_BRAND } from "@/brands/registry";
 import { PackingSlip } from "@/components/admin/PackingSlip";
+import { giftNoteLine } from "@/lib/commerce/gift-note";
 import { brandLogoDataUri } from "@/lib/brand/logo";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -289,6 +290,17 @@ async function main() {
   check("the fixture's slip, whose logo is no local file, has no image", !fxSlip.includes("<img"));
   check("nothing of BacLab's is on the fixture's slip", bacLabLeaks(fxSlip).length === 0, bacLabLeaks(fxSlip).join());
   check("BacLab's slip keeps its own logo path", blSlip.includes(`src="${brandFor("baclab").logo}"`));
+  // A brand order's gift note (lib/commerce/gift-note.ts) is printed on its
+  // slip, under its own label; BacLab's checkout takes none, and its slip
+  // prints nothing of the kind whatever its notes say.
+  const withNotes = (brand: string, notes: string) =>
+    renderToStaticMarkup(createElement(PackingSlip, { order: { ...slipOrder(brand), notes } as Order }));
+  const giftNotes = ["Payment by card", giftNoteLine("Happy birthday <Sam> & all"), "PayPal refunded: 1.00 GBP"].join("\n");
+  const luxGift = withNotes("luxury", giftNotes);
+  check("a brand slip prints the gift note, escaped", luxGift.includes(">Gift note</p>") && luxGift.includes("Happy birthday &lt;Sam&gt; &amp; all"));
+  check("and none of the other notes", !luxGift.includes("Payment by card") && !luxGift.includes("PayPal refunded"));
+  check("a brand slip without one prints no gift note", !withNotes("luxury", "Payment by card").includes("Gift note"));
+  check("BacLab's slip never prints one", withNotes("baclab", giftNotes) === blSlip);
   // Every registered brand but BacLab, so a brand made by scripts/new-brand.ts is covered too.
   for (const id of BRAND_IDS.filter((x) => x !== DEFAULT_BRAND)) {
     const b = brandFor(id);
