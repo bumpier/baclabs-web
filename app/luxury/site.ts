@@ -1,4 +1,5 @@
 import { luxuryProfile } from "@/brands/luxury/profile";
+import { storefrontView } from "@/lib/commerce/storefront";
 
 /**
  * This brand's site settings, shared by its layout and its metadata routes.
@@ -16,5 +17,21 @@ export const LIVE = false;
 
 export const DESCRIPTION = "Coming soon.";
 
-/** Every public page, for the sitemap. */
-export const PAGES: readonly string[] = ["/"];
+/** Every public page, for the sitemap. Not the order confirmation: it is per order, and noindex. */
+export const PAGES: readonly string[] = ["/", "/contact", "/terms", "/privacy", "/returns", "/disclaimer"];
+
+/**
+ * The catalogue as the browser sees it (lib/commerce/storefront.ts), built
+ * with the pages: the root layout hands it to the basket, and the buy
+ * section reads it from there.
+ */
+export const STOREFRONT = storefrontView(brand);
+
+/**
+ * The basket's localStorage key. Each brand's domain has its own storage, so
+ * it needs no brand in it; bump the suffix to drop every stored basket.
+ */
+export const BASKET_KEY = "basket-v1";
+
+/** The contact form's trade topic, in this brand's words; null offers none (lib/commerce/contact.ts). */
+export const TRADE_TOPIC: { label: string; hint?: string } | null = null;
