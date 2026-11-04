@@ -39,6 +39,8 @@ interface StoredOrderItem {
   lineTotal?: string;
   bundleId?: string;
   bundleQty?: number;
+  /** Another brand's line: the SKU its catalogue sold (lib/order-items.ts buildBrandOrderItems). */
+  sku?: string;
 }
 
 export interface SoldLine {
@@ -68,6 +70,18 @@ export function soldLines(itemsJson: string): SoldLine[] {
     // Kits, not vials: one unit of the kit SKU per kit sold.
     if (isKitLine(item)) {
       return { skuCode: LAB_KIT_SKU_CODE, quantity: item.qty, description, lineTotalMinor };
+    }
+    // Another brand's pack names its own kit SKU (N vials + the brand's box,
+    // scripts/seed-brand-skus.ts), one unit per pack. Checked before
+    // bundleId, which on these lines is that same SKU and no BacLab bundle.
+    // BacLab's lines carry no sku, so nothing of theirs comes this way.
+    if (typeof item.sku === "string" && item.sku) {
+      return {
+        skuCode: normaliseCode(item.sku),
+        quantity: item.bundleQty && item.bundleQty > 0 ? item.bundleQty : item.qty,
+        description,
+        lineTotalMinor,
+      };
     }
     if (item.bundleId && item.bundleQty && item.bundleQty > 0) {
       const bundle = bundleById(item.bundleId);

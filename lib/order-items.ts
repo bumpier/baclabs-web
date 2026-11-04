@@ -35,6 +35,14 @@ export interface OrderLine {
    * counts kits, and never vials. Every reader that counts vials skips it.
    */
   kit?: true;
+  /**
+   * Another brand's lines only (buildBrandOrderItems): the code its
+   * catalogue sold the line under. On a pack it is also the warehouse kit
+   * the pack is made up as (lib/inventory/demand.ts soldLines); every line
+   * gives it to Meta as the content id (lib/meta-capi-event.ts). BacLab's
+   * lines never carry one: theirs is found from bundleId, as always.
+   */
+  sku?: string;
 }
 
 /** The name the loose-vial line carries on the slip, the receipt and the admin. */
@@ -130,6 +138,80 @@ export function buildOrderItems(input: {
     });
   }
   return lines;
+}
+
+/**
+ * One priced line of another brand's order (lib/commerce/pricing.ts):
+ * `quantity` packs of `vials` each, or `quantity` add-ons.
+ */
+export type BrandPricedLine =
+  | { kind: "pack"; sku: string; vials: number; quantity: number; unitMinor: number; lineMinor: number }
+  | { kind: "addOn"; sku: string; name: string; ships: "lab-kit"; quantity: number; unitMinor: number; lineMinor: number };
+
+/**
+ * The paid lines of another brand's order, in exactly the shape
+ * buildOrderItems writes, so every reader of Order.items works unchanged:
+ *
+ *  - a pack is a line of the SHARED vial's Product row, qty in vials, priced
+ *    by the pack. Legacy stock takes the vials off that row, vial stock and
+ *    finance count them, the packing slip prints its neutral name. Its
+ *    bundleId is its SKU, never one of BacLab's BundleIds, so nothing that
+ *    looks packs up in config/funnel.ts (plan upgrades, BacLab's reorder
+ *    offer, its pack names) mistakes it for one of BacLab's;
+ *  - the Lab Kit add-on is BacLab's kit line: the kit's Product row, `kit`,
+ *    the parts on the slip, the kit SKU in the warehouse. Only its bundleId
+ *    and sku are the brand's own code.
+ *
+ * Every line records its `sku`. Pure, like buildOrderItems.
+ */
+export function buildBrandOrderItems(input: {
+  /** The shared vial's Product row, which every brand's packs sell from. */
+  vial: { productId: string; slug: string };
+  /** The Lab Kit's Product row. Required when a line ships as the kit. */
+  kitProductId?: string;
+  lines: readonly BrandPricedLine[];
+  /** USD basis of the whole order's goods (subtotalUsd), as a decimal string. */
+  goodsUsd: string;
+}): OrderLine[] {
+  const usd = splitUsd(
+    Number(input.goodsUsd),
+    input.lines.map((l) => l.lineMinor)
+  );
+  return input.lines.map((line, i): OrderLine => {
+    const lineUsd = usd[i] ?? 0;
+    const money = {
+      unitPrice: pounds(line.unitMinor),
+      unitPriceUsd: (lineUsd / line.quantity).toFixed(2),
+      lineTotal: pounds(line.lineMinor),
+      lineTotalUsd: lineUsd.toFixed(2),
+    };
+    if (line.kind === "pack") {
+      return {
+        productId: input.vial.productId,
+        slug: input.vial.slug,
+        name: `${PRODUCT.name} ${PRODUCT.size}`,
+        qty: line.vials * line.quantity,
+        ...money,
+        bundleId: line.sku,
+        bundleName: `${line.vials}-vial pack`,
+        bundleQty: line.quantity,
+        sku: line.sku,
+      };
+    }
+    if (!input.kitProductId) throw new Error("An order with Lab Kits needs the kit's Product row");
+    return {
+      productId: input.kitProductId,
+      slug: LAB_KIT.sku,
+      name: line.name,
+      qty: line.quantity,
+      ...money,
+      bundleId: line.sku,
+      bundleName: line.name,
+      bundleQty: line.quantity,
+      kit: true,
+      sku: line.sku,
+    };
+  });
 }
 
 export function isAddOnLine(item: object): boolean {
