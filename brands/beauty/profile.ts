@@ -1,8 +1,7 @@
 /**
- * Aurelle, the `beauty` brand. A skeleton: the name is a working name, the
- * palette (porcelain and blush with deep plum ink) a placeholder for the
- * design work, and nothing here is live. Empty values render nothing, as
- * everywhere else.
+ * Aurelle, the `beauty` brand. The name is a working name, the palette is
+ * the storefront's (porcelain and blush with deep plum ink), and nothing
+ * here is live. Empty values render nothing, as everywhere else.
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
@@ -20,18 +19,23 @@ export function beautyProfile(): BrandProfile {
     // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
     domains: [...hosts.beauty],
     logo: "/icon.svg",
+    // The wordmark and the mark on Stripe's page, as PNG (Stripe takes no
+    // SVG): sent once the origin is https (lib/commerce/payments/stripe.ts).
+    paymentPage: { logo: "/payment-logo.png", icon: "/payment-icon.png" },
+    // The storefront's own palette (brands/beauty/styles.css): porcelain,
+    // blush and plum ink, for the theme colour, the manifest and the emails.
     colours: {
-      paper: "#FBF7F4",
-      surface: "#FFFFFF",
-      neutral: "#F5ECE8",
-      ink: "#3A1F33",
-      inkSoft: "#6E5566",
-      line: "#EBDDD7",
-      primary: "#7A3B63",
-      cta: "#7A3B63",
-      header: "#F5ECE8",
-      onHeader: "#3A1F33",
-      onCta: "#FFFFFF",
+      paper: "#F8F3F3",
+      surface: "#FFFCFB",
+      neutral: "#F2DFDC",
+      ink: "#3B1730",
+      inkSoft: "#6A4660",
+      line: "#E6D0CC",
+      primary: "#3B1730",
+      cta: "#3B1730",
+      header: "#F2DFDC",
+      onHeader: "#3B1730",
+      onCta: "#FBF6F5",
     },
     email: {
       // TODO(launch): a mailbox on the brand's own domain, verified in Resend.
