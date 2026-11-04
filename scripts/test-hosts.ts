@@ -14,6 +14,13 @@ import {
   brandIdForHost,
   brandRewrite,
 } from "@/lib/brand/resolve";
+import { stripBrandPrefix } from "@/lib/brand/use-brand-pathname";
+import { breadcrumbSchema, pageMetadata, siteOf } from "@/lib/seo";
+import { organizationRef, returnPolicySchema } from "@/lib/product-schema";
+import { legalName, supportEmail } from "@/lib/legal";
+import { robotsTxt, sitemapXml, webManifest } from "@/lib/brand/site";
+import { brand as baclabConfig } from "@/config/brand";
+import { canonicalOrigin } from "@/lib/site-url";
 import { config } from "../middleware";
 
 type Cond = { type: string; value?: string };
@@ -141,6 +148,41 @@ for (const [host, path, expected] of cases) {
   check(`${host || "(no host)"}${path} -> ${expected}`, got === expected, String(got));
 }
 check("the not-found path is no brand's tree", brandRewrite("baclab.co.uk", NOT_FOUND_PATH) === null);
+
+// ── useBrandPathname(): the prerendered path and the browser's agree.
+check("prefix stripped from a brand page", stripBrandPrefix("/beauty/products/x", "/beauty") === "/products/x");
+check("brand home is /", stripBrandPrefix("/beauty", "/beauty") === "/");
+check("browser path is unchanged", stripBrandPrefix("/products/x", "/beauty") === "/products/x");
+check("a lookalike segment is unchanged", stripBrandPrefix("/beauty-tips", "/beauty") === "/beauty-tips");
+check("no provider (BacLab) is usePathname()", stripBrandPrefix("/beauty/x", null) === "/beauty/x");
+
+// ── Shared helpers: BacLab by default and unchanged; another brand's from its profile alone.
+const baclabSite = siteOf();
+check("siteOf() is BacLab's name and canonical origin", baclabSite.name === baclabConfig.name && baclabSite.origin === canonicalOrigin());
+check(
+  "breadcrumb defaults to BacLab",
+  JSON.stringify(breadcrumbSchema("FAQ", "/faq")) === JSON.stringify(breadcrumbSchema("FAQ", "/faq", DEFAULT_BRAND))
+);
+check("pageMetadata defaults to BacLab", JSON.stringify(pageMetadata({ title: "T", description: "D", path: "/t" })).includes(`| ${baclabConfig.name}`));
+check("legalName() is BacLab's", legalName() === (baclabConfig.company.legalName || baclabConfig.name));
+check("supportEmail() is BacLab's", supportEmail() === (baclabConfig.contact.email || null));
+for (const id of nonDefault) {
+  const b = brandFor(id);
+  const out = JSON.stringify([
+    breadcrumbSchema("Page", "/page", id),
+    pageMetadata({ title: "Page", description: "D", path: "/page", brandId: id }),
+    organizationRef(id),
+    returnPolicySchema(id),
+    legalName(id),
+    supportEmail(id),
+    robotsTxt(b, true),
+    sitemapXml(b, ["/", "/page"]),
+    webManifest(b),
+  ]);
+  check(`${id}: helpers use its own origin`, out.includes(b.origin) && !out.includes(canonicalOrigin()));
+  check(`${id}: helpers name it, not BacLab`, out.includes(b.name) && !/baclab/i.test(out), out.slice(0, 200));
+  check(`${id}: robots.txt disallows everything until launch`, robotsTxt(b, false) === "User-agent: *\nDisallow: /\n");
+}
 
 /** Does a CSP source expression (`https://host`, `http://host:*`) allow this origin? */
 function cspAllows(source: string, origin: string): boolean {

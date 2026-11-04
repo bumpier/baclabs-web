@@ -1,0 +1,34 @@
+/* Brute Lab's stylesheet, imported by app/gym/layout.tsx. Its own Tailwind
+   build: it never imports app/globals.css, and BacLab's stylesheet never
+   scans this brand's folders (see the @source not lines there).
+
+   source(none) turns off Tailwind's scan of the whole repo, so only the
+   folders named here contribute classes. The palette is a placeholder from
+   brands/gym/profile.ts until the brand's design lands. */
+@import "tailwindcss" source(none);
+@source "../../app/gym";
+@source "./";
+
+@theme {
+  --color-paper: #f2f1ee;
+  --color-surface: #ffffff;
+  --color-neutral: #e4e2dd;
+  --color-ink: #111111;
+  --color-ink-soft: #4a4a4a;
+  --color-line: #d6d3cc;
+  --color-primary: #c2410c;
+  --color-cta: #c2410c;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: Impact, "Arial Narrow", sans-serif;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+}

@@ -1,0 +1,34 @@
+/* Aurelle's stylesheet, imported by app/beauty/layout.tsx. Its own Tailwind
+   build: it never imports app/globals.css, and BacLab's stylesheet never
+   scans this brand's folders (see the @source not lines there).
+
+   source(none) turns off Tailwind's scan of the whole repo, so only the
+   folders named here contribute classes. The palette is a placeholder from
+   brands/beauty/profile.ts until the brand's design lands. */
+@import "tailwindcss" source(none);
+@source "../../app/beauty";
+@source "./";
+
+@theme {
+  --color-paper: #fbf7f4;
+  --color-surface: #ffffff;
+  --color-neutral: #f5ece8;
+  --color-ink: #3a1f33;
+  --color-ink-soft: #6e5566;
+  --color-line: #ebddd7;
+  --color-primary: #7a3b63;
+  --color-cta: #7a3b63;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+}

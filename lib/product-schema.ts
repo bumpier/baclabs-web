@@ -1,7 +1,19 @@
 import { brand } from "@/config/brand";
+import { brandFor, DEFAULT_BRAND } from "@/brands/registry";
 import { DELIVERY, RETURNS, deliveryMinorFor } from "@/config/funnel";
 import { FACTS } from "@/content/facts";
 import { canonicalOrigin } from "@/lib/site-url";
+
+/**
+ * The origin and organisation name for a brand's structured data, BacLab by
+ * default. Another brand's come from its profile, never canonicalOrigin():
+ * its pages are prerendered with no Host header to go on.
+ */
+function schemaSite(brandId: string): { origin: string; orgName: string } {
+  if (brandId === DEFAULT_BRAND) return { origin: canonicalOrigin(), orgName: brand.company.legalName || brand.name };
+  const b = brandFor(brandId);
+  return { origin: b.origin, orgName: b.legalName || b.name };
+}
 
 /**
  * The parts of the Product structured data that Google's merchant-listing
@@ -49,7 +61,7 @@ export function shippingDetailsFor(offerMinor: number): Record<string, unknown> 
 }
 
 /** MerchantReturnPolicy mirroring /returns. */
-export function returnPolicySchema(): Record<string, unknown> {
+export function returnPolicySchema(brandId: string = DEFAULT_BRAND): Record<string, unknown> {
   return {
     "@type": "MerchantReturnPolicy",
     applicableCountry: "GB",
@@ -60,7 +72,7 @@ export function returnPolicySchema(): Record<string, unknown> {
       ? "https://schema.org/ReturnShippingFees"
       : "https://schema.org/FreeReturn",
     refundType: "https://schema.org/FullRefund",
-    merchantReturnLink: `${canonicalOrigin()}${RETURNS.path}`,
+    merchantReturnLink: `${schemaSite(brandId).origin}${RETURNS.path}`,
     // The sealed-goods exception has no schema.org field, so it goes in the
     // description rather than being silently dropped from the summary.
     description: `Unopened vials with seals intact may be returned within ${RETURNS.windowDays} days of delivery. A vial that has been opened or punctured is sealed for hygiene reasons and cannot be returned, except where faulty or damaged.`,
@@ -83,8 +95,9 @@ export function productAlternateNames(): string[] {
   return [...FACTS.synonyms];
 }
 
-export function organizationRef(): Record<string, unknown> {
-  return { "@id": `${canonicalOrigin()}/#organization`, "@type": "Organization", name: brand.company.legalName || brand.name };
+export function organizationRef(brandId: string = DEFAULT_BRAND): Record<string, unknown> {
+  const site = schemaSite(brandId);
+  return { "@id": `${site.origin}/#organization`, "@type": "Organization", name: site.orgName };
 }
 
 /**

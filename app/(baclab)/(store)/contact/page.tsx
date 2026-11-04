@@ -7,6 +7,7 @@ import { ContactForm } from "@/components/contact/ContactForm";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
 import { contentHref } from "@/lib/blog-migration";
 import { CONTACT_EMAIL } from "@/lib/contact";
+import { COMPLAINT_ACK_DAYS } from "@/lib/legal";
 
 export const metadata: Metadata = pageMetadata({
   title: "Contact",
@@ -48,7 +49,7 @@ export default function ContactPage() {
         <h2 id="form-heading" className="sr-only">
           Send us a message
         </h2>
-        <ContactForm />
+        <ContactForm complaintAckDays={COMPLAINT_ACK_DAYS} />
       </section>
 
       {company.registeredAddress || company.legalName ? (

@@ -1,9 +1,14 @@
 import { brand } from "@/config/brand";
+import { brandFor, DEFAULT_BRAND } from "@/brands/registry";
 
 /**
  * Shared facts for the legal pages, so /terms, /privacy, /returns and
  * /disclaimer cannot drift apart on who "we" are or when the wording last
  * changed. Nothing here is presentation — see components/LegalPage.tsx.
+ *
+ * Server code: it reads the brand registry. The party and contact helpers
+ * take the brand they are for, BacLab by default, whose answers are exactly
+ * what they always were.
  */
 
 /**
@@ -47,12 +52,17 @@ export const RECORD_RETENTION_YEARS = 6;
  * The name the contract is made with. With no registered name configured this
  * is the brand name — a real party to name, not a placeholder for one.
  */
-export function legalName(): string {
+export function legalName(brandId: string = DEFAULT_BRAND): string {
+  if (brandId !== DEFAULT_BRAND) {
+    const b = brandFor(brandId);
+    return b.legalName || b.name;
+  }
   return brand.company.legalName || brand.name;
 }
 
-/** Support address, or null when config/brand.ts has none set. */
-export function supportEmail(): string | null {
+/** Support address, or null when the brand has none set (config/brand.ts for BacLab). */
+export function supportEmail(brandId: string = DEFAULT_BRAND): string | null {
+  if (brandId !== DEFAULT_BRAND) return brandFor(brandId).email.contact || null;
   return brand.contact.email || null;
 }
 

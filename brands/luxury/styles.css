@@ -1,0 +1,34 @@
+/* Reserve No.10's stylesheet, imported by app/luxury/layout.tsx. Its own
+   Tailwind build: it never imports app/globals.css, and BacLab's stylesheet
+   never scans this brand's folders (see the @source not lines there).
+
+   source(none) turns off Tailwind's scan of the whole repo, so only the
+   folders named here contribute classes. The palette is a placeholder from
+   brands/luxury/profile.ts until the brand's design lands. */
+@import "tailwindcss" source(none);
+@source "../../app/luxury";
+@source "./";
+
+@theme {
+  --color-paper: #fbf8f1;
+  --color-surface: #ffffff;
+  --color-neutral: #f2ede2;
+  --color-ink: #0d0d0d;
+  --color-ink-soft: #55504a;
+  --color-line: #e3dbcb;
+  --color-primary: #8c6d2f;
+  --color-cta: #0d0d0d;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: Didot, "Bodoni 72", Georgia, serif;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+}

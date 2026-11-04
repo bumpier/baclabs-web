@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { COMPLAINT_ACK_DAYS } from "@/lib/legal";
 import { CONTACT_MESSAGE_MAX, CONTACT_TOPICS, contactTopic } from "@/lib/contact";
 
 /**
@@ -11,8 +10,12 @@ import { CONTACT_MESSAGE_MAX, CONTACT_TOPICS, contactTopic } from "@/lib/contact
  *
  * A topic can be preselected with ?topic=wholesale, which is how the
  * wholesale section of the page links here.
+ *
+ * The complaint acknowledgement time is a prop (the page passes
+ * COMPLAINT_ACK_DAYS from lib/legal.ts), because lib/legal.ts reads the
+ * brand registry, which must never reach a browser bundle.
  */
-export function ContactForm() {
+export function ContactForm({ complaintAckDays }: { complaintAckDays: number }) {
   const id = useId();
   const [topicId, setTopicId] = useState("");
   const [pending, setPending] = useState(false);
@@ -84,7 +87,7 @@ export function ContactForm() {
           Thanks{sent.name ? `, ${sent.name}` : ""}. Your message has reached us, and we will reply
           to <span className="text-ink">{sent.email}</span>.
           {sent.topic === "complaint"
-            ? ` We aim to acknowledge every complaint within ${COMPLAINT_ACK_DAYS} working days.`
+            ? ` We aim to acknowledge every complaint within ${complaintAckDays} working days.`
             : ""}
         </p>
         <button

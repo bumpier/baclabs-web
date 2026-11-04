@@ -145,6 +145,9 @@ function spokenDuration(secondsLeft: number): string {
  * page below it is not showing.
  */
 export function AnnouncementBanner({ sale, renderedAt }: { sale: boolean; renderedAt: number }) {
+  // BacLab only, so usePathname() is safe. A brand's pages prerender under
+  // /<id>/…, where it disagrees with the browser: reused under a brand, this
+  // must read useBrandPathname() (lib/brand/use-brand-pathname.ts) instead.
   const pathname = usePathname();
   const now = useSyncExternalStore(subscribe, nowSeconds, serverSeconds);
 
