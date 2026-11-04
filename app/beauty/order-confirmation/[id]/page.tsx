@@ -55,17 +55,17 @@ export default async function OrderConfirmationPage({
   const parcel = order.parcel;
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-16">
+    <main id="main" className="mx-auto w-full max-w-2xl px-5 pb-8 pt-10 sm:px-8 md:pt-14">
       <OrderStatusWatcher orderId={order.id} status={order.status} />
       {order.tracker ? <PurchaseTracker {...order.tracker} /> : null}
       <ClearBasket when={order.paid} />
 
       <div role="status">
-        <h1 className="font-display text-4xl text-ink">{heading}</h1>
-        <p className="mt-3 text-ink-soft">{status}</p>
+        <h1 className="au-display text-[clamp(2.5rem,1.9rem+2.4vw,3.5rem)]">{heading}</h1>
+        <p className="au-lead mt-4">{status}</p>
       </div>
 
-      <dl className="commerce-panel mt-8 p-5 text-sm">
+      <dl className="au-panel mt-10 p-6 text-[0.9375rem] sm:p-8">
         <div className="flex flex-wrap justify-between gap-2 border-b border-line pb-4 text-ink-soft">
           <div>
             <dt className="inline">Order </dt>
@@ -101,7 +101,7 @@ export default async function OrderConfirmationPage({
 
       {order.sent && parcel ? (
         <section aria-labelledby="parcel-heading" className="mt-10">
-          <h2 id="parcel-heading" className="font-display text-2xl text-ink">
+          <h2 id="parcel-heading" className="au-h3">
             Your parcel
           </h2>
           <dl className="mt-4 space-y-2 text-ink-soft">
@@ -146,7 +146,7 @@ export default async function OrderConfirmationPage({
         </section>
       ) : order.paid || order.confirming ? (
         <section aria-labelledby="next-heading" className="mt-10">
-          <h2 id="next-heading" className="font-display text-2xl text-ink">
+          <h2 id="next-heading" className="au-h3">
             What happens next
           </h2>
           <ol className="mt-4 list-decimal space-y-3 pl-5 text-ink-soft">
