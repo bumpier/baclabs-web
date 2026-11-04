@@ -95,6 +95,19 @@ export interface BrandProfile {
   /** Registered company name for legal lines. "" renders nothing. */
   legalName: string;
   /**
+   * The registered company's other details, for the brand's legal pages
+   * (lib/commerce/legal.ts). The Trading Disclosures Regulations 2008 want
+   * the number and registered office on every site, so fill them before
+   * launch. One company runs every brand, so they are normally the same on
+   * each. Empty or unset renders nothing. BacLab's are config/brand.ts.
+   */
+  company?: {
+    number?: string;
+    registeredAddress?: string;
+    vatNumber?: string;
+    icoRegistration?: string;
+  };
+  /**
    * The brand's own tracking ids. Each brand reports to its own Meta dataset
    * and GA4 property, never another brand's. The Setting
    * `meta_pixel_id:<brand>` beats metaPixelId (lib/settings.ts); the
@@ -114,6 +127,18 @@ export interface BrandProfile {
    * config/funnel.ts MAILING_LIST, as always.
    */
   mailingList?: { consentText: string };
+  /**
+   * How the brand takes payment, as its storefront and its legal pages
+   * describe it (lib/commerce/storefront.ts, lib/commerce/legal.ts). Unset:
+   * both stay method-neutral ("the payment methods shown at checkout") and
+   * name no provider.
+   *
+   * TODO(payments): the brands' payment methods are still being decided
+   * (an on-site crypto pay page, another processor, bank transfer, or a mix).
+   * Whoever builds that fills this in for each brand: nothing on a brand's
+   * pages may name a provider except through it.
+   */
+  payment?: BrandPayment;
   /**
    * The brand on Stripe's page and the card statement (lib/commerce/checkout.ts).
    * BacLab sets none: its sessions are built as they always were.
@@ -142,6 +167,37 @@ export interface BrandProfile {
    * comes near this.
    */
   catalogue?: BrandCatalogue;
+}
+
+/** A way to pay, as the storefront and the terms describe it. */
+export interface BrandPaymentMethod {
+  /** Stable id, for the checkout request's `method` once it takes one. */
+  id: string;
+  /** "Bank transfer": what the buy section shows. */
+  label: string;
+  /** One sentence for the terms: how and when payment is taken by this method. */
+  terms: string;
+  /** One sentence for the returns policy: how a refund goes back by this method. Unset: the neutral wording. */
+  refunds?: string;
+}
+
+/** Someone who handles payment data for the brand, for its privacy notice. */
+export interface BrandPaymentProcessor {
+  /** The company, as the privacy notice names it. */
+  name: string;
+  /** What it does for us, after a colon: "payment processing and refunds". */
+  purpose: string;
+  /** Its own privacy policy, an https URL. */
+  privacyUrl?: string;
+  /** It is a controller of the payment data in its own right, not our processor. */
+  separateController?: boolean;
+  /** Anything else the notice must say about it (its own cookies on its own page). */
+  note?: string;
+}
+
+export interface BrandPayment {
+  methods: readonly BrandPaymentMethod[];
+  processors: readonly BrandPaymentProcessor[];
 }
 
 // ── Catalogues ──────────────────────────────────────────────────────

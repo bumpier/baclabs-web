@@ -18,6 +18,13 @@
 @source not "../app/wholesale";
 @source not "../app/luxury";
 @source not "../brands";
+/* The brands' commerce kit, its server logic and the class contract they
+   theme are theirs alone (each brand's stylesheet scans them). BacLab uses
+   none of it, so neither a default class in the kit nor a word in the
+   brands' legal text may add CSS here. */
+@source not "../components/commerce";
+@source not "../lib/commerce";
+@source not "../styles";
 
 /* ──────────────────────────────────────────────────────────────────────
    THE PALETTE

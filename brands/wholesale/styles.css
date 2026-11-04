@@ -4,10 +4,15 @@
 
    source(none) turns off Tailwind's scan of the whole repo, so only the
    folders named here contribute classes. The palette is a placeholder from
-   brands/wholesale/profile.ts until the brand's design lands. */
+   brands/wholesale/profile.ts until the brand's design lands.
+
+   The shared class contract (styles/commerce-contract.css) and the commerce
+   kit's folder come with it: the kit's default classes are built here. */
 @import "tailwindcss" source(none);
+@import "../../styles/commerce-contract.css";
 @source "../../app/wholesale";
 @source "./";
+@source "../../components/commerce";
 
 @theme {
   --color-paper: #ffffff;

@@ -4,10 +4,15 @@
 
    source(none) turns off Tailwind's scan of the whole repo, so only the
    folders named here contribute classes. The palette is a placeholder from
-   brands/luxury/profile.ts until the brand's design lands. */
+   brands/luxury/profile.ts until the brand's design lands.
+
+   The shared class contract (styles/commerce-contract.css) and the commerce
+   kit's folder come with it: the kit's default classes are built here. */
 @import "tailwindcss" source(none);
+@import "../../styles/commerce-contract.css";
 @source "../../app/luxury";
 @source "./";
+@source "../../components/commerce";
 
 @theme {
   --color-paper: #fbf8f1;
@@ -18,6 +23,7 @@
   --color-line: #e3dbcb;
   --color-primary: #8c6d2f;
   --color-cta: #0d0d0d;
+  --color-on-cta: #fbf8f1;
 
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: Didot, "Bodoni 72", Georgia, serif;
