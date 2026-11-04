@@ -12,6 +12,7 @@ import { planRowData } from "@/lib/plans/items";
 import { earlierUpgradeAction, upgradeEligibility, upgradePriceMinor, type EarlierUpgrade } from "@/lib/plans/upgrade";
 import { priceIn } from "@/lib/fx";
 import { fetchFxRates } from "@/lib/fx-rates";
+import { belongsToHost, DEFAULT_BRAND } from "@/brands/registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,7 +47,11 @@ export async function POST(req: Request) {
     const { orderId, months, trackingConsent } = parsed.data;
 
     const original = await prisma.order.findUnique({ where: { id: orderId } });
-    if (!original) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    // Plans are BacLab's alone (config/plans.ts): another brand's order, or
+    // any request from another brand's site, has no plan to become.
+    if (!original || original.brand !== DEFAULT_BRAND || !belongsToHost(original.brand, req.headers.get("host"))) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
     const verdict = upgradeEligibility(original, new Date());
     if (!verdict.eligible) {
       return NextResponse.json({ error: "This order can no longer be turned into a plan." }, { status: 409 });

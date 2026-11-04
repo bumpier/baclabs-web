@@ -5,7 +5,7 @@ import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { MAILING_LIST } from "@/config/funnel";
 import { sendWelcomeEmail } from "@/lib/customer-email";
 import { clearOptOut } from "@/lib/opt-outs";
-import { brandFromHost } from "@/brands/registry";
+import { brandFromHost, DEFAULT_BRAND } from "@/brands/registry";
 import {
   SUBSCRIBER_COOKIE,
   SUBSCRIBER_COOKIE_MAX_AGE,
@@ -36,6 +36,13 @@ const OK = () => NextResponse.json({ ok: true });
 
 export async function POST(req: Request) {
   if (!MAILING_LIST.enabled) return NextResponse.json({ error: "Not available" }, { status: 404 });
+  // nginx forwards the visitor's host, as lib/site-url.ts reads it.
+  const b = brandFromHost(req.headers.get("x-forwarded-host") ?? req.headers.get("host"));
+  // What the subscriber agrees to is recorded in their brand's own words:
+  // BacLab's MAILING_LIST text, or the brand's profile. A brand that runs no
+  // list has nothing to sign up to.
+  const consentText = b.id === DEFAULT_BRAND ? MAILING_LIST.consentText : b.mailingList?.consentText;
+  if (!consentText) return NextResponse.json({ error: "Not available" }, { status: 404 });
   if (!verifyOrigin(req)) {
     return NextResponse.json({ error: "Something went wrong" }, { status: 403 });
   }
@@ -57,8 +64,7 @@ export async function POST(req: Request) {
   if (parsed.data.website) return OK(); // honeypot
 
   const email = normEmail(parsed.data.email);
-  // nginx forwards the visitor's host, as lib/site-url.ts reads it.
-  const brand = brandFromHost(req.headers.get("x-forwarded-host") ?? req.headers.get("host")).id;
+  const brand = b.id;
   try {
     const existing = await prisma.subscriber.findUnique({ where: { brand_email: { brand, email } } });
     // Already on the list: nothing to do, and no second welcome email, so
@@ -68,7 +74,7 @@ export async function POST(req: Request) {
     const consent = {
       status: "subscribed",
       source: parsed.data.source,
-      consentText: MAILING_LIST.consentText,
+      consentText,
       consentAt: new Date(),
       ipHash: hashIp(ip),
       unsubscribedAt: null,

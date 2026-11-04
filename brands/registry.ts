@@ -79,3 +79,14 @@ export function brandFromHost(host: string | null | undefined): BrandProfile {
   }
   return brandFor(DEFAULT_BRAND);
 }
+
+/**
+ * Whether a row (an order, say) belongs to the brand whose site the request
+ * came from. Public routes that look a row up by id check this, so one
+ * brand's site can never show another brand's order: it answers as if the
+ * row did not exist. A row written before brands existed is BacLab's, and
+ * so is an unknown host, as everywhere else.
+ */
+export function belongsToHost(rowBrand: string | null | undefined, host: string | null | undefined): boolean {
+  return brandFor(rowBrand).id === brandFromHost(host).id;
+}

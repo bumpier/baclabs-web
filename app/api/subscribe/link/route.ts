@@ -3,6 +3,7 @@ import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { originFromHeaders } from "@/lib/site-url";
 import { MAILING_LIST, bundleById } from "@/config/funnel";
 import { packByBundleId, packPath } from "@/config/products";
+import { brandFromHost, DEFAULT_BRAND } from "@/brands/registry";
 import {
   SUBSCRIBER_COOKIE,
   SUBSCRIBER_COOKIE_MAX_AGE,
@@ -28,7 +29,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const bundle = bundleById(url.searchParams.get("pack") ?? "");
+  // A pack is one of BacLab's pages: on another brand's site the link goes
+  // to that site's own buy box instead.
+  const onBacLab = brandFromHost(req.headers.get("host")).id === DEFAULT_BRAND;
+  const bundle = onBacLab ? bundleById(url.searchParams.get("pack") ?? "") : undefined;
   const pack = bundle ? packByBundleId(bundle.id) : undefined;
   const res = NextResponse.redirect(new URL(pack ? packPath(pack) : "/#buy", originFromHeaders(req.headers)));
   res.headers.set("Cache-Control", "private, no-store");

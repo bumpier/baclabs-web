@@ -43,6 +43,11 @@ export function luxuryProfile(): BrandProfile {
       "Sold as a laboratory reagent. Not a medicine and not a medical device. No therapeutic claim is made.",
     packingSlipThankYou: "Thank you for your order.",
     legalName: "",
+    // TODO(confirm): the wording, with the signup form that shows it.
+    mailingList: {
+      consentText:
+        "By signing up you agree to receive marketing emails from Reserve No.10: news, restocks and new releases. Unsubscribe at any time from any email.",
+    },
     // TODO(launch): the final name's descriptor, and PNG logo and icon for Stripe's page.
     stripe: { statementDescriptorSuffix: "RESERVE NO10" },
     catalogue: luxuryCatalogue,

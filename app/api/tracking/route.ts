@@ -1,4 +1,5 @@
-import { getMetaPixelId } from "@/lib/settings";
+import { getBrandMetaPixelId } from "@/lib/settings";
+import { brandFromHost } from "@/brands/registry";
 
 /**
  * Which consent-requiring trackers this deployment runs, for the cookie
@@ -11,12 +12,15 @@ import { getMetaPixelId } from "@/lib/settings";
  *
  * Returns booleans only. The pixel id itself is not a secret, but the banner
  * has no use for it.
+ *
+ * Per brand, by Host, as /api/pixel chooses the pixel: a brand with no pixel
+ * of its own has nothing to ask about, whatever BacLab runs.
  */
 
 export const dynamic = "force-dynamic";
 
-export async function GET(): Promise<Response> {
-  const metaPixel = (await getMetaPixelId()) !== null;
+export async function GET(req: Request): Promise<Response> {
+  const metaPixel = (await getBrandMetaPixelId(brandFromHost(req.headers.get("host")))) !== null;
   return Response.json(
     { metaPixel },
     {

@@ -107,6 +107,14 @@ export interface BrandProfile {
     ga4Id?: string;
   };
   /**
+   * The brand's own mailing list. `consentText` is stored against each
+   * subscriber as the record of what they agreed to (app/api/subscribe), so
+   * the brand's signup form must show these exact words. Unset: the brand
+   * runs no list and its site's signups are refused. BacLab's is
+   * config/funnel.ts MAILING_LIST, as always.
+   */
+  mailingList?: { consentText: string };
+  /**
    * The brand on Stripe's page and the card statement (lib/commerce/checkout.ts).
    * BacLab sets none: its sessions are built as they always were.
    */

@@ -1,4 +1,5 @@
-import { getMetaPixelId } from "@/lib/settings";
+import { getBrandMetaPixelId } from "@/lib/settings";
+import { brandFromHost, DEFAULT_BRAND } from "@/brands/registry";
 
 /**
  * The Meta Pixel bootstrap, served as a script at request time.
@@ -14,6 +15,13 @@ import { getMetaPixelId } from "@/lib/settings";
  *
  * The response is short-cached: a browser that has already loaded a page this
  * minute reuses it, and a change in the admin panel is live within 60s.
+ *
+ * ONE PIXEL PER BRAND. Every brand's pages load this same path, so the pixel
+ * is chosen by the Host the request came to (getBrandMetaPixelId, the same
+ * choice the server-side Purchase makes in lib/meta-capi.ts, so the two
+ * reports still pair up). A brand never falls through to BacLab's pixel.
+ * BacLab's own resolves exactly as before. Cloudflare's cache key, and every
+ * browser's cache, already include the host.
  */
 
 export const dynamic = "force-dynamic";
@@ -31,14 +39,19 @@ function javascript(body: string): Response {
   });
 }
 
-export async function GET(): Promise<Response> {
-  const pixelId = await getMetaPixelId();
+export async function GET(req: Request): Promise<Response> {
+  const brand = brandFromHost(req.headers.get("host"));
+  const pixelId = await getBrandMetaPixelId(brand);
 
   // A 200 with an empty body rather than a 404: the tag is on every page, and
   // an unconfigured pixel is a normal state, not an error worth logging in
-  // every visitor's console.
+  // every visitor's console. Another brand's site has no admin to point at.
   if (!pixelId) {
-    return javascript("/* Meta Pixel not configured. Add one in /admin/settings. */\n");
+    return javascript(
+      brand.id === DEFAULT_BRAND
+        ? "/* Meta Pixel not configured. Add one in /admin/settings. */\n"
+        : "/* Meta Pixel not configured. */\n"
+    );
   }
 
   // pixelId has already been checked against /^[0-9]{8,20}$/ by lib/settings,
