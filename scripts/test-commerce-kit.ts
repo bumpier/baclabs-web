@@ -10,16 +10,17 @@
  *    word, so a storefront never shows a figure or an error the checkout
  *    would contradict;
  *  - the basket's cleaning of stored and linked lines;
- *  - each brand's legal pages: its own party and no other's, no payment
- *    provider named until BrandProfile.payment says so, and every
- *    cross-reference resolving;
+ *  - each brand's legal pages: its own party and no other's, every brand's
+ *    copy rules, no payment provider named until BrandProfile.payment says
+ *    so, and every cross-reference resolving;
  *  - the contact topics, and the checkout's redirect targets;
- *  - the brand pages' source (app/<id>/**) names no payment provider.
+ *  - the brand pages' source (app/<id>/**) against the brand's copy rules.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { brandFor, type BrandProfile } from "@/brands/registry";
-import { BRAND_IDS } from "@/brands/types";
+import { BRAND_IDS, type BrandId } from "@/brands/types";
+import { checkBrandCopy } from "@/lib/content-rules";
 import { storefrontView } from "@/lib/commerce/storefront";
 import { deliveryQuote, freeDeliveryShortfallMinor, packSavingMinor, priceBasket } from "@/lib/commerce/view";
 import { priceBrandLines } from "@/lib/commerce/pricing";
@@ -201,6 +202,11 @@ for (const id of BRANDS) {
     check(`${where}: names no payment provider`, !/stripe|paypal|apple pay|google pay/i.test(text));
     check(`${where}: is not card-only`, !/\bcards?\b/i.test(text), text.match(/.{40}\bcards?\b.{40}/i)?.[0] ?? "");
     check(`${where}: no crypto, plan or welcome vial`, !/crypto|monthly plan|welcome (?:vial|gift)/i.test(text));
+    // Shared wording, so every brand's text must pass every brand's rules.
+    for (const rulesOf of BRAND_IDS.filter((r) => r !== "baclab")) {
+      const v = checkBrandCopy(rulesOf as BrandId, legalDocText(doc), where);
+      check(`${where}: passes ${rulesOf}'s copy rules`, v.length === 0, JSON.stringify(v));
+    }
     check(`${where}: section anchors are unique`, new Set(doc.sections.map((s) => s.id)).size === doc.sections.length);
     for (const href of links(doc)) {
       const [p, hash] = href.split("#");
@@ -258,6 +264,8 @@ for (const id of BRANDS) {
   for (const file of filesUnder(path.join(ROOT, "app", id))) {
     const rel = path.relative(ROOT, file);
     const src = readFileSync(file, "utf8");
+    const v = checkBrandCopy(id as BrandId, src, rel);
+    check(`${rel} passes ${id}'s copy rules`, v.length === 0, JSON.stringify(v));
     check(`${rel} names no payment provider`, !/stripe/i.test(src));
   }
 }

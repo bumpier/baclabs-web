@@ -7,12 +7,16 @@
  * already used by check-guides.ts.
  */
 import {
+  BANNED,
+  brandRules,
+  checkBrandCopy,
   checkCompliance,
   checkGuideStructure,
   checkPostStructure,
   guideProse,
   normalise,
 } from "@/lib/content-rules";
+import { BRAND_IDS, type BrandId } from "@/brands/types";
 import type { Guide } from "@/content/guides/types";
 import type { Post } from "@/content/posts/types";
 import { GUIDES } from "@/content/guides";
@@ -89,6 +93,164 @@ check(
   checkCompliance(["Sodium chloride 0.9% w/v", "Preservative"]).length === 0,
   "the ¦ delimiter is missing or was replaced by whitespace"
 );
+
+// ── Per-brand rules (brandRules / checkBrandCopy) ───────────────────────
+const NEW_BRANDS = BRAND_IDS.filter((id) => id !== "baclab");
+const caught = (id: BrandId, text: string) => checkBrandCopy(id, text).length > 0;
+
+// BacLab's layer is exactly its guide rules, in the same order.
+check(
+  "BacLab's brand rules are its guide rules",
+  JSON.stringify(brandRules("baclab").map((r) => [r.re.source, r.re.flags, r.why])) ===
+    JSON.stringify(BANNED.map((r) => [r.re.source, r.re.flags, r.why]))
+);
+for (const id of BRAND_IDS) check(`${id} has rules`, brandRules(id).length > 0);
+
+// Rules 1 and 2 hold for every brand.
+const EVERY_BRAND_CATCHES = [
+  "Measure the dose carefully.",
+  "Given to patients on a ward.",
+  "It contains benzyl alcohol.",
+  "It holds 0.9% w/v preservative.",
+  "You are injecting the solution.",
+];
+for (const id of BRAND_IDS) {
+  for (const text of EVERY_BRAND_CATCHES) check(`${id} catches ${JSON.stringify(text)}`, caught(id, text));
+}
+// The new brands get every form of "inject", and no USP-name exemption.
+for (const id of NEW_BRANDS) {
+  for (const text of ["Inject it slowly.", "An injectable vial.", "Bacteriostatic Water for Injection, USP."]) {
+    check(`${id} catches ${JSON.stringify(text)}`, caught(id, text));
+  }
+}
+check("BacLab keeps the USP-name exemption", !caught("baclab", "Sold in the US as Bacteriostatic Water for Injection, USP."));
+check("multi-dose passes on beauty", !caught("beauty", "A sealed multi-dose vial."));
+check("multi-dose is caught on gym", caught("gym", "A sealed multi-dose vial."));
+
+// BacLab only: the price superlative and house style.
+check("BacLab catches the superlative", caught("baclab", "We are the cheapest in the UK."));
+check("BacLab catches an em dash", caught("baclab", "Sterile water — sealed."));
+check("BacLab catches an exclamation", caught("baclab", "Order today!"));
+for (const id of ["gym", "wholesale", "beauty"] as const) {
+  check(`${id} allows an exclamation`, !caught(id, "Order today!"));
+}
+
+const GYM_CATCHES = [
+  "Steroids are not sold here.",
+  "anabolic",
+  "No PEDs.",
+  "performance enhancing",
+  "performance-enhancing",
+  "tren",
+  "trenbolone",
+  "testosterone",
+  "Test E",
+  "test-C",
+  "test cyp",
+  "test enanthate",
+  "test prop",
+  "running test",
+  "on test",
+  "250mg test",
+  "deca",
+  "dbol",
+  "d-bol",
+  "anavar",
+  "winstrol",
+  "winny",
+  "primo",
+  "HGH",
+  "SARMs",
+  "juice",
+  "juiced",
+  "pin",
+  "pinning",
+  "jab",
+  "a shot",
+  "shots",
+  "dose",
+  "dosed",
+  "inject",
+];
+for (const text of GYM_CATCHES) check(`gym catches ${JSON.stringify(text)}`, caught("gym", text));
+const GYM_ALLOWS = [
+  "Stock up before your next cycle.",
+  "Gear up.",
+  "Blast and cruise.",
+  "Every batch is tested.",
+  "Lab tested, batch test certificate on request.",
+  "Our test results are published.",
+  "A test order of 5 vials.",
+  "Testing every batch.",
+  "The latest trend.",
+  "A decade of supply.",
+  "Screenshot your receipt.",
+  "Spin up a fresh order.",
+  "Juniper.",
+  "Primary packaging.",
+  "Speedy delivery.",
+];
+for (const text of GYM_ALLOWS) check(`gym allows ${JSON.stringify(text)}`, !caught("gym", text), JSON.stringify(checkBrandCopy("gym", text)));
+
+const BEAUTY_CATCHES = [
+  "Botox",
+  "dermal filler",
+  "fillers",
+  "toxin",
+  "neurotoxins",
+  "injectables",
+  "anti-wrinkle",
+  "anti-ageing",
+  "fewer wrinkles",
+  "fine lines",
+  "a treatment",
+  "the procedure",
+  "rejuvenating",
+  "collagen",
+  "plumping",
+  "heals",
+  "cures",
+  "smoother skin",
+  "skin that looks younger",
+  "brightens your skin",
+];
+for (const text of BEAUTY_CATCHES) check(`beauty catches ${JSON.stringify(text)}`, caught("beauty", text));
+const BEAUTY_ALLOWS = [
+  "Treat yourself.",
+  "Your ritual, done properly.",
+  "Our health and safety data.",
+  "A secure checkout.",
+  "No therapeutic or curative claim.",
+  "For clinics and salons.",
+  "Detox your shelf.",
+];
+for (const text of BEAUTY_ALLOWS) check(`beauty allows ${JSON.stringify(text)}`, !caught("beauty", text), JSON.stringify(checkBrandCopy("beauty", text)));
+
+for (const text of ["cheap", "cheaper", "a discount", "discounted", "the sale", "Winter sales"]) {
+  check(`luxury catches ${JSON.stringify(text)}`, caught("luxury", text));
+}
+for (const text of ["Not for resale.", "Sold as a laboratory reagent.", "Considered, never rushed."]) {
+  check(`luxury allows ${JSON.stringify(text)}`, !caught("luxury", text));
+}
+
+// Wholesale: rules 1 and 2 only.
+for (const text of ["Cheapest per vial.", "Bulk discount.", "Trade sale.", "50 test vials.", "A treatment room."]) {
+  check(`wholesale allows ${JSON.stringify(text)}`, !caught("wholesale", text));
+}
+
+// Every match, not just the first of each rule; the same word twice is reported once.
+const many = checkBrandCopy("gym", ["juice and more juice", "pin it, jab it"], "copy.ts");
+check("reports every match", many.length === 3, JSON.stringify(many));
+check("names the field", many.every((v) => v.field === "copy.ts"));
+check("no cross-string match", checkBrandCopy("gym", ["Sodium chloride 0.9% w/v", "Preservative"]).length === 0);
+
+let unknownThrew = false;
+try {
+  brandRules("nope" as BrandId);
+} catch {
+  unknownThrew = true;
+}
+check("an unknown brand has no rules to fall back on", unknownThrew);
 
 // ── Structure: guides ───────────────────────────────────────────────────
 check("accepts a valid guide", checkGuideStructure(validGuide(), OTHERS).length === 0);
