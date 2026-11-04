@@ -6,6 +6,7 @@
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
+import { wholesaleCatalogue } from "./catalogue";
 
 export function wholesaleProfile(): BrandProfile {
   return {
@@ -42,5 +43,6 @@ export function wholesaleProfile(): BrandProfile {
       "Sold as a laboratory reagent. Not a medicine and not a medical device. No therapeutic claim is made.",
     packingSlipThankYou: "Thank you for your order.",
     legalName: "",
+    catalogue: wholesaleCatalogue,
   };
 }
