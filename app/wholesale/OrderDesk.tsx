@@ -158,8 +158,29 @@ export function OrderDesk() {
     const root = document.documentElement;
     const before = root.style.overflow;
     root.style.overflow = "hidden";
+    // A modal sheet: Escape closes it, and Tab wraps inside it.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeSheet();
+      if (e.key === "Escape") {
+        closeSheet();
+        return;
+      }
+      if (e.key !== "Tab" || !summaryRef.current) return;
+      const focusable = [
+        ...summaryRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex="-1"]'
+        ),
+      ].filter((el) => el.offsetParent !== null || el === sheetHeading.current);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !summaryRef.current.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !summaryRef.current.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
