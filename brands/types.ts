@@ -20,6 +20,14 @@ export type BrandId = (typeof BRAND_IDS)[number];
 /** The brand every existing row and unknown host belongs to. */
 export const DEFAULT_BRAND: BrandId = "baclab";
 
+/**
+ * Every payment provider a brand checkout can take payment through
+ * (lib/commerce/payments). Never Stripe: that is BacLab's account, on
+ * BacLab's own checkout. A new provider gets an id here and an adapter there.
+ */
+export const BRAND_PAYMENT_PROVIDERS = ["paypal"] as const;
+export type BrandPaymentProviderId = (typeof BRAND_PAYMENT_PROVIDERS)[number];
+
 import type { DeliveryOption } from "@/config/funnel";
 
 /** Literal hex colours, for surfaces that cannot read CSS variables (email, print). */
@@ -128,15 +136,23 @@ export interface BrandProfile {
    */
   mailingList?: { consentText: string };
   /**
+   * The payment providers the brand's checkout may take payment through, in
+   * the order its buy section offers them (lib/commerce/payments). Each is
+   * used only while the brand's OWN credentials for it are set (there is no
+   * shared or fallback account of any kind), so a provider reaches a brand
+   * only by deliberate config: listed here and given credentials by the
+   * brand's id. Empty or unset: the brand takes no payment, its storefront
+   * shows no checkout button and its checkout answers 503. Never Stripe:
+   * BacLab's Stripe account is BacLab's alone.
+   */
+  paymentProviders?: readonly BrandPaymentProviderId[];
+  /**
    * How the brand takes payment, as its storefront and its legal pages
-   * describe it (lib/commerce/storefront.ts, lib/commerce/legal.ts). Unset:
-   * both stay method-neutral ("the payment methods shown at checkout") and
-   * name no provider.
-   *
-   * TODO(payments): the brands' payment methods are still being decided
-   * (an on-site crypto pay page, another processor, bank transfer, or a mix).
-   * Whoever builds that fills this in for each brand: nothing on a brand's
-   * pages may name a provider except through it.
+   * describe it (lib/commerce/storefront.ts, lib/commerce/legal.ts): one
+   * method per provider in paymentProviders, by the same id. Unset: both stay
+   * method-neutral ("the payment methods shown at checkout") and name no
+   * provider. Nothing on a brand's pages may name a provider except through
+   * it.
    */
   payment?: BrandPayment;
   /**
@@ -160,7 +176,7 @@ export interface BrandProfile {
 
 /** A way to pay, as the storefront and the terms describe it. */
 export interface BrandPaymentMethod {
-  /** Stable id, for the checkout request's `method` once it takes one. */
+  /** The provider's id in paymentProviders: the checkout request's `method`. */
   id: string;
   /** "Bank transfer": what the buy section shows. */
   label: string;

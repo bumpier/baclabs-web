@@ -19,8 +19,15 @@
 
 export interface StartCheckoutInput {
   lines: readonly { sku: string; qty: number }[];
-  /** Preselects one of the delivery options offered ("standard", "next_day"). */
+  /**
+   * The delivery option the buyer chose on this page ("standard",
+   * "next_day"). Required while more than one is offered for the order.
+   */
   deliveryOption?: string;
+  /** One of the view's payment.methods ids. Required while more than one is offered. */
+  method?: string;
+  /** A trade buyer's details, for a catalogue that asks (flags.businessDetails). Both optional. */
+  business?: { company?: string; vatNumber?: string };
   /** The cookie banner's answer at this moment (hasTrackingConsent()). */
   tracking: boolean;
 }
@@ -43,11 +50,9 @@ export async function startCheckout(input: StartCheckoutInput): Promise<StartChe
       body: JSON.stringify({
         lines: input.lines.map((l) => ({ sku: l.sku, qty: l.qty })),
         ...(input.deliveryOption ? { deliveryOption: input.deliveryOption } : {}),
+        ...(input.method ? { method: input.method } : {}),
+        ...(input.business && (input.business.company || input.business.vatNumber) ? { business: input.business } : {}),
         consent: { tracking: input.tracking },
-        // TODO(payments): the chosen payment method goes here as `method`
-        // (one of storefrontView's payment.methods ids), added to the input
-        // above, once BrandCheckoutSchema takes it. It is strict today and
-        // would refuse the field.
       }),
     });
     const data = (await res.json().catch(() => ({}))) as { url?: unknown; error?: unknown };

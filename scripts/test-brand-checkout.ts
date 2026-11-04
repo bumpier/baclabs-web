@@ -35,6 +35,7 @@ import { ledgerRow, packMix, packName, type LedgerOrder } from "@/lib/finance/le
 import { brandReorderOffer } from "@/lib/reorder";
 import { purchaseContents } from "@/lib/meta-capi-event";
 import { checkCompliance } from "@/lib/content-rules";
+import type { PaymentAdapter, PaymentOrder } from "@/lib/commerce/payments";
 
 let failures = 0;
 function check(name: string, condition: boolean, detail = "") {
@@ -318,8 +319,24 @@ for (const host of ["baclab.co.uk", "www.baclab.co.uk", "BACLAB.CO.UK:443", "loc
   check("BacLab: brandCheckout is called from that line only", src.split("brandCheckout(").length === 2);
 }
 
+/**
+ * A provider that takes nothing anywhere: it records each order it is asked
+ * to take payment for and answers with a page on a reserved test domain.
+ */
+function standInAdapter(asked: PaymentOrder[]): PaymentAdapter {
+  return {
+    id: "paypal",
+    label: "Stand-in",
+    configured: () => true,
+    createPayment: async (order) => {
+      asked.push(order);
+      return { url: `https://pay.example.test/approve/${asked.length}`, ref: `stand-in-${asked.length}` };
+    },
+  };
+}
+
 async function routeChecks() {
-  const { brandCheckout, CHECKOUT_UNAVAILABLE } = await import("@/lib/commerce/checkout");
+  const { brandCheckout, businessDetailsNote, CHECKOUT_UNAVAILABLE } = await import("@/lib/commerce/checkout");
   const saved = { ...process.env };
   // BacLab's Stripe fully configured, as in production: a brand must still
   // never come near it.
@@ -361,6 +378,36 @@ async function routeChecks() {
   check("brandCheckout: no way to pay is a 503, before any order is written", none.status === 503 && none.body.error === CHECKOUT_UNAVAILABLE);
   check("brandCheckout: the refusal names no provider or method", !/stripe|paypal|card/i.test(CHECKOUT_UNAVAILABLE));
 
+  // A stand-in provider, "configured" for every brand: what the profile
+  // lists still decides, and the request's choices are checked before any
+  // order is written (these would need the database past that point).
+  const { __registerTestPaymentAdapter, __clearTestPaymentAdapters, brandPaymentAdapters, choosePaymentAdapter } = await import("@/lib/commerce/payments");
+  __registerTestPaymentAdapter(standInAdapter([]));
+  check("providers: listed and configured is offered", brandPaymentAdapters(lux).map((a) => a.id).join() === "paypal");
+  check("providers: the gym lists none, so none is offered whatever is set", brandPaymentAdapters(brandFor("gym")).length === 0);
+  check("providers: BacLab is never offered one", brandPaymentAdapters(brandFor(DEFAULT_BRAND)).length === 0);
+  const two = { ...lux, paymentProviders: ["paypal", "paypal"] as const };
+  check("providers: a provider listed twice is offered once", brandPaymentAdapters(two).length === 1);
+  check("providers: the only one needs no method", choosePaymentAdapter(lux, undefined, "x").ok);
+  const gymPay = await answer(await post(brandFor("gym"), { lines: [{ sku: "GYM-10ML-X10", qty: 1 }] }));
+  check("brandCheckout: the gym is a 503 even with a provider configured", gymPay.status === 503 && gymPay.body.error === CHECKOUT_UNAVAILABLE);
+  const refusals: [string, BrandProfile, unknown, RegExp][] = [
+    ["a method the brand does not offer", lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], method: "stripe" }, /^That payment method is not available\.$/],
+    ["no delivery choice while there are two", brandFor("beauty"), { lines: [{ sku: "BEA-10ML-X1", qty: 1 }] }, /^Choose a delivery option\.$/],
+    ["business details on a consumer site", lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], business: { company: "Acme" } }, /Invalid order details/],
+    ["an unknown business field", brandFor("wholesale"), { lines: [{ sku: "WHL-10ML-X50", qty: 1 }], business: { iban: "x" } }, /Invalid order details/],
+  ];
+  for (const [what, b, body, re] of refusals) {
+    const r = await answer(await post(b, body));
+    check(`brandCheckout: ${what} is a 400`, r.status === 400 && re.test(r.body.error ?? ""), JSON.stringify(r));
+  }
+  check(
+    "business details: company and VAT into the notes",
+    businessDetailsNote({ company: "  Acme   Labs Ltd ", vatNumber: "GB123456789" }) === "Company: Acme Labs Ltd\nVAT number: GB123456789"
+  );
+  check("business details: nothing when none given", businessDetailsNote(undefined) === "" && businessDetailsNote({ company: "  " }) === "");
+  __clearTestPaymentAdapters();
+
   // Every brand's host, through the real route, with BacLab's Stripe keys
   // set: not one Stripe client is made. The route itself loads the SDK (for
   // BacLab), so this is the trap's word, not just the import graph's.
@@ -369,12 +416,13 @@ async function routeChecks() {
   let n = 0;
   for (const b of NEW_BRANDS) {
     const first = b.catalogue!.packs.find((p) => p.available)!;
+    const deliveryOption = catalogueDeliveryOptions(b.catalogue!, first.priceMinor)[0]!.option.id;
     const host = new URL(b.origin).host;
     const res = await route(
       new Request(`http://${host}/api/checkout`, {
         method: "POST",
         headers: { "content-type": "application/json", host, origin: `http://${host}`, "x-forwarded-for": `198.51.100.${++n}` },
-        body: JSON.stringify({ lines: [{ sku: first.sku, qty: 1 }] }),
+        body: JSON.stringify({ lines: [{ sku: first.sku, qty: 1 }], deliveryOption }),
       })
     );
     check(`no Stripe: ${b.id}'s checkout is answered without BacLab's`, res.status === 503, String(res.status));
@@ -409,6 +457,14 @@ async function databaseChecks() {
   globalThis.fetch = (async () => {
     throw new Error("no network in test-brand-checkout");
   }) as typeof fetch;
+  const log = console.log;
+  const error = console.error;
+  console.log = (...a: unknown[]) => {
+    if (!String(a[0]).startsWith("[dev email]")) log(...a);
+  };
+  console.error = (...a: unknown[]) => {
+    if (!/fx rate fetch failed/.test(String(a[0]))) error(...a);
+  };
 
   const { prisma } = await import("@/lib/db");
   if ((await prisma.order.count()) > 0) {
@@ -454,7 +510,85 @@ async function databaseChecks() {
     check(`db: ${host} without a way to pay is a 503`, res.status === 503);
   }
   check("db: no order is written without a way to pay", (await prisma.order.count()) === 0);
+
+  // A stand-in provider for every brand: the gym still takes nothing.
+  const { __registerTestPaymentAdapter, __clearTestPaymentAdapters } = await import("@/lib/commerce/payments");
+  const { fulfillPaidOrder } = await import("@/lib/payments/fulfillment");
+  const { setInventoryMode } = await import("@/lib/inventory/mode");
+  const { receiveStock } = await import("@/lib/inventory/store");
+  const asked: PaymentOrder[] = [];
+  __registerTestPaymentAdapter(standInAdapter(asked));
+  const gymRes = await post("gym.localhost:3000", { lines: [{ sku: "GYM-10ML-X10", qty: 1 }] });
+  check("db: the gym takes no payment, whatever is configured", gymRes.status === 503 && (await prisma.order.count()) === 0);
+
+  // Legacy stock: luxury's 3-pack twice, by next day, the only option it offers.
+  const luxRes = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 2 }], consent: { tracking: false } });
+  const luxBody = (await luxRes.json()) as { url?: string; error?: string };
+  check("db: luxury checks out to the provider's page", luxRes.status === 200 && luxBody.url === "https://pay.example.test/approve/1", JSON.stringify(luxBody));
+  const luxOrder = await prisma.order.findFirst({ where: { brand: "luxury" } });
+  check("db: the order is luxury's, pending, priced from its catalogue", luxOrder?.status === "pending" && Number(luxOrder.totalAmount) === 43.98);
+  check("db: the order names its provider", luxOrder?.paymentProvider === "paypal" && luxOrder.paymentMethod === "paypal");
+  check("db: the order holds the provider's reference", luxOrder?.paymentRef === "stand-in-1");
+  check("db: the delivery is recorded at checkout", luxOrder?.deliveryOption === "next_day" && luxOrder.deliveryMinor === 0);
+  check("db: the provider is asked for the order as priced", asked[0]?.id === luxOrder?.id && asked[0]?.goodsMinor === 4398 && asked[0]?.lines.length === 1);
+  check("db: the provider is told the delivery", asked[0]?.delivery.id === "next_day" && asked[0]?.delivery.priceMinor === 0);
+  const paid = await fulfillPaidOrder(luxOrder!.id, { paymentRef: "capture-lux", provider: "paypal", deliveryMinor: 0, amountPaidMinor: 4398 });
+  const luxAfter = await prisma.order.findUnique({ where: { id: luxOrder!.id } });
+  check("db: fulfilment marks it paid, by its provider", !paid.alreadyPaid && luxAfter?.status === "paid" && luxAfter.paymentProvider === "paypal");
+  check("db: and keeps the brand", luxAfter?.brand === "luxury");
+  const vial = await prisma.product.findUniqueOrThrow({ where: { slug: "baclab-10ml" } });
+  check("db: the shared vials came off the shelf", vial.stock === 194, String(vial.stock));
+
+  // Beauty: two delivery options, so the buyer's choice is sent and charged.
+  const beaRes = await post("beauty.localhost:3000", { lines: [{ sku: "BEA-10ML-X1", qty: 1 }], deliveryOption: "standard" });
+  check("db: beauty checks out with the delivery it chose", beaRes.status === 200);
+  const bea = await prisma.order.findFirst({ where: { brand: "beauty" } });
+  check("db: the chosen delivery and its price are recorded", bea?.deliveryOption === "standard" && bea.deliveryMinor === 390, `${bea?.deliveryOption} ${bea?.deliveryMinor}`);
+
+  // Wholesale: the trade buyer's details go into the notes.
+  const whlRes = await post("wholesale.localhost:3000", {
+    lines: [{ sku: "WHL-10ML-X50", qty: 1 }],
+    business: { company: "Acme Labs Ltd", vatNumber: "GB123456789" },
+  });
+  check("db: wholesale checks out", whlRes.status === 200);
+  const whl = await prisma.order.findFirst({ where: { brand: "wholesale" } });
+  check("db: company and VAT number in the notes", !!whl?.notes?.includes("Company: Acme Labs Ltd") && !!whl.notes.includes("VAT number: GB123456789"), String(whl?.notes));
+
+  // A provider that refuses: the order stays unpaid, with nothing attached.
+  __registerTestPaymentAdapter({ ...standInAdapter([]), createPayment: async () => Promise.reject(new Error("refused")) });
+  const refused = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
+  check("db: a provider's refusal is a 502", refused.status === 502);
+  check("db: and leaves the order unpaid, with no payment attached", (await prisma.order.count({ where: { brand: "luxury", paymentRef: null, status: "pending" } })) === 1);
+  __registerTestPaymentAdapter(standInAdapter(asked));
+
+  // Warehouse mode: the pack is allocated as its kit, from the shared vials and the brand's boxes.
+  const warehouse = await prisma.warehouse.create({ data: { code: "MAIN", name: "Main" } });
+  const shelf = await prisma.location.create({ data: { warehouseId: warehouse.id, code: "A1" } });
+  for (const [code, quantity] of [[VIAL_SKU_CODE, 40], ["LUX-BOX", 5]] as const) {
+    const sku = await prisma.sku.findUniqueOrThrow({ where: { code } });
+    await receiveStock({ skuId: sku.id, locationId: shelf.id, quantity, reference: "test", actor: "test" });
+  }
+  await setInventoryMode("warehouse");
+  const shelfRes = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 2 }] });
+  check("db: luxury checks out against the shelves", shelfRes.status === 200);
+  const tooMany = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 6 }] });
+  check("db: the brand's boxes limit what it can sell", tooMany.status === 409);
+  const shelfOrder = await prisma.order.findFirst({ where: { brand: "luxury", paymentRef: `stand-in-${asked.length}` } });
+  await fulfillPaidOrder(shelfOrder!.id, { paymentRef: "capture-shelf", provider: "paypal", deliveryMinor: 0 });
+  const picks = await prisma.pickLine.findMany({ where: { orderId: shelfOrder!.id }, include: { sku: true } });
+  const picked = Object.fromEntries(picks.map((p) => [p.sku.code, p.quantity]));
+  check("db: allocated as 6 shared vials and 2 brand boxes", picked[VIAL_SKU_CODE] === 6 && picked["LUX-BOX"] === 2, JSON.stringify(picked));
+  await setInventoryMode("legacy");
+  __clearTestPaymentAdapters();
+
+  // The confirmations go out after fulfilment answers; wait for them.
+  for (let i = 0; i < 60 && (await prisma.emailLog.count({ where: { type: "confirmation" } })) < 2; i++) {
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  check("db: each paid order is confirmed by email", (await prisma.emailLog.count({ where: { type: "confirmation" } })) === 2);
   check("db: and no Stripe client is made", stripeClientsMade() === made);
+  console.log = log;
+  console.error = error;
   await prisma.$disconnect();
 }
 

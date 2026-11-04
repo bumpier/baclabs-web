@@ -21,8 +21,9 @@ import { priceBasket, type BasketLine } from "@/lib/commerce/view";
  * pressed back on the payment page). `error` is the checkout's own sentence,
  * ready to show in a role="alert" region.
  *
- * TODO(payments): a payment-method choice passes its id through `opts` to
- * startCheckout once the checkout takes a `method` (see start-checkout.ts).
+ * `opts` carries what the buyer chose on the page: the delivery option, the
+ * payment method (one of the view's payment.methods) and, on a trade site,
+ * their business details.
  */
 export function useBrandCheckout() {
   const cart = useCart();
@@ -39,7 +40,14 @@ export function useBrandCheckout() {
 
   const { lines: basket, storefront } = cart;
   const checkout = useCallback(
-    async (opts: { lines?: readonly BasketLine[]; deliveryOption?: string } = {}) => {
+    async (
+      opts: {
+        lines?: readonly BasketLine[];
+        deliveryOption?: string;
+        method?: string;
+        business?: { company?: string; vatNumber?: string };
+      } = {}
+    ) => {
       const lines = opts.lines ?? basket;
       const priced = priceBasket(storefront, lines);
       if (priced.items.length === 0) {
@@ -65,6 +73,8 @@ export function useBrandCheckout() {
       const result = await startCheckout({
         lines: priced.items.map((i) => ({ sku: i.sku, qty: i.qty })),
         deliveryOption: opts.deliveryOption,
+        method: opts.method,
+        business: opts.business,
         tracking: hasTrackingConsent(),
       });
       if (!result.ok) {

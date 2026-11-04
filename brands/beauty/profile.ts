@@ -50,6 +50,9 @@ export function beautyProfile(): BrandProfile {
     },
     // TODO(launch): the final name's statement descriptor.
     statementDescriptor: "AURELLE",
+    // PayPal, on this brand's own account (PAYPAL_*__BEAUTY; see
+    // deploy/BRAND-PAYMENTS.md). A card processor joins once one approves it.
+    paymentProviders: ["paypal"],
     catalogue: beautyCatalogue,
   };
 }

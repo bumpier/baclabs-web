@@ -5,7 +5,8 @@
  * carries its own packs and prices and nothing else: no other brand, no
  * profile, nothing from config/.
  *
- * SERVER CODE: it reads config/funnel.ts (the Lab Kit's switch and parts).
+ * SERVER CODE: it reads config/funnel.ts (the Lab Kit's switch and parts)
+ * and whether the brand's payment credentials are set (never their values).
  * What it returns is plain, serialisable data. BacLab has no catalogue and
  * never comes here; its storefront is config/funnel.ts as it always was.
  */
@@ -13,6 +14,7 @@ import type { BrandProfile } from "@/brands/types";
 import { labKitContents, labKitEnabled } from "@/config/funnel";
 import { packPerVialMinor } from "@/lib/commerce/catalogue";
 import { MAX_BRAND_LINES, MAX_LINE_QTY } from "@/lib/commerce/pricing";
+import { brandPaymentAdapters } from "@/lib/commerce/payments";
 import type { StorefrontView } from "@/lib/commerce/view";
 
 export function storefrontView(brand: BrandProfile): StorefrontView {
@@ -55,8 +57,18 @@ export function storefrontView(brand: BrandProfile): StorefrontView {
     },
     limits: { maxVials: catalogue.maxVials, maxLineQty: MAX_LINE_QTY, maxLines: MAX_BRAND_LINES },
     flags: { businessDetails: catalogue.collectBusinessDetails, promotionCodes: catalogue.allowPromotionCodes },
-    // TODO(payments): empty for every brand until BrandProfile.payment is set.
-    payment: { methods: (brand.payment?.methods ?? []).map((m) => ({ id: m.id, label: m.label, terms: m.terms })) },
+    // What the checkout will take right now: the profile's providers that
+    // have the brand's own credentials (lib/commerce/payments), in the
+    // profile's words when it has some. Empty, the storefront shows no
+    // checkout button at all. Read where the view is built: the brand's
+    // pages are prerendered and revalidated, so credentials set or removed
+    // show from the next render.
+    payment: {
+      methods: brandPaymentAdapters(brand).map((adapter) => {
+        const words = brand.payment?.methods.find((m) => m.id === adapter.id);
+        return { id: adapter.id, label: words?.label ?? adapter.label, terms: words?.terms ?? "" };
+      }),
+    },
     tracking: { ga4Id: brand.analytics?.ga4Id?.trim() || null },
     mailingList: brand.mailingList ? { consentText: brand.mailingList.consentText } : null,
   };

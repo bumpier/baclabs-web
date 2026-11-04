@@ -80,14 +80,15 @@ export interface StorefrontView {
   /** What one order may hold; the checkout refuses anything past them. */
   limits: { maxVials: number; maxLineQty: number; maxLines: number };
   flags: {
-    /** The checkout asks trade buyers for a company name and VAT number. */
+    /** Trade buyers may give a company name and VAT number with the order (the checkout's `business`). */
     businessDetails: boolean;
     /** The checkout takes promotion codes. */
     promotionCodes: boolean;
   };
   /**
-   * How the brand takes payment. Empty until its methods are configured
-   * (TODO(payments) in brands/types.ts): show nothing method-specific then.
+   * The ways the checkout will take payment right now, in the order to offer
+   * them. Empty: the brand takes no payment, so show no checkout button and
+   * nothing method-specific. With several, the order names one (`method`).
    */
   payment: { methods: PaymentMethodView[] };
   /** The brand's own GA4 property. null: none. Its Meta pixel is resolved per request (/api/pixel). */

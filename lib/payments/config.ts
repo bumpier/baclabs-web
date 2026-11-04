@@ -3,9 +3,20 @@
 // present (or, in development, falls back to the /dev/* simulators).
 
 import { GATEWAY_PROVIDER } from "@/lib/crypto-gateway";
+import type { BrandPaymentProviderId } from "@/brands/types";
 
 export type PaymentMethodId = "card" | "btc" | "eth" | "usdt" | "xmr";
-export type PaymentProvider = "stripe" | typeof GATEWAY_PROVIDER;
+/**
+ * Order.paymentProvider. "stripe" and the crypto gateway are BacLab's; the
+ * brands' providers (lib/commerce/payments) are never BacLab's and BacLab
+ * never uses them.
+ */
+export type PaymentProvider = "stripe" | typeof GATEWAY_PROVIDER | BrandPaymentProviderId;
+
+/** A stored provider id as staff read it. BacLab's ids stay as stored. */
+export function providerLabel(provider: string | null): string {
+  return provider === "paypal" ? "PayPal" : (provider ?? "—");
+}
 
 export interface ProviderState {
   enabled: boolean; // the env flag

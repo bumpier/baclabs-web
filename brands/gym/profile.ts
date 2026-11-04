@@ -50,6 +50,14 @@ export function gymProfile(): BrandProfile {
     },
     // TODO(launch): the final name's statement descriptor.
     statementDescriptor: "BRUTE LAB",
+    // None, on purpose: checkout stays off until a specialist high-risk
+    // processor takes this brand on, with its copy disclosed. Never PayPal,
+    // and never an account another brand uses: PayPal's Acceptable Use
+    // Policy bans what this brand's coded copy alludes to (the wording is
+    // quoted in deploy/BRAND-PAYMENTS.md), so a freeze over it would take
+    // every brand on that account down with it. An empty list wins over any
+    // credentials in env.
+    paymentProviders: [],
     catalogue: gymCatalogue,
   };
 }

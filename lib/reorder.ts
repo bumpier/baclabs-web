@@ -99,7 +99,7 @@ export interface BrandReorderOffer {
   lines: BrandRequestLine[];
   vials: number;
   goodsMinor: number;
-  /** What the option Stripe's page would preselect costs; 0 when it ships free. */
+  /** What the option the brand's buy section preselects costs; 0 when it ships free. */
   deliveryMinor: number;
   shipsFree: boolean;
   /** The service that goes free over the threshold ("next-day delivery"), else "UK delivery". */

@@ -107,7 +107,7 @@ export function priceBrandLines(
   }
   if (kits > vials) return { ok: false, error: INVALID };
 
-  // Packs in the catalogue's own order, so the order record, Stripe's page
+  // Packs in the catalogue's own order, so the order record, the provider's page
   // and the receipt list them the way the storefront does.
   const rank = (sku: string) => catalogue.packs.findIndex((p) => p.sku === sku);
   packs.sort((a, b) => rank(a.sku) - rank(b.sku));

@@ -47,6 +47,9 @@ export function wholesaleProfile(): BrandProfile {
     // vial), so its signups are refused.
     // TODO(launch): the final name's statement descriptor.
     statementDescriptor: "VIALHOUSE",
+    // PayPal, on this brand's own account (PAYPAL_*__WHOLESALE; see
+    // deploy/BRAND-PAYMENTS.md). A card processor joins once one approves it.
+    paymentProviders: ["paypal"],
     catalogue: wholesaleCatalogue,
   };
 }

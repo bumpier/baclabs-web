@@ -50,6 +50,9 @@ export function luxuryProfile(): BrandProfile {
     },
     // TODO(launch): the final name's statement descriptor.
     statementDescriptor: "RESERVE NO10",
+    // PayPal, on this brand's own account (PAYPAL_*__LUXURY; see
+    // deploy/BRAND-PAYMENTS.md). A card processor joins once one approves it.
+    paymentProviders: ["paypal"],
     catalogue: luxuryCatalogue,
   };
 }

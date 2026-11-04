@@ -12,9 +12,11 @@ const vials = (n: number) => (n === 1 ? "1 vial" : `${n} vials`);
 
 /**
  * A plain buy section until the brand's design lands: choose a pack and a
- * count, add it to the basket, check out. Every figure comes from the
- * storefront view the root layout gave the basket; the checkout prices the
- * order again from the catalogue, and its answer is shown as it stands.
+ * count, add it to the basket, choose the delivery, check out. Every figure
+ * comes from the storefront view the root layout gave the basket; the
+ * checkout prices the order again from the catalogue, and its answer is
+ * shown as it stands. While the view lists no way to pay there is no
+ * checkout button at all.
  */
 export function BuySection() {
   const cart = useCart();
@@ -22,16 +24,32 @@ export function BuySection() {
   const { checkout, pending, error } = useBrandCheckout();
   const [sku, setSku] = useState<string | null>(storefront.packs.find((p) => p.available)?.sku ?? null);
   const [qty, setQty] = useState(1);
+  const [deliveryId, setDeliveryId] = useState<string | null>(null);
+  const [company, setCompany] = useState("");
+  const [vatNumber, setVatNumber] = useState("");
   const headingId = useId();
   const basketId = useId();
+  const deliveryName = useId();
+  const companyId = useId();
+  const vatId = useId();
 
   const empty = priced.items.length === 0;
   const delivery = deliveryQuote(storefront, priced.goodsMinor);
+  // The first option offered unless the buyer picked another that is still
+  // offered at this basket's value.
+  const chosen = delivery.find((d) => d.option.id === deliveryId) ?? delivery[0] ?? null;
   const shortfall = freeDeliveryShortfallMinor(storefront, priced.goodsMinor);
   const addOns = storefront.addOns.filter((a) => a.available);
   const quoteOnly = storefront.packs.some((p) => !p.available);
   const message = error ?? priced.problem;
   const methods = storefront.payment.methods;
+  const business = storefront.flags.businessDetails;
+  const pay = (method: string) =>
+    checkout({
+      deliveryOption: chosen?.option.id,
+      method,
+      ...(business ? { business: { company, vatNumber } } : {}),
+    });
 
   return (
     <section id="buy" aria-labelledby={headingId} className="mt-12 scroll-mt-8">
@@ -134,18 +152,57 @@ export function BuySection() {
               <dt>Subtotal</dt>
               <dd>{formatGbp(priced.goodsMinor)}</dd>
             </div>
-            {delivery.map(({ option, priceMinor }) => (
-              <div key={option.id} className="flex justify-between gap-4 text-ink-soft">
+            {delivery.length === 1 && chosen ? (
+              <div className="flex justify-between gap-4 text-ink-soft">
                 <dt>
-                  {option.label}: {option.detail}
+                  {chosen.option.label}: {chosen.option.detail}
                 </dt>
-                <dd>{priceMinor === 0 ? "Free" : formatGbp(priceMinor)}</dd>
+                <dd>{chosen.priceMinor === 0 ? "Free" : formatGbp(chosen.priceMinor)}</dd>
               </div>
-            ))}
+            ) : null}
           </dl>
+        ) : null}
+        {!empty && delivery.length > 1 ? (
+          <fieldset className="mt-4 space-y-2 text-sm">
+            <legend className="font-semibold text-ink">Delivery</legend>
+            {delivery.map(({ option, priceMinor }) => (
+              <label key={option.id} className="flex items-baseline justify-between gap-4 text-ink-soft">
+                <span className="flex items-baseline gap-2">
+                  <input
+                    type="radio"
+                    name={deliveryName}
+                    value={option.id}
+                    checked={chosen?.option.id === option.id}
+                    onChange={() => setDeliveryId(option.id)}
+                  />
+                  <span>
+                    {option.label}: {option.detail}
+                  </span>
+                </span>
+                <span>{priceMinor === 0 ? "Free" : formatGbp(priceMinor)}</span>
+              </label>
+            ))}
+          </fieldset>
         ) : null}
         {!empty && shortfall !== null ? (
           <p className="mt-3 text-sm text-ink-soft">{formatGbp(shortfall)} more and delivery is free.</p>
+        ) : null}
+
+        {!empty && business && methods.length > 0 ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor={companyId} className="label">
+                Company name (optional)
+              </label>
+              <input id={companyId} className="field" value={company} maxLength={100} onChange={(e) => setCompany(e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor={vatId} className="label">
+                VAT number (optional)
+              </label>
+              <input id={vatId} className="field" value={vatNumber} maxLength={30} onChange={(e) => setVatNumber(e.target.value)} />
+            </div>
+          </div>
         ) : null}
 
         {message ? (
@@ -154,17 +211,34 @@ export function BuySection() {
           </p>
         ) : null}
 
-        <button
-          type="button"
-          className="btn-cta mt-5 w-full"
-          disabled={empty || pending}
-          aria-busy={pending}
-          onClick={() => checkout()}
-        >
-          {pending ? "Going to checkout…" : "Checkout"}
-        </button>
-        {methods.length > 0 ? (
-          <p className="mt-3 text-sm text-ink-soft">Pay by {methods.map((m) => m.label).join(", ")}.</p>
+        {methods.length === 1 ? (
+          <>
+            <button
+              type="button"
+              className="btn-cta mt-5 w-full"
+              disabled={empty || pending}
+              aria-busy={pending}
+              onClick={() => pay(methods[0]!.id)}
+            >
+              {pending ? "Going to checkout…" : "Checkout"}
+            </button>
+            <p className="mt-3 text-sm text-ink-soft">Pay by {methods[0]!.label}.</p>
+          </>
+        ) : methods.length > 1 ? (
+          <div className="mt-5 space-y-3">
+            {methods.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className="btn-cta w-full"
+                disabled={empty || pending}
+                aria-busy={pending}
+                onClick={() => pay(m.id)}
+              >
+                {pending ? "Going to checkout…" : `Pay by ${m.label}`}
+              </button>
+            ))}
+          </div>
         ) : null}
       </section>
     </section>

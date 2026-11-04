@@ -22,6 +22,7 @@ import { brandFor, type BrandProfile } from "@/brands/registry";
 import { BRAND_IDS, type BrandId } from "@/brands/types";
 import { checkBrandCopy } from "@/lib/content-rules";
 import { storefrontView } from "@/lib/commerce/storefront";
+import { __clearTestPaymentAdapters, __registerTestPaymentAdapter } from "@/lib/commerce/payments";
 import { deliveryQuote, freeDeliveryShortfallMinor, packSavingMinor, priceBasket } from "@/lib/commerce/view";
 import { priceBrandLines } from "@/lib/commerce/pricing";
 import { catalogueDeliveryOptions } from "@/lib/commerce/catalogue";
@@ -72,6 +73,18 @@ for (const id of BRANDS) {
   for (const pack of view.packs) check(`${id}: ${pack.sku} saves nothing negative`, packSavingMinor(view, pack) >= 0);
 }
 check("wholesale runs no list", storefrontView(profiles.wholesale!).mailingList === null);
+// A provider with credentials is offered, in the profile's words when it
+// has some; the gym lists none, so it is offered none whatever is set.
+__registerTestPaymentAdapter({ id: "paypal", label: "Stand-in", configured: () => true, createPayment: () => Promise.reject(new Error("never")) });
+for (const id of BRANDS) {
+  const methods = storefrontView(profiles[id]!).payment.methods;
+  const listed = profiles[id]!.paymentProviders ?? [];
+  check(`${id}: the view offers what is listed and configured`, methods.map((m) => m.id).join() === listed.join(), JSON.stringify(methods));
+  const words = profiles[id]!.payment?.methods.find((m) => m.id === "paypal");
+  if (methods[0]) check(`${id}: the method is in the profile's words`, methods[0].label === (words?.label ?? "Stand-in") && methods[0].terms === (words?.terms ?? ""));
+}
+check("the gym is offered no way to pay", storefrontView(profiles.gym!).payment.methods.length === 0);
+__clearTestPaymentAdapters();
 let threw = false;
 try {
   storefrontView(brandFor("baclab"));
