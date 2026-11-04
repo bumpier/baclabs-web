@@ -6,15 +6,16 @@ import { OrderStatusWatcher } from "@/components/commerce/OrderStatusWatcher";
 import { PurchaseTracker } from "@/components/commerce/PurchaseTracker";
 import { brandOrderView, returnedFromPayment } from "@/lib/commerce/order-view";
 import { formatGbp } from "@/lib/commerce/view";
+import { Seal } from "@/brands/luxury/components/Marks";
 import { ORDER } from "@/brands/luxury/copy/order";
 import { brand } from "../../site";
 
 /**
- * The order confirmation, set like the batch card: the order on an ivory
- * card with a double gold rule. The order is loaded on the server and shown
- * only if it is this brand's: any other order id, BacLab's included, is this
- * site's 404 (brandOrderView). Per request, never cached: it shows one
- * customer's order.
+ * The order confirmation, set as the card that goes in the box: the order
+ * on chalk, closed with the house seal across its top edge. The order is
+ * loaded on the server and shown only if it is this brand's: any other order
+ * id, BacLab's included, is this site's 404 (brandOrderView). Per request,
+ * never cached: it shows one customer's order.
  *
  * While the order is pending the page keeps itself current
  * (OrderStatusWatcher); once it is paid the purchase is reported once
@@ -57,69 +58,72 @@ export default async function OrderConfirmationPage({
   const parcel = order.parcel;
 
   return (
-    <main id="main" className="rx-wrap rx-page">
+    <main id="main" className="rv-wrap rv-page">
       <OrderStatusWatcher orderId={order.id} status={order.status} />
       {order.tracker ? <PurchaseTracker {...order.tracker} /> : null}
       <ClearBasket when={order.paid} />
 
-      <div className="max-w-2xl">
-        <div role="status">
-          <h1 className="rx-page__heading">{heading}</h1>
-          <p className="rx-page__lede">{status}</p>
+      <div className="rv-order">
+        <div role="status" className="rv-order__head">
+          <h1 className="rv-page__heading">{heading}</h1>
+          <p className="rv-page__lede">{status}</p>
         </div>
 
-        <dl className="rx-card rx-frame rx-frame--ivory">
-          <div className="rx-card__meta">
-            <div>
-              <dt className="inline">{ORDER.number} </dt>
-              <dd className="inline text-ink">{order.id}</dd>
+        <div className="rv-card">
+          <Seal className="rv-card__seal" />
+          <dl>
+            <div className="rv-card__meta">
+              <div>
+                <dt className="inline">{ORDER.number} </dt>
+                <dd className="inline">{order.id}</dd>
+              </div>
+              <div>
+                <dt className="sr-only">{ORDER.placed}</dt>
+                <dd>
+                  <time dateTime={order.placedAt}>{order.placedText}</time>
+                </dd>
+              </div>
             </div>
-            <div>
-              <dt className="sr-only">{ORDER.placed}</dt>
-              <dd>
-                <time dateTime={order.placedAt}>{order.placedText}</time>
-              </dd>
+            {order.lines.map((line, i) => (
+              <div key={i} className="rv-card__row">
+                <dt>
+                  {line.name} × {line.qty}
+                  {line.detail ? <span className="rv-card__detail">{line.detail}</span> : null}
+                </dt>
+                <dd>{line.totalMinor === null ? ORDER.free : formatGbp(line.totalMinor)}</dd>
+              </div>
+            ))}
+            {deliveryMinor !== null && deliveryMinor >= 0 ? (
+              <div className="rv-card__row">
+                <dt>{ORDER.delivery}</dt>
+                <dd>{deliveryMinor === 0 ? ORDER.free : formatGbp(deliveryMinor)}</dd>
+              </div>
+            ) : null}
+            <div className="rv-card__row rv-card__total">
+              <dt>{order.paidMinor !== null ? ORDER.totalPaid : ORDER.total}</dt>
+              <dd>{formatGbp(order.paidMinor ?? order.goodsMinor)}</dd>
             </div>
-          </div>
-          {order.lines.map((line, i) => (
-            <div key={i} className="rx-card__row">
-              <dt>
-                {line.name} × {line.qty}
-                {line.detail ? <span className="block text-sm text-ink-soft">{line.detail}</span> : null}
-              </dt>
-              <dd>{line.totalMinor === null ? ORDER.free : formatGbp(line.totalMinor)}</dd>
-            </div>
-          ))}
-          {deliveryMinor !== null && deliveryMinor >= 0 ? (
-            <div className="rx-card__row">
-              <dt>{ORDER.delivery}</dt>
-              <dd>{deliveryMinor === 0 ? ORDER.free : formatGbp(deliveryMinor)}</dd>
-            </div>
-          ) : null}
-          <div className="rx-card__row rx-card__total">
-            <dt>{order.paidMinor !== null ? ORDER.totalPaid : ORDER.total}</dt>
-            <dd>{formatGbp(order.paidMinor ?? order.goodsMinor)}</dd>
-          </div>
-        </dl>
+          </dl>
+        </div>
 
         {order.sent && parcel ? (
-          <section aria-labelledby="parcel-heading" className="mt-14">
-            <h2 id="parcel-heading" className="rx-section-heading">
+          <section aria-labelledby="parcel-heading" className="mt-16">
+            <h2 id="parcel-heading" className="rv-section-heading">
               {ORDER.parcelHeading}
             </h2>
-            <dl className="mt-5 space-y-2 text-ink-soft">
+            <dl className="rv-parcel">
               {parcel.carrier ? (
                 <div>
                   <dt className="inline">{ORDER.sentBy} </dt>
-                  <dd className="inline text-ink">{parcel.carrier}</dd>
+                  <dd className="inline">{parcel.carrier}</dd>
                 </div>
               ) : null}
               {parcel.trackingNumber ? (
                 <div>
                   <dt className="inline">{ORDER.trackingNumber} </dt>
-                  <dd className="inline text-ink">
+                  <dd className="inline">
                     {parcel.trackingUrl ? (
-                      <a href={parcel.trackingUrl} target="_blank" rel="noopener noreferrer" className="rx-link">
+                      <a href={parcel.trackingUrl} target="_blank" rel="noopener noreferrer" className="rv-link">
                         {parcel.trackingNumber}
                       </a>
                     ) : (
@@ -131,34 +135,34 @@ export default async function OrderConfirmationPage({
               {parcel.latest ? (
                 <div>
                   <dt className="inline">{ORDER.latest} </dt>
-                  <dd className="inline text-ink">{parcel.latest}</dd>
+                  <dd className="inline">{parcel.latest}</dd>
                 </div>
               ) : null}
               {parcel.deliveredText ? (
                 <div>
                   <dt className="inline">{ORDER.delivered} </dt>
-                  <dd className="inline text-ink">{parcel.deliveredText}</dd>
+                  <dd className="inline">{parcel.deliveredText}</dd>
                 </div>
               ) : parcel.sentText ? (
                 <div>
                   <dt className="inline">{ORDER.sent} </dt>
-                  <dd className="inline text-ink">{parcel.sentText}</dd>
+                  <dd className="inline">{parcel.sentText}</dd>
                 </div>
               ) : null}
             </dl>
           </section>
         ) : order.paid || order.confirming ? (
-          <section aria-labelledby="next-heading" className="mt-14">
-            <h2 id="next-heading" className="rx-section-heading">
+          <section aria-labelledby="next-heading" className="mt-16">
+            <h2 id="next-heading" className="rv-section-heading">
               {ORDER.nextHeading}
             </h2>
-            <ol className="rx-steps">
+            <ol className="rv-steps">
               <li>
                 {ORDER.next.email}
                 {order.customerEmail ? (
                   <>
                     {" "}
-                    {ORDER.next.to} <span className="font-medium text-ink">{order.customerEmail}</span>
+                    {ORDER.next.to} <span className="font-medium">{order.customerEmail}</span>
                   </>
                 ) : null}
                 .
@@ -176,15 +180,15 @@ export default async function OrderConfirmationPage({
           </section>
         ) : null}
 
-        <p className="mt-14 text-ink-soft">
+        <p className="mt-16 text-smoke">
           {ORDER.help}{" "}
-          <Link href="/contact" className="rx-link">
+          <Link href="/contact" className="rv-link">
             {ORDER.helpLink}
           </Link>{" "}
           {ORDER.helpTail}
         </p>
-        <p className="mt-5">
-          <Link href="/" className="rx-link">
+        <p className="mt-4">
+          <Link href="/" className="rv-link">
             {ORDER.home}
           </Link>
         </p>

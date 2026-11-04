@@ -1,37 +1,52 @@
 import Link from "next/link";
-import { NAV } from "@/brands/luxury/copy/site";
-import { BasketCount } from "./BasketCount";
-import { brand } from "./site";
+import { Wordmark } from "@/brands/luxury/components/Marks";
+import { ANNOUNCE, NAV } from "@/brands/luxury/copy/site";
+import { serviceFacts } from "@/brands/luxury/service";
+import { BagButton } from "./Bag";
+import { brand, STOREFRONT } from "./site";
 
 /**
- * Every page's header: the skip link, the wordmark home and two ways in, to
- * the order (the home page's buy section, #buy) and to the concierge. A
- * server component; only the basket count beside "Order" runs in the browser.
+ * Every page's top: one line of the delivery every order gets (from the
+ * catalogue, through brands/luxury/service.ts), then the header, which stays
+ * at the top as the page scrolls. The wordmark sits in the centre; a few
+ * words either side; the bag on the right opens the drawer (app/luxury/
+ * Bag.tsx). A server component: only the bag button runs in the browser.
  */
 export function SiteHeader() {
+  const facts = serviceFacts(STOREFRONT);
   return (
-    <header className="rx-header">
-      <a href="#main" className="rx-skip">
+    <>
+      <a href="#main" className="rv-skip">
         {NAV.skip}
       </a>
-      <div className="rx-wrap rx-header__inner">
-        <Link href="/" className="rx-wordmark">
-          {brand.name}
-        </Link>
-        <nav aria-label={NAV.label} className="rx-nav">
-          <ul>
+      {facts ? (
+        <div className="rv-announce">
+          <p>{ANNOUNCE(facts)}</p>
+        </div>
+      ) : null}
+      <header className="rv-header">
+        <nav aria-label={NAV.label} className="rv-header__inner">
+          <ul className="rv-header__links">
             <li>
-              <Link href="/#buy">
-                {NAV.order}
-                <BasketCount />
-              </Link>
+              <Link href="/#buy">{NAV.shop}</Link>
+            </li>
+            <li className="rv-wide-only">
+              <Link href="/#house">{NAV.house}</Link>
+            </li>
+          </ul>
+          <Link href="/" className="rv-header__mark" aria-label={NAV.home(brand.name)}>
+            <Wordmark className="rv-header__wordmark" />
+          </Link>
+          <ul className="rv-header__links rv-header__links--end">
+            <li className="rv-wide-only">
+              <Link href="/contact">{NAV.concierge}</Link>
             </li>
             <li>
-              <Link href="/contact">{NAV.concierge}</Link>
+              <BagButton />
             </li>
           </ul>
         </nav>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }

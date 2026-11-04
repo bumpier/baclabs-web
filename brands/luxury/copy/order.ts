@@ -1,5 +1,5 @@
 /**
- * The order confirmation page. Every status line says only what the order
+ * The order confirmation, set as the card in the box. Every status line says only what the order
  * record shows (lib/commerce/order-view.ts); nothing here promises a time
  * the order does not carry.
  */
@@ -21,7 +21,7 @@ export const ORDER = {
   },
   number: "Order",
   placed: "Placed",
-  free: "Included",
+  free: "Complimentary",
   delivery: "Delivery",
   totalPaid: "Total paid",
   total: "Total",
@@ -45,5 +45,5 @@ export const ORDER = {
   help: "Something not right?",
   helpLink: "Write to the concierge",
   helpTail: "quoting your order number.",
-  home: "Back to the home page",
+  home: "Return to the home page",
 };

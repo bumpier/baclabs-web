@@ -28,12 +28,12 @@ export const dynamic = "force-dynamic";
 export default async function PrivacyPage() {
   const doc = brandPrivacy(brand, await brandTrackingFacts(brand));
   return (
-    <main id="main" className="rx-wrap rx-page">
+    <main id="main" className="rv-wrap rv-page">
       <JsonLd data={breadcrumbSchema(TITLE, PATH, brand.id)} />
-      <div className="max-w-3xl">
+      <div className="rv-legal">
         <LegalPage identity={legalIdentity(brand)} doc={doc} classNames={LEGAL_CLASSES} />
-        <p className="mt-6 text-sm">
-          <CookieSettingsButton ga4Id={STOREFRONT.tracking.ga4Id} className="rx-link">
+        <p className="rv-legal__foot">
+          <CookieSettingsButton ga4Id={STOREFRONT.tracking.ga4Id} className="rv-link">
             {FOOTER.cookies}
           </CookieSettingsButton>
         </p>

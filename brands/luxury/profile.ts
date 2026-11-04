@@ -1,7 +1,7 @@
 /**
  * Reserve No.10, the `luxury` brand. A skeleton: the name is a working name,
- * the palette (black and ivory with champagne gold) a placeholder for the
- * design work, and nothing here is live. Empty values render nothing, as
+ * the palette (claret and limestone, brands/luxury/styles.css) the house's, and
+ * nothing here is live. Empty values render nothing, as
  * everywhere else.
  */
 import hosts from "../hosts.json";
@@ -21,17 +21,17 @@ export function luxuryProfile(): BrandProfile {
     domains: [...hosts.luxury],
     logo: "/icon.svg",
     colours: {
-      paper: "#FBF8F1",
-      surface: "#FFFFFF",
-      neutral: "#F2EDE2",
-      ink: "#0D0D0D",
-      inkSoft: "#55504A",
-      line: "#E3DBCB",
-      primary: "#8C6D2F",
-      cta: "#0D0D0D",
-      header: "#0D0D0D",
-      onHeader: "#F4EBD7",
-      onCta: "#FBF8F1",
+      paper: "#E4E1DC",
+      surface: "#F2EFEB",
+      neutral: "#D9D5CF",
+      ink: "#1D1819",
+      inkSoft: "#5B5456",
+      line: "#CBC6C0",
+      primary: "#4A1424",
+      cta: "#4A1424",
+      header: "#4A1424",
+      onHeader: "#F1E9E6",
+      onCta: "#F1E9E6",
     },
     email: {
       // TODO(launch): a mailbox on the brand's own domain, verified in Resend.

@@ -1,154 +1,137 @@
 import Link from "next/link";
-import { SignupForm } from "@/components/commerce/SignupForm";
-import { BoxDrawing } from "@/brands/luxury/components/BoxDrawing";
-import { OpenBox } from "@/brands/luxury/components/OpenBox";
-import { BATCH_CARD, DAY, HERO, LETTERS } from "@/brands/luxury/copy/home";
+import { Seal } from "@/brands/luxury/components/Marks";
+import { artDirected, photoProps } from "@/brands/luxury/components/photo";
+import { CHAPTERS, CONCIERGE_BAND, HERO, PRODUCT } from "@/brands/luxury/copy/home";
+import { CHAPTER_ARRIVAL, CHAPTER_BOX, CHAPTER_HANDS, GALLERY, HERO_TALL, HERO_WIDE } from "@/brands/luxury/copy/images";
 import { serviceFacts } from "@/brands/luxury/service";
+import { Gallery } from "./Gallery";
+import { Purchase } from "./Purchase";
 import { brand, STOREFRONT } from "./site";
-import { BuySection } from "./BuySection";
 
 /**
- * The home page, and the whole of the funnel: few choices, one box, one
- * delivery, someone to write to.
+ * The house's one page of commerce, set like a maison's product page.
  *
- * The hero shows the box (drawn until there are photographs) and says what
- * it is in one line. Everything after it is "the order of the day": a
- * timetable of one working day, from choosing (by the cutoff, where the buy
- * section sits, at #buy) to the parcel at the door the next working day, to
- * the concierge. The times and the delivery words come from the catalogue
- * through the storefront view (brands/luxury/service.ts), so the page never
- * promises what the checkout does not sell.
+ *  1. The hero: the box in a photograph the width of the screen, and one
+ *     line over it.
+ *  2. The product (#buy, where an unfinished payment returns): a column of
+ *     tall photographs (box closed, box open with the vial, the seal and
+ *     card, the vial itself) beside a sticky purchase column. On a phone
+ *     the photographs become a strip to swipe, above the column.
+ *  3. Three chapters (#house), photograph and short text in turn, the width
+ *     of the page: the box, the packing, the arrival.
+ *  4. The concierge, then the footer.
  *
- * Left out on purpose: promotions, codes, popups, plans and any countdown.
- * The gift option and its note are part of the order, in the buy section.
+ * Delivery is the catalogue's, through brands/luxury/service.ts. Left out
+ * on purpose: promotions, codes, popups, plans and any countdown.
  */
 export default function Home() {
   const facts = serviceFacts(STOREFRONT);
-  const list = STOREFRONT.mailingList;
-  const card = BATCH_CARD !== "";
+  const hero = artDirected(HERO_WIDE, HERO_TALL, "100vw");
+  const gallery = GALLERY.map((p) => photoProps(p, { sizes: "(min-width: 960px) 52vw, 86vw" }));
+  const half = "(min-width: 960px) 60vw, 100vw";
 
   return (
     <main id="main">
-      <div className="rx-wrap">
-        <section aria-labelledby="hero-heading" className="rx-hero">
-          <div>
-            <h1 id="hero-heading" className="rx-hero__heading">
-              {HERO.heading}
-            </h1>
-            <p className="rx-hero__lede">
-              {HERO.lede(brand.name)}
-              {facts ? ` ${HERO.delivery(facts)}` : ""}
-            </p>
-            <p className="rx-hero__actions">
-              <a href="#buy" className="rx-btn">
-                {HERO.choose}
-              </a>
-              <Link href="/contact" className="rx-link">
-                {HERO.concierge}
-              </Link>
-            </p>
-          </div>
-          <div className="rx-hero__art">
-            {/*
-              TODO(launch): photography. The box on ivory, lid ajar, can take this drawing's place.
-            */}
-            <BoxDrawing animate card={card} />
-          </div>
-        </section>
-      </div>
-
-      <section aria-labelledby="day-heading" className="rx-dark rx-day">
-        <div className="rx-wrap">
-          <h2 id="day-heading" className="rx-day__heading">
-            {DAY.heading}
-          </h2>
-
-          <ol>
-            <li id="buy" className="rx-station">
-              <p className="rx-when">{DAY.choose.when(facts?.cutoff ?? null)}</p>
-              <div>
-                <h3 className="rx-station__title">{DAY.choose.title}</h3>
-                <BuySection />
-              </div>
-            </li>
-
-            {facts ? (
-              <li className="rx-station">
-                <p className="rx-when">{facts.arrives}</p>
-                <div className="rx-arrival">
-                  <div>
-                    <h3 className="rx-station__title">{DAY.arrive.title}</h3>
-                    <p className="rx-station__text">{DAY.arrive.carrier(facts)}</p>
-                    <p className="rx-station__text">{DAY.arrive.tracking}</p>
-                    <dl className="rx-contents">
-                      {DAY.arrive.contents.map((row) => (
-                        <div key={row.term}>
-                          <dt>{row.term}</dt>
-                          <dd>{row.detail(brand.name)}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
-                  <figure className="rx-plate">
-                    {/*
-                      TODO(launch): photography. The open box from above, on black, at 4:5.
-                    */}
-                    <div className="rx-plate__frame rx-frame">
-                      <OpenBox card={card} />
-                    </div>
-                    <figcaption>{DAY.arrive.figure}</figcaption>
-                  </figure>
-                </div>
-              </li>
-            ) : null}
-
-            <li className="rx-station">
-              <p className="rx-when">{DAY.concierge.when}</p>
-              <div>
-                <h3 className="rx-station__title">{DAY.concierge.title}</h3>
-                <p className="rx-station__text">{DAY.concierge.body}</p>
-                <p className="rx-concierge__action">
-                  <Link href="/contact" className="rx-btn rx-btn--line">
-                    {DAY.concierge.action}
-                  </Link>
-                </p>
-              </div>
-            </li>
-          </ol>
+      <section aria-labelledby="hero-heading" className="rv-hero">
+        <picture>
+          <source media={hero.media} srcSet={hero.srcSet} sizes="100vw" />
+          {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- next/image's attributes, alt included (components/photo.ts) */}
+          <img {...hero.img} className="rv-hero__img" />
+        </picture>
+        <div className="rv-hero__copy">
+          <h1 id="hero-heading" className="rv-hero__heading">
+            {HERO.heading}
+          </h1>
+          <a href="#buy" className="rv-hero__action">
+            {HERO.action}
+          </a>
         </div>
       </section>
 
-      {list ? (
-        <div className="rx-wrap">
-          <section aria-labelledby="letters-heading" className="rx-letters">
-            <div>
-              <h2 id="letters-heading" className="rx-letters__heading">
-                {LETTERS.heading}
-              </h2>
-              <p className="rx-letters__lede">{LETTERS.lede}</p>
+      <section id="buy" aria-labelledby="product-name" className="rv-product">
+        <Gallery photos={gallery} />
+        <div className="rv-product__column">
+          <Purchase brandName={brand.name}>
+            {facts ? (
+              <ul className="rv-service" aria-label={PRODUCT.service.label}>
+                <li>{PRODUCT.service.delivery(facts)}</li>
+                <li>{PRODUCT.service.carrier(facts)}</li>
+                <li>
+                  {PRODUCT.service.returns}{" "}
+                  <Link href="/returns" className="rv-link">
+                    {PRODUCT.service.returnsLink}
+                  </Link>
+                </li>
+              </ul>
+            ) : null}
+            <div className="rv-details">
+              <details>
+                <summary>{PRODUCT.details.vial.title}</summary>
+                <p>{PRODUCT.details.vial.body}</p>
+              </details>
+              <details>
+                <summary>{PRODUCT.details.box.title}</summary>
+                <p>{PRODUCT.details.box.body(brand.name)}</p>
+              </details>
             </div>
-            <SignupForm
-              config={{
-                consentText: list.consentText,
-                placeholder: LETTERS.placeholder,
-                submitLabel: LETTERS.submit,
-                pendingLabel: LETTERS.pending,
-                doneMessage: LETTERS.done,
-              }}
-              source="inline"
-              classNames={{
-                form: "rx-form",
-                row: "rx-signup__row",
-                input: "rx-input",
-                button: "rx-btn shrink-0",
-                consent: "rx-signup__consent",
-                link: "rx-link",
-                done: "rx-letters__lede",
-              }}
-            />
-          </section>
+          </Purchase>
         </div>
-      ) : null}
+      </section>
+
+      <div id="house" className="rv-chapters">
+        <section aria-labelledby="chapter-box" className="rv-chapter rv-chapter--left">
+          <figure className="rv-chapter__photo">
+            {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- next/image's attributes, alt included */}
+            <img {...photoProps(CHAPTER_BOX, { sizes: half })} className="rv-reveal" />
+          </figure>
+          <div className="rv-chapter__text">
+            <h2 id="chapter-box" className="rv-chapter__title">
+              {CHAPTERS.box.title}
+            </h2>
+            <p>{CHAPTERS.box.body(brand.name)}</p>
+          </div>
+        </section>
+
+        <section aria-labelledby="chapter-hands" className="rv-chapter rv-chapter--right rv-chapter--claret">
+          <div className="rv-chapter__text">
+            <h2 id="chapter-hands" className="rv-chapter__title">
+              {CHAPTERS.hands.title}
+            </h2>
+            <p>{CHAPTERS.hands.body}</p>
+          </div>
+          <figure className="rv-chapter__photo">
+            {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- next/image's attributes, alt included */}
+            <img {...photoProps(CHAPTER_HANDS, { sizes: half })} className="rv-reveal" />
+          </figure>
+        </section>
+
+        {facts ? (
+          <section aria-labelledby="chapter-arrival" className="rv-chapter rv-chapter--full">
+            <figure className="rv-chapter__photo">
+              {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- next/image's attributes, alt included */}
+              <img {...photoProps(CHAPTER_ARRIVAL, { sizes: "100vw" })} className="rv-reveal" />
+            </figure>
+            <div className="rv-chapter__text">
+              <h2 id="chapter-arrival" className="rv-chapter__title">
+                {CHAPTERS.arrival.title}
+              </h2>
+              <p>{CHAPTERS.arrival.body(facts)}</p>
+              <p className="rv-chapter__aside">{CHAPTERS.arrival.days}</p>
+            </div>
+          </section>
+        ) : null}
+      </div>
+
+      <section aria-labelledby="concierge-heading" className="rv-concierge">
+        <Seal className="rv-concierge__seal" />
+        <h2 id="concierge-heading" className="rv-concierge__title">
+          {CONCIERGE_BAND.title}
+        </h2>
+        <p className="rv-concierge__body">{CONCIERGE_BAND.body}</p>
+        <Link href="/contact" className="rv-button rv-button--bone">
+          {CONCIERGE_BAND.action}
+        </Link>
+      </section>
     </main>
   );
 }

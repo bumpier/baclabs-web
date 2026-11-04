@@ -1,19 +1,22 @@
 /**
  * The legal pages' dress: components/commerce/LegalPage.tsx takes a class
  * per element, and these are this brand's (brands/luxury/styles.css,
- * "Legal pages"). The documents themselves come from lib/commerce/legal.ts
- * and are not this folder's to change.
+ * "Legal pages"): the title in the house's Caslon, the contents in small
+ * capitals and two columns, each section ruled off. The documents
+ * themselves come from lib/commerce/legal.ts and are not this folder's to
+ * change.
  */
 export const LEGAL_CLASSES = {
-  title: "rx-legal__title",
-  intro: "rx-legal__intro",
-  meta: "rx-legal__meta",
-  toc: "rx-legal__toc",
-  tocHeading: "rx-legal__toc-heading",
-  tocList: "rx-legal__toc-list",
-  section: "rx-legal__section",
-  heading: "rx-legal__heading",
-  body: "legal-prose mt-4",
-  foot: "rx-legal__foot",
-  link: "rx-link",
+  title: "rv-legal__title",
+  intro: "rv-legal__intro",
+  meta: "rv-legal__meta",
+  toc: "rv-legal__toc",
+  tocHeading: "rv-legal__toc-heading",
+  tocList: "rv-legal__toc-list",
+  sections: "rv-legal__sections",
+  section: "rv-legal__section",
+  heading: "rv-legal__heading",
+  body: "legal-prose rv-legal-body",
+  foot: "rv-legal__foot",
+  link: "rv-link",
 };

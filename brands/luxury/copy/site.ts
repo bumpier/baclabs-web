@@ -1,19 +1,35 @@
 /**
- * The words every page shares: the header, the footer, the 404 and the
- * cookie banner. Plain strings that import nothing (the header's basket
- * count is a client component).
+ * The words every page shares: the delivery line above the header, the
+ * header, the footer, the 404 and the cookie banner. Plain strings that
+ * import nothing (the bag button is a client component).
  */
+
+/**
+ * The line above the header, from the catalogue's delivery facts
+ * (brands/luxury/service.ts). Says only what every order gets.
+ */
+export const ANNOUNCE = (f: { cutoff: string | null; arrives: string; included: boolean }) => {
+  const what = f.included ? `Complimentary ${f.arrives.toLowerCase()} delivery on every order.` : `${f.arrives} delivery.`;
+  return f.cutoff ? `${what} Order by ${f.cutoff} on a working day.` : what;
+};
+
 export const NAV = {
   label: "Main",
   skip: "Skip to content",
-  order: "Order",
-  inOrder: (n: number) => (n === 1 ? "1 box in your order" : `${n} boxes in your order`),
+  shop: "Shop",
+  house: "The house",
   concierge: "Concierge",
+  bag: "Bag",
+  inBag: (n: number) => (n === 1 ? "1 box in your bag" : `${n} boxes in your bag`),
+  home: (name: string) => `${name}, home`,
 };
 
 export const FOOTER = {
   label: "Footer",
+  houseHeading: "The house",
+  shop: "Shop",
   concierge: "Concierge",
+  infoHeading: "Information",
   terms: "Terms",
   privacy: "Privacy",
   returns: "Returns",
@@ -24,8 +40,9 @@ export const FOOTER = {
 
 export const NOT_FOUND = {
   heading: "Page not found",
-  body: "That address does not exist on this site.",
-  home: "Back to the home page",
+  body: "This address leads nowhere in the house. It may have moved, or never existed.",
+  home: "Return to the home page",
+  concierge: "Write to the concierge",
 };
 
 export const COOKIES = {
