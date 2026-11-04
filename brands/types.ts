@@ -9,10 +9,11 @@
  */
 
 /**
- * Every registered brand. Add the id here when a brand is registered (and,
- * for any brand but BacLab, its hosts to brands/hosts.json and its tree to
- * app/<id>/). Registered is not live: a brand serves only on the hosts in
- * hosts.json, which are development hosts until it launches.
+ * Every registered brand. A new brand is added by scripts/new-brand.ts,
+ * which also gives it its hosts in brands/hosts.json, its tree in app/<id>/
+ * and every other entry that lists the brands. Registered is not live: a
+ * brand serves only on the hosts in hosts.json, which are development hosts
+ * until it launches (deploy/NEW-BRAND.md).
  */
 export const BRAND_IDS = ["baclab", "beauty", "gym", "wholesale", "luxury"] as const;
 export type BrandId = (typeof BRAND_IDS)[number];

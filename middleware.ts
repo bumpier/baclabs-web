@@ -106,10 +106,12 @@ export async function middleware(req: NextRequest) {
 // matching them costs nothing that was not already being paid.
 //
 // The last two entries are the brands. BacLab's funnel still never runs
-// middleware: the brand-tree entry matches only /beauty, /gym, /wholesale and
-// /luxury paths, and the catch-all only on a brand host. Next reads this
-// config statically, so both are literals: `npm run test:hosts` checks them
-// against brands/hosts.json (brandHostPattern() in lib/brand/resolve.ts).
+// middleware: the brand-tree entry matches only the brands' own trees
+// (/<id>/…, one id per brands/hosts.json entry), and the catch-all only on a
+// brand host. Next reads this config statically, so both are literals:
+// `npm run test:hosts` checks them against brands/hosts.json
+// (brandHostPattern() in lib/brand/resolve.ts), and scripts/new-brand.ts
+// writes a new brand into both.
 export const config = {
   matcher: [
     "/admin/:path*",

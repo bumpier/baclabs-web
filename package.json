@@ -16,6 +16,8 @@
     "check:packs": "tsx scripts/check-packs.ts",
     "check:brands": "tsx scripts/check-brands.ts",
     "test:check-brands": "tsx scripts/test-check-brands.ts",
+    "new-brand": "tsx scripts/new-brand.ts",
+    "test:new-brand": "tsx scripts/test-new-brand.ts",
     "test:rules": "tsx scripts/test-content-rules.ts",
     "export:articles": "tsx scripts/export-articles.ts",
     "export:wxr": "tsx scripts/export-wxr.ts",

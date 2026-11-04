@@ -11,7 +11,7 @@ import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Order } from "@prisma/client";
-import { brandFor, DEFAULT_BRAND } from "@/brands/registry";
+import { BRAND_IDS, brandFor, DEFAULT_BRAND } from "@/brands/registry";
 import { PackingSlip } from "@/components/admin/PackingSlip";
 import { brandLogoDataUri } from "@/lib/brand/logo";
 import { readFileSync } from "node:fs";
@@ -289,7 +289,8 @@ async function main() {
   check("the fixture's slip, whose logo is no local file, has no image", !fxSlip.includes("<img"));
   check("nothing of BacLab's is on the fixture's slip", bacLabLeaks(fxSlip).length === 0, bacLabLeaks(fxSlip).join());
   check("BacLab's slip keeps its own logo path", blSlip.includes(`src="${brandFor("baclab").logo}"`));
-  for (const id of ["beauty", "gym", "wholesale", "luxury"]) {
+  // Every registered brand but BacLab, so a brand made by scripts/new-brand.ts is covered too.
+  for (const id of BRAND_IDS.filter((x) => x !== DEFAULT_BRAND)) {
     const b = brandFor(id);
     const real = slip(id);
     const inlined = `data:image/svg+xml;base64,${readFileSync(path.join(process.cwd(), "public", id, b.logo.slice(1))).toString("base64")}`;
