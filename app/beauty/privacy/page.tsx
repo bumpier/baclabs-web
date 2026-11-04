@@ -4,6 +4,7 @@ import { LegalPage } from "@/components/commerce/LegalPage";
 import { CookieSettingsButton } from "@/components/commerce/CookieSettingsButton";
 import { brandPrivacy, brandTrackingFacts, legalIdentity } from "@/lib/commerce/legal";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
+import { LEGAL_CLASSES } from "@/brands/beauty/components/legal-classes";
 import { brand, STOREFRONT } from "../site";
 
 const TITLE = "Privacy policy";
@@ -26,11 +27,11 @@ export const dynamic = "force-dynamic";
 export default async function PrivacyPage() {
   const doc = brandPrivacy(brand, await brandTrackingFacts(brand));
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-16">
+    <main id="main" className="mx-auto w-full max-w-3xl px-5 pb-8 pt-10 sm:px-8 md:pt-14">
       <JsonLd data={breadcrumbSchema(TITLE, PATH, brand.id)} />
-      <LegalPage identity={legalIdentity(brand)} doc={doc} />
-      <p className="mt-6 text-sm">
-        <CookieSettingsButton ga4Id={STOREFRONT.tracking.ga4Id} className="link">
+      <LegalPage identity={legalIdentity(brand)} doc={doc} classNames={LEGAL_CLASSES} />
+      <p className="mt-6 text-[0.9375rem]">
+        <CookieSettingsButton ga4Id={STOREFRONT.tracking.ga4Id} className="au-link cursor-pointer">
           Cookie settings
         </CookieSettingsButton>
       </p>
