@@ -2,10 +2,11 @@
 
 One brand at a time, from a name to a live site taking orders. Every brand
 runs in the same `baclab` container as BacLab, on the same VPS, behind the
-same nginx and Cloudflare. What it must never share is anything a customer,
-a crawler or a payment processor can see: its domain, certificate, mailbox,
-tracking, statement wording and copy are its own, and no page, email,
-header or certificate names another brand.
+same nginx and Cloudflare, and takes cards on BacLab's Stripe account, which
+is told about every brand. What it must never share is anything a customer
+or a crawler can see: its domain, certificate, mailbox, tracking, statement
+wording, payment page and copy are its own, and no page, email, header or
+certificate names another brand.
 
 Throughout, `<id>` is the brand's internal id (`luxury`), `<ID>` the same in
 capitals (`LUXURY`), `<Name>` its public name, `<apex>` its domain without
@@ -69,20 +70,26 @@ design work.
    `G-…` id). In Search Console add a **Domain** property for `<apex>` and
    verify it with the TXT record it gives you, in Cloudflare DNS. No code
    or deploy is needed for that.
-7. **Payment account.** The brand takes payment through the providers its
-   profile lists (`paymentProviders`), each on the brand's own account and
-   credentials, never shared. Set up that provider for the brand as
-   [BRAND-PAYMENTS.md](BRAND-PAYMENTS.md) describes, and **declare the
-   site to the processor before it takes a single payment**:
+7. **Payment.** The brand takes cards through Stripe, on BacLab's own
+   Stripe account, with no key or account of its own
+   ([BRAND-PAYMENTS.md](BRAND-PAYMENTS.md)). **Declare the site to Stripe
+   before it takes a single payment**:
    - **What to declare:** the domain, what it sells (10ml bacteriostatic
-     water, sold as a laboratory reagent), and that one company runs it and
-     the other brands.
+     water, sold as a laboratory reagent), and that one company runs it,
+     BacLab and the other brands.
    - **Why:** taking card payments for a website the processor has not been
      told about is what the card schemes' rules treat as transaction
-     laundering. It can end with the account closed and the company listed
-     so that no other processor will take it on.
-   - **Then:** keep the processor's written confirmation with the brand's
-     records.
+     laundering. It can end with the account closed (BacLab's with it) and
+     the company listed so that no other processor will take it on.
+   - **Then:** keep Stripe's written confirmation with the brand's records.
+   - **The first brand only:** the account's one-off settings in
+     BRAND-PAYMENTS.md (a neutral shortened descriptor, Stripe's receipt
+     emails off).
+   - **A brand on PayPal instead** has an account and credentials of its
+     own, declared to PayPal the same way ("Switching a brand to PayPal
+     later" in BRAND-PAYMENTS.md).
+   - **Images for Stripe's page:** a PNG or JPG logo and a square icon,
+     for step 6.
 8. **Company details.** The legal name, company number and registered
    office the brand's legal pages must show (Trading Disclosures
    Regulations 2008). One company runs every brand, so they are normally
@@ -151,9 +158,10 @@ label buyer treats unmeasured as "not known".
 - **Env (VPS, step 8):** `META_CAPI_ACCESS_TOKEN__<ID>`, the brand's own
   Conversions API token. Without it, the brand's server events fall back to
   the shared `META_CAPI_ACCESS_TOKEN`, which is the wrong account for a brand.
-- **Payments:** the provider's env names and profile fields are in
-  [BRAND-PAYMENTS.md](BRAND-PAYMENTS.md). All of them are per brand, by
-  `<ID>`, with no fallback to another brand's.
+- **Payments:** on Stripe there is no env for the brand: it uses BacLab's
+  Stripe settings. Its profile fields are in
+  [BRAND-PAYMENTS.md](BRAND-PAYMENTS.md). A brand on PayPal has its own
+  `PAYPAL_*__<ID>`, with no fallback to another brand's.
 
 ## 5. The env vars, in one place
 
@@ -162,7 +170,8 @@ BacLab or the other brands:
 
 ```
 META_CAPI_ACCESS_TOKEN__<ID>=
-# The brand's payment provider credentials, by <ID>: see BRAND-PAYMENTS.md.
+# Nothing for Stripe: the brand uses BacLab's Stripe settings.
+# A brand on PayPal instead: its four PAYPAL_*__<ID>, see BRAND-PAYMENTS.md.
 ```
 
 `CONTACT_FORM_TO`, if set, sends every brand's contact-form messages to one
@@ -196,10 +205,14 @@ placeholder:
    - `legalName` and `company` from step 1.8;
    - `shipping.senderCompany`, the label's sender name (25 characters at
      most);
-   - `statementDescriptor`: 22 characters at most, letters, digits, spaces,
-     `.` and `-` only. The provider may put its own prefix in front; see
-     BRAND-PAYMENTS.md;
-   - `paymentProviders` and `payment`, as BRAND-PAYMENTS.md says;
+   - `statementDescriptor`: letters, digits, spaces, `.` and `-` only.
+     Stripe prints it after the account's shortened descriptor
+     (`<prefix>* <descriptor>`, 22 characters in all), so after an
+     8-character prefix it has 12;
+   - `paymentProviders: ["stripe"]` and `payment: STRIPE_PAYMENT`, as
+     BRAND-PAYMENTS.md says, once the site is declared to Stripe (step 1.7);
+   - `paymentPage: { logo, icon }`, the PNG or JPG images from step 1.7, in
+     `public/<id>/`;
    - `analytics`, from step 4;
    - `mailingList.consentText` if the brand runs a list, in exactly the
      words its signup form shows.
@@ -218,7 +231,9 @@ placeholder:
    `--launch` turns every "not ready for launch" warning for that brand
    into a failure: a development origin or host, a placeholder or missing
    mailbox, missing company details, no label sender, no payment provider,
-   any TODO note left. Run the full test set as for any change.
+   no images for Stripe's page, the account's shortened descriptor not yet
+   recorded in `STRIPE_STATEMENT_PREFIX`, any TODO note left. Run the full
+   test set as for any change.
 8. **Build it in a scratch copy**, as for every change (never in the repo,
    where another session's dev server shares `.next`):
 
@@ -272,7 +287,8 @@ docker compose logs --tail 50 baclab
 log names any payment provider whose credentials are only partly set,
 never their values. Brand pages are prerendered and revalidate every five
 minutes, so the checkout button appears within five minutes of the
-restart.
+restart. A brand on Stripe needs no env of its own: its button shows while
+BacLab's cards are on.
 
 ## 9. nginx, the certificate, then DNS (VPS operator)
 
@@ -393,7 +409,8 @@ The site is reachable but still noindex. Before anyone else buys:
    The order confirmation page shows it paid.
 2. **Email:** the confirmation arrives from the brand's own address. In
    the message source, SPF and DKIM pass for `<apex>`, and nothing in it
-   names BacLab or another brand.
+   names BacLab or another brand. No receipt arrives from Stripe: its
+   receipt emails are off for the account (BRAND-PAYMENTS.md).
 3. **Admin:** at baclab.co.uk/admin, the order shows the brand's chip, its
    provider and its reference.
    - **Packing slip:** prints the brand's logo, its thank-you line and
@@ -402,9 +419,13 @@ The site is reachable but still noindex. Before anyone else buys:
      real weight.
 4. **Meta:** Events Manager shows the Purchase in the brand's own dataset,
    once, with the value charged.
-5. **Refund:** refund the payment in the brand's provider account, as
-   BRAND-PAYMENTS.md describes. Then cancel the order in the admin so it
-   is not packed. The admin never refunds by itself.
+5. **Stripe's page:** it showed the brand's name, logo and icon, on
+   `checkout.stripe.com`, and nothing of BacLab's; the statement line reads
+   `<prefix>* <statementDescriptor>`.
+6. **Refund:** refund the payment in the Stripe Dashboard (or, for a brand
+   on PayPal, its own PayPal account), as BRAND-PAYMENTS.md describes. Then
+   cancel the order in the admin so it is not packed. The admin never
+   refunds by itself.
 
 ## 11. Go live
 
@@ -432,10 +453,12 @@ backup already cover every brand's orders.
   `return 503;` and reload nginx. Do one of these **before** any code
   rollback. A domain the app no longer knows is served BacLab's site, which
   is the one thing that must never happen.
-- **Stop taking payment, nothing else:** remove the brand's payment
-  credentials from `.env.local` and run
-  `docker compose --env-file .env.local up -d`. Its checkout then answers
-  "Checkout is not available right now". No other brand is touched.
+- **Stop taking payment, nothing else:** set the brand's
+  `paymentProviders` to `[]` and deploy. Its checkout then answers
+  "Checkout is not available right now". No other brand is touched. Never
+  remove BacLab's Stripe keys for this: every brand and BacLab would stop
+  with them. (A brand on PayPal can also be stopped by removing its
+  `PAYPAL_*__<ID>` and running `docker compose --env-file .env.local up -d`.)
 - **Back to noindex:** set `LIVE = false` and deploy.
 - **Unregister the domain:** once the site is offline, remove the apex and
   www from `brands/hosts.json` and the middleware literal, set the origin
