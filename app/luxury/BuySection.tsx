@@ -7,16 +7,20 @@ import { useBrandCheckout } from "@/components/commerce/useBrandCheckout";
 import { PackPicker } from "@/components/commerce/PackPicker";
 import { QuantityStepper } from "@/components/commerce/QuantityStepper";
 import { deliveryQuote, formatGbp, freeDeliveryShortfallMinor } from "@/lib/commerce/view";
-
-const vials = (n: number) => (n === 1 ? "1 vial" : `${n} vials`);
+import { CapsDiagram } from "@/brands/luxury/components/CapsDiagram";
+import { BUY } from "@/brands/luxury/copy/home";
 
 /**
- * A plain buy section until the brand's design lands: choose a pack and a
- * count, add it to the basket, choose the delivery, check out. Every figure
- * comes from the storefront view the root layout gave the basket; the
- * checkout prices the order again from the catalogue, and its answer is
- * shown as it stands. While the view lists no way to pay there is no
- * checkout button at all.
+ * The first hour of the order of the day: choose a size, say how many
+ * boxes, add them to the order, pay. It sits on the lacquer, inside the
+ * home page's timetable (app/luxury/page.tsx), which holds the #buy anchor
+ * an unfinished payment returns to.
+ *
+ * Every figure comes from the storefront view the root layout gave the
+ * basket; the checkout prices the order again from the catalogue, and its
+ * answer is shown as it stands. Prices are set small and never as a saving
+ * or a per-vial figure: this brand does not sell on price. While the view
+ * lists no way to pay there is no payment button at all.
  */
 export function BuySection() {
   const cart = useCart();
@@ -25,13 +29,9 @@ export function BuySection() {
   const [sku, setSku] = useState<string | null>(storefront.packs.find((p) => p.available)?.sku ?? null);
   const [qty, setQty] = useState(1);
   const [deliveryId, setDeliveryId] = useState<string | null>(null);
-  const [company, setCompany] = useState("");
-  const [vatNumber, setVatNumber] = useState("");
-  const headingId = useId();
-  const basketId = useId();
+  const [added, setAdded] = useState<string | null>(null);
+  const orderId = useId();
   const deliveryName = useId();
-  const companyId = useId();
-  const vatId = useId();
 
   const empty = priced.items.length === 0;
   const delivery = deliveryQuote(storefront, priced.goodsMinor);
@@ -40,207 +40,213 @@ export function BuySection() {
   const chosen = delivery.find((d) => d.option.id === deliveryId) ?? delivery[0] ?? null;
   const shortfall = freeDeliveryShortfallMinor(storefront, priced.goodsMinor);
   const addOns = storefront.addOns.filter((a) => a.available);
-  const quoteOnly = storefront.packs.some((p) => !p.available);
+  const onRequest = storefront.packs.some((p) => !p.available);
   const message = error ?? priced.problem;
   const methods = storefront.payment.methods;
-  const business = storefront.flags.businessDetails;
-  const pay = (method: string) =>
-    checkout({
-      deliveryOption: chosen?.option.id,
-      method,
-      ...(business ? { business: { company, vatNumber } } : {}),
-    });
+  const totalMinor = priced.goodsMinor + (chosen?.priceMinor ?? 0);
+  const pay = (method: string) => checkout({ deliveryOption: chosen?.option.id, method });
+  const nameOf = (pack: { label: string; vials: number }) => pack.label || BUY.vials(pack.vials);
+  const price = (minor: number) => (minor === 0 ? BUY.included : formatGbp(minor));
 
   return (
-    <section id="buy" aria-labelledby={headingId} className="mt-12 scroll-mt-8">
-      <h2 id={headingId} className="font-display text-3xl text-ink">
-        Order
-      </h2>
-
+    <div>
       <form
-        className="mt-6 space-y-6"
         onSubmit={(e) => {
           e.preventDefault();
-          if (sku) cart.add(sku, qty);
+          const pack = storefront.packs.find((p) => p.sku === sku);
+          if (!pack) return;
+          cart.add(pack.sku, qty);
+          setAdded(BUY.added(nameOf(pack), qty));
         }}
       >
         <PackPicker
           packs={storefront.packs}
           value={sku}
-          onChange={setSku}
-          legend="Pack size"
+          onChange={(next) => {
+            setSku(next);
+            setAdded(null);
+          }}
+          legend={BUY.legend}
+          classNames={{ list: "rx-sizes", option: "rx-size" }}
           renderPack={(pack, { disabled }) => (
-            <span className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <span className="font-medium text-ink">
-                {pack.label || vials(pack.vials)}
-                {pack.label ? <span className="ml-2 text-ink-soft">{vials(pack.vials)}</span> : null}
-              </span>
-              <span className="text-ink">
-                {disabled ? "Quote only" : formatGbp(pack.priceMinor)}
-                {disabled ? null : <span className="ml-2 text-sm text-ink-soft">{formatGbp(pack.perVialMinor)} a vial</span>}
-              </span>
-            </span>
+            <>
+              <CapsDiagram vials={pack.vials} className="rx-size__caps" />
+              <span className="rx-size__name">{nameOf(pack)}</span>
+              {pack.label ? <span className="rx-size__vials">{BUY.vials(pack.vials)}</span> : null}
+              <span className="rx-size__price">{disabled ? BUY.onRequest : formatGbp(pack.priceMinor)}</span>
+            </>
           )}
         />
-        {quoteOnly ? (
-          <p className="text-sm text-ink-soft">
-            Packs marked quote only are not ordered online.{" "}
-            <Link href="/contact?topic=wholesale" className="link">
-              Ask us for a quote
+        {onRequest ? (
+          <p className="rx-note">
+            {BUY.requestNote}{" "}
+            <Link href="/contact" className="rx-link">
+              {BUY.requestLink}
             </Link>
             .
           </p>
         ) : null}
-        <div className="flex flex-wrap items-center gap-4">
-          <QuantityStepper value={qty} onChange={setQty} max={storefront.limits.maxLineQty} label="Quantity" />
-          <button type="submit" className="btn-quiet" disabled={!sku}>
-            Add to basket
+
+        <div className="rx-add">
+          <QuantityStepper
+            value={qty}
+            onChange={setQty}
+            max={storefront.limits.maxLineQty}
+            label={BUY.boxes}
+            classNames={{
+              root: "rx-stepper",
+              label: "rx-stepper__label",
+              input: "rx-stepper__input",
+              button: "rx-stepper__btn",
+            }}
+          />
+          <button type="submit" className="rx-btn" disabled={!sku}>
+            {BUY.add}
           </button>
         </div>
+        <p role="status" className="rx-status">
+          {added ?? ""}
+        </p>
       </form>
 
       {addOns.length > 0 ? (
-        <ul className="mt-8 space-y-3">
-          {addOns.map((a) => (
-            <li key={a.sku} className="commerce-panel flex flex-wrap items-center justify-between gap-4 p-4">
-              <span>
-                <span className="block font-medium text-ink">
-                  {a.name}, {formatGbp(a.priceMinor)}
+        <section aria-label={BUY.addOnsHeading} className="rx-addons">
+          <ul>
+            {addOns.map((a) => (
+              <li key={a.sku}>
+                <span>
+                  <span className="block">
+                    {a.name}, {formatGbp(a.priceMinor)}
+                  </span>
+                  {a.contents ? <span className="rx-note block">{a.contents}</span> : null}
                 </span>
-                {a.contents ? <span className="block text-sm text-ink-soft">{a.contents}</span> : null}
-              </span>
-              <button type="button" className="btn-quiet" onClick={() => cart.add(a.sku)}>
-                Add<span className="sr-only"> {a.name}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+                <button type="button" className="rx-btn rx-btn--line" onClick={() => cart.add(a.sku)}>
+                  {BUY.addOnAdd}
+                  <span className="sr-only"> {a.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
-      <section aria-labelledby={basketId} className="commerce-panel mt-10 p-5">
-        <h3 id={basketId} className="text-lg font-semibold text-ink">
-          Basket
-        </h3>
+      <section aria-labelledby={orderId} className="rx-order rx-frame">
+        <h4 id={orderId} className="rx-order__heading">
+          {BUY.orderHeading}
+        </h4>
+
         {!cart.hydrated ? null : empty ? (
-          <p className="mt-3 text-ink-soft">Your basket is empty.</p>
+          <p className="rx-order__empty">{BUY.empty}</p>
         ) : (
-          <ul className="mt-3 divide-y divide-line">
-            {priced.items.map((item) => {
-              const name = item.kind === "pack" ? item.pack.label || vials(item.pack.vials) : item.addOn.name;
-              return (
-                <li key={item.sku} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                  <span className="min-w-32 font-medium text-ink">{name}</span>
-                  <QuantityStepper
-                    value={item.qty}
-                    onChange={(n) => cart.set(item.sku, n)}
-                    max={storefront.limits.maxLineQty}
-                    label={`Quantity of ${name}`}
-                  />
-                  <span className="text-ink">{formatGbp(item.lineMinor)}</span>
-                  <button type="button" className="link text-sm" onClick={() => cart.remove(item.sku)}>
-                    Remove<span className="sr-only"> {name}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            <ul className="rx-lines">
+              {priced.items.map((item) => {
+                const name = item.kind === "pack" ? nameOf(item.pack) : item.addOn.name;
+                return (
+                  <li key={item.sku} className="rx-line">
+                    <span className="rx-line__name">
+                      {name}
+                      {item.kind === "pack" && item.pack.label ? (
+                        <span className="rx-line__vials">{BUY.vials(item.pack.vials)}</span>
+                      ) : null}
+                    </span>
+                    <span className="rx-line__price">{formatGbp(item.lineMinor)}</span>
+                    <span className="rx-line__controls">
+                      <QuantityStepper
+                        value={item.qty}
+                        onChange={(n) => cart.set(item.sku, n)}
+                        max={storefront.limits.maxLineQty}
+                        label={BUY.lineBoxes(name)}
+                        classNames={{ root: "rx-stepper", input: "rx-stepper__input", button: "rx-stepper__btn" }}
+                      />
+                      <button type="button" className="rx-link rx-line__remove" onClick={() => cart.remove(item.sku)}>
+                        {BUY.remove}
+                        <span className="sr-only"> {name}</span>
+                      </button>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <dl className="rx-sum">
+              {delivery.length === 1 && chosen ? (
+                <div>
+                  <dt>
+                    {BUY.delivery}
+                    <span className="rx-sum__detail">
+                      {chosen.option.label}, {chosen.option.carrier}
+                    </span>
+                  </dt>
+                  <dd>{price(chosen.priceMinor)}</dd>
+                </div>
+              ) : null}
+              <div className="rx-sum__total">
+                <dt>{BUY.total}</dt>
+                <dd>{formatGbp(totalMinor)}</dd>
+              </div>
+            </dl>
+
+            {delivery.length > 1 ? (
+              <fieldset className="rx-choice">
+                <legend>{BUY.delivery}</legend>
+                {delivery.map(({ option, priceMinor }) => (
+                  <label key={option.id}>
+                    <span>
+                      <input
+                        type="radio"
+                        name={deliveryName}
+                        value={option.id}
+                        checked={chosen?.option.id === option.id}
+                        onChange={() => setDeliveryId(option.id)}
+                      />
+                      {option.label}, {option.detail}
+                    </span>
+                    <span>{price(priceMinor)}</span>
+                  </label>
+                ))}
+              </fieldset>
+            ) : null}
+            {shortfall !== null && shortfall > 0 ? <p className="rx-note">{BUY.shortfall(formatGbp(shortfall))}</p> : null}
+          </>
         )}
 
-        {!empty ? (
-          <dl className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
-            <div className="flex justify-between gap-4 text-base font-semibold text-ink">
-              <dt>Subtotal</dt>
-              <dd>{formatGbp(priced.goodsMinor)}</dd>
-            </div>
-            {delivery.length === 1 && chosen ? (
-              <div className="flex justify-between gap-4 text-ink-soft">
-                <dt>
-                  {chosen.option.label}: {chosen.option.detail}
-                </dt>
-                <dd>{chosen.priceMinor === 0 ? "Free" : formatGbp(chosen.priceMinor)}</dd>
-              </div>
-            ) : null}
-          </dl>
-        ) : null}
-        {!empty && delivery.length > 1 ? (
-          <fieldset className="mt-4 space-y-2 text-sm">
-            <legend className="font-semibold text-ink">Delivery</legend>
-            {delivery.map(({ option, priceMinor }) => (
-              <label key={option.id} className="flex items-baseline justify-between gap-4 text-ink-soft">
-                <span className="flex items-baseline gap-2">
-                  <input
-                    type="radio"
-                    name={deliveryName}
-                    value={option.id}
-                    checked={chosen?.option.id === option.id}
-                    onChange={() => setDeliveryId(option.id)}
-                  />
-                  <span>
-                    {option.label}: {option.detail}
-                  </span>
-                </span>
-                <span>{priceMinor === 0 ? "Free" : formatGbp(priceMinor)}</span>
-              </label>
-            ))}
-          </fieldset>
-        ) : null}
-        {!empty && shortfall !== null ? (
-          <p className="mt-3 text-sm text-ink-soft">{formatGbp(shortfall)} more and delivery is free.</p>
-        ) : null}
-
-        {!empty && business && methods.length > 0 ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor={companyId} className="label">
-                Company name (optional)
-              </label>
-              <input id={companyId} className="field" value={company} maxLength={100} onChange={(e) => setCompany(e.target.value)} />
-            </div>
-            <div>
-              <label htmlFor={vatId} className="label">
-                VAT number (optional)
-              </label>
-              <input id={vatId} className="field" value={vatNumber} maxLength={30} onChange={(e) => setVatNumber(e.target.value)} />
-            </div>
-          </div>
-        ) : null}
-
         {message ? (
-          <p role="alert" className="alert-error mt-4">
+          <p role="alert" className="alert-error mt-5">
             {message}
           </p>
         ) : null}
 
         {methods.length === 1 ? (
-          <>
+          <div className="rx-pay">
             <button
               type="button"
-              className="btn-cta mt-5 w-full"
+              className="rx-btn rx-btn--wide"
               disabled={empty || pending}
               aria-busy={pending}
               onClick={() => pay(methods[0]!.id)}
             >
-              {pending ? "Going to checkout…" : "Checkout"}
+              {pending ? BUY.paying : BUY.pay}
             </button>
-            <p className="mt-3 text-sm text-ink-soft">Pay by {methods[0]!.label}.</p>
-          </>
+            <p className="rx-note">{BUY.payNote(methods[0]!.label)}</p>
+          </div>
         ) : methods.length > 1 ? (
-          <div className="mt-5 space-y-3">
+          <div className="rx-pay">
             {methods.map((m) => (
               <button
                 key={m.id}
                 type="button"
-                className="btn-cta w-full"
+                className="rx-btn rx-btn--wide"
                 disabled={empty || pending}
                 aria-busy={pending}
                 onClick={() => pay(m.id)}
               >
-                {pending ? "Going to checkout…" : `Pay by ${m.label}`}
+                {pending ? BUY.paying : BUY.payWith(m.label)}
               </button>
             ))}
           </div>
         ) : null}
       </section>
-    </section>
+    </div>
   );
 }
