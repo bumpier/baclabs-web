@@ -15,7 +15,7 @@ import {
 import { isPlanMonths, isPlanPackId, planKey } from "@/config/plans";
 import { DELIVERY, formatMinor, formatMinorShort, freeDeliveryName, labKitContents } from "@/config/funnel";
 import { isKitLine } from "@/lib/order-items";
-import { reorderOffer, type ReorderOffer } from "@/lib/reorder";
+import { brandReorderOffer, reorderOffer, type BrandReorderOffer, type ReorderOffer } from "@/lib/reorder";
 import { waitingVials } from "@/lib/vial-gifts";
 import { isOptedOut } from "@/lib/opt-outs";
 
@@ -328,7 +328,8 @@ export async function sendOrderConfirmationEmail(
   const planBlock = plan
     ? `<p style="margin:24px 0 0;font-weight:600;color:${C.ink}">Your monthly plan</p>${planScheduleHtml(planTermsOf(plan))}`
     : "";
-  const verdict = plan ? null : upgradeEligibility(order, new Date());
+  // Plans are BacLab's alone (config/plans.ts): no other brand's receipt offers one.
+  const verdict = plan || b.id !== DEFAULT_BRAND ? null : upgradeEligibility(order, new Date());
   const upgradeBlock =
     verdict?.eligible && !(await optedOutOfEmails(order))
       ? upgradeOfferHtml({ packId: verdict.packId, orderUrl, deadline: verdict.deadline }, b)
@@ -531,14 +532,14 @@ export function deliveredEmail(
     };
   }
 
-  const offer = reorderOffer(order.items);
+  const offer = emailReorder(order, b);
   const vials = offer ? `${offer.vials} ${offer.vials === 1 ? "vial" : "vials"}` : "";
   const gifts = opts.giftVials;
   const giftLine =
     gifts > 0
       ? `<p style="margin:0 0 12px">${gifts === 1 ? "The free 10ml vial" : `The ${gifts} free 10ml vials`} we promised you ${gifts === 1 ? "is" : "are"} still waiting, and ${gifts === 1 ? "goes" : "go"} in your next order automatically.</p>`
       : "";
-  const delivery = offer ? reorderDeliveryLine(offer) : "";
+  const delivery = offer ? offer.delivery : "";
 
   return {
     subject,
@@ -552,13 +553,68 @@ export function deliveredEmail(
           : ctaButton(`${site}/#buy`, "Choose your pack", b)
       }</p>
       ${delivery ? `<p style="font-size:13px;color:${C.inkSoft};margin:12px 0 0">${delivery}</p>` : ""}
-      ${offer ? reorderStepHtml(offer, b) : ""}
+      ${offer ? offer.step : ""}
       <p style="margin:28px 0 0;font-size:12px;color:${C.inkSoft}">Order reference: ${order.id} &middot; <a href="${orderUrl}" style="color:${C.inkSoft}">View your order</a></p>
       <p style="font-size:11px;color:${C.inkSoft};margin-top:24px">Don't want offers like this?
         <a href="${unsubscribeUrl(order.customerEmail, b)}" style="color:${C.inkSoft}">Unsubscribe</a></p>`,
       { preheader: offer ? `Your parcel has arrived. Reorder your ${vials} in one click.` : "Your parcel has arrived.", brand: b }
     ),
   };
+}
+
+/**
+ * What the reorder button, and the lines beside it, offer, for an order of
+ * any brand. BacLab's comes from its own ladder (lib/reorder.ts
+ * reorderOffer), exactly as before brands existed: the same lines, the same
+ * step up, the same links. Another brand's comes from its own catalogue
+ * (brandReorderOffer): its prices, its delivery, a link to its own
+ * storefront, and no step up. Null when no pack on the order is still sold;
+ * the email then falls back to its generic copy.
+ */
+interface EmailReorder {
+  vials: number;
+  goodsMinor: number;
+  /** Site-relative: the email puts the brand's origin in front. */
+  link: string;
+  /** The delivery line under the button, or "". */
+  delivery: string;
+  /** The step up, as HTML, or "". */
+  step: string;
+  /** "2 × 5-vial pack + 1 single vial": the recovery email's basket line. */
+  basket: string;
+}
+
+function emailReorder(order: { items: string }, b: BrandProfile): EmailReorder | null {
+  if (b.id !== DEFAULT_BRAND) {
+    const offer = b.catalogue ? brandReorderOffer(order.items, b.catalogue) : null;
+    if (!offer) return null;
+    return {
+      vials: offer.vials,
+      goodsMinor: offer.goodsMinor,
+      link: offer.link,
+      delivery: brandReorderDeliveryLine(offer),
+      step: "",
+      basket: offer.basket,
+    };
+  }
+  const offer = reorderOffer(order.items);
+  if (!offer) return null;
+  return {
+    vials: offer.vials,
+    goodsMinor: offer.goodsMinor,
+    link: offer.link,
+    delivery: reorderDeliveryLine(offer),
+    step: reorderStepHtml(offer, b),
+    basket: `${offer.quantity > 1 ? `${offer.quantity} × ` : ""}${offer.bundle.vials}-vial pack${offer.extraVials > 0 ? ` + ${offer.extraVials} single ${offer.extraVials === 1 ? "vial" : "vials"}` : ""}`,
+  };
+}
+
+/** reorderDeliveryLine's wording, from another brand's catalogue rather than config/funnel.ts. */
+function brandReorderDeliveryLine(offer: BrandReorderOffer): string {
+  if (offer.shipsFree) return `Free ${offer.freeDelivery} on this order.`;
+  return offer.freeFromMinor !== null
+    ? `Delivery ${formatMinor(offer.deliveryMinor)}, free on orders of ${formatMinorShort(offer.freeFromMinor)} or more.`
+    : "";
 }
 
 /** What delivery on a reorder costs, or "" when the shop shows no delivery line. */
@@ -612,9 +668,10 @@ export async function sendRepurchaseNudgeEmail(order: Order, items: OrderItem[])
   const site = b.origin;
   const email = order.customerEmail;
   const hi = order.customerName ? `Hi ${escapeHtml(order.customerName)},` : "Hi,";
-  const pack = nudgePlanPack(order);
+  // Plans are BacLab's alone: no other brand's nudge offers one.
+  const pack = b.id === DEFAULT_BRAND ? nudgePlanPack(order) : null;
   const planLine = pack ? nudgePlanOfferHtml(pack, site, b) : "";
-  const offer = reorderOffer(order.items);
+  const offer = emailReorder(order, b);
 
   if (!offer) {
     const list = items
@@ -638,8 +695,8 @@ export async function sendRepurchaseNudgeEmail(order: Order, items: OrderItem[])
   }
 
   const vials = `${offer.vials} ${offer.vials === 1 ? "vial" : "vials"}`;
-  const delivery = reorderDeliveryLine(offer);
-  const step = reorderStepHtml(offer, b);
+  const delivery = offer.delivery;
+  const step = offer.step;
 
   return logAndSend(
     order,
@@ -671,11 +728,9 @@ export async function sendRepurchaseNudgeEmail(order: Order, items: OrderItem[])
 export async function sendCheckoutRecoveryEmail(order: Order, to: string, linkExpiresAt: Date): Promise<boolean> {
   const b = brandOf(order);
   try {
-    const offer = reorderOffer(order.items);
+    const offer = emailReorder(order, b);
     const vials = offer ? `${offer.vials} ${offer.vials === 1 ? "vial" : "vials"}` : "";
-    const packs = offer
-      ? `${offer.quantity > 1 ? `${offer.quantity} × ` : ""}${offer.bundle.vials}-vial pack${offer.extraVials > 0 ? ` + ${offer.extraVials} single ${offer.extraVials === 1 ? "vial" : "vials"}` : ""}`
-      : "";
+    const packs = offer ? offer.basket : "";
     const gift = order.items.includes('"welcome":true') ? ", and your free welcome vial" : "";
     const basket = offer
       ? `<p style="margin:16px 0 0"><strong>${escapeHtml(packs)}</strong>, ${formatMinor(Math.round(Number(order.totalAmount) * 100))}${gift}</p>`
