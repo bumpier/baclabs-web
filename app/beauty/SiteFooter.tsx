@@ -1,31 +1,38 @@
 import Link from "next/link";
 import { CookieSettingsButton } from "@/components/commerce/CookieSettingsButton";
 import { FOOTER } from "@/brands/beauty/copy/site";
+import { Mark, Wordmark } from "@/brands/beauty/components/Wordmark";
 import { brand, STOREFRONT } from "./site";
 
 /**
- * The footer, a blush sheet: the wordmark, the shop's two pages, help, the
- * legal pages and "Cookie settings" on every page, as the law and the
- * cookie banner's promise need, then the product disclaimer and, once it is
- * set, the company behind the name.
+ * The footer, a blush sheet: the mark and the promise, the shop's pages,
+ * help, the legal pages and "Cookie settings" on every page, as the law and
+ * the cookie banner's promise need, then the product disclaimer and, once
+ * it is set, the company behind the name. It ends on the wordmark across
+ * the whole sheet, blush on blush, with the seal the one point of colour.
  */
 export function SiteFooter() {
   const company = brand.company ?? {};
-  const link = "inline-flex min-h-10 items-center hover:underline hover:decoration-rose hover:underline-offset-4";
+  const link = "au-nav min-h-10 font-[450]";
   return (
-    <footer className="au-sheet au-blush mb-2.5 mt-20 px-6 py-12 sm:mb-6 sm:px-12 sm:py-16">
-      <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+    <footer className="au-sheet au-blush no-print mb-2.5 mt-24 overflow-hidden px-6 pt-14 sm:mb-5 sm:px-12 sm:pt-16 lg:mt-32">
+      <div className="mx-auto grid max-w-[74rem] gap-12 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
         <div>
-          <p className="font-display text-[2.25rem] leading-none">{brand.name}</p>
-          <p className="au-small mt-3">{FOOTER.tagline}</p>
+          <Mark className="h-12 w-12 text-ink" />
+          <p className="au-voice mt-5 max-w-[16rem] text-[1.625rem]">{FOOTER.tagline}</p>
         </div>
-        <nav aria-label={FOOTER.navLabel} className="grid gap-8 text-[0.9375rem] sm:grid-cols-3">
+        <nav aria-label={FOOTER.navLabel} className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-3">
           <div>
             <h2 className="font-semibold">{FOOTER.shop}</h2>
             <ul className="mt-2">
               <li>
                 <Link href="/#essentials" className={link}>
                   {FOOTER.essentials}
+                </Link>
+              </li>
+              <li>
+                <Link href="/#ritual" className={link}>
+                  {FOOTER.ritual}
                 </Link>
               </li>
               <li>
@@ -75,7 +82,7 @@ export function SiteFooter() {
           </div>
         </nav>
       </div>
-      <div className="au-small mx-auto mt-12 max-w-6xl space-y-2">
+      <div className="au-fine mx-auto mt-14 max-w-[74rem] space-y-2">
         <p>{brand.disclaimer}</p>
         {brand.legalName ? (
           <p>
@@ -85,6 +92,7 @@ export function SiteFooter() {
           </p>
         ) : null}
       </div>
+      <Wordmark ring className="mx-auto mt-10 block h-auto w-full max-w-[74rem] translate-y-[8%] text-blush-deep" />
     </footer>
   );
 }

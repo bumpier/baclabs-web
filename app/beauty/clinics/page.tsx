@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
 import { ContactForm } from "@/components/commerce/ContactForm";
 import { brandContactTopics, CONTACT_MESSAGE_MAX } from "@/lib/commerce/contact";
-import { shipsFree } from "@/lib/commerce/view";
 import { COMPLAINT_ACK_DAYS } from "@/lib/legal";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
-import { ClinicPicker } from "../ClinicPicker";
-import { Basket } from "../Basket";
+import { Photo } from "@/brands/beauty/components/Photo";
 import { CLINICS } from "@/brands/beauty/copy/clinics";
+import { listSizes } from "@/brands/beauty/copy/home";
+import { IMAGES } from "@/brands/beauty/copy/images";
+import { ClinicPicker } from "../ClinicPicker";
 import { brand, CLINIC_PACKS, STOREFRONT, TRADE_TOPIC } from "../site";
 
 const PATH = "/clinics";
@@ -30,91 +31,117 @@ const TOPICS = (() => {
   return ["wholesale", "product", "other"].flatMap((id) => all.filter((t) => t.id === id));
 })();
 
+/** The form opens on the clinic topic: this page is about one subject. */
+const OPENING_TOPIC = TOPICS.find((t) => t.id === "wholesale")?.id;
+
 /**
- * "For clinics": the larger packs, in a professional register. The packs
- * can be bought here like the Essentials (the same basket, #buy), and
- * anything larger or recurring comes through the enquiry form (#enquire).
- * A link with ?topic=wholesale opens the form on the clinic topic.
+ * "For clinics and salons": the same four packs in a professional register.
+ * The hero and three plain facts; the price list (#buy, the same basket
+ * and drawer as everywhere); how clinic orders work; and the enquiry form
+ * (#enquire), which opens on the clinic topic by itself, so every link to
+ * it is a plain anchor.
  */
 export default function ClinicsPage() {
   const onSale = CLINIC_PACKS.filter((p) => p.available);
-  const freeDelivery = onSale.length > 0 && onSale.every((p) => shipsFree(STOREFRONT, p.priceMinor));
+  const sizes = listSizes(onSale.map((p) => p.vials));
   const method = STOREFRONT.payment.methods[0] ?? null;
-  const enquire = `${PATH}?topic=wholesale#enquire`;
+  const maxVials = STOREFRONT.limits.maxVials;
 
   return (
     <main id="main">
       <JsonLd data={breadcrumbSchema(CLINICS.metaTitle, PATH, brand.id)} />
 
-      <section aria-labelledby="clinics-title" className="mx-auto max-w-6xl px-5 pb-14 pt-10 sm:px-8 md:pb-20 md:pt-14">
-        <h1 id="clinics-title" className="au-display max-w-[12ch]">
-          {CLINICS.title}
-        </h1>
-        <p className="au-lead mt-6 max-w-[38rem]">{CLINICS.lead}</p>
-        <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
-          {onSale.length > 0 ? (
-            <a href="#order" className="btn-cta">
-              {CLINICS.orderTitle}
-            </a>
-          ) : null}
-          {/* A full load, so the form reads the topic from the address. */}
-          <a href={enquire} className="au-link inline-flex min-h-11 items-center font-semibold">
-            {CLINICS.enquireLink}
-          </a>
+      <section aria-labelledby="clinics-title" className="au-wrap pt-8 md:pt-12">
+        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+          <div className="lg:py-10">
+            <h1 id="clinics-title" className="au-display max-w-[11ch]">
+              {CLINICS.title}
+            </h1>
+            <p className="au-lead mt-6">{CLINICS.lead(sizes)}</p>
+            <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
+              {onSale.length > 0 ? (
+                <a href="#price-list" className="btn-cta">
+                  {CLINICS.toPriceList}
+                </a>
+              ) : null}
+              <a href="#enquire" className="au-link inline-flex min-h-11 items-center font-semibold">
+                {CLINICS.enquireLink}
+              </a>
+            </div>
+          </div>
+          <div className="au-frame aspect-[4/3] lg:aspect-[5/4]">
+            <Photo image={IMAGES.clinicCounter} fill priority sizes="(min-width: 1024px) 55vw, 100vw" className="object-[45%_60%]" />
+          </div>
         </div>
+
+        <dl className="mt-12 grid gap-5 sm:grid-cols-3 sm:gap-8 lg:mt-16">
+          {CLINICS.facts(sizes, maxVials).map((f) => (
+            <div key={f.term} className="flex items-baseline gap-3 sm:block">
+              <dt className="font-display text-[1.375rem] leading-tight">{f.term}</dt>
+              <dd className="au-small sm:mt-1">{f.detail}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       {CLINIC_PACKS.length > 0 ? (
-        <section id="buy" aria-labelledby="order" className="au-sheet au-blush scroll-mt-4 px-5 py-14 sm:px-10 md:py-20">
-          <div className="mx-auto max-w-6xl">
-            <h2 id="order" className="au-h2 scroll-mt-8">
-              {CLINICS.orderTitle}
-            </h2>
-            <div className="mt-10 md:mt-12">
-              <ClinicPicker packs={CLINIC_PACKS} freeDelivery={freeDelivery} />
+        <section id="buy" aria-labelledby="price-list" className="au-sheet au-blush mt-20 px-5 py-14 sm:px-10 lg:mt-28 lg:py-20">
+          <div className="mx-auto grid max-w-[74rem] gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+            <div>
+              <h2 id="price-list" className="au-h2">
+                {CLINICS.priceTitle}
+              </h2>
+              <p className="au-lead mt-4">{CLINICS.priceLead(onSale.length)}</p>
+              <div className="au-frame mt-10 hidden aspect-[4/5] max-w-[24rem] lg:block">
+                <Photo image={IMAGES.clinicShelf} fill sizes="24rem" className="object-[50%_30%]" />
+              </div>
             </div>
-            <div className="mt-12 md:grid md:grid-cols-2 md:gap-14">
-              <div aria-hidden="true" />
-              <Basket />
+            <div className="lg:pt-2">
+              <ClinicPicker packs={CLINIC_PACKS} />
             </div>
           </div>
         </section>
       ) : null}
 
-      <section aria-labelledby="how-title" className="mx-auto grid max-w-6xl gap-10 px-5 py-20 sm:px-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-14 md:py-28">
-        <h2 id="how-title" className="au-h2">
-          {CLINICS.howTitle}
-        </h2>
-        <dl className="grid gap-9 sm:grid-cols-2 sm:gap-x-10">
-          <div>
-            <dt className="au-h3">{CLINICS.onlineTerm}</dt>
-            <dd className="mt-2 text-ink-soft">{CLINICS.online(method?.label ?? null)}</dd>
-          </div>
-          <div>
-            <dt className="au-h3">{CLINICS.largerTerm}</dt>
-            <dd className="mt-2 text-ink-soft">{CLINICS.larger}</dd>
-          </div>
-          <div>
-            <dt className="au-h3">{CLINICS.productTerm}</dt>
-            <dd className="mt-2 text-ink-soft">{CLINICS.product}</dd>
-          </div>
-          <div>
-            <dt className="au-h3">{CLINICS.limitTerm}</dt>
-            <dd className="mt-2 text-ink-soft">{CLINICS.limit(STOREFRONT.limits.maxVials)}</dd>
-          </div>
-        </dl>
+      <section aria-labelledby="how-title" className="au-wrap pt-24 lg:pt-32">
+        <div className="grid gap-10 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-16">
+          <h2 id="how-title" className="au-h2">
+            {CLINICS.howTitle}
+          </h2>
+          <dl className="grid gap-x-12 gap-y-10 sm:grid-cols-2">
+            <div>
+              <dt className="au-h3">{CLINICS.onlineTerm}</dt>
+              <dd className="mt-2 text-ink-soft">{CLINICS.online(method?.label ?? null)}</dd>
+            </div>
+            <div>
+              <dt className="au-h3">{CLINICS.largerTerm}</dt>
+              <dd className="mt-2 text-ink-soft">{CLINICS.larger}</dd>
+            </div>
+            <div>
+              <dt className="au-h3">{CLINICS.productTerm}</dt>
+              <dd className="mt-2 text-ink-soft">{CLINICS.product}</dd>
+            </div>
+            <div>
+              <dt className="au-h3">{CLINICS.limitTerm}</dt>
+              <dd className="mt-2 text-ink-soft">{CLINICS.limit(maxVials)}</dd>
+            </div>
+          </dl>
+        </div>
       </section>
 
-      <section id="enquire" aria-labelledby="enquire-title" className="au-sheet au-on-plum scroll-mt-4 px-6 py-14 sm:px-12 md:py-20">
-        <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-14">
+      <section id="enquire" aria-labelledby="enquire-title" className="au-sheet au-on-plum mt-24 px-6 py-14 sm:px-12 lg:mt-32 lg:py-20">
+        <div className="mx-auto grid max-w-[74rem] gap-10 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-16">
           <div>
             <h2 id="enquire-title" className="au-h2">
               {CLINICS.enquireTitle}
             </h2>
             <p className="mt-4 text-[1.1875rem] text-on-plum-soft">{CLINICS.enquireLead}</p>
+            <p className="mt-3 text-[0.9375rem] text-on-plum-soft">{CLINICS.enquireNote}</p>
           </div>
           <ContactForm
             topics={TOPICS}
+            defaultTopic={OPENING_TOPIC}
+            text={CLINICS.form}
             complaintAckDays={COMPLAINT_ACK_DAYS}
             messageMax={CONTACT_MESSAGE_MAX}
             classNames={{

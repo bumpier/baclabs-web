@@ -1,14 +1,18 @@
 import { llmsTxt, textResponse } from "@/lib/brand/site";
 import { CLINICS } from "@/brands/beauty/copy/clinics";
-import { brand, DESCRIPTION } from "../site";
+import { listSizes } from "@/brands/beauty/copy/home";
+import { brand, CLINIC_PACKS, DESCRIPTION, ESSENTIAL_PACKS } from "../site";
 
 // Served at /llms.txt on the brand's host (middleware.ts rewrites it here).
 export const revalidate = 300;
 
+/** The pack sizes on sale, from the catalogue: "1, 5, 10 and 20". */
+const sizes = (packs: typeof ESSENTIAL_PACKS) => listSizes(packs.filter((p) => p.available).map((p) => p.vials));
+
 /** The brand's pages, each on its own origin, with one line on what it holds. */
 const PAGES: readonly { path: string; title: string; note: string }[] = [
-  { path: "/", title: "The Essentials", note: "Sets of one, three and five sealed 10ml vials, with prices and delivery." },
-  { path: "/clinics", title: CLINICS.title, note: "Packs of 25, 50 and 100 vials, and the enquiry form for larger or regular orders." },
+  { path: "/", title: "The Essentials", note: `Sets of ${sizes(ESSENTIAL_PACKS)} sealed 10ml vials, with prices and delivery.` },
+  { path: "/clinics", title: CLINICS.title, note: `Packs of ${sizes(CLINIC_PACKS)} vials, and the enquiry form for larger or regular orders.` },
   { path: "/contact", title: "Contact", note: "Orders, delivery, returns and questions about the product." },
   { path: "/terms", title: "Terms", note: "The terms of supply." },
   { path: "/returns", title: "Returns", note: "Cancellation rights, sealed goods and refunds." },

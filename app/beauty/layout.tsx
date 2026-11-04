@@ -7,8 +7,11 @@ import { Analytics } from "@/components/commerce/Analytics";
 import { displayFont, textFont } from "@/brands/beauty/fonts";
 import { SiteHeader } from "@/brands/beauty/components/SiteHeader";
 import { WelcomePopup } from "@/brands/beauty/components/WelcomePopup";
+import { BasketDrawerProvider } from "@/brands/beauty/components/basket-drawer";
+import { announcement } from "@/brands/beauty/copy/home";
 import { brand, BASKET_KEY, DESCRIPTION, LIVE, STOREFRONT } from "./site";
 import { SiteFooter } from "./SiteFooter";
+import { BasketDrawer } from "./BasketDrawer";
 import "@/brands/beauty/styles.css";
 
 /**
@@ -17,9 +20,10 @@ import "@/brands/beauty/styles.css";
  * front can hold a page (and its prices) for more than five minutes.
  *
  * The commerce kit's shell sits here, fed by this brand's storefront view
- * alone: the basket (every page can fill it, from ?buy= links too), the
- * cookie banner and the analytics tags, which load nothing until the
- * visitor accepts, and the list's welcome, which waits for the banner.
+ * alone: the basket (every page can fill it, from ?buy= links too) and its
+ * drawer, opened from the header on every page; the cookie banner and the
+ * analytics tags, which load nothing until the visitor accepts; and the
+ * list's welcome, which waits for the banner.
  */
 export const revalidate = 300;
 
@@ -40,9 +44,12 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
         </a>
         <BrandPathnameProvider id={brand.id}>
           <CartProvider storageKey={BASKET_KEY} storefront={STOREFRONT}>
-            <SiteHeader name={brand.name} />
-            {children}
-            <SiteFooter />
+            <BasketDrawerProvider>
+              <SiteHeader announcement={announcement(STOREFRONT.delivery.options, STOREFRONT.delivery.freeFromMinor)} />
+              {children}
+              <SiteFooter />
+              <BasketDrawer />
+            </BasketDrawerProvider>
           </CartProvider>
           {STOREFRONT.mailingList ? <WelcomePopup consentText={STOREFRONT.mailingList.consentText} ga4Id={ga4Id} /> : null}
           <CookieBanner

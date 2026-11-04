@@ -9,19 +9,28 @@
 
    THE DESIGN, IN SHORT.
    Thesis: an Aurelle page is a still life you can buy from. Porcelain, blush
-   silk, a marble plinth and the vial itself, drawn rather than photographed
-   (no photography exists yet; every drawing marks its photo slot). It
-   refuses the lab-supply product grid and the black-and-gold box.
+   silk, white marble and the Aurelle pouch, photographed in soft window
+   light (stand-in photographs, brands/beauty/copy/images.ts). It refuses the
+   lab-supply product grid and the black-and-gold box.
    World: a porcelain ground, blush fields that own whole sections, plum ink
-   for every word, and rose gold only as metal inside the drawings (it never
-   carries text on a light ground: too little contrast). Rosarivo for display,
-   Ysabeau Office for text (brands/beauty/fonts.ts).
+   for every word, rose gold only as metal (the pouch's stud, a link's
+   underline; never text on a light ground).
+   The seal: the vial's blue flip-off cap seen from above, a royal-blue disc
+   in a thin silver ring. It is the identity's one cool note and its
+   signature: the crossbar of the wordmark's A, the full stop of the
+   promise, the mark on whatever is chosen (a size, a picture, a pack), the
+   basket's count, and the end of the footer. Nothing else on a page is
+   blue, so the cap in every photograph reads as meant.
+   Type: Rosarivo for display and its italic for the editorial voice, Ysabeau
+   Office for text (brands/beauty/fonts.ts), on a classical scale.
    Shape: everything is rounded. Sections are sheets with large radii inset
-   from the page edge, actions are pills, panels are soft-cornered porcelain.
-   No hairline rules, no capitals labels, no icon library.
-   Motion: one moment per action. The hero's vial catches the light once on
-   load; choosing a set fills its pouch; choosing a clinic pack fills its
-   tray. All of it stops for prefers-reduced-motion. */
+   from the page edge, actions are pills, photographs sit in soft frames.
+   No hairline rules between sections, no capitals labels, no icon library
+   (the few icons are drawn here, in one 1.5px stroke).
+   Motion: one orchestrated moment, the hero's arrival (the photograph opens,
+   the promise rises, the seal lands last). Everything else answers an
+   action: a size takes the seal, the basket slides in, its count lifts. All
+   of it stops for prefers-reduced-motion. */
 @import "tailwindcss" source(none);
 @import "../../styles/commerce-contract.css";
 @source "../../app/beauty";
@@ -33,7 +42,7 @@
   --color-paper: #f8f3f3;
   /* Glazed porcelain: panels, fields, the basket. */
   --color-surface: #fffcfb;
-  /* Blush: the fields that hold whole sections. */
+  /* Blush: the fields that hold whole sections, and the pouch's colour. */
   --color-neutral: #f2dfdc;
   --color-blush: #f2dfdc;
   --color-blush-deep: #e7c6c1;
@@ -49,17 +58,24 @@
   --color-rose: #b9877a;
   --color-rose-light: #e6bcab;
   --color-line: #e6d0cc;
+  /* The seal: the cap's blue and the crimp's silver. Only ever the seal. */
+  --color-cap: #1747c8;
+  --color-crimp: #c9cdd3;
   --color-primary: #3b1730;
   --color-cta: #3b1730;
   --color-on-cta: #fbf6f5;
 
   --radius-sheet: 2.5rem;
   --radius-panel: 1.75rem;
+  --radius-frame: 1.5rem;
   --radius-field: 0.875rem;
 
   --shadow-porcelain: 0 1px 2px rgb(59 23 48 / 0.05), 0 22px 44px -26px rgb(59 23 48 / 0.3);
+  --shadow-drawer: -24px 0 60px -30px rgb(59 23 48 / 0.45);
 
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  /* The seal lands: a quick start and a long, soft stop, no bounce. */
+  --ease-seal: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @theme inline {
@@ -77,7 +93,8 @@
     font-size: 1.125rem;
     line-height: 1.6;
     font-weight: 430;
-    /* No sideways scroll at 390px, whatever a drawing's overflow does. */
+    font-variant-numeric: lining-nums;
+    /* No sideways scroll at 360px, whatever a photograph's frame does. */
     overflow-x: clip;
   }
 
@@ -85,6 +102,9 @@
   h2,
   h3 {
     text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
   }
 
   ::selection {
@@ -96,37 +116,68 @@
     outline: 2px solid var(--color-ink);
     outline-offset: 3px;
   }
+
+  /* Anchored sections clear the sticky header. */
+  [id] {
+    scroll-margin-top: 5.5rem;
+  }
 }
 
 @layer components {
+  /* ── The page's measure ──────────────────────────────────────────── */
+  .au-wrap {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 80rem;
+    padding-inline: clamp(1.25rem, 0.6rem + 3vw, 3rem);
+  }
+
   /* ── Type ────────────────────────────────────────────────────────
-     A classical scale (48 → 56 → 72 → 92 at the top), set in Rosarivo at
-     its only weight. More space above a heading than below it. */
+     A classical scale, 15 → 18 → 21 → 28 → 36/60 → 48/96, set in
+     Rosarivo at its one weight. More space above a heading than below. */
   .au-display {
     font-family: var(--font-display);
     font-weight: 400;
-    font-size: clamp(3rem, 1.6rem + 5.2vw, 5.25rem);
-    line-height: 1.02;
-    letter-spacing: -0.015em;
+    font-size: clamp(3rem, 1.5rem + 5.4vw, 6rem);
+    /* Rosarivo's ascenders and descenders are long: any tighter and a
+       "g" meets the line below. */
+    line-height: 1.03;
+    letter-spacing: -0.02em;
   }
   .au-h2 {
     font-family: var(--font-display);
     font-weight: 400;
-    font-size: clamp(2.25rem, 1.6rem + 2.4vw, 3.5rem);
-    line-height: 1.06;
-    letter-spacing: -0.01em;
+    font-size: clamp(2.25rem, 1.55rem + 2.5vw, 3.75rem);
+    line-height: 1.04;
+    letter-spacing: -0.012em;
   }
   .au-h3 {
     font-family: var(--font-display);
     font-weight: 400;
-    font-size: 1.625rem;
+    font-size: clamp(1.5rem, 1.35rem + 0.5vw, 1.75rem);
     line-height: 1.15;
   }
-  .au-lead {
-    font-size: 1.1875rem;
-    line-height: 1.6;
+  /* The editorial voice: Rosarivo's italic, for a line that is read slowly. */
+  .au-voice {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(1.5rem, 1.2rem + 1.1vw, 2.25rem);
+    line-height: 1.28;
+    letter-spacing: -0.005em;
+  }
+  .au-caption {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 1.0625rem;
+    line-height: 1.45;
     color: var(--color-ink-soft);
-    max-width: 34rem;
+  }
+  .au-lead {
+    font-size: clamp(1.1875rem, 1.12rem + 0.25vw, 1.3125rem);
+    line-height: 1.55;
+    color: var(--color-ink-soft);
+    max-width: 36rem;
   }
   .au-price {
     font-family: var(--font-display);
@@ -138,6 +189,31 @@
     font-size: 0.9375rem;
     line-height: 1.55;
     color: var(--color-ink-soft);
+  }
+  .au-fine {
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--color-ink-soft);
+  }
+
+  /* ── The seal ─────────────────────────────────────────────────────
+     The cap from above: a blue disc in a silver ring. Sized in em, so it
+     sits as a full stop at any type size. */
+  .au-seal {
+    display: inline-block;
+    width: 0.26em;
+    height: 0.26em;
+    margin-left: 0.06em;
+    border-radius: 999px;
+    background: var(--color-cap);
+    box-shadow: 0 0 0 0.055em var(--color-crimp);
+    vertical-align: 0.02em;
+  }
+  .au-seal-fill {
+    fill: var(--color-cap);
+  }
+  .au-crimp-fill {
+    fill: var(--color-crimp);
   }
 
   /* ── Actions: pills ─────────────────────────────────────────────── */
@@ -152,10 +228,16 @@
     transition:
       background-color 160ms ease,
       border-color 160ms ease,
-      color 160ms ease;
+      color 160ms ease,
+      transform 160ms var(--ease-out-soft);
   }
   .btn-cta:hover:not(:disabled) {
     background: var(--color-plum-raised);
+  }
+  .btn-cta:active:not(:disabled),
+  .btn-secondary:active:not(:disabled),
+  .btn-quiet:active:not(:disabled) {
+    transform: scale(0.98);
   }
   .btn-quiet {
     border-color: var(--color-blush-deep);
@@ -196,6 +278,23 @@
   .au-on-plum .au-link {
     text-decoration-color: var(--color-rose-light);
   }
+  /* A navigation link: no underline until hovered, a rose one then. */
+  .au-nav {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    font-size: 0.9375rem;
+    font-weight: 560;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 6px;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 160ms ease;
+  }
+  .au-nav:hover,
+  .au-nav[aria-current="page"] {
+    text-decoration-color: var(--color-rose);
+  }
 
   /* ── Forms ──────────────────────────────────────────────────────── */
   .label {
@@ -204,7 +303,7 @@
     margin-bottom: 0.5rem;
   }
   .field {
-    min-height: 3rem;
+    min-height: 3.125rem;
     border-radius: var(--radius-field);
     border-color: var(--color-line);
     padding: 0.75rem 1rem;
@@ -267,7 +366,7 @@
   }
   @media (min-width: 48rem) {
     .au-sheet {
-      margin-inline: 1.5rem;
+      margin-inline: 1.25rem;
       border-radius: var(--radius-sheet);
     }
   }
@@ -278,117 +377,339 @@
     background: var(--color-plum);
     color: var(--color-on-plum);
   }
-
-  /* ── Choosing a pack ──────────────────────────────────────────────
-     The kit's PackPicker draws native radios, visually hidden; the label
-     carries the look, the chosen state and the focus ring. */
-  .au-set {
+  /* A photograph's frame: soft corners, a blush ground while it loads. */
+  .au-frame {
     position: relative;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 0.25rem 1rem;
-    border: 1.5px solid transparent;
-    border-radius: 1.5rem;
-    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-    padding: 1rem 1.25rem;
-    cursor: pointer;
-    transition:
-      border-color 160ms ease,
-      background-color 160ms ease;
-  }
-  .au-set:hover {
-    background: var(--color-surface);
-  }
-  .au-set[data-checked] {
-    border-color: var(--color-ink);
-    background: var(--color-surface);
-  }
-  .au-set:has(:focus-visible) {
-    outline: 2px solid var(--color-ink);
-    outline-offset: 3px;
-  }
-  /* The radio's face: a ring, filled when chosen. */
-  .au-dot {
-    display: block;
-    width: 1.25rem;
-    height: 1.25rem;
-    border: 1.5px solid var(--color-ink-soft);
-    border-radius: 999px;
-    transition: box-shadow 160ms ease;
-  }
-  [data-checked] > .au-dot,
-  [data-checked] .au-dot {
-    border-color: var(--color-ink);
-    box-shadow: inset 0 0 0 4px var(--color-surface), inset 0 0 0 10px var(--color-ink);
+    overflow: hidden;
+    border-radius: var(--radius-frame);
+    background: var(--color-blush);
+    isolation: isolate;
   }
 
-  /* The clinic sizes: one porcelain pill track on the blush sheet, three
-     choices. */
-  .au-segments {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.25rem;
-    border-radius: 999px;
-    background: var(--color-surface);
-    box-shadow: var(--shadow-porcelain);
-    padding: 0.3rem;
+  /* ── The announcement line and the header ──────────────────────── */
+  .au-announce {
+    background: var(--color-plum);
+    color: var(--color-on-plum);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    padding: 0.6rem 1.25rem;
+    text-align: center;
   }
-  .au-segment {
-    display: flex;
-    min-height: 3rem;
+  .au-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--color-paper);
+  }
+  /* A soft edge appears once the page moves under it, where scroll-driven
+     animation exists; without it the header simply has none. */
+  @supports (animation-timeline: scroll()) {
+    .au-header {
+      animation: au-header-lift linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 6rem;
+    }
+  }
+  .au-header-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 1rem;
+    min-height: 4rem;
+  }
+  @media (min-width: 64rem) {
+    .au-header-row {
+      min-height: 4.75rem;
+    }
+  }
+  .au-wordmark {
+    display: block;
+    height: 1.75rem;
+    width: auto;
+    color: var(--color-ink);
+  }
+  @media (min-width: 64rem) {
+    .au-wordmark {
+      height: 2.125rem;
+    }
+  }
+  /* A round icon button: the menu, the basket on a phone, the drawer's close. */
+  .au-icon-btn {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    font-weight: 600;
-    cursor: pointer;
-    transition:
-      background-color 160ms ease,
-      color 160ms ease;
+    color: var(--color-ink);
+    transition: background-color 160ms ease;
   }
-  .au-segment:hover {
+  .au-icon-btn:hover {
     background: var(--color-blush);
   }
-  .au-segment[data-checked] {
-    background: var(--color-ink);
-    color: var(--color-on-plum);
+  .au-basket {
+    position: relative;
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 560;
+    color: var(--color-ink);
+    transition: background-color 160ms ease;
   }
-  .au-segment:has(:focus-visible) {
-    outline: 2px solid var(--color-ink);
-    outline-offset: 2px;
+  .au-basket:hover {
+    background: var(--color-blush);
+  }
+  /* The basket's count: a quiet ring when empty, the seal's blue once
+     something is in it. */
+  .au-count-badge {
+    display: inline-flex;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1.5px var(--color-blush-deep);
+    padding: 0 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+  }
+  .au-count-badge[data-filled] {
+    background: var(--color-cap);
+    box-shadow: 0 0 0 2px var(--color-crimp);
+    color: #fff;
+    animation: au-bump 420ms var(--ease-seal);
   }
 
-  /* The quantity stepper's round buttons. */
+  /* The phone's menu: a porcelain sheet under the header. */
+  .au-menu {
+    position: absolute;
+    inset-inline: 0.625rem;
+    top: calc(100% + 0.25rem);
+    border-radius: var(--radius-panel);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-porcelain);
+    padding: 1rem 1.25rem 1.5rem;
+    animation: au-drop 280ms var(--ease-out-soft);
+  }
+  .au-menu-link {
+    display: flex;
+    min-height: 3.25rem;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-display);
+    font-size: 1.625rem;
+    line-height: 1.1;
+  }
+  .au-menu-link[aria-current="page"]::after {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--color-cap);
+    box-shadow: 0 0 0 2px var(--color-crimp);
+  }
+
+  /* ── The hero ─────────────────────────────────────────────────────
+     The still life fills a sheet; on a wide screen the promise sits on its
+     empty wall, on a phone it follows the photograph. */
+  .au-hero-media {
+    --r: 2rem;
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--r);
+    background: var(--color-blush);
+    aspect-ratio: 4 / 5;
+  }
+  @media (min-width: 40rem) {
+    .au-hero-media {
+      aspect-ratio: 3 / 2;
+    }
+  }
+  @media (min-width: 64rem) {
+    .au-hero-media {
+      --r: var(--radius-sheet);
+      aspect-ratio: auto;
+      height: clamp(36rem, 82vh, 50rem);
+    }
+  }
+
+  /* ── The product: gallery ───────────────────────────────────────── */
+  .au-gallery {
+    display: grid;
+    gap: 0.875rem;
+  }
+  @media (min-width: 64rem) {
+    /* Beside the taller purchase panel, the pictures stay in view. */
+    .au-gallery {
+      position: sticky;
+      top: 6.5rem;
+      align-self: start;
+      grid-template-columns: 5rem minmax(0, 1fr);
+      align-items: start;
+      gap: 1.25rem;
+    }
+    .au-gallery > .au-thumbs {
+      order: -1;
+      flex-direction: column;
+    }
+  }
+  .au-track {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    border-radius: var(--radius-panel);
+    background: var(--color-blush);
+  }
+  .au-track::-webkit-scrollbar {
+    display: none;
+  }
+  .au-slide {
+    position: relative;
+    flex: 0 0 100%;
+    aspect-ratio: 1;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  .au-thumbs {
+    display: flex;
+    gap: 0.625rem;
+  }
+  .au-thumb {
+    position: relative;
+    width: 4.25rem;
+    height: 4.25rem;
+    flex: none;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: var(--color-blush);
+    opacity: 0.72;
+    transition:
+      opacity 200ms ease,
+      box-shadow 200ms ease;
+  }
+  @media (min-width: 64rem) {
+    .au-thumb {
+      width: 5rem;
+      height: 5rem;
+    }
+  }
+  .au-thumb:hover {
+    opacity: 1;
+  }
+  .au-thumb[aria-current="true"] {
+    opacity: 1;
+    box-shadow:
+      0 0 0 2px var(--color-paper),
+      0 0 0 3.5px var(--color-ink);
+  }
+  .au-thumb[aria-current="true"]::after {
+    content: "";
+    position: absolute;
+    right: 0.45rem;
+    top: 0.45rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--color-cap);
+    box-shadow: 0 0 0 2px var(--color-crimp);
+    animation: au-seal-in 360ms var(--ease-seal);
+  }
+
+  /* ── The product: choosing a size ─────────────────────────────────
+     The kit's PackPicker draws native radios, visually hidden; the label
+     carries the look, the chosen state and the focus ring. An empty ring
+     waits in each corner; the chosen size takes the seal. */
+  .au-sizes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+  .au-size {
+    position: relative;
+    display: grid;
+    gap: 0.125rem;
+    min-height: 5.5rem;
+    align-content: start;
+    border: 1.5px solid var(--color-line);
+    border-radius: 1.25rem;
+    background: var(--color-surface);
+    padding: 0.875rem 2.25rem 0.875rem 1rem;
+    cursor: pointer;
+    transition:
+      border-color 180ms ease,
+      background-color 180ms ease;
+  }
+  .au-size::after {
+    content: "";
+    position: absolute;
+    right: 0.9rem;
+    top: 1.05rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1.5px var(--color-blush-deep);
+  }
+  .au-size:hover {
+    border-color: var(--color-blush-deep);
+  }
+  .au-size[data-checked] {
+    border-color: var(--color-ink);
+  }
+  .au-size[data-checked]::after {
+    background: var(--color-cap);
+    box-shadow: 0 0 0 2px var(--color-crimp);
+    animation: au-seal-in 380ms var(--ease-seal);
+  }
+  .au-size:has(:focus-visible) {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  /* The quantity stepper: one porcelain pill holding − n +. */
+  .au-qty {
+    display: inline-flex;
+    align-items: center;
+    border: 1.5px solid var(--color-line);
+    border-radius: 999px;
+    background: var(--color-surface);
+    padding: 0.1875rem;
+  }
   .au-step {
     display: inline-flex;
     width: 2.75rem;
     height: 2.75rem;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--color-blush-deep);
     border-radius: 999px;
-    background: var(--color-surface);
     font-size: 1.25rem;
     line-height: 1;
     color: var(--color-ink);
     cursor: pointer;
+    transition: background-color 160ms ease;
   }
   .au-step:hover:not(:disabled) {
-    border-color: var(--color-ink);
+    background: var(--color-blush);
   }
   .au-step:disabled {
     cursor: not-allowed;
-    opacity: 0.45;
+    opacity: 0.4;
   }
   .au-count {
-    width: 3.25rem;
+    width: 2.5rem;
     min-height: 2.75rem;
     border: 0;
     border-radius: 0.75rem;
     background: transparent;
     text-align: center;
     font: inherit;
-    font-weight: 600;
+    font-weight: 620;
     color: var(--color-ink);
     appearance: textfield;
   }
@@ -401,6 +722,154 @@
     outline: none;
     box-shadow: 0 0 0 2px var(--color-ink);
   }
+  /* The basket's smaller stepper. */
+  .au-qty-sm .au-step {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1.125rem;
+  }
+  .au-qty-sm .au-count {
+    width: 2.25rem;
+    min-height: 2.25rem;
+  }
+
+  /* A fold of details (delivery, returns): the summary is the control. */
+  .au-fold {
+    border-top: 1px solid var(--color-line);
+  }
+  .au-fold:last-of-type {
+    border-bottom: 1px solid var(--color-line);
+  }
+  .au-fold > summary {
+    display: flex;
+    min-height: 3.5rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+  }
+  .au-fold > summary::-webkit-details-marker {
+    display: none;
+  }
+  .au-fold > summary svg {
+    flex: none;
+    transition: transform 240ms var(--ease-out-soft);
+  }
+  .au-fold[open] > summary svg {
+    transform: rotate(45deg);
+  }
+
+  /* The clinic price list: each pack a row, chosen by its radio. */
+  .au-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.25rem 1rem;
+    border-radius: 1.25rem;
+    padding: 1rem 1.125rem;
+    cursor: pointer;
+    transition: background-color 160ms ease;
+  }
+  .au-row:hover {
+    background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  }
+  .au-row[data-checked] {
+    background: var(--color-surface);
+    box-shadow: var(--shadow-porcelain);
+  }
+  .au-row:has(:focus-visible) {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  /* The radio's face: a ring, the seal when chosen. */
+  .au-dot {
+    display: block;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1.5px var(--color-ink-soft);
+  }
+  [data-checked] > .au-dot,
+  [data-checked] .au-dot {
+    background: var(--color-cap);
+    box-shadow:
+      inset 0 0 0 0 transparent,
+      0 0 0 2.5px var(--color-crimp);
+    transform: scale(0.72);
+    animation: au-seal-in-small 360ms var(--ease-seal);
+  }
+
+  /* ── The basket drawer ────────────────────────────────────────────
+     A native modal <dialog> on the right edge: focus stays inside, Esc and
+     the backdrop close it, the page behind is inert. It slides in where
+     @starting-style exists and simply appears where it does not. */
+  .au-drawer {
+    position: fixed;
+    inset: 0 0 0 auto;
+    margin: 0;
+    width: min(100vw - 1.25rem, 28rem);
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    border: 0;
+    border-radius: var(--radius-panel) 0 0 var(--radius-panel);
+    padding: 0;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    box-shadow: var(--shadow-drawer);
+    translate: 0 0;
+    transition:
+      translate 460ms var(--ease-out-soft),
+      overlay 460ms allow-discrete,
+      display 460ms allow-discrete;
+  }
+  .au-drawer:not([open]) {
+    translate: 100% 0;
+  }
+  @starting-style {
+    .au-drawer[open] {
+      translate: 100% 0;
+    }
+  }
+  .au-drawer::backdrop {
+    background: rgb(59 23 48 / 0.32);
+    opacity: 1;
+    transition:
+      opacity 360ms ease,
+      overlay 360ms allow-discrete,
+      display 360ms allow-discrete;
+  }
+  .au-drawer:not([open])::backdrop {
+    opacity: 0;
+  }
+  @starting-style {
+    .au-drawer[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  .au-line[data-new] {
+    animation: au-line-new 1.8s ease-out;
+  }
+  .au-meter {
+    height: 0.25rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-blush);
+  }
+  /* The share of the way to free delivery, as a scale (styled inline), so
+     it grows without moving anything around it. */
+  .au-meter > span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--color-rose);
+    transform-origin: left center;
+    transition: transform 500ms var(--ease-out-soft);
+  }
 
   /* The delivery choice in the basket. */
   .au-choice {
@@ -411,6 +880,7 @@
     border-radius: 1.125rem;
     padding: 0.875rem 1rem;
     cursor: pointer;
+    transition: border-color 160ms ease;
   }
   .au-choice[data-checked] {
     border-color: var(--color-ink);
@@ -420,117 +890,127 @@
     outline-offset: 2px;
   }
 
-  /* The header's basket pill. */
-  .au-basket {
-    display: inline-flex;
-    min-height: 2.75rem;
-    align-items: center;
-    gap: 0.5rem;
-    border-radius: 999px;
-    border: 1px solid var(--color-blush-deep);
-    background: var(--color-surface);
-    padding: 0 0.5rem 0 1rem;
-    font-weight: 600;
-  }
-  .au-basket:hover {
-    border-color: var(--color-ink);
-  }
-  .au-basket-count {
-    display: inline-flex;
-    min-width: 1.75rem;
-    height: 1.75rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: var(--color-blush);
-    padding: 0 0.4rem;
-    font-size: 0.875rem;
-    font-variant-numeric: tabular-nums;
-  }
-  .au-basket-count[data-filled] {
-    background: var(--color-ink);
-    color: var(--color-on-plum);
-  }
-
   /* The welcome dialog (the kit's SignupPopup). */
   .au-dialog {
     margin: auto;
     width: calc(100% - 2rem);
-    max-width: 28rem;
+    max-width: 27rem;
     border: 0;
     border-radius: 2rem;
     padding: 0;
+    overflow: hidden;
     background: var(--color-plum);
     color: var(--color-on-plum);
     box-shadow: 0 40px 80px -30px rgb(59 23 48 / 0.6);
   }
+  .au-dialog[open] {
+    animation: au-dialog-in 420ms var(--ease-out-soft);
+  }
   .au-dialog::backdrop {
     background: rgb(59 23 48 / 0.38);
+  }
+  /* The page behind a drawer or a dialog stays where it is. */
+  html:has(dialog[open]) {
+    overflow: hidden;
   }
 
   /* ── Legal pages (components/commerce/LegalPage.tsx) ───────────── */
   .legal-prose {
     font-size: 1.0625rem;
-    line-height: 1.7;
+    line-height: 1.75;
+    max-width: 40rem;
   }
   .legal-prose h3 {
     font-weight: 650;
+    margin-top: 1.25rem;
+  }
+  .legal-prose p + p,
+  .legal-prose ul,
+  .legal-prose ol {
+    margin-top: 0.75rem;
   }
 
   /* ── Motion ─────────────────────────────────────────────────────── */
-  /* SVG elements: a CSS transform replaces the element's own transform
-     attribute, so these go on inner groups only, and turn about their own
-     box rather than the drawing's origin. */
-  .au-sheen,
-  .au-rise,
-  .au-settle {
-    transform-box: fill-box;
-    transform-origin: center;
+  /* The one orchestrated moment: the hero arrives. The photograph opens
+     from a slightly smaller frame and settles; the promise rises line by
+     line; the seal lands as its full stop, last. Nothing starts hidden for
+     long: the whole sequence is over in a little over a second. */
+  .au-arrive-media {
+    animation: au-open 1200ms var(--ease-out-soft) both;
   }
-  .au-sheen {
-    animation: au-sheen 1.9s var(--ease-out-soft) 0.6s 1 both;
+  .au-arrive-media img {
+    animation: au-settle 1600ms var(--ease-out-soft) both;
   }
-  .au-rise {
-    animation: au-rise 520ms var(--ease-out-soft) both;
-    animation-delay: calc(var(--i, 0) * 70ms);
+  .au-arrive {
+    animation: au-rise 820ms var(--ease-out-soft) both;
+    animation-delay: calc(180ms + var(--i, 0) * 90ms);
   }
-  .au-settle {
-    animation: au-settle 420ms var(--ease-out-soft) both;
-    animation-delay: calc(var(--i, 0) * 5ms);
+  .au-arrive-seal {
+    animation: au-seal-in 520ms var(--ease-seal) 880ms both;
   }
+
   @media (prefers-reduced-motion: reduce) {
-    .au-sheen {
+    .au-arrive-media,
+    .au-arrive-media img,
+    .au-arrive,
+    .au-arrive-seal,
+    .au-thumb[aria-current="true"]::after,
+    .au-size[data-checked]::after,
+    [data-checked] > .au-dot,
+    [data-checked] .au-dot,
+    .au-count-badge[data-filled],
+    .au-line[data-new],
+    .au-menu,
+    .au-dialog[open] {
       animation: none;
-      opacity: 0;
     }
-    .au-rise,
-    .au-settle {
-      animation: none;
-    }
+    .au-drawer,
+    .au-drawer::backdrop,
+    .au-meter > span,
     .btn-cta,
     .btn-quiet,
     .btn-secondary,
     .field,
-    .au-set,
-    .au-segment {
+    .au-size,
+    .au-row,
+    .au-thumb,
+    .au-fold > summary svg {
       transition: none;
+    }
+    .au-track {
+      scroll-behavior: auto;
     }
   }
 }
 
-@keyframes au-sheen {
+@keyframes au-header-lift {
+  to {
+    box-shadow: 0 12px 28px -26px rgb(59 23 48 / 0.55);
+  }
+}
+
+@keyframes au-open {
   from {
-    transform: translateX(0) skewX(-14deg);
+    clip-path: inset(3% 2.5% round var(--r));
   }
   to {
-    transform: translateX(260px) skewX(-14deg);
+    clip-path: inset(0 round var(--r));
+  }
+}
+
+@keyframes au-settle {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: none;
   }
 }
 
 @keyframes au-rise {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(0.45em);
   }
   to {
     opacity: 1;
@@ -538,13 +1018,60 @@
   }
 }
 
-@keyframes au-settle {
+@keyframes au-seal-in {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes au-seal-in-small {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(0.72);
+  }
+}
+
+@keyframes au-bump {
+  0% {
+    transform: scale(0.6);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes au-drop {
   from {
     opacity: 0;
-    transform: scale(0.6);
+    transform: translateY(-0.5rem);
   }
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes au-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(1rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes au-line-new {
+  from {
+    background-color: var(--color-blush);
+  }
+  to {
+    background-color: transparent;
   }
 }
