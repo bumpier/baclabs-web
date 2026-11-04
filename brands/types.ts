@@ -149,9 +149,11 @@ export interface BrandProfile {
    *  - any other provider is used only while the brand's OWN credentials for
    *    it are set, by the brand's id, with no shared or fallback account.
    * Moving a brand from one to another is this list plus that provider's
-   * credentials, and nothing else. Empty or unset: the brand takes no
-   * payment, its storefront shows no checkout button and its checkout
-   * answers 503.
+   * credentials, and nothing else. The storefront's checkout button follows
+   * this list alone, because the pages are built without the runtime env:
+   * listed but not configured, the button shows and the checkout answers
+   * 503 in neutral words. Empty or unset: the brand takes no payment, its
+   * storefront shows no checkout button and its checkout answers 503.
    */
   paymentProviders?: readonly BrandPaymentProviderId[];
   /**

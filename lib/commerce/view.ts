@@ -86,9 +86,12 @@ export interface StorefrontView {
     promotionCodes: boolean;
   };
   /**
-   * The ways the checkout will take payment right now, in the order to offer
-   * them. Empty: the brand takes no payment, so show no checkout button and
-   * nothing method-specific. With several, the order names one (`method`).
+   * The ways the checkout takes payment, as the brand's profile lists them,
+   * in the order to offer them. Empty: the brand takes no payment, so show
+   * no checkout button and nothing method-specific. With several, the order
+   * names one (`method`). A listed method can still be off when the
+   * customer pays (the view is built without the runtime env): the checkout
+   * then answers 503 in neutral words, shown as they stand.
    */
   payment: { methods: PaymentMethodView[] };
   /** The brand's own GA4 property. null: none. Its Meta pixel is resolved per request (/api/pixel). */

@@ -133,7 +133,10 @@ async function main() {
   clearPayPalEnv();
   const off = await post(lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
   check("a PayPal brand without credentials is a 503", off.status === 503);
-  check("its storefront shows no way to pay", storefrontView(lux).payment.methods.length === 0);
+  // Its pages are built without the runtime env, so the button follows the
+  // profile: still there, and the 503 above is what a press of it reads.
+  check("its storefront still offers PayPal, by its profile", storefrontView(lux).payment.methods.map((m) => m.id).join() === "paypal");
+  check("its storefront's PayPal answers 503, not 400", (await post(lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], method: "paypal" })).status === 503);
   for (const b of PAYPAL_BRANDS) setPayPalEnv(b.id);
   for (const b of PAYPAL_BRANDS) {
     const methods = storefrontView(b).payment.methods;

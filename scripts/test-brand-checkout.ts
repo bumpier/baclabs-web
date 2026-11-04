@@ -514,13 +514,29 @@ async function routeChecks() {
   const none = await answer(await post(lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] }));
   check("brandCheckout: with BacLab's Stripe off, a 503 before any order is written", none.status === 503 && none.body.error === CHECKOUT_UNAVAILABLE);
   check("brandCheckout: the refusal names no provider or method", !/stripe|paypal|card/i.test(CHECKOUT_UNAVAILABLE));
+  // The storefront is built as `next build` builds it, with no Stripe env:
+  // its button is still there, and pressing it is the 503 above, also when
+  // it names the method it offered.
+  const { storefrontView } = await import("@/lib/commerce/storefront");
+  for (const b of NEW_BRANDS) {
+    check(`storefront: ${b.id} offers Stripe with BacLab's Stripe off`, storefrontView(b).payment.methods.map((m) => m.id).join() === "stripe");
+  }
+  const named = await answer(await post(lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], method: "stripe" }));
+  check("brandCheckout: the method the storefront offered, while it is off, is the same 503", named.status === 503 && named.body.error === CHECKOUT_UNAVAILABLE, JSON.stringify(named));
 
   // A stand-in for the Stripe adapter, "configured" for every brand: what
   // the profile lists still decides, and the request's choices are checked
   // before any order is written (these would need the database past that
   // point).
   const noprov = registerNoProviderBrand();
-  const { __registerTestPaymentAdapter, __clearTestPaymentAdapters, brandPaymentAdapters, choosePaymentAdapter } = await import("@/lib/commerce/payments");
+  const { __registerTestPaymentAdapter, __clearTestPaymentAdapters, brandPaymentAdapters, choosePaymentAdapter, listedPaymentAdapters } = await import("@/lib/commerce/payments");
+  // Listed but off: offered by the storefront, refused by the checkout.
+  __registerTestPaymentAdapter({ ...standInAdapter([]), configured: () => false });
+  check("providers: listed but off, still listed", listedPaymentAdapters(lux).map((a) => a.id).join() === "stripe");
+  check("providers: listed but off, not offered for payment", brandPaymentAdapters(lux).length === 0);
+  const off = choosePaymentAdapter(lux, "stripe", "x");
+  check("providers: listed but off, named, is a 503", !off.ok && off.status === 503 && off.error === "x");
+  check("providers: BacLab lists none, whatever is set", listedPaymentAdapters(brandFor(DEFAULT_BRAND)).length === 0);
   __registerTestPaymentAdapter(standInAdapter([]));
   for (const b of NEW_BRANDS) check(`providers: ${b.id} lists Stripe and is offered it`, brandPaymentAdapters(b).map((a) => a.id).join() === "stripe");
   check("providers: a brand that lists none is offered none whatever is set", brandPaymentAdapters(noprov).length === 0);

@@ -68,23 +68,32 @@ for (const id of BRANDS) {
   check(`${id}: every pack is listed`, view.packs.map((p) => p.sku).join() === b.catalogue!.packs.map((p) => p.sku).join());
   check(`${id}: prices are the catalogue's`, view.packs.every((p, i) => p.priceMinor === b.catalogue!.packs[i]!.priceMinor));
   check(`${id}: it is serialisable`, JSON.stringify(JSON.parse(json)) === json);
-  check(`${id}: no payment method until one is configured`, view.payment.methods.length === 0);
+  // No payment env is set here, as in `next build`: the view still offers
+  // what the profile lists, so a prerendered page keeps its checkout button.
+  check(
+    `${id}: the view offers what the profile lists, with no payment env`,
+    view.payment.methods.map((m) => m.id).join() === (b.paymentProviders ?? []).join(),
+    JSON.stringify(view.payment.methods)
+  );
   check(`${id}: its mailing list words are the profile's`, (view.mailingList?.consentText ?? null) === (b.mailingList?.consentText ?? null));
   check(`${id}: the free-delivery threshold is the catalogue's`, view.delivery.freeFromMinor === b.catalogue!.delivery.freeFromMinor);
   for (const pack of view.packs) check(`${id}: ${pack.sku} saves nothing negative`, packSavingMinor(view, pack) >= 0);
 }
 check("wholesale runs no list", storefrontView(profiles.wholesale!).mailingList === null);
-// A configured provider is offered, in the profile's words when it has
+// A listed provider is offered whether or not it is configured (the
+// checkout answers 503 while it is off), in the profile's words when it has
 // some; a brand that lists none is offered none whatever is set.
-__registerTestPaymentAdapter({ id: "stripe", label: "Stand-in", configured: () => true, createPayment: () => Promise.reject(new Error("never")) });
-for (const id of BRANDS) {
-  const methods = storefrontView(profiles[id]!).payment.methods;
-  const listed = profiles[id]!.paymentProviders ?? [];
-  check(`${id}: the view offers what is listed and configured`, methods.map((m) => m.id).join() === listed.join(), JSON.stringify(methods));
-  const words = profiles[id]!.payment?.methods.find((m) => m.id === "stripe");
-  if (methods[0]) check(`${id}: the method is in the profile's words`, methods[0].label === (words?.label ?? "Stand-in") && methods[0].terms === (words?.terms ?? ""));
+for (const configured of [false, true]) {
+  __registerTestPaymentAdapter({ id: "stripe", label: "Stand-in", configured: () => configured, createPayment: () => Promise.reject(new Error("never")) });
+  for (const id of BRANDS) {
+    const methods = storefrontView(profiles[id]!).payment.methods;
+    const listed = profiles[id]!.paymentProviders ?? [];
+    check(`${id}: the view offers what is listed, ${configured ? "configured" : "not configured"}`, methods.map((m) => m.id).join() === listed.join(), JSON.stringify(methods));
+    const words = profiles[id]!.payment?.methods.find((m) => m.id === "stripe");
+    if (methods[0]) check(`${id}: the method is in the profile's words`, methods[0].label === (words?.label ?? "Stand-in") && methods[0].terms === (words?.terms ?? ""));
+  }
+  check("a brand that lists no provider is offered no way to pay", storefrontView({ ...profiles.gym!, paymentProviders: [] }).payment.methods.length === 0);
 }
-check("a brand that lists no provider is offered no way to pay", storefrontView({ ...profiles.gym!, paymentProviders: [] }).payment.methods.length === 0);
 __clearTestPaymentAdapters();
 let threw = false;
 try {

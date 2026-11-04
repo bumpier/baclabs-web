@@ -29,6 +29,14 @@ separately, from each brand's own catalogue
   `"stripe"`. There is no per-brand key and no `STRIPE_*__<ID>`.
   `STRIPE_ENABLED=false` turns off every brand's card checkout along with
   BacLab's.
+- **The checkout button:** follows the profile alone. A brand that lists
+  `"stripe"` shows it on every page from the moment it is deployed, because
+  the pages are prerendered by the Docker build, which never has the Stripe
+  keys (and must not: they are runtime secrets). Whether a payment can be
+  taken is checked when the customer presses it: with BacLab's cards off,
+  the button stays and the checkout answers *"Checkout is not available
+  right now."* (503), as BacLab's own checkout refuses cards while they are
+  off. A brand that lists no provider shows no button at all.
 
 ## The rules
 
@@ -159,8 +167,9 @@ its paid Stripe orders are still refunded in Stripe.
 1. **Each brand's PayPal credentials are its own.** There is no shared
    `PAYPAL_CLIENT_ID`, no default environment and no fallback from one brand
    to another. A brand that lists PayPal without all four variables below
-   takes no payment: its site shows no checkout button and its checkout
-   answers *"Checkout is not available right now."*
+   takes no payment: its site still shows the checkout button (it follows
+   the profile, as for Stripe above), and the checkout answers *"Checkout
+   is not available right now."*
 2. **The gym brand never goes on PayPal.**
    - **Why:** PayPal's UK Acceptable Use Policy prohibits, at 2(a),
      *"narcotics, steroids, certain controlled substances or other products
@@ -226,10 +235,10 @@ Do this in the sandbox first, then again in live.
    - **Partly set:** the log names what is missing (`[paypal] luxury: PayPal
      is off until ...`), never the values.
    - **Runtime only:** these are read while the app runs, not as build
-     arguments. A restart picks them up.
-   - **The checkout button:** brand pages are prerendered and revalidated
-     every 5 minutes, so the button shows once a page has been regenerated
-     after the restart.
+     arguments. A restart picks them up, and payments work from the first
+     request after it.
+   - **The checkout button:** is already there from the profile, whether
+     these are set or not. Until all four are, pressing it answers the 503.
 4. **The brand's profile** (`brands/<id>/profile.ts`) must have:
    - `paymentProviders: ["paypal"]` and `payment: PAYPAL_PAYMENT`;
    - an https `origin` on the brand's apex, since PayPal sends the buyer back

@@ -6,15 +6,15 @@
  * profile, nothing from config/.
  *
  * SERVER CODE: it reads config/funnel.ts (the Lab Kit's switch and parts)
- * and whether the brand's payment providers are configured (never a value).
- * What it returns is plain, serialisable data. BacLab has no catalogue and
+ * and the payment providers the brand's profile lists. What it returns is
+ * plain, serialisable data. BacLab has no catalogue and
  * never comes here; its storefront is config/funnel.ts as it always was.
  */
 import type { BrandProfile } from "@/brands/types";
 import { labKitContents, labKitEnabled } from "@/config/funnel";
 import { packPerVialMinor } from "@/lib/commerce/catalogue";
 import { MAX_BRAND_LINES, MAX_LINE_QTY } from "@/lib/commerce/pricing";
-import { brandPaymentAdapters } from "@/lib/commerce/payments";
+import { listedPaymentAdapters } from "@/lib/commerce/payments";
 import type { StorefrontView } from "@/lib/commerce/view";
 
 export function storefrontView(brand: BrandProfile): StorefrontView {
@@ -57,15 +57,17 @@ export function storefrontView(brand: BrandProfile): StorefrontView {
     },
     limits: { maxVials: catalogue.maxVials, maxLineQty: MAX_LINE_QTY, maxLines: MAX_BRAND_LINES },
     flags: { businessDetails: catalogue.collectBusinessDetails, promotionCodes: catalogue.allowPromotionCodes },
-    // What the checkout will take right now: the profile's providers that
-    // are configured (lib/commerce/payments: BacLab's Stripe settings for
-    // Stripe, the brand's own credentials for any other), in the profile's
-    // words when it has some. Empty, the storefront shows no checkout
-    // button at all. Read where the view is built: the brand's pages are
-    // prerendered and revalidated, so settings changed show from the next
-    // render.
+    // The ways to pay the profile lists (lib/commerce/payments), in its
+    // words when it has some. Never whether they are configured: the
+    // brand's pages are prerendered by `next build`, which has no payment
+    // keys, so a view that waited for them lost its checkout button on
+    // every deploy until the page revalidated. The checkout checks when the
+    // customer pays, and answers the neutral 503 while a listed provider is
+    // off (BacLab's cards switched off, a brand's own credentials unset).
+    // Empty only when the profile lists none: then the storefront shows no
+    // checkout button at all.
     payment: {
-      methods: brandPaymentAdapters(brand).map((adapter) => {
+      methods: listedPaymentAdapters(brand).map((adapter) => {
         const words = brand.payment?.methods.find((m) => m.id === adapter.id);
         return { id: adapter.id, label: words?.label ?? adapter.label, terms: words?.terms ?? "" };
       }),

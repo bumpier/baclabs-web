@@ -1,10 +1,18 @@
 /**
- * Which payment providers a brand may use right now: the ones its profile
- * lists (BrandProfile.paymentProviders), in that order, that have an adapter
- * here and are configured for that brand. The checkout takes payment only
- * through these, and the storefront offers only these
- * (lib/commerce/storefront.ts), so a brand with none shows no checkout
- * button and its checkout answers 503.
+ * Which payment providers a brand may use: the ones its profile lists
+ * (BrandProfile.paymentProviders), in that order, that have an adapter here.
+ * The storefront offers every one of them (lib/commerce/storefront.ts), so
+ * a brand that lists none shows no checkout button. The checkout takes
+ * payment only through those that are also configured for the brand right
+ * now, and answers 503 in neutral words while none is.
+ *
+ * Two lists, because they are read at different times. The brand's pages
+ * are prerendered by `next build`, which never sees the runtime env (the
+ * Docker build gets no payment keys, by design), so a storefront that
+ * waited for configured() was built without its checkout button after
+ * every deploy, until the page next revalidated. The profile is the same
+ * at build time and at runtime; the credentials are only known when the
+ * customer pays.
  *
  * SERVER ONLY: configured() reads credentials from env.
  *
@@ -49,38 +57,54 @@ export function paymentAdapter(id: string): PaymentAdapter | null {
 }
 
 /**
+ * The providers this brand's profile lists, in its order, configured or
+ * not: what its storefront offers. Read from the profile alone, so a page
+ * built without the runtime env offers what the live checkout takes. Never
+ * BacLab's, and a provider listed twice is offered once.
+ */
+export function listedPaymentAdapters(brand: Pick<BrandProfile, "id" | "paymentProviders">): PaymentAdapter[] {
+  if (brand.id === DEFAULT_BRAND) return [];
+  const out: PaymentAdapter[] = [];
+  for (const id of brand.paymentProviders ?? []) {
+    const adapter = paymentAdapter(id);
+    if (adapter && !out.includes(adapter)) out.push(adapter);
+  }
+  return out;
+}
+
+/**
  * The providers this brand can take payment through now, in its profile's
  * order. Listed on the profile AND configured: neither alone is enough, so
  * a brand with an empty list never takes payment however env is set, and
  * BacLab's Stripe keys reach only the brands that list "stripe".
  */
 export function brandPaymentAdapters(brand: Pick<BrandProfile, "id" | "paymentProviders">): PaymentAdapter[] {
-  if (brand.id === DEFAULT_BRAND) return [];
-  const out: PaymentAdapter[] = [];
-  for (const id of brand.paymentProviders ?? []) {
-    const adapter = paymentAdapter(id);
-    if (adapter && adapter.configured(brand) && !out.includes(adapter)) out.push(adapter);
-  }
-  return out;
+  return listedPaymentAdapters(brand).filter((adapter) => adapter.configured(brand));
 }
 
 export type PaymentChoice = { ok: true; adapter: PaymentAdapter } | { ok: false; status: 400 | 503; error: string };
 
 /**
  * The provider a checkout request pays through: the one its `method` names,
- * when the brand offers several, else the only one there is. No provider at
- * all is a 503 in neutral words (the storefront shows it as it stands).
+ * when the brand offers several, else the only one there is. No provider
+ * configured at all is a 503 in neutral words (the storefront shows it as it
+ * stands), and so is a method the storefront offered, because the profile
+ * lists it, whose provider is off right now. A method the profile does not
+ * list is a 400.
  */
 export function choosePaymentAdapter(
   brand: Pick<BrandProfile, "id" | "paymentProviders">,
   method: string | undefined,
   unavailable: string
 ): PaymentChoice {
-  const offered = brandPaymentAdapters(brand);
+  const listed = listedPaymentAdapters(brand);
+  const offered = listed.filter((adapter) => adapter.configured(brand));
   if (offered.length === 0) return { ok: false, status: 503, error: unavailable };
   if (method !== undefined) {
     const named = offered.find((a) => a.id === method);
-    return named ? { ok: true, adapter: named } : { ok: false, status: 400, error: "That payment method is not available." };
+    if (named) return { ok: true, adapter: named };
+    if (listed.some((a) => a.id === method)) return { ok: false, status: 503, error: unavailable };
+    return { ok: false, status: 400, error: "That payment method is not available." };
   }
   if (offered.length === 1) return { ok: true, adapter: offered[0]! };
   return { ok: false, status: 400, error: "Choose how you would like to pay." };

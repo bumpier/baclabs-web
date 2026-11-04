@@ -82,8 +82,11 @@ export type BrandCheckoutInput = z.infer<typeof BrandCheckoutSchema>;
 
 /**
  * The answer while a brand has no way to pay. Names no provider and no
- * method: the storefront shows it as it stands, and shows no checkout
- * button at all while its view lists no method (lib/commerce/storefront.ts).
+ * method: the storefront shows it as it stands. Its checkout button follows
+ * the profile, not the env (lib/commerce/storefront.ts), so this is what a
+ * customer reads while a listed provider is off: BacLab's cards switched
+ * off, or a brand's own credentials unset. A brand that lists none shows no
+ * button at all.
  */
 export const CHECKOUT_UNAVAILABLE = "Checkout is not available right now.";
 

@@ -285,10 +285,12 @@ docker compose logs --tail 50 baclab
 
 `docker compose restart` does not re-read the env file; `up -d` does. The
 log names any payment provider whose credentials are only partly set,
-never their values. Brand pages are prerendered and revalidate every five
-minutes, so the checkout button appears within five minutes of the
-restart. A brand on Stripe needs no env of its own: its button shows while
-BacLab's cards are on.
+never their values. The checkout button does not wait for any of this: it
+follows the profile's `paymentProviders`, so it is on every brand page from
+the deploy on, prerendered by a build that never sees the env. Until the
+provider is configured, pressing it answers "Checkout is not available
+right now." A brand on Stripe needs no env of its own: it takes payment
+while BacLab's cards are on.
 
 ## 9. nginx, the certificate, then DNS (VPS operator)
 
@@ -454,11 +456,13 @@ backup already cover every brand's orders.
   rollback. A domain the app no longer knows is served BacLab's site, which
   is the one thing that must never happen.
 - **Stop taking payment, nothing else:** set the brand's
-  `paymentProviders` to `[]` and deploy. Its checkout then answers
-  "Checkout is not available right now". No other brand is touched. Never
-  remove BacLab's Stripe keys for this: every brand and BacLab would stop
-  with them. (A brand on PayPal can also be stopped by removing its
-  `PAYPAL_*__<ID>` and running `docker compose --env-file .env.local up -d`.)
+  `paymentProviders` to `[]` and deploy. Its site then shows no checkout
+  button, and its checkout answers "Checkout is not available right now".
+  No other brand is touched. Never remove BacLab's Stripe keys for this:
+  every brand and BacLab would stop with them. (A brand on PayPal can also
+  be stopped by removing its `PAYPAL_*__<ID>` and running
+  `docker compose --env-file .env.local up -d`; its button then stays, and
+  answers with that sentence.)
 - **Back to noindex:** set `LIVE = false` and deploy.
 - **Unregister the domain:** once the site is offline, remove the apex and
   www from `brands/hosts.json` and the middleware literal, set the origin
