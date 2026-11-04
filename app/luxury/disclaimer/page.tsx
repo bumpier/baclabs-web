@@ -13,9 +13,9 @@ export const metadata: Metadata = pageMetadata({ title: doc.title, description: 
 
 export default function DisclaimerPage() {
   return (
-    <main id="main" className="rx-wrap rx-page">
+    <main id="main" className="rv-wrap rv-page">
       <JsonLd data={breadcrumbSchema(doc.title, doc.path, brand.id)} />
-      <div className="max-w-3xl">
+      <div className="rv-legal">
         <LegalPage identity={legalIdentity(brand)} doc={doc} classNames={LEGAL_CLASSES} />
       </div>
     </main>

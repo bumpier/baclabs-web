@@ -13,4 +13,18 @@ export const CONCIERGE = {
   orEmail: "Or email",
   companyNo: "no.",
   vat: "VAT",
+  /** The topic the form opens on: most who write before an order ask about the vials. */
+  defaultTopic: "product",
+  /** The kit form's labels, in the house's words (ContactForm's `text`). */
+  form: {
+    topic: "Your question concerns",
+    topicPrompt: "Choose one",
+    name: "Your name",
+    email: "Your email",
+    orderRef: "Order number, if you have one",
+    message: "Your message",
+    submit: "Send to the concierge",
+    sending: "Sending…",
+    again: "Write again",
+  },
 };

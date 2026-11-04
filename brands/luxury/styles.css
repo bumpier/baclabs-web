@@ -8,22 +8,26 @@
    it: the kit's default classes are built here, and themed by the tokens
    below.
 
-   THE DIRECTION, as built:
-   - Thesis: the service is the structure. The home page is one working day,
-     from choosing to the doorstep to the concierge, set as a timetable. It
-     refuses the category's default of a dark hero, a product grid and an
-     "our story" band.
-   - World: black lacquer and ivory, champagne hairlines (doubled, like a
-     stationer's rule, on anything that is a card or a frame), Bodoni Moda at
-     its optical display size over Jost. Square corners. Gold is only ever a
-     line or a figure, never a fill or a gradient.
-   - First viewport: ivory; the box drawn large, its lid lifting once; the
-     Didone headline; "Choose a box" beneath it.
-   - Motion: that lid, once, over 3.6s, and nothing else moves on its own.
-     prefers-reduced-motion shows the lid already lifted.
-   - Colour roles: lacquer owns the timetable (most of the page), ivory the
-     hero, the letters and the footer. Prices are set small, and never as a
-     saving. */
+   THE HOUSE, as built (round two, 4 Nov 2026):
+   - A maison selling one object: the page is a product page as a
+     fragrance or leather house sets one. A photograph the width of the
+     screen; a column of tall photographs beside a sticky purchase column;
+     three chapters, photograph and text in turn; the concierge; a footer in
+     small capitals that ends on the wordmark.
+   - World: claret, limestone and the vial's own silver and blue. Claret is
+     the box, so it owns whole fields (the delivery line, the second chapter,
+     the concierge, the button, the bag's count), never a hairline. The
+     ground is a cool grey limestone, the stone in the photographs.
+   - Type: Libre Caslon Display for the house's voice, Libre Caslon Text for
+     reading, Hanken Grotesk for the counter (prices, forms, small capitals).
+   - The device: the wax seal (R over 10). It is the favicon, the bag's
+     count, the mark beside the chosen size, the order card's closure and the
+     concierge's mark. Everything else is square: the seal is the only
+     curve on the page.
+   - Motion: the hero settles once as the page opens; the photographs come up
+     out of shadow as they scroll in; the bag slides in; the seal is pressed
+     each time something is added. Nothing else moves on its own, and
+     prefers-reduced-motion stills all of it. */
 @import "tailwindcss" source(none);
 @import "../../styles/commerce-contract.css";
 @source "../../app/luxury";
@@ -32,43 +36,60 @@
 
 @theme {
   /* The contract's tokens, in the profile's own colours (brands/luxury/profile.ts). */
-  --color-paper: #fbf8f1;
-  --color-surface: #fffdf8;
-  --color-neutral: #f2ede2;
-  --color-ink: #0d0d0d;
-  --color-ink-soft: #55504a;
-  --color-line: #ddd3bf;
-  --color-primary: #8c6d2f;
-  --color-cta: #0d0d0d;
-  --color-on-cta: #fbf8f1;
-  --color-warn: #9b2a1c;
-  --color-warn-tint: #fbf0ea;
+  --color-paper: #e4e1dc;
+  --color-surface: #f2efeb;
+  --color-neutral: #d9d5cf;
+  --color-ink: #1d1819;
+  --color-ink-soft: #5b5456;
+  --color-line: #cbc6c0;
+  --color-primary: #4a1424;
+  --color-cta: #4a1424;
+  --color-on-cta: #f1e9e6;
+  --color-warn: #8e2232;
+  --color-warn-tint: #f3e4e4;
 
-  /* The lacquer side. Mist is the secondary text on lacquer (7:1), tinted
-     from the vellum rather than grey; edge is the 3:1 border a control
-     needs there; rule is a decorative hairline only. */
-  --color-lacquer: #0d0d0d;
-  --color-vellum: #f4ebd7;
-  --color-champagne: #c8ae78;
-  --color-mist: #aba290;
-  --color-edge: #6f6450;
-  --color-rule: #3a3428;
-  /* A field's border on ivory, at 3.6:1. */
-  --color-field: #8a8170;
+  /* The house's own. Claret is the box; wax the seal's brighter red; bone
+     the text on claret, foil its quieter second line (8:1 there); smoke the
+     second line on limestone (5.6:1); edge a control's border on limestone
+     or chalk (3.3:1); line a decorative hairline only. */
+  --color-limestone: #e4e1dc;
+  --color-chalk: #f2efeb;
+  --color-claret: #4a1424;
+  --color-claret-deep: #3a0f1c;
+  --color-wax: #8e2232;
+  --color-bone: #f1e9e6;
+  --color-foil: #cdbfc1;
+  --color-smoke: #5b5456;
+  --color-edge: #7f7775;
+  --color-shadow: #1e1714;
 
-  --font-display: var(--font-rx-display), "Bodoni 72", Didot, "Times New Roman", serif;
-  --font-sans: var(--font-rx-text), Futura, "Century Gothic", system-ui, sans-serif;
+  --font-display: var(--font-rv-display), "Big Caslon", "Libre Caslon Display", "Times New Roman", serif;
+  --font-serif: var(--font-rv-serif), "Big Caslon", "Times New Roman", serif;
+  --font-sans: var(--font-rv-text), "Helvetica Neue", Arial, system-ui, sans-serif;
 
-  --ease-lux: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Exponential ease-out: everything arrives fast and settles slowly. */
+  --ease-house: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @layer base {
   :root {
     color-scheme: light;
+    --rv-gutter: clamp(16px, 4vw, 56px);
+    --rv-announce-h: 36px;
+    --rv-header-h: 60px;
+    --rv-wax: var(--color-claret);
+    --rv-impression: var(--color-bone);
+  }
+
+  @media (min-width: 760px) {
+    :root {
+      --rv-header-h: 76px;
+    }
   }
 
   html {
     -webkit-text-size-adjust: 100%;
+    scroll-padding-top: var(--rv-header-h);
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -77,11 +98,21 @@
     }
   }
 
+  /* No page scroll behind the open bag. */
+  html:has(.rv-drawer[open]) {
+    overflow: hidden;
+  }
+
   body {
-    @apply bg-paper font-sans text-ink antialiased;
-    font-size: 1.0625rem;
-    line-height: 1.65;
+    background: var(--color-limestone);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
     font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
   }
 
   h1,
@@ -89,15 +120,24 @@
   h3,
   h4 {
     text-wrap: balance;
+    font-weight: 400;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  img {
+    max-width: 100%;
   }
 
   ::selection {
-    background: var(--color-champagne);
-    color: var(--color-lacquer);
+    background: var(--color-claret);
+    color: var(--color-bone);
   }
 
   :focus-visible {
-    outline: 2px solid currentColor;
+    outline: 2px solid var(--color-wax);
     outline-offset: 3px;
   }
 
@@ -113,1120 +153,1659 @@
 }
 
 @layer components {
-  /* ── Frame ────────────────────────────────────────────────────────
-     16px gutters on a phone, wider from tablet up. */
-  .rx-wrap {
-    width: 100%;
-    max-width: 84rem;
+  /* ── Shared pieces ─────────────────────────────────────────────── */
+  .rv-wrap {
     margin-inline: auto;
-    padding-inline: 1rem;
-  }
-  @media (min-width: 48rem) {
-    .rx-wrap {
-      padding-inline: 2rem;
-    }
-  }
-  @media (min-width: 80rem) {
-    .rx-wrap {
-      padding-inline: 3rem;
-    }
-  }
-
-  .rx-display {
-    font-family: var(--font-display);
-    font-weight: 400;
-    letter-spacing: -0.01em;
-  }
-
-  /* The lacquer side of the page: every colour inside it is re-pointed, so
-     a link or a button needs no dark variant of its own. */
-  .rx-dark {
-    background: var(--color-lacquer);
-    color: var(--color-vellum);
-    --rx-link-line: var(--color-champagne);
-  }
-
-  /* ── Header ─────────────────────────────────────────────────────── */
-  .rx-skip {
-    position: absolute;
-    left: 1rem;
-    top: -4rem;
-    z-index: 50;
-    background: var(--color-ink);
-    color: var(--color-paper);
-    padding: 0.75rem 1rem;
-    font-size: 0.9375rem;
-  }
-  .rx-skip:focus {
-    top: 1rem;
-  }
-
-  .rx-header {
-    border-bottom: 1px solid var(--color-line);
-  }
-  .rx-header__inner {
-    display: flex;
-    min-height: 4.5rem;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  .rx-wordmark {
-    font-family: var(--font-display);
-    font-size: 1.375rem;
-    line-height: 1;
-    letter-spacing: 0.01em;
-    white-space: nowrap;
-  }
-  .rx-nav ul {
-    display: flex;
-    gap: 1.5rem;
-  }
-  .rx-nav a {
-    display: inline-flex;
-    min-height: 2.75rem;
-    align-items: center;
-    font-size: 0.9375rem;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    text-decoration: underline;
-    text-decoration-color: transparent;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.35em;
-    transition: text-decoration-color 0.25s;
-  }
-  .rx-nav a:hover {
-    text-decoration-color: var(--color-primary);
-  }
-  .rx-count {
-    margin-left: 0.4em;
-    font-family: var(--font-display);
-    font-size: 1.0625rem;
-    color: var(--color-primary);
-    font-variant-numeric: lining-nums;
-  }
-
-  /* ── Actions ──────────────────────────────────────────────────────
-     Square, one hairline, letter-spaced a touch. 52px tall on purpose:
-     generous, like the margins. */
-  .rx-btn {
-    display: inline-flex;
-    min-height: 3.25rem;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    border: 1px solid var(--color-ink);
-    background: var(--color-ink);
-    color: var(--color-paper);
-    padding: 0 1.75rem;
-    font-size: 0.9375rem;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    transition:
-      background-color 0.25s,
-      border-color 0.25s,
-      color 0.25s;
-  }
-  .rx-btn:hover:not(:disabled) {
-    background: #2b2823;
-    border-color: #2b2823;
-  }
-  .rx-dark .rx-btn {
-    border-color: var(--color-vellum);
-    background: var(--color-vellum);
-    color: var(--color-lacquer);
-  }
-  .rx-dark .rx-btn:hover:not(:disabled) {
-    border-color: var(--color-champagne);
-    background: var(--color-champagne);
-  }
-  .rx-btn--line,
-  .rx-dark .rx-btn--line {
-    border-color: currentColor;
-    background: transparent;
-    color: inherit;
-  }
-  .rx-btn--line:hover:not(:disabled),
-  .rx-dark .rx-btn--line:hover:not(:disabled) {
-    border-color: currentColor;
-    background: color-mix(in srgb, currentColor 8%, transparent);
-  }
-  .rx-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.45;
-  }
-  .rx-btn--wide {
     width: 100%;
+    max-width: 88rem;
+    padding-inline: var(--rv-gutter);
   }
 
-  .rx-link {
+  .rv-skip {
+    position: absolute;
+    left: 12px;
+    top: -60px;
+    z-index: 80;
+    background: var(--color-claret);
+    color: var(--color-bone);
+    padding: 10px 16px;
+    font-size: 0.875rem;
+  }
+  .rv-skip:focus {
+    top: 12px;
+  }
+
+  .rv-link {
     color: inherit;
     text-decoration: underline;
-    text-decoration-color: var(--rx-link-line, var(--color-primary));
     text-decoration-thickness: 1px;
-    text-underline-offset: 0.3em;
-    transition: text-decoration-color 0.25s;
-    cursor: pointer;
+    text-underline-offset: 0.22em;
+    text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+    transition: text-decoration-color 0.3s var(--ease-house);
   }
-  .rx-link:hover {
+  .rv-link:hover {
     text-decoration-color: currentColor;
   }
 
-  /* ── Hero ─────────────────────────────────────────────────────────
-     Phone: the box above the words. Desktop: words low on the left, the
-     box to the right, and a great deal of ivory around both. */
-  .rx-hero {
-    display: grid;
-    gap: 1.5rem;
-    padding-block: 2rem 4.5rem;
-  }
-  .rx-hero__art {
-    order: -1;
-    justify-self: center;
-    width: min(100%, 21rem);
-  }
-  .rx-hero__heading {
-    max-width: 13ch;
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: clamp(2.5rem, 1rem + 6vw, 5.25rem);
-    line-height: 1.02;
-    letter-spacing: -0.015em;
-  }
-  .rx-hero__lede {
-    margin-top: 1.5rem;
-    max-width: 36ch;
-    font-size: 1.125rem;
-    line-height: 1.6;
-    color: var(--color-ink-soft);
-  }
-  .rx-hero__actions {
-    margin-top: 2.25rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 1.25rem 2rem;
-  }
-  @media (min-width: 64rem) {
-    .rx-hero {
-      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-      align-items: end;
-      min-height: min(calc(100svh - 4.5rem), 54rem);
-      padding-block: 5rem 7rem;
-      gap: 4rem;
-    }
-    .rx-hero__art {
-      order: 0;
-      align-self: center;
-      justify-self: end;
-      width: min(100%, 34rem);
-    }
+  .rv-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--color-ink);
   }
 
-  /* ── The box drawing (brands/luxury/components/BoxDrawing.tsx) ────
-     The one moment of motion on the site: the lid lifts, once, slowly.
-     The resting state is lifted, so reduced motion simply skips to it. */
-  .rx-box {
+  .rv-hint {
+    margin-top: 8px;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-smoke);
+  }
+
+  .rv-input {
     display: block;
     width: 100%;
-    height: auto;
-    overflow: visible;
-  }
-  .rx-box__line {
-    stroke: var(--color-champagne);
-  }
-  .rx-box__mark {
-    font-family: var(--font-display);
-    fill: var(--color-champagne);
-  }
-  .rx-box__mark--lid {
-    font-size: 15px;
-    letter-spacing: 0.32em;
-  }
-  .rx-box__mark--base {
-    font-size: 24px;
-    letter-spacing: 0.04em;
-  }
-  .rx-box--open .rx-lid {
-    transform: translateY(-76px);
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .rx-box--animate .rx-lid {
-      animation: rx-lift 3.6s var(--ease-lux) 0.5s both;
-    }
-  }
-  @keyframes rx-lift {
-    from {
-      transform: translateY(0);
-    }
-    to {
-      transform: translateY(-76px);
-    }
-  }
-
-  /* ── The timetable (the order of the day) ─────────────────────── */
-  .rx-day {
-    padding-block: 4.5rem 1.5rem;
-  }
-  .rx-day__heading {
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: clamp(2.25rem, 1.4rem + 3.2vw, 3.75rem);
-    line-height: 1.05;
-    letter-spacing: -0.01em;
-    padding-bottom: 2.5rem;
-  }
-  .rx-station {
-    display: grid;
-    gap: 1rem;
-    padding-block: 2.75rem 3.5rem;
-    border-top: 1px solid var(--color-rule);
-    scroll-margin-top: 1rem;
-  }
-  .rx-when {
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
-    line-height: 1.05;
-    color: var(--color-champagne);
-  }
-  .rx-station__title {
-    font-size: 1.25rem;
-    font-weight: 500;
-    line-height: 1.3;
-    letter-spacing: 0.01em;
-  }
-  .rx-station__text {
-    margin-top: 0.75rem;
-    max-width: 60ch;
-    color: var(--color-mist);
-  }
-  .rx-station__text + .rx-station__text {
-    margin-top: 1rem;
-  }
-  @media (min-width: 64rem) {
-    .rx-day {
-      padding-block: 7rem 3rem;
-    }
-    .rx-day__heading {
-      padding-bottom: 4rem;
-    }
-    .rx-station {
-      grid-template-columns: 17.5rem minmax(0, 1fr);
-      gap: 3.5rem;
-      padding-block: 4.5rem 5.5rem;
-    }
-    .rx-when {
-      font-size: 2.75rem;
-    }
-  }
-
-  /* ── Choosing a size (app/luxury/BuySection.tsx) ──────────────── */
-  .rx-sizes {
-    margin-top: 1.75rem;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-  }
-  @media (min-width: 48rem) {
-    .rx-sizes {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 1rem;
-    }
-  }
-  .rx-size {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    padding: 1.25rem 1rem 1.125rem;
+    min-height: 48px;
     border: 1px solid var(--color-edge);
+    border-radius: 0;
+    background: var(--color-chalk);
+    padding: 12px 14px;
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  .rv-input::placeholder {
+    color: var(--color-smoke);
+  }
+  .rv-input:hover {
+    border-color: var(--color-ink);
+  }
+  .rv-input:focus-visible {
+    outline: 2px solid var(--color-wax);
+    outline-offset: 0;
+    border-color: var(--color-wax);
+  }
+  select.rv-input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%231d1819' stroke-width='1.2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 12px 8px;
+    padding-right: 40px;
+  }
+
+  .rv-alert {
+    margin-top: 16px;
+    background: var(--color-warn-tint);
+    padding: 12px 14px;
+    font-size: 0.875rem;
+    color: var(--color-warn);
+  }
+
+  /* The house's button: claret, square, the width it is given. */
+  .rv-button {
+    display: inline-flex;
+    min-height: 52px;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    border: 1px solid var(--color-claret);
+    border-radius: 0;
+    background: var(--color-claret);
+    padding: 0 28px;
+    color: var(--color-bone);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-decoration: none;
     cursor: pointer;
     transition:
-      border-color 0.25s,
-      box-shadow 0.25s;
+      background-color 0.35s var(--ease-house),
+      border-color 0.35s var(--ease-house),
+      color 0.35s var(--ease-house),
+      transform 0.2s var(--ease-house);
   }
-  .rx-size:hover {
-    border-color: var(--color-champagne);
+  .rv-button:hover {
+    background: var(--color-claret-deep);
+    border-color: var(--color-claret-deep);
   }
-  .rx-size[data-checked] {
-    border-color: var(--color-vellum);
-    box-shadow: inset 0 0 0 1px var(--color-vellum);
+  .rv-button:active {
+    transform: scale(0.99);
   }
-  /* The chosen size carries a small lozenge, like a stamp on a card. */
-  .rx-size[data-checked]::after {
+  .rv-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .rv-button--wide {
+    width: 100%;
+  }
+  .rv-button--split {
+    justify-content: space-between;
+    min-height: 56px;
+  }
+  .rv-button__price {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .rv-button--quiet {
+    background: transparent;
+    color: var(--color-ink);
+    border-color: var(--color-ink);
+  }
+  .rv-button--quiet:hover {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-limestone);
+  }
+  .rv-button--bone {
+    background: transparent;
+    border-color: var(--color-bone);
+    color: var(--color-bone);
+  }
+  .rv-button--bone:hover {
+    background: var(--color-bone);
+    border-color: var(--color-bone);
+    color: var(--color-claret);
+  }
+  .rv-button--bone:focus-visible {
+    outline-color: var(--color-bone);
+  }
+
+  .rv-text-button {
+    background: none;
+    border: 0;
+    padding: 8px 0;
+    color: var(--color-smoke);
+    font: inherit;
+    font-size: 0.8125rem;
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
+    text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+    cursor: pointer;
+  }
+  .rv-text-button:hover {
+    color: var(--color-ink);
+  }
+
+  .rv-icon-button {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-right: -10px;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .rv-check {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    font-size: 0.9375rem;
+    cursor: pointer;
+  }
+  .rv-check input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--color-claret);
+  }
+
+  /* ── The delivery line and the header ──────────────────────────── */
+  .rv-announce {
+    display: flex;
+    min-height: var(--rv-announce-h);
+    align-items: center;
+    justify-content: center;
+    background: var(--color-claret);
+    padding: 8px var(--rv-gutter);
+    color: var(--color-bone);
+    text-align: center;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+
+  .rv-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: color-mix(in srgb, var(--color-limestone) 94%, transparent);
+    backdrop-filter: saturate(1.2) blur(10px);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .rv-header__inner {
+    display: grid;
+    height: var(--rv-header-h);
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    padding-inline: var(--rv-gutter);
+  }
+  .rv-header__links {
+    display: flex;
+    align-items: center;
+    gap: clamp(16px, 2.4vw, 36px);
+    font-size: 0.875rem;
+  }
+  .rv-header__links--end {
+    justify-content: flex-end;
+  }
+  .rv-header__links a,
+  .rv-bag-button {
+    position: relative;
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+  .rv-header__links a::after {
     content: "";
     position: absolute;
-    top: 0.875rem;
-    right: 0.875rem;
-    width: 0.4375rem;
-    height: 0.4375rem;
-    background: var(--color-champagne);
-    transform: rotate(45deg);
+    left: 0;
+    right: 0;
+    bottom: 10px;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.45s var(--ease-house);
   }
-  .rx-size:has(:focus-visible) {
-    outline: 2px solid var(--color-vellum);
-    outline-offset: 3px;
+  .rv-header__links a:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
   }
-  .rx-size[data-disabled] {
-    cursor: not-allowed;
-    opacity: 0.5;
+  .rv-header__mark {
+    display: block;
+    color: var(--color-ink);
+    padding-block: 10px;
   }
-  .rx-size__caps {
-    width: 4.25rem;
-    height: 4.25rem;
-    margin-bottom: 1.125rem;
-    color: var(--color-champagne);
-    transition: color 0.25s;
+  .rv-header__wordmark {
+    display: block;
+    height: 12px;
+    width: auto;
   }
-  .rx-size[data-checked] .rx-size__caps {
-    color: var(--color-vellum);
+  @media (min-width: 760px) {
+    .rv-header__wordmark {
+      height: 17px;
+    }
   }
-  .rx-size__name {
-    font-family: var(--font-display);
-    font-size: 1.625rem;
-    line-height: 1.1;
+  .rv-wide-only {
+    display: none;
   }
-  .rx-size__vials {
-    margin-top: 0.25rem;
+  @media (min-width: 760px) {
+    .rv-wide-only {
+      display: list-item;
+      list-style: none;
+    }
+  }
+
+  .rv-bag-button {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
     font-size: 0.875rem;
-    color: var(--color-mist);
-  }
-  .rx-size__price {
-    margin-top: 0.875rem;
-    font-size: 0.9375rem;
-    font-variant-numeric: lining-nums tabular-nums;
-  }
-  @media (min-width: 64rem) {
-    .rx-size {
-      padding: 1.5rem 1.25rem 1.25rem;
-    }
-    .rx-size__caps {
-      width: 5.5rem;
-      height: 5.5rem;
-    }
+    cursor: pointer;
   }
 
-  .rx-add {
-    margin-top: 1.75rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 1rem 1.5rem;
+  /* The bag's count: a wax seal with the number pressed into it. */
+  .rv-count {
+    position: relative;
+    display: inline-grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
   }
-
-  .rx-stepper {
+  .rv-count__wax {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    fill: var(--color-claret);
+  }
+  .rv-count__n {
+    position: relative;
+    color: var(--color-bone);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .rv-count-press {
     display: inline-flex;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .rv-count-press {
+      animation: rv-press 0.7s var(--ease-house);
+    }
+  }
+  @keyframes rv-press {
+    0% {
+      transform: scale(1.45) rotate(-12deg);
+      filter: blur(1.5px);
+      opacity: 0.4;
+    }
+    55% {
+      transform: scale(0.92) rotate(0deg);
+      filter: blur(0);
+      opacity: 1;
+    }
+    100% {
+      transform: none;
+    }
+  }
+
+  /* ── The hero ──────────────────────────────────────────────────── */
+  .rv-hero {
+    position: relative;
+    isolation: isolate;
+    height: calc(100svh - var(--rv-header-h) - var(--rv-announce-h));
+    min-height: 540px;
+    max-height: 980px;
+    overflow: hidden;
+    background: var(--color-shadow);
+    color: var(--color-bone);
+  }
+  .rv-hero picture {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+  }
+  .rv-hero__img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 70%;
+  }
+  @media (min-width: 700px) {
+    .rv-hero__img {
+      object-position: 22% 50%;
+    }
+  }
+  /* A shade where the words sit: the top on a phone, the right on a screen. */
+  .rv-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(to bottom, rgb(20 14 12 / 0.55), rgb(20 14 12 / 0) 42%);
+    pointer-events: none;
+  }
+  @media (min-width: 700px) {
+    .rv-hero::after {
+      background: linear-gradient(to left, rgb(20 14 12 / 0.5), rgb(20 14 12 / 0) 48%);
+    }
+  }
+  .rv-hero__copy {
+    position: absolute;
+    left: var(--rv-gutter);
+    right: var(--rv-gutter);
+    top: clamp(36px, 9svh, 96px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  @media (min-width: 700px) {
+    .rv-hero__copy {
+      top: auto;
+      left: auto;
+      bottom: clamp(48px, 12vh, 120px);
+      width: min(30rem, 38vw);
+    }
+  }
+  .rv-hero__heading {
+    font-family: var(--font-display);
+    font-size: clamp(2.125rem, 4vw, 3.75rem);
+    line-height: 1.04;
+    letter-spacing: -0.012em;
+    max-width: 11ch;
+  }
+  .rv-hero__action {
+    position: relative;
+    display: inline-flex;
+    min-height: 44px;
     align-items: center;
+    color: var(--color-bone);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
   }
-  .rx-stepper__label {
-    margin-right: 1rem;
-    font-size: 0.9375rem;
-    color: var(--color-mist);
+  .rv-hero__action::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 8px;
+    width: 100%;
+    height: 1px;
+    background: currentColor;
+    transform-origin: left;
+    transition: transform 0.6s var(--ease-house);
   }
-  .rx-stepper__btn {
+  .rv-hero__action:hover::after {
+    transform: scaleX(0.4);
+  }
+  .rv-hero__action:focus-visible {
+    outline-color: var(--color-bone);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .rv-hero__img {
+      animation: rv-settle 2.6s var(--ease-house) both;
+    }
+    .rv-hero__copy > * {
+      animation: rv-rise 1.4s var(--ease-house) both;
+      animation-delay: 0.45s;
+    }
+    .rv-hero__copy > :nth-child(2) {
+      animation-delay: 0.7s;
+    }
+  }
+  @keyframes rv-settle {
+    from {
+      transform: scale(1.06);
+      filter: brightness(0.62);
+    }
+    to {
+      transform: none;
+      filter: none;
+    }
+  }
+  @keyframes rv-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ── The product: the gallery and the purchase column ─────────── */
+  .rv-product {
     display: grid;
-    width: 2.75rem;
-    height: 2.75rem;
+    padding-top: 16px;
+  }
+  @media (min-width: 960px) {
+    .rv-product {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      align-items: start;
+      padding-top: 0;
+    }
+  }
+
+  .rv-gallery__track {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    padding: 0 var(--rv-gutter);
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--rv-gutter);
+    scrollbar-width: none;
+  }
+  .rv-gallery__track::-webkit-scrollbar {
+    display: none;
+  }
+  .rv-gallery__item {
+    flex: 0 0 84%;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    background: var(--color-neutral);
+    scroll-snap-align: start;
+  }
+  .rv-gallery__img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    user-select: none;
+  }
+  .rv-gallery__marks {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 12px;
+  }
+  .rv-gallery__mark {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+  .rv-gallery__mark::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 50%;
+    height: 1px;
+    background: var(--color-edge);
+    transition:
+      background-color 0.3s,
+      height 0.3s var(--ease-house);
+  }
+  .rv-gallery__mark[aria-current="true"]::before {
+    height: 2px;
+    margin-top: -0.5px;
+    background: var(--color-claret);
+  }
+
+  @media (min-width: 960px) {
+    .rv-gallery__track {
+      display: grid;
+      gap: 6px;
+      padding: 0;
+      overflow: visible;
+    }
+    .rv-gallery__item {
+      flex: none;
+    }
+    .rv-gallery__marks {
+      display: none;
+    }
+  }
+
+  .rv-product__column {
+    padding: 28px var(--rv-gutter) 72px;
+  }
+  @media (min-width: 960px) {
+    .rv-product__column {
+      position: sticky;
+      top: var(--rv-header-h);
+      max-height: calc(100svh - var(--rv-header-h));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-line) transparent;
+      padding: clamp(28px, 4.5vh, 56px) clamp(32px, 4.5vw, 88px) 40px;
+    }
+  }
+
+  .rv-purchase {
+    max-width: 30rem;
+  }
+  .rv-purchase__name {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 2.6vw, 2.5rem);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+  .rv-purchase__lede {
+    margin-top: 6px;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.0625rem;
+    color: var(--color-smoke);
+  }
+  .rv-purchase__price {
+    margin-top: 14px;
+    min-height: 1.5em;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .rv-purchase__intro {
+    margin-top: 12px;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-smoke);
+  }
+  .rv-purchase__form {
+    display: grid;
+    gap: 18px;
+    margin-top: 22px;
+  }
+
+  /* The sizes: a list, the chosen one sealed. */
+  .rv-sizes {
+    margin: 0;
+    border: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  .rv-sizes__list {
+    border-top: 1px solid var(--color-line);
+  }
+  .rv-size {
+    position: relative;
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr) auto 5.5rem;
+    align-items: center;
+    gap: 14px;
+    min-height: 46px;
+    padding: 5px 2px;
+    border-bottom: 1px solid var(--color-line);
+    cursor: pointer;
+    transition: background-color 0.3s var(--ease-house);
+  }
+  .rv-size:hover {
+    background: color-mix(in srgb, var(--color-chalk) 60%, transparent);
+  }
+  .rv-size:has(:focus-visible) {
+    outline: 2px solid var(--color-wax);
+    outline-offset: 2px;
+  }
+  .rv-size[data-disabled] {
+    cursor: not-allowed;
+    color: var(--color-smoke);
+  }
+  .rv-size__seal {
+    width: 16px;
+    height: 16px;
+  }
+  .rv-size__seal path {
+    fill: transparent;
+    stroke: var(--color-edge);
+    stroke-width: 5;
+    transform-origin: 50% 50%;
+    transition:
+      fill 0.3s var(--ease-house),
+      stroke 0.3s var(--ease-house),
+      transform 0.45s var(--ease-house);
+  }
+  .rv-size__seal path.is-on {
+    fill: var(--color-claret);
+    stroke: var(--color-claret);
+    transform: rotate(-20deg);
+  }
+  .rv-size__name {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+  .rv-size[data-checked] .rv-size__name {
+    color: var(--color-claret);
+  }
+  .rv-size__vials {
+    font-size: 0.8125rem;
+    color: var(--color-smoke);
+  }
+  .rv-size__price {
+    justify-self: end;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rv-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .rv-stepper__label {
+    margin: 0 auto 0 0;
+  }
+  .rv-stepper__btn {
+    display: inline-grid;
+    width: 44px;
+    height: 44px;
     place-items: center;
     border: 1px solid var(--color-edge);
     background: transparent;
-    color: inherit;
+    color: var(--color-ink);
+    font: inherit;
     font-size: 1.125rem;
     line-height: 1;
     cursor: pointer;
-    transition: border-color 0.25s;
   }
-  .rx-stepper__btn:hover:not(:disabled) {
-    border-color: var(--color-champagne);
+  .rv-stepper__btn:hover:not(:disabled) {
+    background: var(--color-chalk);
   }
-  .rx-stepper__btn:disabled {
+  .rv-stepper__btn:disabled {
     cursor: not-allowed;
-    opacity: 0.35;
+    color: var(--color-edge);
   }
-  .rx-stepper__input {
-    width: 3.25rem;
-    height: 2.75rem;
-    border-block: 1px solid var(--color-edge);
+  .rv-stepper__input {
+    width: 52px;
+    height: 44px;
+    border: 1px solid var(--color-edge);
     border-inline: 0;
+    border-radius: 0;
     background: transparent;
-    color: inherit;
+    color: var(--color-ink);
+    font: inherit;
     text-align: center;
-    font-family: var(--font-display);
-    font-size: 1.125rem;
-    font-variant-numeric: lining-nums;
+    font-variant-numeric: tabular-nums;
     appearance: textfield;
     -moz-appearance: textfield;
   }
-  .rx-stepper__input::-webkit-inner-spin-button,
-  .rx-stepper__input::-webkit-outer-spin-button {
+  .rv-stepper__input::-webkit-inner-spin-button,
+  .rv-stepper__input::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
-
-  .rx-status {
-    min-height: 1.5rem;
-    margin-top: 1rem;
-    font-size: 0.9375rem;
-    color: var(--color-mist);
+  .rv-stepper--small .rv-stepper__btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+  .rv-stepper--small .rv-stepper__input {
+    width: 40px;
+    height: 36px;
+    font-size: 0.875rem;
   }
 
-  .rx-addons {
-    margin-top: 2.5rem;
+  .rv-gift__note {
+    margin-top: 12px;
   }
-  .rx-addons li {
+  .rv-gift__field {
+    min-height: 96px;
+    resize: vertical;
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .rv-status {
+    min-height: 1.25rem;
+    margin-top: -8px;
+    font-size: 0.8125rem;
+    color: var(--color-smoke);
+  }
+
+  .rv-addons ul {
+    display: grid;
+    gap: 12px;
+    margin-top: 20px;
+    font-size: 0.875rem;
+  }
+  .rv-addons li {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding-block: 1rem;
-    border-top: 1px solid var(--color-rule);
+    gap: 16px;
   }
 
-  /* ── Frames: the stationer's double rule ───────────────────────────
-     The order, the photograph frame and the confirmation card all wear
-     it: one hairline, and a fainter one just inside. */
-  .rx-frame {
-    border: 1px solid var(--color-champagne);
-    outline: 1px solid color-mix(in srgb, var(--color-champagne) 35%, transparent);
-    outline-offset: -7px;
+  /* The quiet service lines, each marked with a drop of wax. */
+  .rv-service {
+    display: grid;
+    gap: 8px;
+    margin-top: 28px;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-smoke);
   }
-  .rx-frame--ivory {
-    border-color: var(--color-primary);
-    outline-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
-    background: var(--color-surface);
+  .rv-service li {
+    position: relative;
+    padding-left: 18px;
+  }
+  .rv-service li::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 0.55em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-claret);
   }
 
-  .rx-order {
-    margin-top: 1.25rem;
-    max-width: 40rem;
-    padding: 1.75rem 1.5rem;
+  .rv-details {
+    margin-top: 24px;
+    border-top: 1px solid var(--color-line);
   }
-  @media (min-width: 48rem) {
-    .rx-order {
-      margin-top: 1.75rem;
-      padding: 2.25rem 2.25rem 2rem;
+  .rv-details details {
+    border-bottom: 1px solid var(--color-line);
+  }
+  .rv-details summary {
+    position: relative;
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    padding-right: 32px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    list-style: none;
+    cursor: pointer;
+  }
+  .rv-details summary::-webkit-details-marker {
+    display: none;
+  }
+  .rv-details summary::before,
+  .rv-details summary::after {
+    content: "";
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    width: 11px;
+    height: 1px;
+    background: currentColor;
+    transition: transform 0.4s var(--ease-house);
+  }
+  .rv-details summary::after {
+    transform: rotate(90deg);
+  }
+  .rv-details details[open] summary::after {
+    transform: rotate(0deg);
+  }
+  .rv-details details p {
+    padding-bottom: 18px;
+    font-family: var(--font-serif);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--color-ink);
+  }
+
+  /* ── The chapters ──────────────────────────────────────────────── */
+  .rv-chapters {
+    margin-top: clamp(48px, 8vw, 120px);
+    scroll-margin-top: var(--rv-header-h);
+  }
+  .rv-chapter {
+    display: grid;
+  }
+  .rv-chapter__photo {
+    margin: 0;
+    overflow: hidden;
+    aspect-ratio: 3 / 2;
+    background: var(--color-shadow);
+  }
+  .rv-chapter__photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .rv-chapter__text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(40px, 7vw, 96px) var(--rv-gutter);
+  }
+  .rv-chapter__title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3.2vw, 3rem);
+    line-height: 1.06;
+    letter-spacing: -0.01em;
+  }
+  .rv-chapter__text p {
+    max-width: 30rem;
+    margin-top: 20px;
+    font-family: var(--font-serif);
+    font-size: clamp(1.0625rem, 1.25vw, 1.1875rem);
+    line-height: 1.75;
+  }
+  .rv-chapter__text .rv-chapter__aside {
+    margin-top: 14px;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--color-smoke);
+  }
+  .rv-chapter--claret {
+    background: var(--color-claret);
+    color: var(--color-bone);
+  }
+  .rv-chapter--claret :focus-visible {
+    outline-color: var(--color-bone);
+  }
+  /* On a phone every chapter opens on its photograph. */
+  @media (max-width: 959px) {
+    .rv-chapter--right .rv-chapter__photo {
+      order: -1;
     }
   }
-  .rx-order__heading {
+
+  @media (min-width: 960px) {
+    .rv-chapter--left {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+    .rv-chapter--right {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    }
+    .rv-chapter--left .rv-chapter__photo,
+    .rv-chapter--right .rv-chapter__photo {
+      aspect-ratio: auto;
+      min-height: min(80vh, 760px);
+    }
+    .rv-chapter--left .rv-chapter__text {
+      padding-left: clamp(40px, 5vw, 96px);
+    }
+    .rv-chapter--right .rv-chapter__text {
+      padding-left: var(--rv-gutter);
+      padding-right: clamp(40px, 5vw, 96px);
+    }
+    .rv-chapter--full {
+      position: relative;
+    }
+    .rv-chapter--full .rv-chapter__photo {
+      position: relative;
+      aspect-ratio: auto;
+      height: min(92vh, 66vw);
+    }
+    /* A veil of limestone over the wall, so the words read on it. */
+    .rv-chapter--full .rv-chapter__photo::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, rgb(228 225 220 / 0.82), rgb(228 225 220 / 0.55) 30%, rgb(228 225 220 / 0) 52%);
+      pointer-events: none;
+    }
+    /* The words sit on the plaster wall the photograph leaves empty. */
+    .rv-chapter--full .rv-chapter__text {
+      position: absolute;
+      left: var(--rv-gutter);
+      top: 50%;
+      width: min(27rem, 34vw);
+      padding: 0;
+      transform: translateY(-50%);
+    }
+    .rv-chapter--full .rv-chapter__text {
+      z-index: 1;
+    }
+  }
+
+  /* The photographs come up out of shadow as they scroll in. */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .rv-reveal {
+        animation: rv-surface linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 38%;
+      }
+    }
+    /* The gallery only as a column: on a phone its strip is the scroller. */
+    @media (prefers-reduced-motion: no-preference) and (min-width: 960px) {
+      .rv-gallery__img {
+        animation: rv-surface linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 38%;
+      }
+    }
+  }
+  @keyframes rv-surface {
+    from {
+      filter: brightness(0.55) saturate(0.85);
+      transform: scale(1.07);
+    }
+    to {
+      filter: none;
+      transform: none;
+    }
+  }
+
+  /* ── The concierge ─────────────────────────────────────────────── */
+  .rv-concierge {
+    --rv-wax: var(--color-bone);
+    --rv-impression: var(--color-claret);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--color-claret-deep);
+    padding: clamp(72px, 10vw, 136px) var(--rv-gutter);
+    color: var(--color-bone);
+    text-align: center;
+  }
+  .rv-concierge__seal {
+    width: 64px;
+    height: 64px;
+  }
+  .rv-concierge__title {
+    margin-top: 28px;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3.2vw, 3rem);
+    line-height: 1.06;
+  }
+  .rv-concierge__body {
+    max-width: 32rem;
+    margin: 16px 0 32px;
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    color: var(--color-foil);
+  }
+
+  /* ── The footer, in small capitals ─────────────────────────────── */
+  .rv-footer {
+    padding-top: clamp(56px, 7vw, 96px);
+    overflow: hidden;
+  }
+  .rv-footer__grid {
+    display: grid;
+    gap: 48px;
+  }
+  @media (min-width: 860px) {
+    .rv-footer__grid {
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 64px;
+    }
+  }
+  .rv-letters__heading {
     font-family: var(--font-display);
     font-size: 1.75rem;
     line-height: 1.1;
   }
-  .rx-order__empty {
-    margin-top: 1rem;
-    color: var(--color-mist);
+  .rv-letters__lede {
+    margin-top: 8px;
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    color: var(--color-smoke);
   }
-  .rx-lines {
-    margin-top: 1.25rem;
-    border-top: 1px solid var(--color-rule);
+  .rv-signup {
+    margin-top: 20px;
+    max-width: 30rem;
   }
-  .rx-line {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: baseline;
-    gap: 0.75rem 1rem;
-    padding-block: 1.125rem;
-    border-bottom: 1px solid var(--color-rule);
-  }
-  .rx-line__name {
-    font-family: var(--font-display);
-    font-size: 1.375rem;
-    line-height: 1.15;
-  }
-  .rx-line__vials {
-    display: block;
-    margin-top: 0.125rem;
-    font-family: var(--font-sans);
-    font-size: 0.875rem;
-    color: var(--color-mist);
-  }
-  .rx-line__price {
-    justify-self: end;
-    font-variant-numeric: lining-nums tabular-nums;
-  }
-  .rx-line__controls {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  .rx-line__remove {
-    min-height: 2.75rem;
-    font-size: 0.875rem;
-    color: var(--color-mist);
-  }
-
-  .rx-sum {
-    margin-top: 1.25rem;
-    display: grid;
-    gap: 0.625rem;
-    font-size: 0.9375rem;
-  }
-  .rx-sum > div {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  .rx-sum dt {
-    color: var(--color-mist);
-  }
-  .rx-sum dd {
-    text-align: right;
-    font-variant-numeric: lining-nums tabular-nums;
-  }
-  .rx-sum__detail {
-    display: block;
-    font-size: 0.8125rem;
-  }
-  .rx-sum .rx-sum__total {
-    margin-top: 0.375rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--color-rule);
-    align-items: baseline;
-  }
-  .rx-sum .rx-sum__total dt {
-    color: inherit;
-    font-size: 1.0625rem;
-  }
-  .rx-sum .rx-sum__total dd {
-    font-family: var(--font-display);
-    font-size: 1.625rem;
-    line-height: 1;
-  }
-  .rx-choice {
-    margin-top: 1.25rem;
-    display: grid;
-    gap: 0.5rem;
-    font-size: 0.9375rem;
-  }
-  .rx-choice legend {
-    margin-bottom: 0.5rem;
-    color: var(--color-mist);
-  }
-  .rx-choice label {
-    display: flex;
-    min-height: 2.75rem;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    cursor: pointer;
-  }
-  .rx-choice input {
-    accent-color: var(--color-champagne);
-    margin-right: 0.625rem;
-  }
-  .rx-note {
-    margin-top: 0.875rem;
-    font-size: 0.875rem;
-    color: var(--color-mist);
-  }
-  .rx-pay {
-    margin-top: 1.75rem;
-  }
-  .rx-pay > * + * {
-    margin-top: 0.75rem;
-  }
-
-  /* The gift option, on the lacquer, under its own hairline: the tick in
-     the delivery choice's champagne, the note field square and drawn in the
-     edge colour (the 3:1 a control needs here), its text the vellum. */
-  .rx-gift {
-    margin-top: 1.5rem;
-    padding-top: 1.25rem;
-    border-top: 1px solid var(--color-rule);
-  }
-  .rx-gift__option {
-    display: flex;
-    min-height: 2.75rem;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.9375rem;
-    cursor: pointer;
-  }
-  .rx-gift__option input {
-    width: 1.125rem;
-    height: 1.125rem;
-    accent-color: var(--color-champagne);
-  }
-  .rx-gift__note {
-    margin-top: 0.75rem;
-  }
-  .rx-gift__label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-size: 0.9375rem;
-    color: var(--color-mist);
-  }
-  .rx-gift__field {
-    width: 100%;
-    min-height: 6.5rem;
-    resize: vertical;
-    border: 1px solid var(--color-edge);
-    border-radius: 0;
-    background: transparent;
-    padding: 0.75rem 1rem;
-    font-family: var(--font-display);
-    font-size: 1.1875rem;
-    line-height: 1.5;
-    color: inherit;
-    transition: border-color 0.25s;
-  }
-  .rx-gift__field:hover {
-    border-color: var(--color-mist);
-  }
-  .rx-gift__field:focus-visible {
-    border-color: var(--color-vellum);
-    outline: 2px solid var(--color-vellum);
-    outline-offset: 2px;
-  }
-
-  /* ── Arrival: the photograph frame and what is in the box ───────── */
-  .rx-arrival {
-    display: grid;
-    gap: 2.5rem;
-  }
-  @media (min-width: 64rem) {
-    .rx-arrival {
-      grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
-      gap: 4rem;
-      align-items: start;
-    }
-  }
-  .rx-plate {
-    margin: 0;
-    max-width: 22rem;
-  }
-  .rx-plate__frame {
-    display: grid;
-    aspect-ratio: 4 / 5;
-    place-items: center;
-    background: #151412;
-    padding: 0.75rem;
-  }
-  .rx-plate__frame svg {
-    width: 100%;
-    height: 100%;
-  }
-  .rx-plate figcaption {
-    margin-top: 0.875rem;
-    font-size: 0.875rem;
-    color: var(--color-mist);
-  }
-  .rx-contents {
-    margin-top: 2rem;
-    border-top: 1px solid var(--color-rule);
-  }
-  .rx-contents > div {
-    display: grid;
-    gap: 0.25rem;
-    padding-block: 1.125rem;
-    border-bottom: 1px solid var(--color-rule);
-  }
-  @media (min-width: 48rem) {
-    .rx-contents > div {
-      grid-template-columns: 8rem minmax(0, 1fr);
-      gap: 1.5rem;
-    }
-  }
-  .rx-contents dt {
-    font-family: var(--font-display);
-    font-size: 1.1875rem;
-    line-height: 1.4;
-    color: var(--color-champagne);
-  }
-  .rx-contents dd {
-    color: var(--color-mist);
-  }
-
-  .rx-concierge__action {
-    margin-top: 2rem;
-  }
-
-  /* ── Letters (the mailing list) ───────────────────────────────── */
-  .rx-letters {
-    display: grid;
-    gap: 1.5rem;
-    padding-block: 4.5rem;
-  }
-  @media (min-width: 64rem) {
-    .rx-letters {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-      gap: 4rem;
-      padding-block: 6.5rem;
-      align-items: start;
-    }
-  }
-  .rx-letters__heading {
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: clamp(2.25rem, 1.6rem + 2.4vw, 3.25rem);
-    line-height: 1.05;
-  }
-  .rx-letters__lede {
-    margin-top: 0.75rem;
-    max-width: 34ch;
-    color: var(--color-ink-soft);
-  }
-  .rx-signup__row {
+  .rv-signup__row {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 8px;
   }
-  @media (min-width: 40rem) {
-    .rx-signup__row {
+  @media (min-width: 480px) {
+    .rv-signup__row {
       flex-direction: row;
     }
-    .rx-signup__row .rx-input {
+    .rv-signup__row .rv-input {
       flex: 1;
     }
   }
-  .rx-signup__consent {
-    max-width: 62ch;
-    font-size: 0.8125rem;
-    line-height: 1.55;
-    color: var(--color-ink-soft);
+  .rv-signup__consent {
+    margin-top: 12px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--color-smoke);
   }
-
-  /* ── Forms on ivory (the concierge, the letters) ──────────────── */
-  .rx-label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-size: 0.9375rem;
+  .rv-footer__nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+  }
+  .rv-footer__heading {
+    font-size: 0.6875rem;
     font-weight: 500;
-    color: var(--color-ink);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-smoke);
   }
-  .rx-input {
+  .rv-footer__nav ul {
+    display: grid;
+    gap: 2px;
+    margin-top: 14px;
+  }
+  .rv-footer__nav a,
+  .rv-footer__cookie {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .rv-footer__nav a:hover,
+  .rv-footer__cookie:hover {
+    color: var(--color-claret);
+  }
+  .rv-footer__legal {
+    display: grid;
+    gap: 6px;
+    margin-top: 56px;
+    font-size: 0.6875rem;
+    letter-spacing: 0.06em;
+    line-height: 1.6;
+    color: var(--color-smoke);
+  }
+  .rv-footer__legal::before {
+    content: "";
+    height: 1px;
+    margin-bottom: 14px;
+    background: var(--color-line);
+  }
+  .rv-footer__signature {
+    margin-top: 40px;
+    padding: 0 var(--rv-gutter) clamp(20px, 3vw, 40px);
+    color: var(--color-claret);
+  }
+  .rv-footer__signature svg {
+    display: block;
     width: 100%;
-    min-height: 3.25rem;
-    border: 1px solid var(--color-field);
-    border-radius: 0;
-    background: var(--color-surface);
-    padding: 0.75rem 1rem;
-    font-size: 1.0625rem;
+    height: auto;
+  }
+
+  /* ── The bag drawer ────────────────────────────────────────────── */
+  .rv-drawer {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(440px, 100vw);
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+    padding: 0;
+    background: var(--color-chalk);
     color: var(--color-ink);
-    transition: border-color 0.2s;
+    box-shadow: -24px 0 60px -20px rgb(30 23 20 / 0.35);
+    transform: translateX(100%);
+    transition:
+      transform 0.55s var(--ease-house),
+      overlay 0.55s allow-discrete,
+      display 0.55s allow-discrete;
   }
-  .rx-input::placeholder {
-    color: var(--color-ink-soft);
+  .rv-drawer[open] {
+    transform: none;
   }
-  .rx-input:hover {
-    border-color: var(--color-ink-soft);
-  }
-  .rx-input:focus-visible {
-    border-color: var(--color-ink);
-    outline: 2px solid var(--color-ink);
-    outline-offset: 2px;
-  }
-  textarea.rx-input {
-    min-height: 11rem;
-    resize: vertical;
-  }
-  .rx-hint {
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: var(--color-ink-soft);
-  }
-  .rx-form > * + * {
-    margin-top: 1.5rem;
-  }
-  .rx-form__note {
-    margin-top: 0.875rem;
-    font-size: 0.8125rem;
-    color: var(--color-ink-soft);
-  }
-
-  /* Errors keep the contract's one appearance, re-tinted for lacquer. */
-  .rx-dark .alert-error {
-    border-color: currentColor;
-    background: transparent;
-    color: #f0b5a4;
-  }
-
-  /* ── Interior pages ───────────────────────────────────────────── */
-  .rx-page {
-    padding-block: 3.5rem 5rem;
-  }
-  @media (min-width: 64rem) {
-    .rx-page {
-      padding-block: 6rem 8rem;
+  @starting-style {
+    .rv-drawer[open] {
+      transform: translateX(100%);
     }
   }
-  .rx-page__heading {
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
-    line-height: 1.02;
-    letter-spacing: -0.015em;
+  .rv-drawer::backdrop {
+    background: rgb(30 23 20 / 0);
+    transition:
+      background-color 0.55s var(--ease-house),
+      overlay 0.55s allow-discrete,
+      display 0.55s allow-discrete;
   }
-  .rx-page__lede {
-    margin-top: 1.25rem;
-    max-width: 40ch;
-    font-size: 1.125rem;
-    color: var(--color-ink-soft);
+  .rv-drawer[open]::backdrop {
+    background: rgb(30 23 20 / 0.45);
+  }
+  @starting-style {
+    .rv-drawer[open]::backdrop {
+      background: rgb(30 23 20 / 0);
+    }
+  }
+  .rv-drawer__panel {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+  }
+  .rv-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--color-line);
+    padding: 16px 24px;
+  }
+  .rv-drawer__title {
+    font-family: var(--font-display);
+    font-size: 1.625rem;
+    line-height: 1.1;
+  }
+  .rv-drawer__body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px 24px 24px;
+  }
+  .rv-drawer__empty {
+    display: grid;
+    gap: 12px;
+    justify-items: start;
+    padding-top: 24px;
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+  }
+  .rv-drawer__foot {
+    border-top: 1px solid var(--color-line);
+    padding: 16px 24px 0;
+  }
+  .rv-drawer .rv-alert {
+    margin: 12px 24px 0;
+  }
+  .rv-pay {
+    display: grid;
+    gap: 8px;
+    padding: 16px 24px max(20px, env(safe-area-inset-bottom));
+  }
+  .rv-pay .rv-hint {
+    margin-top: 0;
+    text-align: center;
   }
 
-  .rx-concierge {
+  .rv-lines {
     display: grid;
-    gap: 3rem;
   }
-  @media (min-width: 64rem) {
-    .rx-concierge {
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-      gap: 6rem;
+  .rv-line {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    gap: 16px;
+    border-bottom: 1px solid var(--color-line);
+    padding: 18px 0;
+  }
+  .rv-line__thumb {
+    width: 64px;
+    height: 85px;
+    object-fit: cover;
+    background: var(--color-neutral);
+  }
+  .rv-line__name {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+  .rv-line__meta {
+    font-size: 0.8125rem;
+    color: var(--color-smoke);
+  }
+  .rv-line__controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 10px;
+  }
+  .rv-line__price {
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .rv-drawer .rv-gift {
+    margin-top: 16px;
+  }
+
+  .rv-sum {
+    display: grid;
+    gap: 10px;
+    font-size: 0.875rem;
+  }
+  .rv-sum > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .rv-sum dd {
+    font-variant-numeric: tabular-nums;
+  }
+  .rv-sum__detail {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-smoke);
+  }
+  .rv-sum__total {
+    border-top: 1px solid var(--color-line);
+    padding-top: 10px;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  .rv-choice {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 12px;
+    border: 0;
+    padding: 0;
+    font-size: 0.875rem;
+  }
+  .rv-choice__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .rv-choice input {
+    accent-color: var(--color-claret);
+  }
+
+  /* ── Inner pages ───────────────────────────────────────────────── */
+  .rv-page {
+    padding-block: clamp(48px, 8vw, 112px);
+  }
+  .rv-page__heading {
+    font-family: var(--font-display);
+    font-size: clamp(2.375rem, 4.4vw, 3.75rem);
+    line-height: 1.04;
+    letter-spacing: -0.012em;
+  }
+  .rv-page__lede {
+    max-width: 36rem;
+    margin-top: 18px;
+    font-family: var(--font-serif);
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: var(--color-ink);
+  }
+
+  /* A page set beside a photograph: the concierge and the 404. */
+  .rv-split {
+    display: grid;
+  }
+  .rv-split__photo {
+    margin: 0;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: var(--color-shadow);
+  }
+  .rv-split__photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .rv-split__body {
+    padding: clamp(40px, 6vw, 96px) var(--rv-gutter) clamp(64px, 8vw, 120px);
+  }
+  @media (min-width: 960px) {
+    .rv-split {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       align-items: start;
     }
-  }
-  .rx-concierge__aside {
-    margin-top: 2.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--color-line);
-    font-size: 0.9375rem;
-    color: var(--color-ink-soft);
-  }
-  .rx-sent {
-    padding: 2rem 1.75rem;
-  }
-  .rx-sent__heading {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    outline: none;
-  }
-  .rx-sent__text {
-    margin-top: 0.75rem;
-    color: var(--color-ink-soft);
-  }
-
-  /* The confirmation, set like the batch card itself. */
-  .rx-card {
-    margin-top: 2.5rem;
-    padding: 1.75rem 1.5rem;
-  }
-  @media (min-width: 48rem) {
-    .rx-card {
-      padding: 2.5rem 2.5rem 2.25rem;
+    .rv-split__photo {
+      position: sticky;
+      top: var(--rv-header-h);
+      aspect-ratio: auto;
+      height: calc(100svh - var(--rv-header-h));
+    }
+    .rv-split__body {
+      max-width: 44rem;
+      padding-inline: clamp(40px, 6vw, 112px);
     }
   }
-  .rx-card__meta {
+
+  .rv-form {
+    display: grid;
+    gap: 22px;
+    margin-top: 40px;
+  }
+  .rv-form__note {
+    margin-top: 12px;
+    font-size: 0.75rem;
+    color: var(--color-smoke);
+  }
+  .rv-aside {
+    margin-top: 40px;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: var(--color-smoke);
+  }
+
+  .rv-sent {
+    margin-top: 40px;
+    background: var(--color-chalk);
+    padding: 32px 28px;
+  }
+  .rv-sent__heading {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    line-height: 1.1;
+    outline: none;
+  }
+  .rv-sent__text {
+    margin-top: 12px;
+    font-family: var(--font-serif);
+    line-height: 1.7;
+  }
+
+  /* The 404: the seal, unbroken. */
+  .rv-missing__seal {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 32px;
+  }
+  .rv-missing__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    margin-top: 32px;
+    font-size: 0.9375rem;
+  }
+
+  /* ── The order card ────────────────────────────────────────────── */
+  .rv-order {
+    max-width: 44rem;
+    margin-inline: auto;
+  }
+  .rv-order__head {
+    text-align: center;
+  }
+  .rv-order__head .rv-page__lede {
+    margin-inline: auto;
+  }
+  .rv-card {
+    position: relative;
+    margin-top: 72px;
+    background: var(--color-chalk);
+    padding: 64px clamp(20px, 5vw, 48px) 32px;
+    box-shadow: 0 30px 60px -40px rgb(30 23 20 / 0.45);
+  }
+  /* The card is closed with the seal, pressed across its top edge. */
+  .rv-card__seal {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 76px;
+    height: 76px;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    filter: drop-shadow(0 6px 8px rgb(30 23 20 / 0.25));
+  }
+  .rv-card__meta {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    gap: 0.5rem 1rem;
-    padding-bottom: 1.25rem;
+    gap: 8px 24px;
     border-bottom: 1px solid var(--color-line);
-    font-size: 0.9375rem;
-    color: var(--color-ink-soft);
+    padding-bottom: 16px;
+    font-size: 0.8125rem;
+    color: var(--color-smoke);
   }
-  .rx-card__row {
+  .rv-card__meta dd {
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .rv-card__row {
     display: flex;
     justify-content: space-between;
-    gap: 1rem;
-    padding-block: 0.875rem;
+    gap: 16px;
+    border-bottom: 1px solid var(--color-line);
+    padding: 14px 0;
+    font-size: 0.9375rem;
   }
-  .rx-card__row + .rx-card__row {
-    border-top: 1px solid var(--color-line);
+  .rv-card__row dt {
+    font-family: var(--font-serif);
   }
-  .rx-card__row dd {
-    flex-shrink: 0;
-    font-variant-numeric: lining-nums tabular-nums;
+  .rv-card__row dd {
+    font-variant-numeric: tabular-nums;
   }
-  .rx-card__total {
-    border-top: 1px solid var(--color-ink) !important;
-    padding-top: 1.125rem;
-    align-items: baseline;
+  .rv-card__detail {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    color: var(--color-smoke);
   }
-  .rx-card__total dd {
+  .rv-card__total {
+    border-bottom: 0;
+    font-weight: 500;
+  }
+  .rv-section-heading {
     font-family: var(--font-display);
     font-size: 1.75rem;
-    line-height: 1;
-  }
-  .rx-section-heading {
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: 1.875rem;
     line-height: 1.1;
   }
-  .rx-steps {
-    margin-top: 1.25rem;
-    padding-left: 1.25rem;
-    list-style: decimal;
-    color: var(--color-ink-soft);
-  }
-  .rx-steps li + li {
-    margin-top: 0.75rem;
-  }
-  .rx-steps li::marker {
-    font-family: var(--font-display);
-    color: var(--color-primary);
-  }
-
-  /* The 404: a closed box and a way home. */
-  .rx-missing {
+  .rv-steps {
     display: grid;
-    min-height: 70vh;
-    align-content: center;
-    justify-items: start;
-    gap: 1.5rem;
-    padding-block: 4rem;
+    gap: 18px;
+    margin-top: 20px;
+    counter-reset: step;
   }
-  .rx-missing__art {
-    width: 9rem;
+  .rv-steps li {
+    position: relative;
+    padding-left: 44px;
+    font-family: var(--font-serif);
+    line-height: 1.7;
+    counter-increment: step;
+  }
+  .rv-steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 1px solid var(--color-edge);
+    border-radius: 50%;
+    font-family: var(--font-display);
+    font-size: 0.9375rem;
+  }
+  .rv-parcel {
+    display: grid;
+    gap: 6px;
+    margin-top: 16px;
+    color: var(--color-smoke);
+  }
+  .rv-parcel dd {
+    color: var(--color-ink);
   }
 
-  /* Legal pages (components/commerce/LegalPage.tsx classNames). */
-  .rx-legal__title {
+  /* ── Legal pages ───────────────────────────────────────────────── */
+  .rv-legal {
+    max-width: 46rem;
+    margin-inline: auto;
+  }
+  /* The seal heads every legal page: the favicon's own file. */
+  .rv-legal::before {
+    content: "";
+    display: block;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 28px;
+    background: url("/icon.svg") center / contain no-repeat;
+  }
+  .rv-legal__seal {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 28px;
+  }
+  .rv-legal__title {
     font-family: var(--font-display);
-    font-weight: 400;
-    font-size: clamp(2.25rem, 1.5rem + 3vw, 3.75rem);
-    line-height: 1.05;
-    letter-spacing: -0.01em;
+    font-size: clamp(2.375rem, 4.4vw, 3.5rem);
+    line-height: 1.04;
+    letter-spacing: -0.012em;
   }
-  .rx-legal__intro {
-    margin-top: 1.25rem;
-    max-width: 62ch;
+  .rv-legal__intro {
+    margin-top: 18px;
+    font-family: var(--font-serif);
     font-size: 1.125rem;
-    color: var(--color-ink-soft);
+    line-height: 1.7;
   }
-  .rx-legal__meta {
-    margin-top: 1rem;
-    font-size: 0.875rem;
-    color: var(--color-ink-soft);
+  .rv-legal__meta {
+    margin-top: 14px;
+    font-size: 0.8125rem;
+    color: var(--color-smoke);
   }
-  .rx-legal__toc {
-    margin-top: 2.5rem;
-    padding: 1.5rem 0;
+  .rv-legal__toc {
+    margin-top: 48px;
     border-block: 1px solid var(--color-line);
+    padding: 24px 0;
   }
-  .rx-legal__toc-heading {
+  .rv-legal__toc-heading {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-smoke);
+  }
+  .rv-legal__toc-list {
+    margin-top: 14px;
+    padding-left: 1.5rem;
+    list-style: decimal;
+    font-size: 0.9375rem;
+  }
+  .rv-legal__toc-list li {
+    break-inside: avoid;
+    padding-block: 3px;
+  }
+  @media (min-width: 760px) {
+    .rv-legal__toc-list {
+      columns: 2;
+      column-gap: 48px;
+    }
+  }
+  .rv-legal__toc-list li::marker {
+    color: var(--color-smoke);
+    font-size: 0.8125rem;
+  }
+  .rv-legal__section {
+    scroll-margin-top: calc(var(--rv-header-h) + 16px);
+    border-bottom: 1px solid var(--color-line);
+    padding-block: 36px;
+  }
+  .rv-legal__heading {
+    font-family: var(--font-display);
+    font-size: 1.625rem;
+    line-height: 1.15;
+  }
+  .rv-legal__foot {
+    margin-top: 40px;
+    font-size: 0.875rem;
+    color: var(--color-smoke);
+  }
+  .rv-legal-body {
+    margin-top: 16px;
+  }
+
+  .legal-prose {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  .legal-prose h3 {
     font-family: var(--font-display);
     font-size: 1.25rem;
   }
-  .rx-legal__toc-list {
-    margin-top: 1rem;
-    padding-left: 1.25rem;
-    list-style: decimal;
-    columns: 1;
-    font-size: 0.9375rem;
-  }
-  .rx-legal__toc-list li + li {
-    margin-top: 0.375rem;
-  }
-  @media (min-width: 48rem) {
-    .rx-legal__toc-list {
-      columns: 2;
-      column-gap: 3rem;
-    }
-  }
-  .rx-legal__section {
-    scroll-margin-top: 1.5rem;
-    padding-block: 2.5rem 0.5rem;
-  }
-  .rx-legal__heading {
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: 1.5rem;
-    line-height: 1.2;
-  }
-  .rx-legal__heading span {
-    color: var(--color-primary);
-  }
-  .rx-legal__foot {
-    margin-top: 3rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--color-line);
-    font-size: 0.9375rem;
-    color: var(--color-ink-soft);
-  }
-
-  /* ── Footer ───────────────────────────────────────────────────── */
-  .rx-footer {
-    border-top: 1px solid var(--color-line);
-    padding-block: 3.5rem 3rem;
-    font-size: 0.9375rem;
-    color: var(--color-ink-soft);
-  }
-  .rx-footer__mark {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    line-height: 1;
-    color: var(--color-ink);
-  }
-  .rx-footer__nav ul {
-    margin-top: 2rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1.75rem;
-  }
-  .rx-footer__nav a,
-  .rx-footer__nav button {
-    display: inline-flex;
-    min-height: 2.75rem;
-    align-items: center;
-    color: var(--color-ink);
+  .legal-prose a {
     text-decoration: underline;
-    text-decoration-color: transparent;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.3em;
-    transition: text-decoration-color 0.25s;
-    cursor: pointer;
-  }
-  .rx-footer__nav a:hover,
-  .rx-footer__nav button:hover {
-    text-decoration-color: var(--color-primary);
-  }
-  .rx-footer__small {
-    margin-top: 1.75rem;
-    max-width: 68ch;
-    font-size: 0.8125rem;
-    line-height: 1.6;
-  }
-  @media (min-width: 64rem) {
-    .rx-footer__inner {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-      gap: 4rem;
-      align-items: start;
-    }
-    .rx-footer__nav ul {
-      margin-top: 0;
-      justify-content: flex-end;
-    }
+    text-underline-offset: 0.22em;
   }
 
-  /* ── The cookie banner (components/commerce/CookieBanner.tsx) ──── */
-  .rx-cookies {
+  /* ── The cookie banner ─────────────────────────────────────────── */
+  .rv-cookies {
     position: fixed;
-    inset-inline: 0;
-    bottom: 0;
-    z-index: 40;
-    padding: 0.75rem;
+    inset: auto 0 0 0;
+    z-index: 60;
+    padding: 12px;
   }
-  .rx-cookies__panel {
-    margin-inline: auto;
-    max-width: 40rem;
-    padding: 1.5rem;
-    border: 1px solid var(--color-champagne);
-    background: var(--color-lacquer);
-    color: var(--color-vellum);
-    box-shadow: 0 12px 32px -8px rgb(13 13 13 / 0.35);
-    --rx-link-line: var(--color-champagne);
+  .rv-cookies__panel {
+    max-width: 30rem;
+    margin-left: auto;
+    background: var(--color-chalk);
+    padding: 24px;
+    box-shadow: 0 20px 50px -20px rgb(30 23 20 / 0.4);
   }
-  .rx-cookies__heading {
+  .rv-cookies__heading {
     font-family: var(--font-display);
     font-size: 1.375rem;
     outline: none;
   }
-  .rx-cookies__text {
-    margin-top: 0.5rem;
-    font-size: 0.9375rem;
-    color: var(--color-mist);
+  .rv-cookies__text {
+    margin-top: 8px;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-smoke);
   }
-  .rx-cookies__actions {
-    margin-top: 1.25rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
+  .rv-cookies__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .rv-cookies__actions > * {
+    flex: 1;
+  }
+}
+
+@media print {
+  .rv-announce,
+  .rv-header,
+  .rv-footer,
+  .rv-drawer {
+    display: none;
   }
 }
