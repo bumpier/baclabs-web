@@ -3,10 +3,15 @@ import { BrandPathnameProvider } from "@/lib/brand/use-brand-pathname";
 import { brandRootMetadata, brandViewport } from "@/lib/brand/site";
 import { CartProvider } from "@/components/commerce/cart";
 import { Analytics } from "@/components/commerce/Analytics";
-import { bodyFont, displayFont, stencilFont } from "@/brands/gym/fonts";
+import { formatGbp } from "@/lib/commerce/view";
+import { bodyFont, stencilFont } from "@/brands/gym/fonts";
+import { MARQUEE } from "@/brands/gym/copy/home";
+import { SITE } from "@/brands/gym/copy/site";
 import { Header } from "@/brands/gym/components/Header";
+import { Marquee } from "@/brands/gym/components/Marquee";
 import { GymCookieBanner } from "@/brands/gym/components/GymCookieBanner";
 import { brand, BASKET_KEY, DESCRIPTION, LIVE, STOREFRONT } from "./site";
+import { CartShell } from "./CartShell";
 import { SiteFooter } from "./SiteFooter";
 import "@/brands/gym/styles.css";
 
@@ -16,9 +21,10 @@ import "@/brands/gym/styles.css";
  * front can hold a page (and its prices) for more than five minutes.
  *
  * The commerce kit's shell sits here, fed by this brand's storefront view
- * alone: the basket (every page can fill it, from ?buy= links too), the
- * cookie banner and the analytics tags, which load nothing until the
- * visitor accepts. The header and footer frame every page.
+ * alone: the cart (every page can fill it, from ?buy= links too) and the
+ * slide-out cart drawer with the one checkout (CartShell), the cookie banner
+ * and the analytics tags, which load nothing until the visitor accepts. The
+ * marquee, the header and the footer frame every page.
  */
 export const revalidate = 300;
 
@@ -31,15 +37,34 @@ export const metadata: Metadata = brandRootMetadata(brand, { description: DESCRI
  */
 export const viewport: Viewport = { ...brandViewport(brand), colorScheme: "dark", themeColor: "#000000" };
 
+/** The marquee's facts, each from the view: the next-day cutoff, the free-delivery line, the packs. */
+function marqueeFacts(): string[] {
+  const options = STOREFRONT.delivery.options;
+  const timed = options.find((o) => o.cutoff) ?? null;
+  const free = options.find((o) => o.overThreshold === "free") ?? null;
+  const from = STOREFRONT.delivery.freeFromMinor;
+  const counts = STOREFRONT.packs.filter((p) => p.available).map((p) => p.vials);
+  return [
+    ...(timed?.cutoff ? [MARQUEE.cutoff(timed.cutoff, timed.label)] : []),
+    ...(free && from !== null ? [MARQUEE.free(free.label, formatGbp(from))] : []),
+    ...(options.length > 0 ? [MARQUEE.tracked] : []),
+    MARQUEE.sealed,
+    ...(counts.length > 0 ? [MARQUEE.packs(SITE.sizes(counts))] : []),
+  ];
+}
+
 export default function BrandLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-GB" className={`${bodyFont.variable} ${displayFont.variable} ${stencilFont.variable}`}>
+    <html lang="en-GB" className={`${bodyFont.variable} ${stencilFont.variable}`}>
       <body>
         <BrandPathnameProvider id={brand.id}>
           <CartProvider storageKey={BASKET_KEY} storefront={STOREFRONT}>
-            <Header name={brand.name} />
-            {children}
-            <SiteFooter />
+            <CartShell>
+              <Marquee facts={marqueeFacts()} label={MARQUEE.label} />
+              <Header name={brand.name} />
+              {children}
+              <SiteFooter />
+            </CartShell>
           </CartProvider>
           <GymCookieBanner ga4Id={STOREFRONT.tracking.ga4Id} />
           <Analytics ga4Id={STOREFRONT.tracking.ga4Id} />
