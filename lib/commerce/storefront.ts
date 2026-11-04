@@ -6,8 +6,9 @@
  * profile, nothing from config/.
  *
  * SERVER CODE: it reads config/funnel.ts (the Lab Kit's switch and parts)
- * and the payment providers the brand's profile lists. What it returns is
- * plain, serialisable data. BacLab has no catalogue and
+ * and the payment providers the brand's profile lists; withStockLevel reads
+ * the shared vial count from the database. What they return is plain,
+ * serialisable data. BacLab has no catalogue and
  * never comes here; its storefront is config/funnel.ts as it always was.
  */
 import type { BrandProfile } from "@/brands/types";
@@ -84,7 +85,46 @@ export function storefrontView(brand: BrandProfile): StorefrontView {
         return { id: adapter.id, label: words?.label ?? adapter.label };
       }),
     },
+    // Not known here: this is built when the brand's modules load, with no
+    // database read. withStockLevel below reads it when a page renders.
+    stock: { low: false },
     tracking: { ga4Id: brand.analytics?.ga4Id?.trim() || null },
     mailingList: brand.mailingList ? { consentText: brand.mailingList.consentText } : null,
   };
+}
+
+/**
+ * Whether a vial count is low enough for a storefront to say so: a count is
+ * running (a delivery has been booked in on /admin/stock), it is at or under
+ * the admin's own warning level (lib/vial-stock.ts LOW_STOCK_VIALS, the
+ * dashboard's and /admin/stock's), and above nothing. At or below zero the
+ * admin itself reads the count as wrong until a delivery is booked in or
+ * the count corrected, so it is no figure to tell a customer anything by.
+ * Pure, so npm run test:kit can hold it to each case.
+ */
+export function stockIsLow(stock: { since: string | null; left: number; low: boolean }): boolean {
+  return stock.since !== null && stock.low && stock.left > 0;
+}
+
+/**
+ * The view with its stock level read now, for a page that may show the
+ * low-stock line. Every vial is shared, so it is the same for every brand.
+ *
+ * Anything that goes wrong reads as "not low", because saying nothing is
+ * always true: the brand pages are prerendered by `next build`, which on
+ * the VPS runs against a placeholder database, and revalidation reads the
+ * real count at runtime. The stock module is loaded here, not at the top,
+ * so a page that never asks loads nothing of the database.
+ */
+export async function withStockLevel(view: StorefrontView, now = new Date()): Promise<StorefrontView> {
+  let low = false;
+  try {
+    const { loadVialStock } = await import("@/lib/vial-stock");
+    low = stockIsLow(await loadVialStock(now));
+  } catch (err) {
+    // One line: Prisma's message ends with its cause, after the call it was in.
+    const cause = err instanceof Error ? err.message.split("\n").map((l) => l.trim()).filter(Boolean).at(-1) : String(err);
+    console.warn(`[internal] the storefront's stock level is not known, so it reads as not low: ${cause ?? "unknown error"}`);
+  }
+  return { ...view, stock: { low } };
 }

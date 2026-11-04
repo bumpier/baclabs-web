@@ -22,7 +22,8 @@ import { brandFor, type BrandProfile } from "@/brands/registry";
 import { BRAND_IDS, type BrandId } from "@/brands/types";
 import { PAYPAL_PAYMENT, STRIPE_PAYMENT } from "@/brands/payment-methods";
 import { checkBrandCopy } from "@/lib/content-rules";
-import { storefrontView } from "@/lib/commerce/storefront";
+import { stockIsLow, storefrontView, withStockLevel } from "@/lib/commerce/storefront";
+import { LOW_STOCK_VIALS, summariseVialStock, type SentOrder } from "@/lib/vial-stock";
 import { __clearTestPaymentAdapters, __registerTestPaymentAdapter } from "@/lib/commerce/payments";
 import { deliveryQuote, freeDeliveryShortfallMinor, packSavingMinor, priceBasket } from "@/lib/commerce/view";
 import { priceBrandLines } from "@/lib/commerce/pricing";
@@ -85,6 +86,19 @@ for (const id of BRANDS) {
   for (const pack of view.packs) check(`${id}: ${pack.sku} saves nothing negative`, packSavingMinor(view, pack) >= 0);
 }
 check("wholesale runs no list", storefrontView(profiles.wholesale!).mailingList === null);
+// ── The stock level ─────────────────────────────────────────────────
+for (const id of BRANDS) check(`${id}: the view is built not low, with no database read`, storefrontView(profiles[id]!).stock.low === false);
+{
+  const DAY = "2026-10-08";
+  const ON = new Date("2026-10-12T12:00:00Z");
+  const sold = (vials: number): SentOrder => ({ paidAt: new Date("2026-10-10T10:00:00Z"), items: JSON.stringify([{ qty: vials }]), kind: "sale" });
+  const count = (received: number, sent: number) => summariseVialStock([{ vials: received, receivedOn: DAY }], sent ? [sold(sent)] : [], ON);
+  check("stock: nothing booked in is not low", !stockIsLow(summariseVialStock([], [], ON)));
+  check("stock: above the admin's warning level is not low", !stockIsLow(count(1000, 1000 - (LOW_STOCK_VIALS + 1))) && !stockIsLow(count(LOW_STOCK_VIALS + 1, 0)));
+  check("stock: at the warning level is low", stockIsLow(count(LOW_STOCK_VIALS, 0)));
+  check("stock: under it is low", stockIsLow(count(1000, 1000 - 12)));
+  check("stock: a count that has run out says nothing", !stockIsLow(count(100, 100)) && !stockIsLow(count(100, 130)));
+}
 check("luxury offers a gift note", storefrontView(profiles.luxury!).flags.giftNote);
 // A listed provider is offered whether or not it is configured (the
 // checkout answers 503 while it is off), in the profile's words when it has
@@ -359,8 +373,35 @@ for (const file of filesUnder(path.join(ROOT, "components", "commerce"))) {
   check(`${path.relative(ROOT, file)} names no payment provider`, !/stripe/i.test(readFileSync(file, "utf8")));
 }
 
-if (failures > 0) {
-  console.error(`\n${failures} kit check(s) failed.`);
-  process.exit(1);
+/**
+ * The stock level as a prerender on the VPS reads it: the database is a
+ * placeholder that cannot be opened. It must read as "not low", say why in
+ * one line, and never throw.
+ */
+async function stockWithoutDatabase() {
+  const saved = process.env.DATABASE_URL;
+  process.env.DATABASE_URL = "file:/nonexistent-test-kit-dir/placeholder.db";
+  const warn = console.warn;
+  const warned: string[] = [];
+  console.warn = (...a: unknown[]) => {
+    warned.push(a.map(String).join(" "));
+  };
+  try {
+    const view = await withStockLevel(storefrontView(profiles.gym!));
+    check("stock: no database reads as not low", view.stock.low === false);
+    check("stock: and says so in one line", warned.length === 1 && warned[0]!.startsWith("[internal]") && !warned[0]!.includes("\n"), JSON.stringify(warned));
+    check("stock: the rest of the view is as built", JSON.stringify({ ...view, stock: undefined }) === JSON.stringify({ ...storefrontView(profiles.gym!), stock: undefined }));
+  } finally {
+    console.warn = warn;
+    if (saved === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = saved;
+  }
 }
-console.log("✓ commerce kit: all checks passed");
+
+stockWithoutDatabase().then(() => {
+  if (failures > 0) {
+    console.error(`\n${failures} kit check(s) failed.`);
+    process.exit(1);
+  }
+  console.log("✓ commerce kit: all checks passed");
+});

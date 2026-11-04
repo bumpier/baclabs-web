@@ -115,6 +115,15 @@ export interface StorefrontView {
    * then answers 503 in neutral words, shown as they stand.
    */
   payment: { methods: PaymentMethodView[] };
+  /**
+   * The shared vial stock, as far as a page may say it. `low` is true only
+   * while the vial count the admin keeps (lib/vial-stock.ts) is really low:
+   * the one urgency a storefront may show, never a countdown and never a
+   * figure. false whenever the count is not known, which is how
+   * storefrontView builds it; withStockLevel (lib/commerce/storefront.ts)
+   * reads it when the page renders.
+   */
+  stock: { low: boolean };
   /** The brand's own GA4 property. null: none. Its Meta pixel is resolved per request (/api/pixel). */
   tracking: { ga4Id: string | null };
   /** The words the brand's signup form must show (they are stored as the consent record). null: no list. */

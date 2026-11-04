@@ -902,6 +902,23 @@ async function databaseChecks() {
   await stripeDatabaseChecks(post);
   await paypalChecks(post, () => `192.0.2.${++ip}`);
 
+  // The storefront's low-stock flag reads the count /admin/stock keeps,
+  // with every brand's paid orders taken off it.
+  const { storefrontView, withStockLevel } = await import("@/lib/commerce/storefront");
+  const { loadVialStock } = await import("@/lib/vial-stock");
+  const { shopDayKey } = await import("@/lib/saleTime");
+  const gymView = storefrontView(brandFor("gym"));
+  const lowNow = async () => (await withStockLevel(gymView)).stock.low;
+  check("db: stock: nothing booked in reads as not low", !(await lowNow()));
+  await prisma.vialDelivery.create({ data: { vials: 10_000, receivedOn: shopDayKey(new Date()) } });
+  const counted = await loadVialStock();
+  check("db: stock: the brands' orders come off the count", counted.sent > 0, String(counted.sent));
+  check("db: stock: plenty reads as not low", !(await lowNow()));
+  await prisma.vialDelivery.create({ data: { vials: 150 - counted.left, receivedOn: shopDayKey(new Date()) } });
+  check("db: stock: 150 left reads as low", (await loadVialStock()).left === 150 && (await lowNow()));
+  await prisma.vialDelivery.create({ data: { vials: -150, receivedOn: shopDayKey(new Date()) } });
+  check("db: stock: a count at nothing says nothing", !(await lowNow()));
+
   // The confirmations go out after fulfilment answers; wait for them.
   const paidOrders = await prisma.order.count({ where: { status: "paid" } });
   for (let i = 0; i < 60 && (await prisma.emailLog.count({ where: { type: "confirmation" } })) < paidOrders; i++) {
