@@ -296,7 +296,9 @@ with `sqlite3 <copy> '.tables'` to prove the snapshot is readable.
 # Deploy a code change
 bash /srv/baclab/deploy/scripts/baclab-deploy.sh
 
-# Add another storefront domain
+# Add another domain for BacLab itself (a mirror of baclab.co.uk). NEVER for
+# one of the other brands: this puts the domain on BacLab's certificate and
+# server block. A brand gets its own of each: deploy/NEW-BRAND.md.
 sudo ADMIN_EMAIL=you@yourdomain.tld bash /srv/baclab/deploy/scripts/baclab-add-domain.sh newshop.com
 
 # Logs
