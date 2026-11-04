@@ -3,11 +3,25 @@
    scans this brand's folders (see the @source not lines there).
 
    source(none) turns off Tailwind's scan of the whole repo, so only the
-   folders named here contribute classes. The palette is a placeholder from
-   brands/beauty/profile.ts until the brand's design lands.
+   folders named here contribute classes. The shared class contract
+   (styles/commerce-contract.css) and the commerce kit's folder come with it:
+   the kit's default classes are built here, then themed below.
 
-   The shared class contract (styles/commerce-contract.css) and the commerce
-   kit's folder come with it: the kit's default classes are built here. */
+   THE DESIGN, IN SHORT.
+   Thesis: an Aurelle page is a still life you can buy from. Porcelain, blush
+   silk, a marble plinth and the vial itself, drawn rather than photographed
+   (no photography exists yet; every drawing marks its photo slot). It
+   refuses the lab-supply product grid and the black-and-gold box.
+   World: a porcelain ground, blush fields that own whole sections, plum ink
+   for every word, and rose gold only as metal inside the drawings (it never
+   carries text on a light ground: too little contrast). Rosarivo for display,
+   Ysabeau Office for text (brands/beauty/fonts.ts).
+   Shape: everything is rounded. Sections are sheets with large radii inset
+   from the page edge, actions are pills, panels are soft-cornered porcelain.
+   No hairline rules, no capitals labels, no icon library.
+   Motion: one moment per action. The hero's vial catches the light once on
+   load; choosing a set fills its pouch; choosing a clinic pack fills its
+   tray. All of it stops for prefers-reduced-motion. */
 @import "tailwindcss" source(none);
 @import "../../styles/commerce-contract.css";
 @source "../../app/beauty";
@@ -15,17 +29,42 @@
 @source "../../components/commerce";
 
 @theme {
-  --color-paper: #fbf7f4;
-  --color-surface: #ffffff;
-  --color-neutral: #f5ece8;
-  --color-ink: #3a1f33;
-  --color-ink-soft: #6e5566;
-  --color-line: #ebddd7;
-  --color-primary: #7a3b63;
-  --color-cta: #7a3b63;
+  /* Porcelain: the page. Cool and faintly pink, never cream. */
+  --color-paper: #f8f3f3;
+  /* Glazed porcelain: panels, fields, the basket. */
+  --color-surface: #fffcfb;
+  /* Blush: the fields that hold whole sections. */
+  --color-neutral: #f2dfdc;
+  --color-blush: #f2dfdc;
+  --color-blush-deep: #e7c6c1;
+  /* Plum: every word, and the one action colour. */
+  --color-ink: #3b1730;
+  --color-ink-soft: #6a4660;
+  --color-plum: #3b1730;
+  --color-plum-raised: #52223f;
+  /* Text on plum: porcelain, and a misted plum for the quieter lines. */
+  --color-on-plum: #fbf6f5;
+  --color-on-plum-soft: #dcc0cb;
+  /* Rose gold, as metal. On plum it may carry a word (8:1); never on light. */
+  --color-rose: #b9877a;
+  --color-rose-light: #e6bcab;
+  --color-line: #e6d0cc;
+  --color-primary: #3b1730;
+  --color-cta: #3b1730;
+  --color-on-cta: #fbf6f5;
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: Georgia, "Times New Roman", serif;
+  --radius-sheet: 2.5rem;
+  --radius-panel: 1.75rem;
+  --radius-field: 0.875rem;
+
+  --shadow-porcelain: 0 1px 2px rgb(59 23 48 / 0.05), 0 22px 44px -26px rgb(59 23 48 / 0.3);
+
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@theme inline {
+  --font-sans: var(--font-aurelle-text), "Gill Sans", "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-aurelle-display), Georgia, "Times New Roman", serif;
 }
 
 @layer base {
@@ -35,5 +74,477 @@
 
   body {
     @apply bg-paper font-sans text-ink antialiased;
+    font-size: 1.125rem;
+    line-height: 1.6;
+    font-weight: 430;
+    /* No sideways scroll at 390px, whatever a drawing's overflow does. */
+    overflow-x: clip;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: var(--color-blush-deep);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  /* ── Type ────────────────────────────────────────────────────────
+     A classical scale (48 → 56 → 72 → 92 at the top), set in Rosarivo at
+     its only weight. More space above a heading than below it. */
+  .au-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(3rem, 1.6rem + 5.2vw, 5.25rem);
+    line-height: 1.02;
+    letter-spacing: -0.015em;
+  }
+  .au-h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(2.25rem, 1.6rem + 2.4vw, 3.5rem);
+    line-height: 1.06;
+    letter-spacing: -0.01em;
+  }
+  .au-h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.625rem;
+    line-height: 1.15;
+  }
+  .au-lead {
+    font-size: 1.1875rem;
+    line-height: 1.6;
+    color: var(--color-ink-soft);
+    max-width: 34rem;
+  }
+  .au-price {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1;
+    font-variant-numeric: lining-nums;
+  }
+  .au-small {
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--color-ink-soft);
+  }
+
+  /* ── Actions: pills ─────────────────────────────────────────────── */
+  .btn-cta,
+  .btn-quiet,
+  .btn-secondary {
+    min-height: 3.25rem;
+    border-radius: 999px;
+    padding: 0 1.75rem;
+    font-weight: 620;
+    letter-spacing: 0.005em;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease;
+  }
+  .btn-cta:hover:not(:disabled) {
+    background: var(--color-plum-raised);
+  }
+  .btn-quiet {
+    border-color: var(--color-blush-deep);
+  }
+  .btn-quiet:hover:not(:disabled) {
+    border-color: var(--color-ink);
+  }
+  .btn-secondary {
+    border-color: var(--color-ink);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--color-ink);
+    color: var(--color-on-plum);
+  }
+  /* On a plum field the action turns porcelain. */
+  .au-on-plum .btn-cta {
+    background: var(--color-on-plum);
+    color: var(--color-ink);
+  }
+  .au-on-plum .btn-cta:hover:not(:disabled) {
+    background: var(--color-rose-light);
+  }
+
+  .link,
+  .au-link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--color-rose);
+    transition: text-decoration-color 160ms ease;
+  }
+  .link:hover,
+  .au-link:hover {
+    text-decoration-color: currentColor;
+  }
+  .au-on-plum .link,
+  .au-on-plum .au-link {
+    text-decoration-color: var(--color-rose-light);
+  }
+
+  /* ── Forms ──────────────────────────────────────────────────────── */
+  .label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .field {
+    min-height: 3rem;
+    border-radius: var(--radius-field);
+    border-color: var(--color-line);
+    padding: 0.75rem 1rem;
+    font: inherit;
+    font-size: 1.0625rem;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-ink);
+    box-shadow: 0 0 0 3px var(--color-blush-deep);
+  }
+  select.field {
+    appearance: none;
+    padding-right: 2.75rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%233b1730' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1.1rem center;
+    background-size: 0.75rem;
+  }
+  textarea.field {
+    min-height: 9rem;
+    resize: vertical;
+  }
+  .au-on-plum .field {
+    border-color: transparent;
+    background: var(--color-on-plum);
+  }
+  .au-on-plum .field:focus {
+    box-shadow: 0 0 0 3px var(--color-rose-light);
+  }
+
+  /* ── Messages ───────────────────────────────────────────────────── */
+  .alert-error,
+  .alert-note {
+    border-radius: var(--radius-field);
+    padding: 0.75rem 1rem;
+    font-size: 0.9375rem;
+  }
+  .alert-note {
+    border-color: var(--color-blush-deep);
+    background: var(--color-blush);
+  }
+
+  /* ── Surfaces ───────────────────────────────────────────────────── */
+  .commerce-panel,
+  .au-panel {
+    border: 0;
+    border-radius: var(--radius-panel);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-porcelain);
+    color: var(--color-ink);
+  }
+  /* A section that is a sheet: blush or plum, rounded, inset from the edge. */
+  .au-sheet {
+    margin-inline: 0.625rem;
+    border-radius: 2rem;
+  }
+  @media (min-width: 48rem) {
+    .au-sheet {
+      margin-inline: 1.5rem;
+      border-radius: var(--radius-sheet);
+    }
+  }
+  .au-blush {
+    background: var(--color-blush);
+  }
+  .au-on-plum {
+    background: var(--color-plum);
+    color: var(--color-on-plum);
+  }
+
+  /* ── Choosing a pack ──────────────────────────────────────────────
+     The kit's PackPicker draws native radios, visually hidden; the label
+     carries the look, the chosen state and the focus ring. */
+  .au-set {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.25rem 1rem;
+    border: 1.5px solid transparent;
+    border-radius: 1.5rem;
+    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    transition:
+      border-color 160ms ease,
+      background-color 160ms ease;
+  }
+  .au-set:hover {
+    background: var(--color-surface);
+  }
+  .au-set[data-checked] {
+    border-color: var(--color-ink);
+    background: var(--color-surface);
+  }
+  .au-set:has(:focus-visible) {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+  /* The radio's face: a ring, filled when chosen. */
+  .au-dot {
+    display: block;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 1.5px solid var(--color-ink-soft);
+    border-radius: 999px;
+    transition: box-shadow 160ms ease;
+  }
+  [data-checked] > .au-dot,
+  [data-checked] .au-dot {
+    border-color: var(--color-ink);
+    box-shadow: inset 0 0 0 4px var(--color-surface), inset 0 0 0 10px var(--color-ink);
+  }
+
+  /* The clinic sizes: one porcelain pill track on the blush sheet, three
+     choices. */
+  .au-segments {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.25rem;
+    border-radius: 999px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-porcelain);
+    padding: 0.3rem;
+  }
+  .au-segment {
+    display: flex;
+    min-height: 3rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+  .au-segment:hover {
+    background: var(--color-blush);
+  }
+  .au-segment[data-checked] {
+    background: var(--color-ink);
+    color: var(--color-on-plum);
+  }
+  .au-segment:has(:focus-visible) {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+
+  /* The quantity stepper's round buttons. */
+  .au-step {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-blush-deep);
+    border-radius: 999px;
+    background: var(--color-surface);
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+  .au-step:hover:not(:disabled) {
+    border-color: var(--color-ink);
+  }
+  .au-step:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+  .au-count {
+    width: 3.25rem;
+    min-height: 2.75rem;
+    border: 0;
+    border-radius: 0.75rem;
+    background: transparent;
+    text-align: center;
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-ink);
+    appearance: textfield;
+  }
+  .au-count::-webkit-inner-spin-button,
+  .au-count::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  .au-count:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-ink);
+  }
+
+  /* The delivery choice in the basket. */
+  .au-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    border: 1.5px solid var(--color-line);
+    border-radius: 1.125rem;
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+  }
+  .au-choice[data-checked] {
+    border-color: var(--color-ink);
+  }
+  .au-choice:has(:focus-visible) {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+
+  /* The header's basket pill. */
+  .au-basket {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-blush-deep);
+    background: var(--color-surface);
+    padding: 0 0.5rem 0 1rem;
+    font-weight: 600;
+  }
+  .au-basket:hover {
+    border-color: var(--color-ink);
+  }
+  .au-basket-count {
+    display: inline-flex;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--color-blush);
+    padding: 0 0.4rem;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .au-basket-count[data-filled] {
+    background: var(--color-ink);
+    color: var(--color-on-plum);
+  }
+
+  /* The welcome dialog (the kit's SignupPopup). */
+  .au-dialog {
+    margin: auto;
+    width: calc(100% - 2rem);
+    max-width: 28rem;
+    border: 0;
+    border-radius: 2rem;
+    padding: 0;
+    background: var(--color-plum);
+    color: var(--color-on-plum);
+    box-shadow: 0 40px 80px -30px rgb(59 23 48 / 0.6);
+  }
+  .au-dialog::backdrop {
+    background: rgb(59 23 48 / 0.38);
+  }
+
+  /* ── Legal pages (components/commerce/LegalPage.tsx) ───────────── */
+  .legal-prose {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+  .legal-prose h3 {
+    font-weight: 650;
+  }
+
+  /* ── Motion ─────────────────────────────────────────────────────── */
+  /* SVG elements: a CSS transform replaces the element's own transform
+     attribute, so these go on inner groups only, and turn about their own
+     box rather than the drawing's origin. */
+  .au-sheen,
+  .au-rise,
+  .au-settle {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .au-sheen {
+    animation: au-sheen 1.9s var(--ease-out-soft) 0.6s 1 both;
+  }
+  .au-rise {
+    animation: au-rise 520ms var(--ease-out-soft) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+  .au-settle {
+    animation: au-settle 420ms var(--ease-out-soft) both;
+    animation-delay: calc(var(--i, 0) * 5ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .au-sheen {
+      animation: none;
+      opacity: 0;
+    }
+    .au-rise,
+    .au-settle {
+      animation: none;
+    }
+    .btn-cta,
+    .btn-quiet,
+    .btn-secondary,
+    .field,
+    .au-set,
+    .au-segment {
+      transition: none;
+    }
+  }
+}
+
+@keyframes au-sheen {
+  from {
+    transform: translateX(0) skewX(-14deg);
+  }
+  to {
+    transform: translateX(260px) skewX(-14deg);
+  }
+}
+
+@keyframes au-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes au-settle {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
