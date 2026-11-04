@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/db";
-import { chosenDeliveryOption, deliveryInstructionsFrom, verifyStripeEvent } from "@/lib/payments/stripe";
+import { chosenDeliveryOption, deliveryInstructionsFrom, verifyStripeWebhook } from "@/lib/payments/stripe";
 import { cleanDeliveryInstructions } from "@/lib/smarttrack/payload";
 import { fulfillPaidOrder } from "@/lib/payments/fulfillment";
 import { handleExpiredCheckout, orderForSession } from "@/lib/payments/recovery";
@@ -50,10 +50,14 @@ export async function POST(req: Request) {
   }
 
   // Signature over the raw bytes. A genuine mismatch — and only that — is 400.
+  // Checked against the shared signing secret and then any brand's own
+  // (STRIPE_WEBHOOK_SECRET__<ID>, for a brand on a Stripe account of its
+  // own): the one that verifies says which account sent the event.
   const signature = req.headers.get("stripe-signature");
   let event: Stripe.Event;
+  let account: { secretKey: string; keyEnv: string; stripe: Stripe };
   try {
-    event = verifyStripeEvent(raw, signature);
+    ({ event, ...account } = verifyStripeWebhook(raw, signature));
   } catch (err) {
     console.warn("[stripe] webhook signature verification failed", (err as Error).message);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
@@ -62,11 +66,12 @@ export async function POST(req: Request) {
   // A test-mode event arriving on a live deployment (a test endpoint's signing
   // secret configured in production) would otherwise fulfil real orders for
   // free. Unrecognised key prefixes are treated as live, so a restricted live
-  // key never blocks genuine events.
-  const expectLive = !/^(sk|rk)_test_/.test(secretKey);
+  // key never blocks genuine events. Judged by the key of the account that
+  // sent it: STRIPE_SECRET_KEY unless the event came from a brand's own.
+  const expectLive = !/^(sk|rk)_test_/.test(account.secretKey);
   if (event.livemode !== expectLive) {
     console.error(
-      `[stripe] livemode mismatch: event.livemode=${event.livemode} but STRIPE_SECRET_KEY is a ${expectLive ? "live" : "test"} key — ignoring event ${event.id}`
+      `[stripe] livemode mismatch: event.livemode=${event.livemode} but ${account.keyEnv} is a ${expectLive ? "live" : "test"} key — ignoring event ${event.id}`
     );
     return NextResponse.json({ received: true, ignored: "livemode-mismatch" });
   }
@@ -140,7 +145,7 @@ export async function POST(req: Request) {
       const phone = session.customer_details?.phone ?? "";
       // Which delivery the customer paid for: label buying sends it that way.
       const deliveryMinor = session.total_details?.amount_shipping ?? 0;
-      const deliveryOption = await chosenDeliveryOption(session);
+      const deliveryOption = await chosenDeliveryOption(session, account.stripe);
       const deliveryInstructions = cleanDeliveryInstructions(deliveryInstructionsFrom(session));
 
       await prisma.order.update({

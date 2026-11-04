@@ -17,17 +17,58 @@ import {
   type KitTier,
 } from "@/config/funnel";
 import { planFreeLine, type PlanPrice } from "@/config/plans";
-import { DEFAULT_BRAND } from "@/brands/types";
+import { BRAND_IDS, DEFAULT_BRAND } from "@/brands/types";
 
 let _stripe: Stripe | null = null;
+
+/** Pinned so an SDK bump can never silently change the wire contract. Keep it in step with the installed SDK's LatestApiVersion. */
+const API_VERSION = "2026-07-29.dahlia" as const;
 
 export function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY is not configured");
-  // Pin the API version so an SDK bump can never silently change the wire
-  // contract. Keep it in step with the installed SDK's LatestApiVersion.
-  if (!_stripe) _stripe = new Stripe(key, { apiVersion: "2026-07-29.dahlia" });
+  if (!_stripe) _stripe = new Stripe(key, { apiVersion: API_VERSION });
   return _stripe;
+}
+
+// ── One Stripe account per brand, by config alone ────────────────────
+// Every brand shares BacLab's Stripe account until it is given its own:
+// set STRIPE_SECRET_KEY__<ID> (and STRIPE_WEBHOOK_SECRET__<ID> for its
+// webhook endpoint) and that brand's sessions, lookups and webhook events
+// move to that account, with no code change. BacLab is always the shared
+// account, so with only the shared env set nothing differs from before.
+
+/** `STRIPE_SECRET_KEY__GYM`: a brand's own value of a shared Stripe setting. */
+export function brandStripeEnv(name: "STRIPE_SECRET_KEY" | "STRIPE_WEBHOOK_SECRET", brandId: string): string {
+  return `${name}__${brandId.toUpperCase()}`;
+}
+
+/** The secret key a brand's Stripe calls use: its own account's when set, else the shared one. */
+export function stripeKeyFor(brandId: string): string | undefined {
+  if (brandId !== DEFAULT_BRAND) {
+    const own = process.env[brandStripeEnv("STRIPE_SECRET_KEY", brandId)]?.trim();
+    if (own) return own;
+  }
+  return process.env.STRIPE_SECRET_KEY;
+}
+
+const brandClients = new Map<string, Stripe>();
+
+/**
+ * The Stripe client for a brand's account. The shared account's is
+ * getStripe() itself, so BacLab, and every brand without its own key, gets
+ * the very same client as before.
+ */
+export function stripeFor(brand: { id: string }): Stripe {
+  const key = stripeKeyFor(brand.id);
+  if (!key) throw new Error("STRIPE_SECRET_KEY is not configured");
+  if (key === process.env.STRIPE_SECRET_KEY) return getStripe();
+  let client = brandClients.get(key);
+  if (!client) {
+    client = new Stripe(key, { apiVersion: API_VERSION });
+    brandClients.set(key, client);
+  }
+  return client;
 }
 
 /** Convert a pence figure to the major-unit string Stripe reports back. */
@@ -501,11 +542,16 @@ export function deliveryInstructionsFrom(session: Stripe.Checkout.Session): stri
  * charged no delivery, or the rate is not one of ours. Never throws: the
  * order is paid either way, and label buying copes with an unknown choice.
  */
-export async function chosenDeliveryOption(session: Stripe.Checkout.Session): Promise<DeliveryOptionId | null> {
+export async function chosenDeliveryOption(
+  session: Stripe.Checkout.Session,
+  // The account the session lives in: the webhook passes the one whose
+  // signing secret verified the event (verifyStripeWebhook).
+  stripe: Stripe = getStripe()
+): Promise<DeliveryOptionId | null> {
   const rate = session.shipping_cost?.shipping_rate;
   if (!rate) return null;
   try {
-    const resolved = typeof rate === "string" ? await getStripe().shippingRates.retrieve(rate) : rate;
+    const resolved = typeof rate === "string" ? await stripe.shippingRates.retrieve(rate) : rate;
     return deliveryOptionById(resolved.metadata?.deliveryOption)?.id ?? null;
   } catch (err) {
     console.error(`[stripe] could not read the delivery option of session ${session.id}`, err);
@@ -519,6 +565,54 @@ export function verifyStripeEvent(rawBody: string, signature: string | null): St
   if (!secret) throw new Error("STRIPE_WEBHOOK_SECRET is not configured");
   if (!signature) throw new Error("Missing stripe-signature header");
   return getStripe().webhooks.constructEvent(rawBody, signature, secret);
+}
+
+/**
+ * The webhook signing secrets in force, the shared account's first: one
+ * entry per STRIPE_WEBHOOK_SECRET__<ID> that is set, each with the secret
+ * key of the account it belongs to (stripeKeyFor). `env` names the key, for
+ * the log.
+ */
+export function webhookAccounts(brandIds: readonly string[] = BRAND_IDS): { secret: string; key: string; env: string; brandId: string }[] {
+  const out: { secret: string; key: string; env: string; brandId: string }[] = [];
+  const shared = process.env.STRIPE_WEBHOOK_SECRET;
+  const sharedKey = process.env.STRIPE_SECRET_KEY;
+  if (shared && sharedKey) out.push({ secret: shared, key: sharedKey, env: "STRIPE_SECRET_KEY", brandId: DEFAULT_BRAND });
+  for (const id of brandIds) {
+    if (id === DEFAULT_BRAND) continue;
+    const secret = process.env[brandStripeEnv("STRIPE_WEBHOOK_SECRET", id)]?.trim();
+    const key = stripeKeyFor(id);
+    if (!secret || !key) continue;
+    const own = key !== sharedKey;
+    out.push({ secret, key, env: own ? brandStripeEnv("STRIPE_SECRET_KEY", id) : "STRIPE_SECRET_KEY", brandId: id });
+  }
+  return out;
+}
+
+/**
+ * Verify a webhook against every configured signing secret, the shared one
+ * first, and say which account sent it: its secret key (for the livemode
+ * check), the env var that holds it, and its client (for any lookup the
+ * handler makes, such as the shipping rate). Throws, with the shared
+ * secret's own error, when none matches. With only the shared secret set
+ * this is verifyStripeEvent exactly.
+ */
+export function verifyStripeWebhook(
+  rawBody: string,
+  signature: string | null
+): { event: Stripe.Event; secretKey: string; keyEnv: string; stripe: Stripe } {
+  if (!process.env.STRIPE_WEBHOOK_SECRET) throw new Error("STRIPE_WEBHOOK_SECRET is not configured");
+  if (!signature) throw new Error("Missing stripe-signature header");
+  let first: unknown = null;
+  for (const account of webhookAccounts()) {
+    const stripe = stripeFor({ id: account.key === process.env.STRIPE_SECRET_KEY ? DEFAULT_BRAND : account.brandId });
+    try {
+      return { event: stripe.webhooks.constructEvent(rawBody, signature, account.secret), secretKey: account.key, keyEnv: account.env, stripe };
+    } catch (err) {
+      first ??= err;
+    }
+  }
+  throw first ?? new Error("STRIPE_SECRET_KEY is not configured");
 }
 
 /** Every bundle whose Price ID is configured. Used by the startup warning. */
