@@ -37,6 +37,8 @@ import {
 } from "@/lib/mailing-list";
 import { priceIn } from "@/lib/fx";
 import { fetchFxRates } from "@/lib/fx-rates";
+import { brandFromHost, DEFAULT_BRAND } from "@/brands/registry";
+import { brandCheckout } from "@/lib/commerce/checkout";
 import {
   bundleById,
   allowedPriceIds,
@@ -113,6 +115,10 @@ export async function POST(req: Request) {
         { status: 429 }
       );
     }
+    // Another brand's site: its own checkout (lib/commerce/checkout.ts).
+    // Nothing below this line runs for it, and BacLab never leaves here.
+    const brand = brandFromHost(req.headers.get("host"));
+    if (brand.id !== DEFAULT_BRAND) return brandCheckout(req, brand);
 
     const parsed = CheckoutSchema.safeParse(await req.json());
     if (!parsed.success) {

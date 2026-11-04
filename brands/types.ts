@@ -107,6 +107,26 @@ export interface BrandProfile {
     ga4Id?: string;
   };
   /**
+   * The brand on Stripe's page and the card statement (lib/commerce/checkout.ts).
+   * BacLab sets none: its sessions are built as they always were.
+   */
+  stripe?: {
+    /**
+     * After the account's own prefix on the customer's card statement:
+     * "PREFIX* SUFFIX", 22 characters at most in all, letters required, none
+     * of < > \ ' " *. Neutral, like the line items.
+     */
+    statementDescriptorSuffix?: string;
+    /**
+     * Stripe's page shows these instead of the account's own. Paths on the
+     * brand's origin, used only once it is https (Stripe fetches them), and
+     * PNG or JPG, square, 128px or more: Stripe takes no SVG, so the
+     * profile's `logo` cannot stand in.
+     */
+    logo?: string;
+    icon?: string;
+  };
+  /**
    * What the brand sells and how it is delivered (brands/<id>/catalogue.ts):
    * the brand checkout (lib/commerce/checkout.ts) prices every line from it,
    * and its emails and finance read it back. BacLab has none: its packs,

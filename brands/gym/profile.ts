@@ -43,6 +43,8 @@ export function gymProfile(): BrandProfile {
       "Sold as a laboratory reagent. Not a medicine and not a medical device. No therapeutic claim is made.",
     packingSlipThankYou: "Thank you for your order.",
     legalName: "",
+    // TODO(launch): the final name's descriptor, and PNG logo and icon for Stripe's page.
+    stripe: { statementDescriptorSuffix: "BRUTE LAB" },
     catalogue: gymCatalogue,
   };
 }

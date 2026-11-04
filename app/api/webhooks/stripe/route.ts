@@ -5,6 +5,7 @@ import { chosenDeliveryOption, deliveryInstructionsFrom, verifyStripeWebhook } f
 import { cleanDeliveryInstructions } from "@/lib/smarttrack/payload";
 import { fulfillPaidOrder } from "@/lib/payments/fulfillment";
 import { handleExpiredCheckout, orderForSession } from "@/lib/payments/recovery";
+import { businessDetailsNote } from "@/lib/commerce/checkout";
 
 // Stripe SDK (crypto) + Prisma (DB) — Edge can't run these.
 export const runtime = "nodejs";
@@ -147,6 +148,10 @@ export async function POST(req: Request) {
       const deliveryMinor = session.total_details?.amount_shipping ?? 0;
       const deliveryOption = await chosenDeliveryOption(session, account.stripe);
       const deliveryInstructions = cleanDeliveryInstructions(deliveryInstructionsFrom(session));
+      // A trade buyer's company and VAT number, from a brand session that
+      // asked for them (lib/commerce/checkout.ts), kept in the notes. BacLab's
+      // sessions are never "brand" and never ask.
+      const business = session.metadata?.kind === "brand" ? businessDetailsNote(session) : "";
 
       await prisma.order.update({
         where: { id: orderId },
@@ -154,6 +159,7 @@ export async function POST(req: Request) {
           deliveryMinor,
           ...(deliveryOption ? { deliveryOption } : {}),
           ...(deliveryInstructions ? { deliveryInstructions } : {}),
+          ...(business ? { notes: order.notes ? `${order.notes}\n${business}` : business } : {}),
           ...(email ? { customerEmail: email } : {}),
           ...(name ? { customerName: name } : {}),
           // Paid through the link in a recovery email: credited to it on the

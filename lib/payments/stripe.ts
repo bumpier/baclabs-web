@@ -527,8 +527,8 @@ export async function createPlanUpgradeCheckout(params: {
   return { paymentUrl: session.url, paymentRef: session.id };
 }
 
-/** Stripe Checkout custom field carrying the customer's delivery instructions. */
-const DELIVERY_INSTRUCTIONS_FIELD = "deliveryinstructions";
+/** Stripe Checkout custom field carrying the customer's delivery instructions. Brand sessions use it too. */
+export const DELIVERY_INSTRUCTIONS_FIELD = "deliveryinstructions";
 
 /** What the customer typed in the delivery instructions box, or "". */
 export function deliveryInstructionsFrom(session: Stripe.Checkout.Session): string {
