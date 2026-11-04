@@ -1,5 +1,6 @@
 import { gymProfile } from "@/brands/gym/profile";
 import { storefrontView } from "@/lib/commerce/storefront";
+import { SITE } from "@/brands/gym/copy/site";
 
 /**
  * This brand's site settings, shared by its layout and its metadata routes.
@@ -15,8 +16,6 @@ export const brand = gymProfile();
  */
 export const LIVE = false;
 
-export const DESCRIPTION = "Coming soon.";
-
 /** Every public page, for the sitemap. Not the order confirmation: it is per order, and noindex. */
 export const PAGES: readonly string[] = ["/", "/contact", "/terms", "/privacy", "/returns", "/disclaimer"];
 
@@ -26,6 +25,9 @@ export const PAGES: readonly string[] = ["/", "/contact", "/terms", "/privacy", 
  * section reads it from there.
  */
 export const STOREFRONT = storefrontView(brand);
+
+/** The site's description (meta, Open Graph, llms.txt), naming only the pack sizes on sale. */
+export const DESCRIPTION = SITE.description(STOREFRONT.packs.filter((p) => p.available).map((p) => p.vials));
 
 /**
  * The basket's localStorage key. Each brand's domain has its own storage, so

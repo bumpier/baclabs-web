@@ -1,46 +1,47 @@
 import Link from "next/link";
 import { CookieSettingsButton } from "@/components/commerce/CookieSettingsButton";
+import { SITE } from "@/brands/gym/copy/site";
 import { brand, STOREFRONT } from "./site";
 
+const LINKS = [
+  { href: "/contact", label: SITE.links.contact },
+  { href: "/terms", label: SITE.links.terms },
+  { href: "/privacy", label: SITE.links.privacy },
+  { href: "/returns", label: SITE.links.returns },
+  { href: "/disclaimer", label: SITE.links.disclaimer },
+];
+
 /**
- * A plain footer until the brand's design lands: the legal pages, the
- * contact page and "Cookie settings" on every page, as the law and the
- * cookie banner's promise need.
+ * The footer on every page: the legal pages, the contact page and "Cookie
+ * settings", as the law and the cookie banner's promise need, the product
+ * disclaimer, and the wordmark at full width to close the page. The phone's
+ * buy bar steps aside while this is in view (#site-footer).
  */
 export function SiteFooter() {
   return (
-    <footer className="mx-auto max-w-3xl border-t border-line px-6 py-10 text-sm text-ink-soft">
-      <nav aria-label="Footer">
-        <ul className="flex flex-wrap gap-x-6 gap-y-2">
-          <li>
-            <Link href="/contact" className="link">
-              Contact
-            </Link>
-          </li>
-          <li>
-            <Link href="/terms" className="link">
-              Terms
-            </Link>
-          </li>
-          <li>
-            <Link href="/privacy" className="link">
-              Privacy
-            </Link>
-          </li>
-          <li>
-            <Link href="/returns" className="link">
-              Returns
-            </Link>
-          </li>
-          <li>
-            <Link href="/disclaimer" className="link">
-              Product disclaimer
-            </Link>
-          </li>
-          <CookieSettingsButton asListItem ga4Id={STOREFRONT.tracking.ga4Id} className="link" />
-        </ul>
-      </nav>
-      <p className="mt-4">{brand.disclaimer}</p>
+    <footer id="site-footer" className="gym-footer gym-rubber">
+      <div className="gym-hazard gym-hazard-thin" aria-hidden="true" />
+      <div className="gym-wrap">
+        <nav aria-label={SITE.footerNav}>
+          <ul className="gym-footer-links">
+            {LINKS.map((l) => (
+              <li key={l.href}>
+                <Link href={l.href} className="gym-footer-link">
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+            <CookieSettingsButton asListItem ga4Id={STOREFRONT.tracking.ga4Id} className="gym-footer-link">
+              {SITE.cookieSettings}
+            </CookieSettingsButton>
+          </ul>
+        </nav>
+        <p className="gym-footer-disclaimer">{brand.disclaimer}</p>
+        {brand.legalName ? <p className="gym-footer-disclaimer">{brand.legalName}</p> : null}
+        <p className="gym-footer-mark" aria-hidden="true">
+          {brand.name}
+        </p>
+      </div>
     </footer>
   );
 }
