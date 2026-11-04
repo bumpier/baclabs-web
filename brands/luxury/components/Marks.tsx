@@ -1,0 +1,51 @@
+import { SEAL, WORDMARK } from "./mark-paths";
+
+/**
+ * Reserve No.10's two marks, drawn from path data (mark-paths.ts), so they
+ * render the same before the faces load and in every place they appear.
+ *
+ * The wordmark is one colour, the text's (currentColor). The seal is wax
+ * and impression: the disc takes --rv-wax (claret unless a parent says
+ * otherwise) and the ring, R and 10 take --rv-impression (bone). Both are
+ * decorative unless given a `title`, in which case they are an image with
+ * that name (a link around the wordmark names it instead).
+ *
+ * The seal is the house's one device: the favicon, the bag's count, the
+ * chosen size, the order card and the 404 all carry it.
+ */
+export function Wordmark({ className, title }: { className?: string; title?: string }) {
+  return (
+    <svg
+      viewBox={`0 -4 ${WORDMARK.width} 108`}
+      className={className}
+      role={title ? "img" : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
+      focusable="false"
+    >
+      <path d={WORDMARK.d} fill="currentColor" />
+    </svg>
+  );
+}
+
+export function Seal({ className, title, plain = false }: { className?: string; title?: string; plain?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      className={className}
+      role={title ? "img" : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
+      focusable="false"
+    >
+      <path d={SEAL.edge} fill="var(--rv-wax, #4A1424)" />
+      <path d={SEAL.ring} fill="var(--rv-impression, #F1E9E6)" />
+      {plain ? null : (
+        <>
+          <path d={SEAL.r} fill="var(--rv-impression, #F1E9E6)" />
+          <path d={SEAL.ten} fill="var(--rv-impression, #F1E9E6)" />
+        </>
+      )}
+    </svg>
+  );
+}

@@ -1,33 +1,46 @@
 import localFont from "next/font/local";
 
-// Reserve No.10's two faces, self-hosted from brands/luxury/fonts/ for the
+// Reserve No.10's three faces, self-hosted from brands/luxury/fonts/ for the
 // same reason as app/fonts.ts: the CSP sets `font-src 'self'`, and
 // next/font/google once failed a deploy by fetching at build time. These are
-// the fontsource packages' latin variable files (v5.3.0, from jsDelivr),
-// each under the SIL Open Font License 1.1, whose text sits beside it.
-// Glyphs outside latin fall back to the system face.
+// the fontsource packages' latin files (v5.3.0, from jsDelivr), each under
+// the SIL Open Font License 1.1, whose text sits beside it. Glyphs outside
+// latin fall back to the system face.
 //
-// BODONI MODA (indestructible type, OFL 1.1) is the display face: a Didone
-// with an optical-size axis (6 to 96). The browser picks the cut from the
-// font size (font-optical-sizing is auto), so the hero gets the hairline
-// display cut and a price or a line in a table gets the sturdier text cut,
-// from one file.
+// LIBRE CASLON DISPLAY (Pablo Impallari, OFL 1.1) is the house voice: a
+// Caslon cut for large sizes, the English letter of engravers and
+// stationers. It sets the headlines, the product's name and the sizes, and
+// its outlines are the wordmark and the seal (components/mark-paths.ts).
 //
-// JOST (indestructible type, OFL 1.1) is the text face: a geometric sans in
-// the Futura line, the classic partner to a Didone in print. It sets the
-// body, the forms and the figures, and keeps out of the serif's way.
+// LIBRE CASLON TEXT (Impallari, OFL 1.1), roman and italic, is the same
+// letter cut for reading: the chapters' paragraphs and the quiet italic
+// notes beside a choice.
+//
+// HANKEN GROTESK (Alfredo Marco Pradil, OFL 1.1), variable, is the counter:
+// prices, buttons, forms, the bag and the footer's small capitals. A plain
+// grotesque, so the Caslon keeps the voice.
 
 export const displayFace = localFont({
-  src: "./fonts/bodoni-moda-latin.woff2",
-  variable: "--font-rx-display",
+  src: "./fonts/libre-caslon-display-latin-400.woff2",
+  variable: "--font-rv-display",
   display: "swap",
-  weight: "400 700",
+  weight: "400",
+  adjustFontFallback: "Times New Roman",
+});
+
+export const serifFace = localFont({
+  src: [
+    { path: "./fonts/libre-caslon-text-latin-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/libre-caslon-text-latin-400-italic.woff2", weight: "400", style: "italic" },
+  ],
+  variable: "--font-rv-serif",
+  display: "swap",
   adjustFontFallback: "Times New Roman",
 });
 
 export const textFace = localFont({
-  src: "./fonts/jost-latin.woff2",
-  variable: "--font-rx-text",
+  src: "./fonts/hanken-grotesk-latin-wght.woff2",
+  variable: "--font-rv-text",
   display: "swap",
-  weight: "300 600",
+  weight: "300 700",
 });
