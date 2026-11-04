@@ -1,43 +1,42 @@
 import Link from "next/link";
 import { NAV } from "@/brands/beauty/copy/site";
-import { BasketLink } from "./BasketLink";
+import { BasketButton } from "./BasketButton";
+import { ContactLink, HeaderNav } from "./HeaderNav";
+import { Wordmark } from "./Wordmark";
 
 /**
- * The header: the wordmark with its mark (a vial top seen from above, as in
- * the icon), three links and the basket. No menu button: three links fit on
- * a phone as a second row, and need no script.
+ * The announcement line, then the header, which stays at the top as the
+ * page scrolls: the links on the left (a Menu button on a phone), the
+ * wordmark in the middle, Contact and the basket on the right. The basket
+ * opens as a drawer on every page.
+ *
+ * `announcement` is the free-delivery line and its cutoff, written by the
+ * layout from the catalogue's own figures (copy/home.ts announcement); null
+ * shows none.
  */
-export function SiteHeader({ name }: { name: string }) {
+export function SiteHeader({ announcement }: { announcement: { offer: string; cutoff: string | null } | null }) {
   return (
-    <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-8 gap-y-3 px-5 pt-5 sm:px-8 sm:pt-7">
-      <Link href="/" aria-label={NAV.home} className="inline-flex items-center gap-2.5 rounded-full">
-        <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
-          <circle cx="16" cy="16" r="15" fill="#3B1730" />
-          <circle cx="16" cy="16" r="9" fill="none" stroke="#E6BCAB" strokeWidth="2.6" />
-          <ellipse cx="13.2" cy="12.6" rx="3" ry="1.8" fill="#FFFFFF" opacity="0.25" />
-        </svg>
-        <span className="font-display text-[1.875rem] leading-none tracking-[-0.01em]">{name}</span>
-      </Link>
-      <nav aria-label={NAV.label} className="order-3 w-full sm:order-none sm:ml-auto sm:w-auto">
-        <ul className="flex flex-wrap gap-x-6 gap-y-1 text-[0.9375rem] font-semibold">
-          <li>
-            <Link href="/#essentials" className="inline-flex min-h-11 items-center hover:underline hover:decoration-rose hover:underline-offset-4">
-              {NAV.essentials}
-            </Link>
-          </li>
-          <li>
-            <Link href="/clinics" className="inline-flex min-h-11 items-center hover:underline hover:decoration-rose hover:underline-offset-4">
-              {NAV.clinics}
-            </Link>
-          </li>
-          <li>
-            <Link href="/contact" className="inline-flex min-h-11 items-center hover:underline hover:decoration-rose hover:underline-offset-4">
-              {NAV.contact}
-            </Link>
-          </li>
-        </ul>
-      </nav>
-      <BasketLink />
-    </header>
+    <>
+      {announcement ? (
+        <p className="au-announce no-print">
+          {announcement.offer}
+          {announcement.cutoff ? <span className="hidden sm:inline"> {announcement.cutoff}</span> : null}
+        </p>
+      ) : null}
+      <header className="au-header no-print">
+        <div className="au-wrap au-header-row">
+          <div className="justify-self-start">
+            <HeaderNav />
+          </div>
+          <Link href="/" aria-label={NAV.home} className="justify-self-center rounded-md">
+            <Wordmark className="au-wordmark" />
+          </Link>
+          <div className="flex items-center gap-x-5 justify-self-end">
+            <ContactLink />
+            <BasketButton />
+          </div>
+        </div>
+      </header>
+    </>
   );
 }
