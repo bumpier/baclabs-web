@@ -10,14 +10,16 @@ import { CONFIRMATION as C } from "@/brands/gym/copy/site";
 import { brand } from "../../site";
 
 /**
- * The order confirmation. The order is loaded on the server and shown only
- * if it is this brand's: any other order id, BacLab's included, is this
- * site's 404 (brandOrderView). Per request, never cached: it shows one
- * customer's order.
+ * The order confirmation, laid out as a docket: the status on black, then
+ * the order on a white slip (its number, the date, every line, delivery and
+ * the total), and what happens next, or the parcel once it has gone.
  *
- * While the order is pending the page keeps itself current
+ * The order is loaded on the server and shown only if it is this brand's:
+ * any other order id, BacLab's included, is this site's 404
+ * (brandOrderView). Per request, never cached: it shows one customer's
+ * order. While the order is pending the page keeps itself current
  * (OrderStatusWatcher); once it is paid the purchase is reported once
- * (PurchaseTracker, consent-gated like every tag) and the basket is emptied.
+ * (PurchaseTracker, consent-gated like every tag) and the cart is emptied.
  */
 export const dynamic = "force-dynamic";
 
@@ -61,18 +63,24 @@ export default async function OrderConfirmationPage({
       {order.tracker ? <PurchaseTracker {...order.tracker} /> : null}
       <ClearBasket when={order.paid} />
 
-      <div className="gym-wrap">
-        <div className="gym-narrow">
-          <div role="status">
-            <h1 className="gym-page-title">{heading}</h1>
-            <p className="gym-page-lead">{status}</p>
-          </div>
+      <div className="gym-page-band">
+        <div className="gym-wrap gym-page-band-inner" role="status">
+          <h1 className="gym-page-title">{heading}</h1>
+          <p className="gym-page-lead">{status}</p>
+        </div>
+        <div className="gym-tape" aria-hidden="true" />
+      </div>
 
-          <dl className="gym-receipt">
-            <div className="gym-receipt-head">
+      <div className="gym-wrap gym-page-body">
+        <section aria-labelledby="docket-heading" className="gym-docket">
+          <h2 id="docket-heading" className="sr-only">
+            {C.items}
+          </h2>
+          <dl>
+            <div className="gym-docket-head">
               <div>
                 <dt className="inline">{C.order} </dt>
-                <dd className="inline font-semibold text-ink">{order.id}</dd>
+                <dd className="gym-docket-id inline">{order.id}</dd>
               </div>
               <div>
                 <dt className="sr-only">{C.placed}</dt>
@@ -82,44 +90,50 @@ export default async function OrderConfirmationPage({
               </div>
             </div>
             {order.lines.map((line, i) => (
-              <div key={i} className="gym-receipt-row">
+              <div key={i} className="gym-docket-row">
                 <dt>
-                  <span className="font-semibold">
+                  <span className="font-bold">
                     {line.name} × {line.qty}
                   </span>
-                  {line.detail ? <span className="block text-sm text-ink-soft">{line.detail}</span> : null}
+                  {line.detail ? <span className="gym-docket-detail">{line.detail}</span> : null}
                 </dt>
-                <dd className="gym-figure shrink-0 text-xl">{line.totalMinor === null ? C.free : formatGbp(line.totalMinor)}</dd>
+                <dd className="gym-docket-figure">{line.totalMinor === null ? C.free : formatGbp(line.totalMinor)}</dd>
               </div>
             ))}
             {deliveryMinor !== null && deliveryMinor >= 0 ? (
-              <div className="gym-receipt-row">
-                <dt>{C.delivery}</dt>
-                <dd className="gym-figure shrink-0 text-xl">{deliveryMinor === 0 ? C.free : formatGbp(deliveryMinor)}</dd>
+              <div className="gym-docket-row">
+                <dt>
+                  {C.delivery}
+                  {order.delivery ? <span className="gym-docket-detail">{order.delivery.label}</span> : null}
+                </dt>
+                <dd className="gym-docket-figure">{deliveryMinor === 0 ? C.free : formatGbp(deliveryMinor)}</dd>
               </div>
             ) : null}
-            <div className="gym-receipt-total">
+            <div className="gym-docket-total">
               <dt>{order.paidMinor !== null ? C.totalPaid : C.total}</dt>
-              <dd className="gym-figure">{formatGbp(order.paidMinor ?? order.goodsMinor)}</dd>
+              <dd>{formatGbp(order.paidMinor ?? order.goodsMinor)}</dd>
             </div>
           </dl>
+          <div className="gym-tape gym-tape-thin" aria-hidden="true" />
+        </section>
 
+        <div className="mt-12 max-w-[46rem]">
           {order.sent && parcel ? (
-            <section aria-labelledby="parcel-heading" className="mt-12">
+            <section aria-labelledby="parcel-heading">
               <h2 id="parcel-heading" className="gym-h3">
                 {C.parcel}
               </h2>
-              <dl className="mt-4 space-y-2 text-ink-soft">
+              <dl className="gym-facts">
                 {parcel.carrier ? (
                   <div>
                     <dt className="inline">{C.sentBy} </dt>
-                    <dd className="inline text-ink">{parcel.carrier}</dd>
+                    <dd className="inline">{parcel.carrier}</dd>
                   </div>
                 ) : null}
                 {parcel.trackingNumber ? (
                   <div>
                     <dt className="inline">{C.tracking} </dt>
-                    <dd className="inline text-ink">
+                    <dd className="inline">
                       {parcel.trackingUrl ? (
                         <a href={parcel.trackingUrl} target="_blank" rel="noopener noreferrer" className="gym-link">
                           {parcel.trackingNumber}
@@ -133,24 +147,24 @@ export default async function OrderConfirmationPage({
                 {parcel.latest ? (
                   <div>
                     <dt className="inline">{C.latest} </dt>
-                    <dd className="inline text-ink">{parcel.latest}</dd>
+                    <dd className="inline">{parcel.latest}</dd>
                   </div>
                 ) : null}
                 {parcel.deliveredText ? (
                   <div>
                     <dt className="inline">{C.delivered} </dt>
-                    <dd className="inline text-ink">{parcel.deliveredText}</dd>
+                    <dd className="inline">{parcel.deliveredText}</dd>
                   </div>
                 ) : parcel.sentText ? (
                   <div>
                     <dt className="inline">{C.sent} </dt>
-                    <dd className="inline text-ink">{parcel.sentText}</dd>
+                    <dd className="inline">{parcel.sentText}</dd>
                   </div>
                 ) : null}
               </dl>
             </section>
           ) : order.paid || order.confirming ? (
-            <section aria-labelledby="next-heading" className="mt-12">
+            <section aria-labelledby="next-heading">
               <h2 id="next-heading" className="gym-h3">
                 {C.next}
               </h2>
@@ -161,7 +175,7 @@ export default async function OrderConfirmationPage({
                     {order.customerEmail ? (
                       <>
                         {" "}
-                        {C.steps.to} <span className="font-semibold text-ink">{order.customerEmail}</span>
+                        {C.steps.to} <span className="font-bold text-black">{order.customerEmail}</span>
                       </>
                     ) : null}
                     .
@@ -182,15 +196,15 @@ export default async function OrderConfirmationPage({
             </section>
           ) : null}
 
-          <p className="mt-12 text-ink-soft">
+          <p className="mt-12 text-[var(--color-ink-soft)]">
             {C.problem}{" "}
-            <Link href="/contact" className="gym-link">
+            <Link href="/contact" className="gym-link text-black">
               {C.getInTouch}
             </Link>{" "}
             {C.quoting}
           </p>
           <p className="mt-6">
-            <Link href="/" className="gym-btn gym-btn-ghost">
+            <Link href="/" className="gym-btn gym-btn-ink">
               {C.back}
             </Link>
           </p>

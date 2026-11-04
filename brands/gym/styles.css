@@ -7,28 +7,32 @@
    (styles/commerce-contract.css) and the commerce kit's folder come with
    it: the kit's default classes are built here, themed by the tokens below.
 
-   THE DIRECTION, as built.
-   Thesis: the shop is a loading bay, not a boutique. One product in four
-   weights, sold the way a lifter reads a gym floor: the price stamped huge,
-   the packs drawn as plates on a bar, the rest stencilled on a crate. It
-   refuses the soft supplement-shop look (gradients, rounded cards, lifestyle
-   photos) and any refinement a dark luxury site would use.
-   World: rubber-floor black, poured concrete, hazard orange, chalk. Hard
-   edges everywhere, 3px rules instead of hairlines, real grain on every
-   field (SVG noise below, no images). Big Shoulders in capitals for the
-   voice, its stencil cut for every figure, Archivo for reading.
-   Story: the visitor sees one price, buys it in one tap, or climbs the
-   ladder to a bigger pack and sees the saving; the basket offers the kit,
-   the phone keeps a buy bar in reach.
-   First viewport: "10 vials. £49.99. Done." filling the screen, the price
-   in orange stencil; the lead and the one orange button under it on a
-   phone, beside it from the large breakpoint.
-   Colour: committed. Orange owns the price, the chosen rung, every action,
-   the hazard bands and the restock band; never a glow, never a gradient.
+   THE DIRECTION, as built (round two).
+   THESIS: a sports-nutrition drop store, not a poster. Photography-led
+   commerce people already know (marquee, sticky header, slide-out cart,
+   product cards with quick add), dressed in the gym's own kit; it refuses
+   round one's single black poster page and anything clinical.
+   OWN-WORLD: rubber black, studio steel grey (the packshots' backdrop),
+   chalk and hazard yellow. One device: 45-degree hazard tape, on the hero's
+   foot, the cart, the meter, the bar, the footer, and the 45-degree cut on
+   the mark and the photo tiles. Archivo at full width and 900 for every
+   heading, at normal width for reading; Big Shoulders Stencil for the
+   counts, as stamped on the box. Square corners, no shadows, no glass.
+   STORY: the marquee states the delivery facts; the hero shows the box on
+   the floor; SHOP THE STACK prices every pack per vial and adds in one tap;
+   the cart slides out with the kit and the checkout; the maths, the true
+   promises, straight answers and the restock list close it.
+   FIRST VIEWPORT: yellow marquee, black header (mark and wordmark left,
+   cart right), the photograph full bleed, BLAST. CRUISE. RESTOCK. stacked
+   bottom-left at up to 7.5rem, the lead, one hazard button, the tape.
+   FORM: brief-pinned (the owner's architecture), no seed roll.
+   FINISH: unreviewed and undocumented is unfinished; this build ends with
+   the finish review, the verdict, and DESIGN.md.
 
-   Contrast, measured: hazard orange #ff6b00 on black is 7.3:1 and black on
-   it the same, so it carries small text either way; white on orange fails
-   (2.9:1), so nothing on orange is ever white. */
+   Contrast, measured: hazard #f5c400 on black 12.9:1 and black on it the
+   same, so it carries small text either way; chalk #f4f5f6 on black 19:1;
+   soft #a7aab0 on black 8.9:1; ink-soft #45484e on mist #e4e5e7 7.3:1;
+   olive #3d3200 on hazard 8:1. Nothing on hazard is ever white. */
 @import "tailwindcss" source(none);
 @import "../../styles/commerce-contract.css";
 @source "../../app/gym";
@@ -36,42 +40,50 @@
 @source "../../components/commerce";
 
 @theme {
-  /* The contract's tokens, for the kit's own defaults (contact form, legal pages). */
-  --color-paper: #000000;
-  --color-surface: #1b1b19;
-  --color-neutral: #262624;
-  --color-ink: #f2f2ed;
-  --color-ink-soft: #b8b7b0;
-  --color-line: #4a4944;
-  --color-primary: #ff6b00;
-  --color-cta: #ff6b00;
+  /* The contract's tokens, for the kit's own defaults (contact form, legal
+     pages), which sit on the light pages. */
+  --color-paper: #eeeff0;
+  --color-surface: #ffffff;
+  --color-neutral: #e4e5e7;
+  --color-ink: #000000;
+  --color-ink-soft: #45484e;
+  --color-line: #c9ccd1;
+  --color-primary: #000000;
+  --color-cta: #f5c400;
   --color-on-cta: #000000;
-  --color-warn: #ffb4a6;
-  --color-warn-tint: #2b0f0a;
+  --color-warn: #b3261e;
+  --color-warn-tint: #fdecea;
 
-  /* The brand's own names for the same world. */
+  /* The brand's own names. */
   --color-rubber: #000000;
-  --color-slab: #1b1b19;
-  --color-concrete: #2c2c29;
-  --color-aggregate: #9b9992;
-  --color-chalk: #f2f2ed;
-  --color-hazard: #ff6b00;
+  --color-iron: #0e0f11;
+  --color-plate: #16181b;
+  --color-rule: #2a2d32;
+  --color-steel: #999ca0;
+  --color-mist: #e4e5e7;
+  --color-chalk: #f4f5f6;
+  --color-soft: #a7aab0;
+  --color-hazard: #f5c400;
+  --color-olive: #3d3200;
 
   --font-sans: var(--font-gym-body), Arial, sans-serif;
-  --font-display: var(--font-gym-display), "Arial Narrow", sans-serif;
-  --font-stencil: var(--font-gym-stencil), var(--font-gym-display), "Arial Narrow", sans-serif;
+  --font-stencil: var(--font-gym-stencil), var(--font-gym-body), "Arial Narrow", sans-serif;
 }
 
-/* Grit, drawn rather than photographed: SVG noise tiles, each one feTurbulence
-   mapped to white or black specks with a ceiling on their opacity, so a tile
-   is decided once and costs nothing to paint. Concrete is three layers: fine
-   grain, the cloudy mottle of a poured slab, and the odd dark air void. */
 :root {
-  --grain-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .36 0 0 0 -.13'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  --grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .42 0 0 0 -.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  --mottle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .3 0 0 0 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
-  --voids: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 0 -2.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)'/%3E%3C/svg%3E");
-  --hazard-band: repeating-linear-gradient(-45deg, var(--color-hazard) 0 14px, var(--color-rubber) 14px 28px);
+  --gutter: 16px;
+  --tape: repeating-linear-gradient(-45deg, var(--color-hazard) 0 12px, var(--color-rubber) 12px 24px);
+  --ease-out: cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+@media (min-width: 768px) {
+  :root {
+    --gutter: 32px;
+  }
+}
+@media (min-width: 1280px) {
+  :root {
+    --gutter: 48px;
+  }
 }
 
 @layer base {
@@ -85,14 +97,27 @@
     }
   }
 
+  /* The sticky header covers the top of an anchored section otherwise. */
+  [id] {
+    scroll-margin-top: 5rem;
+  }
+
+  /* While the cart is open the page behind it stays put. */
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+
   body {
     background-color: var(--color-rubber);
     color: var(--color-chalk);
     font-family: var(--font-sans);
+    font-stretch: 100%;
+    font-weight: 400;
     font-size: 1rem;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
   }
 
   ::selection {
@@ -107,1266 +132,1514 @@
 }
 
 @layer components {
-  /* ── Fields: the materials every section is poured in ─────────────── */
-  .gym-rubber {
-    background-color: var(--color-rubber);
-    background-image: var(--grain-light);
+  /* ── Frame ─────────────────────────────────────────────────────────── */
+  .gym-wrap {
+    width: 100%;
+    max-width: 1440px;
+    margin-inline: auto;
+    padding-inline: var(--gutter);
   }
-  .gym-concrete {
-    background-color: var(--color-slab);
-    background-image: var(--voids), var(--grain-light), var(--mottle);
+
+  /* Light ground: the shop, the answers, the inner pages. Native controls
+     and the focus ring follow it. */
+  .gym-shop,
+  .gym-faq,
+  .gym-page {
+    color-scheme: light;
   }
-  .gym-chalk {
-    background-color: var(--color-chalk);
-    background-image: var(--grain-dark);
-    color: var(--color-rubber);
-  }
-  .gym-hot {
-    background-color: var(--color-hazard);
-    background-image: var(--grain-dark);
-    color: var(--color-rubber);
-  }
-  /* On a light field the focus ring is black: orange on orange is no ring. */
-  .gym-chalk :focus-visible,
-  .gym-hot :focus-visible {
+  .gym-shop :focus-visible,
+  .gym-faq :focus-visible,
+  .gym-page :focus-visible,
+  .gym-trust :focus-visible,
+  .gym-marquee :focus-visible {
     outline-color: var(--color-rubber);
   }
 
-  .gym-hazard {
-    height: 18px;
-    background: var(--hazard-band);
+  /* ── The device: hazard tape ──────────────────────────────────────── */
+  .gym-tape {
+    height: 12px;
+    background: var(--tape);
   }
-  .gym-hazard-thin {
-    height: 8px;
-  }
-
-  .gym-wrap {
-    width: 100%;
-    max-width: 1360px;
-    margin-inline: auto;
-    padding-inline: 16px;
-  }
-  @media (min-width: 768px) {
-    .gym-wrap {
-      padding-inline: 32px;
-    }
-  }
-  @media (min-width: 1280px) {
-    .gym-wrap {
-      padding-inline: 48px;
-    }
+  .gym-tape-thin {
+    height: 6px;
   }
 
-  /* ── Type ──────────────────────────────────────────────────────── */
-  .gym-figure {
-    font-family: var(--font-stencil);
-    font-weight: 800;
-  }
-  .gym-h2 {
-    font-family: var(--font-display);
+  /* ── Type ──────────────────────────────────────────────────────────── */
+  .gym-display,
+  .gym-h2,
+  .gym-hero-title,
+  .gym-page-title,
+  .gym-legal-title {
+    font-stretch: 125%;
     font-weight: 900;
-    font-size: clamp(3.5rem, 15vw, 8rem);
-    line-height: 0.85;
     text-transform: uppercase;
+    letter-spacing: -0.015em;
     text-wrap: balance;
   }
-  .gym-section-head {
-    display: grid;
-    gap: 14px;
-    margin-bottom: 28px;
+  .gym-h2 {
+    font-size: clamp(2.1rem, 6.4vw, 4rem);
+    line-height: 0.92;
   }
-  @media (min-width: 1024px) {
-    .gym-section-head {
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: end;
-      gap: 48px;
-      margin-bottom: 44px;
-    }
-  }
-  .gym-section-lead {
-    max-width: 40ch;
+  .gym-lead {
+    max-width: 38rem;
     font-size: 1.0625rem;
-    color: var(--color-ink-soft);
+    line-height: 1.5;
   }
-  @media (min-width: 1024px) {
-    .gym-section-lead {
-      font-size: 1.1875rem;
-      padding-bottom: 0.4em;
-    }
-  }
-
   .gym-link {
-    color: inherit;
     text-decoration: underline;
     text-decoration-thickness: 2px;
     text-underline-offset: 3px;
+    font-weight: 600;
   }
   .gym-link:hover {
     text-decoration-color: var(--color-hazard);
   }
-  .gym-chalk .gym-link:hover,
-  .gym-hot .gym-link:hover {
-    text-decoration-thickness: 3px;
+  .gym-shop .gym-link:hover,
+  .gym-faq .gym-link:hover,
+  .gym-page .gym-link:hover,
+  .gym-trust .gym-link:hover {
+    text-decoration-thickness: 4px;
     text-decoration-color: currentColor;
   }
-  .gym-link-strong {
-    display: inline-flex;
-    min-height: 44px;
-    align-items: center;
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.375rem;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    text-decoration: underline;
-    text-decoration-color: var(--color-hazard);
-    text-decoration-thickness: 3px;
-    text-underline-offset: 6px;
-  }
-  .gym-link-strong:hover {
-    color: var(--color-hazard);
-  }
 
-  /* ── Actions ────────────────────────────────────────────────────
-     A slab of orange with black capitals. Hover goes to chalk, press
-     drops it 2px: a plate set down, nothing that glows or bounces. */
+  /* ── Buttons ───────────────────────────────────────────────────────── */
   .gym-btn {
     display: inline-flex;
-    min-height: 52px;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    padding: 0 20px;
-    border: 3px solid var(--color-hazard);
-    background: var(--color-hazard);
-    color: var(--color-rubber);
-    font-family: var(--font-display);
+    gap: 0.75rem;
+    min-height: 3rem;
+    padding: 0 1.5rem;
+    border: 2px solid transparent;
+    border-radius: 0;
+    font-family: var(--font-sans);
+    font-stretch: 112%;
     font-weight: 800;
-    font-size: 1.375rem;
-    line-height: 1;
-    letter-spacing: 0.02em;
+    font-size: 0.9375rem;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
     text-transform: uppercase;
+    text-align: center;
     cursor: pointer;
     transition:
-      background-color 0.12s,
-      border-color 0.12s,
-      color 0.12s,
-      transform 0.06s;
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease,
+      translate 0.1s ease;
   }
-  .gym-btn:has(> span + span) {
-    justify-content: space-between;
-  }
-  .gym-btn .gym-figure {
-    font-size: 1.12em;
-  }
-  .gym-btn:hover {
-    border-color: var(--color-chalk);
-    background: var(--color-chalk);
-  }
-  .gym-btn:active {
-    transform: translateY(2px);
-  }
-  .gym-btn:focus-visible {
-    outline-color: var(--color-chalk);
+  .gym-btn:active:not(:disabled) {
+    translate: 0 1px;
   }
   .gym-btn:disabled {
-    border-color: #3a3a37;
-    background: #3a3a37;
-    color: #a3a29b;
+    opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
   }
   .gym-btn-lg {
-    min-height: 60px;
-    font-size: 1.5rem;
+    min-height: 3.5rem;
+    padding: 0 2rem;
+    font-size: 1rem;
   }
-  .gym-btn-xl {
-    min-height: 68px;
-    padding: 0 22px;
-    font-size: 1.75rem;
+  .gym-btn-block {
+    width: 100%;
   }
-  /* On chalk and on orange: a black slab. */
+  .gym-btn-split {
+    justify-content: space-between;
+  }
+  .gym-btn-figure {
+    font-stretch: 100%;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+  .gym-btn-hazard {
+    background: var(--color-hazard);
+    color: var(--color-rubber);
+  }
+  .gym-btn-hazard:hover:not(:disabled) {
+    background: var(--color-chalk);
+  }
   .gym-btn-ink {
-    border-color: var(--color-rubber);
     background: var(--color-rubber);
     color: var(--color-chalk);
   }
-  .gym-btn-ink:hover {
-    border-color: var(--color-rubber);
-    background: transparent;
+  .gym-btn-ink:hover:not(:disabled) {
+    background: var(--color-hazard);
     color: var(--color-rubber);
-  }
-  .gym-btn-ink:focus-visible {
-    outline-color: var(--color-rubber);
-  }
-  .gym-btn-ink:disabled {
-    border-color: #6f6d67;
-    background: transparent;
-    color: #4a4944;
   }
   .gym-btn-ghost {
     border-color: var(--color-chalk);
-    background: transparent;
     color: var(--color-chalk);
+    background: transparent;
   }
-  .gym-btn-ghost:hover {
+  .gym-btn-ghost:hover:not(:disabled) {
     background: var(--color-chalk);
     color: var(--color-rubber);
   }
-  @media (prefers-reduced-motion: reduce) {
-    .gym-btn {
-      transition: none;
-    }
-    .gym-btn:active {
-      transform: none;
-    }
+  .gym-btn-ghost-ink {
+    border-color: var(--color-rubber);
+    color: var(--color-rubber);
+    background: transparent;
   }
-
-  .gym-status {
-    min-height: 1.55em;
-    margin-top: 10px;
-    font-weight: 600;
-    font-size: 0.9375rem;
-  }
-
-  /* ── Header ─────────────────────────────────────────────────────── */
-  .gym-header {
-    position: relative;
+  .gym-btn-ghost-ink:hover {
     background: var(--color-rubber);
-    border-bottom: 3px solid var(--color-concrete);
+    color: var(--color-chalk);
   }
-  .gym-header-row {
-    display: flex;
-    min-height: 64px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-  }
-  .gym-wordmark {
-    font-family: var(--font-stencil);
-    font-weight: 900;
-    font-size: 1.875rem;
-    line-height: 1;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-  }
-  .gym-wordmark:hover {
-    color: var(--color-hazard);
-  }
-  .gym-basket-link {
-    display: inline-flex;
-    min-height: 44px;
-    align-items: center;
-    gap: 10px;
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.375rem;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-  }
-  .gym-basket-link:hover {
-    color: var(--color-hazard);
-  }
-  .gym-basket-count {
+
+  .gym-icon-btn {
     display: inline-grid;
-    min-width: 34px;
-    height: 34px;
     place-items: center;
-    padding: 0 6px;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: none;
+    border: 2px solid var(--color-rule);
+    color: var(--color-chalk);
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .gym-icon-btn:hover {
+    border-color: var(--color-hazard);
+  }
+  .gym-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .gym-alert {
+    border: 1px solid #6b241b;
+    background: #2b0e0b;
+    color: #ffb4a6;
+    padding: 0.75rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .gym-page .gym-alert,
+  .gym-page .alert-error {
+    border-color: #f2b8b5;
+    background: var(--color-warn-tint);
+    color: var(--color-warn);
+  }
+
+  /* ── Marquee ───────────────────────────────────────────────────────── */
+  .gym-marquee {
+    position: relative;
+    overflow: hidden;
     background: var(--color-hazard);
     color: var(--color-rubber);
-    font-size: 1.25rem;
+  }
+  .gym-marquee-track {
+    display: flex;
+    width: max-content;
+  }
+  .gym-marquee-run {
+    display: flex;
+    flex: none;
+  }
+  .gym-marquee-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5625rem 1.5rem 0.5625rem 0;
+    white-space: nowrap;
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+  .gym-marquee-slash {
+    width: 14px;
+    height: 12px;
+    flex: none;
+    background: repeating-linear-gradient(-45deg, var(--color-rubber) 0 3px, transparent 3px 6px);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .gym-marquee-track {
+      animation: gym-marquee 60s linear infinite;
+    }
+    .gym-marquee:hover .gym-marquee-track {
+      animation-play-state: paused;
+    }
+  }
+  @keyframes gym-marquee {
+    to {
+      translate: -50% 0;
+    }
+  }
+
+  /* ── Header ────────────────────────────────────────────────────────── */
+  .gym-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: var(--color-rubber);
+    border-bottom: 1px solid var(--color-rule);
   }
   .gym-skip {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    left: 0.75rem;
+    top: -4rem;
     z-index: 60;
-    padding: 10px 14px;
+    padding: 0.75rem 1rem;
     background: var(--color-hazard);
     color: var(--color-rubber);
-    font-weight: 700;
-    transform: translateY(-200%);
+    font-weight: 800;
   }
   .gym-skip:focus {
-    transform: none;
+    top: 0.5rem;
+  }
+  .gym-header-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: 3.75rem;
+  }
+  @media (min-width: 768px) {
+    .gym-header-row {
+      height: 4.25rem;
+    }
+  }
+  .gym-home {
+    display: inline-flex;
+    margin-right: auto;
+    color: var(--color-chalk);
+  }
+  .gym-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+  .gym-lockup-mark {
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+  }
+  .gym-lockup-word {
+    height: 0.95rem;
+    width: auto;
+  }
+  @media (min-width: 768px) {
+    .gym-lockup-mark {
+      width: 2.25rem;
+      height: 2.25rem;
+    }
+    .gym-lockup-word {
+      height: 1.125rem;
+    }
+  }
+  /* On a phone the nav is the shop link alone; the footer carries the rest. */
+  .gym-nav ul {
+    display: flex;
+    gap: 2rem;
+  }
+  @media (max-width: 899px) {
+    .gym-nav li + li {
+      display: none;
+    }
+  }
+  .gym-nav-link {
+    position: relative;
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.8125rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding-block: 0.5rem;
+  }
+  .gym-nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: var(--color-hazard);
+    scale: 0 1;
+    transform-origin: left;
+    transition: scale 0.2s var(--ease-out);
+  }
+  .gym-nav-link:hover::after {
+    scale: 1 1;
+  }
+  .gym-cart-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.75rem;
+    padding: 0 0.75rem;
+    border: 2px solid var(--color-rule);
+    color: var(--color-chalk);
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .gym-cart-btn:hover {
+    border-color: var(--color-hazard);
+  }
+  .gym-cart-icon {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+  .gym-cart-label {
+    display: none;
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.8125rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  @media (min-width: 640px) {
+    .gym-cart-label {
+      display: inline;
+    }
+  }
+  .gym-cart-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.25rem;
+    background: var(--color-hazard);
+    color: var(--color-rubber);
+    font-family: var(--font-stencil);
+    font-weight: 800;
+    font-size: 1.0625rem;
+    line-height: 1;
   }
 
-  /* ── Hero: the price, as big as the screen allows ─────────────────── */
+  /* ── Hero ──────────────────────────────────────────────────────────── */
   .gym-hero {
-    padding-block: 28px 44px;
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: max(34rem, calc(100svh - 5.75rem));
+    background: var(--color-rubber);
+    overflow: hidden;
   }
-  .gym-hero-grid {
-    display: grid;
-    gap: 28px;
+  @media (min-width: 768px) {
+    .gym-hero {
+      min-height: min(max(38rem, calc(100svh - 6.5rem)), 58rem);
+    }
   }
-  /* The price line is the widest, about 3.9 times the title size: 22vw keeps
-     it inside a phone's 16px gutters down to 320px, and from the large
-     breakpoint 14vw keeps it inside the column beside the aside. */
+  .gym-hero-media,
+  .gym-hero-img,
+  .gym-hero-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+  .gym-hero-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 0%;
+  }
+  .gym-hero-scrim {
+    background: linear-gradient(to top, #000 0%, rgb(0 0 0 / 0.88) 34%, rgb(0 0 0 / 0) 64%);
+  }
+  @media (min-width: 768px) {
+    .gym-hero-img {
+      object-position: 82% 50%;
+    }
+    .gym-hero-scrim {
+      background:
+        linear-gradient(90deg, rgb(0 0 0 / 0.9) 0%, rgb(0 0 0 / 0.55) 34%, rgb(0 0 0 / 0) 58%),
+        linear-gradient(to top, rgb(0 0 0 / 0.7) 0%, rgb(0 0 0 / 0) 40%);
+    }
+  }
+  .gym-hero-body {
+    padding-top: 6rem;
+    padding-bottom: 2.25rem;
+  }
+  @media (min-width: 768px) {
+    .gym-hero-body {
+      padding-bottom: 4.5rem;
+    }
+  }
   .gym-hero-title {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: clamp(4rem, 22vw, 12.5rem);
-    line-height: 0.8;
-    text-transform: uppercase;
+    font-size: clamp(3rem, 13.4vw, 7.5rem);
+    line-height: 0.86;
+    letter-spacing: -0.02em;
+  }
+  @media (min-width: 768px) {
+    .gym-hero-title {
+      font-size: clamp(3.75rem, 6.6vw, 6.5rem);
+    }
+  }
+  .gym-hero-title > span {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.04em;
   }
   .gym-hero-line {
     display: block;
   }
-  .gym-hero-price {
-    margin-block: 0.04em 0.02em;
-    font-family: var(--font-stencil);
-    font-size: 1.3em;
-    line-height: 0.82;
-    color: var(--color-hazard);
+  @media (prefers-reduced-motion: no-preference) {
+    .gym-hero-line {
+      animation: gym-rise 0.8s var(--ease-out) both;
+    }
+  }
+  @keyframes gym-rise {
+    from {
+      translate: 0 105%;
+    }
   }
   .gym-hero-lead {
-    max-width: 36ch;
+    max-width: 30rem;
+    margin-top: 1.25rem;
+    color: #c9ccd1;
     font-size: 1.0625rem;
-    color: var(--color-ink-soft);
+    line-height: 1.5;
   }
-  .gym-hero-note {
-    margin-top: 12px;
-    font-weight: 600;
-    font-size: 0.9375rem;
-  }
-  @media (min-width: 1024px) {
-    .gym-hero {
-      display: flex;
-      min-height: min(78vh, 840px);
-      align-items: flex-end;
-      padding-block: 48px 72px;
-    }
-    .gym-hero-grid {
-      grid-template-columns: minmax(0, 1fr) 340px;
-      align-items: end;
-      gap: 56px;
-    }
-    .gym-hero-title {
-      font-size: min(14vw, 13.5rem);
-    }
-    .gym-hero-lead {
-      font-size: 1.1875rem;
-    }
-  }
-
-  /* ── The ladder ───────────────────────────────────────────────────
-     A phone stacks the rungs, each with its plates loaded on a sleeve;
-     from the large breakpoint the rungs stand side by side and the plates
-     stack on the floor, so the four tops climb like stairs. */
-  .gym-packs {
-    padding-block: 52px 44px;
-  }
-  @media (min-width: 1024px) {
-    .gym-packs {
-      padding-block: 96px 72px;
-    }
-  }
-  .gym-ladder {
-    display: grid;
-    gap: 6px;
-  }
-  .gym-rung {
-    position: relative;
-    display: grid;
-    grid-template-columns: 26px minmax(0, 1fr) auto;
-    grid-template-areas:
-      "tick count price"
-      "tick plates meta";
-    align-items: center;
-    gap: 8px 14px;
-    padding: 14px 16px;
-    border: 3px solid var(--color-rubber);
-    background: var(--color-rubber);
+  .gym-hero-lead strong {
     color: var(--color-chalk);
-    cursor: pointer;
-  }
-  .gym-rung:hover {
-    border-color: #5a5954;
-  }
-  .gym-rung[data-checked] {
-    border-color: var(--color-hazard);
-    background-color: var(--color-hazard);
-    background-image: var(--grain-dark);
-    color: var(--color-rubber);
-  }
-  .gym-rung[data-disabled] {
-    cursor: not-allowed;
-    opacity: 0.55;
-  }
-  .gym-rung:has(:focus-visible) {
-    outline: 3px solid var(--color-chalk);
-    outline-offset: 3px;
-  }
-  .gym-tick {
-    grid-area: tick;
-    position: relative;
-    width: 26px;
-    height: 26px;
-    border: 3px solid currentColor;
-  }
-  .gym-rung[data-checked] .gym-tick {
-    background: var(--color-rubber);
-  }
-  .gym-rung[data-checked] .gym-tick::after {
-    content: "";
-    position: absolute;
-    top: 2px;
-    left: 6px;
-    width: 8px;
-    height: 13px;
-    border: solid var(--color-hazard);
-    border-width: 0 3px 3px 0;
-    transform: rotate(45deg);
-  }
-  .gym-rung-count {
-    grid-area: count;
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-  }
-  .gym-rung-n {
-    font-size: 3.25rem;
-    line-height: 0.82;
-  }
-  .gym-rung-unit {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.375rem;
-    line-height: 1;
-    text-transform: uppercase;
-  }
-  .gym-rung-price {
-    grid-area: price;
-    justify-self: end;
-    font-size: 2.5rem;
-    line-height: 0.9;
-  }
-  .gym-rung-meta {
-    grid-area: meta;
-    justify-self: end;
-    display: grid;
-    gap: 2px;
-    font-size: 0.9375rem;
-    line-height: 1.3;
-    text-align: right;
-    color: var(--color-ink-soft);
-  }
-  .gym-rung-save {
     font-weight: 700;
-    color: var(--color-hazard);
   }
-  .gym-rung[data-checked] .gym-rung-meta,
-  .gym-rung[data-checked] .gym-rung-save {
-    color: var(--color-rubber);
+  .gym-hero-body .gym-btn {
+    margin-top: 1.75rem;
+    width: 100%;
   }
-  .gym-rung-badge {
-    position: absolute;
-    top: -12px;
-    right: 12px;
-    padding: 3px 8px;
-    background: var(--color-chalk);
-    color: var(--color-rubber);
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 0.9375rem;
-    text-transform: uppercase;
-  }
-
-  .gym-plates {
-    grid-area: plates;
-    position: relative;
-    display: flex;
-    width: max-content;
-    height: 34px;
-    align-items: center;
-    gap: 3px;
-    padding: 0 18px 0 8px;
-    color: var(--color-aggregate);
-  }
-  /* The sleeve the plates sit on. */
-  .gym-plates::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    right: 0;
-    left: 0;
-    height: 4px;
-    margin-top: -2px;
-    background: currentColor;
-    opacity: 0.6;
-  }
-  .gym-plate {
-    position: relative;
-    width: 7px;
-    height: 100%;
-    background: currentColor;
-  }
-  .gym-rung[data-checked] .gym-plates {
-    color: var(--color-rubber);
-  }
-
-  @media (min-width: 1024px) {
-    .gym-ladder {
-      grid-auto-columns: minmax(0, 1fr);
-      grid-auto-flow: column;
-      gap: 10px;
-    }
-    .gym-rung {
-      grid-template-columns: minmax(0, 1fr) auto;
-      grid-template-areas:
-        "count tick"
-        "plates plates"
-        "price price"
-        "meta meta";
-      align-items: start;
-      gap: 18px;
-      padding: 22px;
-    }
-    .gym-rung-count {
-      flex-direction: column;
-      gap: 6px;
-    }
-    .gym-rung-n {
-      font-size: 6.5rem;
-    }
-    .gym-rung-unit {
-      font-size: 1.625rem;
-    }
-    .gym-rung-price {
-      justify-self: start;
-      font-size: 3.75rem;
-    }
-    .gym-rung-meta {
-      justify-self: start;
-      font-size: 1rem;
-      text-align: left;
-    }
-    .gym-plates {
-      width: 100%;
-      height: calc(var(--plates-max, 1) * 14px + 7px);
-      flex-direction: column-reverse;
-      align-items: stretch;
-      gap: 4px;
-      padding: 0 0 4px;
-      border-bottom: 3px solid currentColor;
-    }
-    .gym-plates::before {
-      display: none;
-    }
-    .gym-plate {
-      width: 100%;
-      height: 10px;
-      flex: none;
+  @media (min-width: 480px) {
+    .gym-hero-body .gym-btn {
+      width: auto;
     }
   }
 
-  .gym-ladder-foot {
-    margin-top: 14px;
+  /* ── Shop the stack ────────────────────────────────────────────────── */
+  .gym-shop {
+    background: var(--color-mist);
+    color: var(--color-rubber);
+    padding: 4rem 0 3rem;
+  }
+  @media (min-width: 768px) {
+    .gym-shop {
+      padding: 6rem 0 4.5rem;
+    }
+  }
+  .gym-section-head {
     display: grid;
-    gap: 6px;
-    font-size: 0.875rem;
+    gap: 1rem;
+  }
+  @media (min-width: 768px) {
+    .gym-section-head {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+      align-items: end;
+      gap: 2rem;
+    }
+  }
+  .gym-shop .gym-lead {
     color: var(--color-ink-soft);
   }
-  /* The button takes the rest of the row, and drops under the stepper
-     when the row is too narrow for its words and price on one line. */
-  .gym-add {
-    margin-top: 22px;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: stretch;
-    gap: 10px;
+  .gym-low {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-weight: 700;
+    font-size: 0.9375rem;
   }
-  .gym-add > .gym-btn {
-    flex: 1 1 260px;
-  }
-  @media (min-width: 1024px) {
-    .gym-add {
-      max-width: 620px;
-    }
+  .gym-low-dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    background: var(--color-warn);
   }
 
-  /* The kit's QuantityStepper, as a steel collar. */
-  .gym-stepper {
-    display: inline-flex;
-    flex: none;
-    align-items: stretch;
-    border: 3px solid var(--color-chalk);
-    background: var(--color-rubber);
+  .gym-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: min(80vw, 20rem);
+    gap: 0.75rem;
+    margin-top: 2.25rem;
+    padding: 0 var(--gutter) 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--gutter);
+    scrollbar-width: none;
   }
-  .gym-stepper-btn {
-    width: 46px;
-    min-height: 54px;
-    background: transparent;
-    color: var(--color-chalk);
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.75rem;
-    line-height: 1;
-    cursor: pointer;
+  .gym-grid::-webkit-scrollbar {
+    display: none;
   }
-  .gym-stepper-btn:hover {
-    background: var(--color-chalk);
+  @media (min-width: 768px) {
+    .gym-grid {
+      grid-auto-flow: row;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      max-width: 1440px;
+      margin-inline: auto;
+      margin-top: 3rem;
+      overflow: visible;
+    }
+  }
+  @media (min-width: 1024px) {
+    .gym-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .gym-card {
+    scroll-snap-align: start;
+    display: flex;
+  }
+  /* Positioned, so the quick-add button's visually hidden words are placed
+     inside the card: unanchored, they would sit at the scroller's far end
+     outside its clip and widen the whole page on a phone. */
+  .gym-card-inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background: #ffffff;
+  }
+  .gym-card-media {
+    position: relative;
+    aspect-ratio: 4 / 5.6;
+    overflow: hidden;
+    background: var(--color-steel);
+    clip-path: polygon(0 0, calc(100% - 1.5rem) 0, 100% 1.5rem, 100% 100%, 0 100%);
+  }
+  /* The tile is taller than the photograph: the photograph sits at its foot,
+     full width, its top faded into the same steel, so the stencilled count
+     above it stays clear of the box. */
+  .gym-card-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: auto;
+    mask-image: linear-gradient(to bottom, transparent 0, #000 16%);
+  }
+  @media (prefers-reduced-motion: no-preference) and (hover: hover) {
+    .gym-card-img {
+      transform-origin: 50% 100%;
+      transition: scale 0.6s var(--ease-out);
+    }
+    .gym-card:hover .gym-card-img {
+      scale: 1.04;
+    }
+  }
+  .gym-card-count {
+    position: absolute;
+    top: 0.875rem;
+    left: 1rem;
     color: var(--color-rubber);
   }
-  .gym-stepper-btn:disabled {
-    background: transparent;
-    color: #5d5c57;
-    cursor: not-allowed;
-  }
-  .gym-stepper-btn:focus-visible {
-    outline-offset: -5px;
-  }
-  .gym-stepper-input {
-    width: 50px;
-    border-inline: 3px solid var(--color-chalk);
-    background: transparent;
-    color: var(--color-chalk);
+  .gym-card-n {
+    display: block;
     font-family: var(--font-stencil);
     font-weight: 800;
+    font-size: clamp(3.5rem, 5vw, 4.5rem);
+    line-height: 0.8;
+  }
+  .gym-card-unit {
+    display: block;
+    margin-top: 0.375rem;
+    font-stretch: 125%;
+    font-weight: 900;
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .gym-card-tag {
+    position: absolute;
+    left: 0.75rem;
+    bottom: 0.75rem;
+    padding: 0.375rem 0.5625rem;
+    background: var(--color-hazard);
+    color: var(--color-rubber);
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.6875rem;
+    letter-spacing: 0.06em;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+  .gym-card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 1rem 1rem 1.125rem;
+  }
+  .gym-card-title {
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.9375rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .gym-card-line {
+    margin-top: 0.25rem;
+    color: var(--color-ink-soft);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  .gym-card-price {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.625rem;
+    margin-top: auto;
+    padding-top: 1rem;
+  }
+  .gym-price {
+    font-stretch: 112%;
+    font-weight: 800;
     font-size: 1.5rem;
-    text-align: center;
-    -moz-appearance: textfield;
-    appearance: textfield;
+    line-height: 1;
   }
-  .gym-stepper-input::-webkit-inner-spin-button,
-  .gym-stepper-input::-webkit-outer-spin-button {
-    margin: 0;
-    -webkit-appearance: none;
+  .gym-per {
+    color: var(--color-ink-soft);
+    font-size: 0.8125rem;
   }
-  .gym-stepper-input:focus-visible {
-    outline-offset: -5px;
+  .gym-card-save {
+    min-height: 1.625rem;
+    margin: 0.5rem 0 0.875rem;
   }
-  .gym-stepper-sm .gym-stepper-btn {
-    width: 40px;
-    min-height: 44px;
-    font-size: 1.375rem;
+  .gym-save {
+    display: inline-block;
+    padding: 0.3125rem 0.5rem;
+    background: var(--color-rubber);
+    color: var(--color-hazard);
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    line-height: 1.1;
+    text-transform: uppercase;
   }
-  .gym-stepper-sm .gym-stepper-input {
-    width: 44px;
-    font-size: 1.25rem;
+  .gym-swipe {
+    margin-top: 0.75rem;
+    color: var(--color-ink-soft);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  @media (min-width: 768px) {
+    .gym-swipe {
+      display: none;
+    }
+  }
+  .gym-basis {
+    margin-top: 0.5rem;
+    color: var(--color-ink-soft);
+    font-size: 0.8125rem;
+  }
+  @media (min-width: 768px) {
+    .gym-basis {
+      margin-top: 1.25rem;
+    }
   }
 
-  /* ── Basket and till ─────────────────────────────────────────────── */
-  .gym-basket {
-    padding-block: 56px 64px;
-    border-top: 3px solid var(--color-concrete);
-    background-color: var(--color-rubber);
-    background-image: var(--grain-light);
+  /* ── Price per vial ────────────────────────────────────────────────── */
+  .gym-maths {
+    background: var(--color-rubber);
+    padding: 4rem 0;
   }
-  @media (min-width: 1024px) {
-    .gym-basket {
-      padding-block: 96px;
+  @media (min-width: 768px) {
+    .gym-maths {
+      padding: 6rem 0;
     }
   }
-  .gym-basket h2:focus {
-    outline: none;
-  }
-  .gym-basket h2:focus-visible {
-    outline: 3px solid var(--color-hazard);
-  }
-  .gym-basket-grid {
-    margin-top: 28px;
+  .gym-maths-grid {
     display: grid;
-    gap: 28px;
+    gap: 2rem;
   }
-  @media (min-width: 1024px) {
-    .gym-basket-grid {
-      grid-template-columns: minmax(0, 1fr) 420px;
-      align-items: start;
-      gap: 56px;
-      margin-top: 44px;
+  @media (min-width: 900px) {
+    .gym-maths-grid {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+      align-items: center;
+      gap: 4rem;
     }
   }
-  .gym-basket-empty {
-    padding: 22px;
-    border: 3px dashed #4a4944;
-    font-family: var(--font-display);
+  .gym-maths .gym-lead {
+    margin-top: 1rem;
+    color: var(--color-soft);
+  }
+  .gym-maths-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .gym-maths-table tr {
+    border-top: 1px solid var(--color-rule);
+  }
+  .gym-maths-table tr:last-child {
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .gym-maths-size {
+    width: 3.5rem;
+    padding: 0.875rem 0;
+    text-align: left;
+  }
+  .gym-maths-n {
+    font-family: var(--font-stencil);
     font-weight: 800;
-    font-size: 1.75rem;
+    font-size: 2.5rem;
     line-height: 1;
+  }
+  .gym-maths-bar {
+    padding: 0.875rem 0.75rem;
+  }
+  .gym-maths-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .gym-maths-track {
+    flex: 1;
+    height: 0.875rem;
+    background: var(--color-plate);
+  }
+  .gym-maths-track > span {
+    display: block;
+    height: 100%;
+    background: #5d6168;
+  }
+  .gym-maths-table tr[data-low] .gym-maths-track > span {
+    background: var(--tape);
+  }
+  .gym-maths-price {
+    min-width: 4.25rem;
+    text-align: right;
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 1.0625rem;
+  }
+  .gym-maths-less {
+    width: 6rem;
+    padding: 0.875rem 0;
+    text-align: right;
+    color: var(--color-hazard);
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
+  }
+  .gym-maths-table tr:first-child .gym-maths-less {
+    color: var(--color-soft);
+  }
+
+  /* ── Trust ─────────────────────────────────────────────────────────── */
+  .gym-trust {
+    background: var(--color-hazard);
+    color: var(--color-rubber);
+    padding: 3rem 0;
+  }
+  @media (min-width: 768px) {
+    .gym-trust {
+      padding: 4rem 0;
+    }
+  }
+  .gym-trust-list {
+    display: grid;
+    gap: 2rem 1.5rem;
+  }
+  @media (min-width: 560px) {
+    .gym-trust-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .gym-trust-list {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 2.5rem;
+    }
+  }
+  .gym-trust-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+  @media (min-width: 1024px) {
+    .gym-trust-icon {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+  }
+  .gym-trust-title {
+    margin-top: 0.875rem;
+    font-stretch: 112%;
+    font-weight: 900;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .gym-trust-text {
+    margin-top: 0.375rem;
+    max-width: 22rem;
+    color: var(--color-olive);
+    font-size: 0.9375rem;
+    line-height: 1.45;
+  }
+  .gym-trust-text .gym-link {
+    color: var(--color-rubber);
+  }
+
+  /* ── Straight answers ──────────────────────────────────────────────── */
+  .gym-faq {
+    background: var(--color-paper);
+    color: var(--color-rubber);
+    padding: 4rem 0;
+  }
+  @media (min-width: 768px) {
+    .gym-faq {
+      padding: 6rem 0;
+    }
+  }
+  .gym-faq-grid {
+    display: grid;
+    gap: 2rem;
+  }
+  @media (min-width: 900px) {
+    .gym-faq-grid {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+      gap: 4rem;
+    }
+    .gym-faq-head {
+      position: sticky;
+      top: 6.5rem;
+      align-self: start;
+    }
+  }
+  .gym-faq .gym-lead {
+    margin-top: 1rem;
     color: var(--color-ink-soft);
   }
+  .gym-qa-list {
+    border-top: 3px solid var(--color-rubber);
+  }
+  .gym-qa {
+    border-bottom: 1px solid var(--color-line);
+  }
+  .gym-qa-q {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.125rem 0;
+    cursor: pointer;
+    list-style: none;
+    font-stretch: 106%;
+    font-weight: 700;
+    font-size: 1.0625rem;
+    line-height: 1.3;
+  }
+  .gym-qa-q::-webkit-details-marker {
+    display: none;
+  }
+  .gym-qa-q:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+  .gym-qa-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: none;
+  }
+  .gym-plus-v {
+    transform-origin: 12px 12px;
+    transition: rotate 0.25s var(--ease-out);
+  }
+  .gym-qa[open] .gym-plus-v {
+    rotate: 90deg;
+  }
+  .gym-qa-a {
+    max-width: 62ch;
+    padding-bottom: 1.25rem;
+    color: var(--color-ink-soft);
+  }
+  .gym-qa-a ul {
+    display: grid;
+    gap: 0.375rem;
+  }
+
+  /* ── Restock band ──────────────────────────────────────────────────── */
+  .gym-restock {
+    display: grid;
+    background: var(--color-rubber);
+  }
+  @media (min-width: 1024px) {
+    .gym-restock {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+  .gym-restock-media {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+  }
+  @media (min-width: 1024px) {
+    .gym-restock-media {
+      aspect-ratio: auto;
+      min-height: 32rem;
+    }
+  }
+  .gym-restock-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 70% 50%;
+  }
+  .gym-restock-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3rem var(--gutter);
+  }
+  @media (min-width: 1024px) {
+    .gym-restock-body {
+      padding: 4rem clamp(2.5rem, 5vw, 5rem);
+    }
+  }
+  .gym-restock .gym-lead {
+    margin-top: 1rem;
+    color: var(--color-soft);
+  }
+  .gym-signup {
+    margin-top: 2rem;
+    max-width: 34rem;
+  }
+  .gym-signup-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  @media (min-width: 480px) {
+    .gym-signup-row {
+      flex-direction: row;
+    }
+  }
+  .gym-input {
+    width: 100%;
+    min-height: 3rem;
+    padding: 0 1rem;
+    border: 2px solid var(--color-rule);
+    border-radius: 0;
+    background: var(--color-iron);
+    color: var(--color-chalk);
+    font-size: 1rem;
+  }
+  .gym-input::placeholder {
+    color: #7c8087;
+  }
+  .gym-input:focus-visible {
+    outline: none;
+    border-color: var(--color-hazard);
+  }
+  .gym-signup-consent {
+    margin-top: 0.875rem;
+    max-width: 60ch;
+    color: var(--color-soft);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+  .gym-signup .gym-alert {
+    margin-top: 0.75rem;
+  }
+  .gym-signup-done {
+    margin-top: 2rem;
+    color: var(--color-hazard);
+    font-weight: 700;
+    font-size: 1.0625rem;
+  }
+
+  /* ── Footer ────────────────────────────────────────────────────────── */
+  .gym-footer {
+    background: var(--color-rubber);
+    border-top: 1px solid var(--color-rule);
+    overflow: hidden;
+  }
+  .gym-footer-grid {
+    display: grid;
+    gap: 2.5rem;
+    padding-top: 3.5rem;
+    padding-bottom: 2.5rem;
+  }
+  @media (min-width: 900px) {
+    .gym-footer-grid {
+      grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+      gap: 4rem;
+    }
+  }
+  .gym-footer-mark {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+  .gym-footer-signoff {
+    margin-top: 1rem;
+    font-stretch: 125%;
+    font-weight: 900;
+    font-size: 1.25rem;
+    line-height: 1.05;
+    text-transform: uppercase;
+  }
+  .gym-footer-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem 1.5rem;
+  }
+  @media (min-width: 640px) {
+    .gym-footer-nav {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .gym-footer-heading {
+    color: var(--color-soft);
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .gym-footer-links {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 0.75rem;
+  }
+  .gym-footer-link {
+    display: inline-block;
+    padding-block: 0.3125rem;
+    color: var(--color-chalk);
+    font-size: 0.9375rem;
+    text-align: left;
+    cursor: pointer;
+  }
+  .gym-footer-link:hover {
+    color: var(--color-hazard);
+  }
+  .gym-footer-small {
+    max-width: 70ch;
+    color: var(--color-soft);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+  .gym-footer-small + .gym-footer-small {
+    margin-top: 0.375rem;
+  }
+  .gym-footer-word {
+    margin-top: 2.5rem;
+    height: clamp(3rem, 11vw, 10rem);
+    overflow: hidden;
+  }
+  .gym-footer-wordmark {
+    display: block;
+    width: 100%;
+    height: auto;
+    color: var(--color-chalk);
+  }
+
+  /* ── Cart drawer ───────────────────────────────────────────────────── */
+  .gym-drawer {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(27rem, 100vw);
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 0;
+    background: var(--color-iron);
+    color: var(--color-chalk);
+    color-scheme: dark;
+    overflow: hidden;
+  }
+  .gym-drawer::backdrop {
+    background: rgb(0 0 0 / 0.65);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .gym-drawer {
+      translate: 100% 0;
+      transition:
+        translate 0.38s var(--ease-out),
+        display 0.38s allow-discrete,
+        overlay 0.38s allow-discrete;
+    }
+    .gym-drawer[open] {
+      translate: 0 0;
+    }
+    @starting-style {
+      .gym-drawer[open] {
+        translate: 100% 0;
+      }
+    }
+    .gym-drawer::backdrop {
+      opacity: 0;
+      transition:
+        opacity 0.38s ease,
+        display 0.38s allow-discrete,
+        overlay 0.38s allow-discrete;
+    }
+    .gym-drawer[open]::backdrop {
+      opacity: 1;
+    }
+    @starting-style {
+      .gym-drawer[open]::backdrop {
+        opacity: 0;
+      }
+    }
+  }
+  .gym-drawer-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .gym-drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.125rem 1.25rem 1rem;
+  }
+  .gym-drawer-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-stretch: 125%;
+    font-weight: 900;
+    font-size: 1.5rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .gym-drawer-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.25rem;
+    background: var(--color-hazard);
+    color: var(--color-rubber);
+    font-family: var(--font-stencil);
+    font-weight: 800;
+    font-size: 1.25rem;
+    font-stretch: 100%;
+  }
+  .gym-meter {
+    padding: 0 1.25rem 1rem;
+  }
+  .gym-meter-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .gym-meter-bar {
+    height: 0.625rem;
+    margin-top: 0.5rem;
+    background: var(--color-plate);
+  }
+  /* The fill is the whole bar, clipped back to the share reached, so the
+     tape's stripes never stretch and nothing reflows as it grows. */
+  .gym-meter-bar > span {
+    display: block;
+    height: 100%;
+    background: var(--tape);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .gym-meter-bar > span {
+      transition: clip-path 0.4s var(--ease-out);
+    }
+  }
+  .gym-drawer-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 1.25rem 1rem;
+  }
+  .gym-drawer-empty {
+    padding: 2.5rem 0;
+    color: var(--color-soft);
+  }
+  .gym-drawer-empty-title {
+    color: var(--color-chalk);
+    font-stretch: 125%;
+    font-weight: 900;
+    font-size: 1.5rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .gym-drawer-empty p + p {
+    margin-top: 0.625rem;
+  }
+  .gym-drawer-empty .gym-btn {
+    margin-top: 1.5rem;
+  }
+  .gym-lines > li + li {
+    border-top: 1px solid var(--color-rule);
+  }
   .gym-lines {
-    border-top: 3px solid var(--color-chalk);
+    border-top: 1px solid var(--color-rule);
+    border-bottom: 1px solid var(--color-rule);
   }
   .gym-line {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "name total"
-      "stepper remove";
-    align-items: center;
-    gap: 10px 12px;
-    padding-block: 16px;
-    border-bottom: 3px solid var(--color-concrete);
+    grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+    gap: 0.875rem;
+    padding: 1rem 0;
   }
-  @media (min-width: 640px) {
-    .gym-line {
-      grid-template-columns: minmax(0, 1fr) auto auto auto;
-      grid-template-areas: "name stepper total remove";
-      gap: 20px;
-    }
+  .gym-line-thumb {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--color-steel);
   }
-  .gym-line-name {
-    grid-area: name;
-    font-family: var(--font-display);
+  .gym-line-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .gym-line-tag {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    background: var(--color-rubber);
+    color: var(--color-hazard);
+    font-family: var(--font-stencil);
     font-weight: 800;
-    font-size: 1.625rem;
-    line-height: 1;
+    font-size: 1.25rem;
     text-transform: uppercase;
   }
-  .gym-line .gym-stepper {
-    grid-area: stepper;
-    justify-self: start;
+  .gym-line-name {
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.9375rem;
+    text-transform: uppercase;
+    line-height: 1.2;
   }
-  .gym-line-total {
-    grid-area: total;
-    justify-self: end;
-    font-size: 1.75rem;
-    line-height: 1;
+  .gym-line-meta {
+    margin-top: 0.125rem;
+    color: var(--color-soft);
+    font-size: 0.8125rem;
+  }
+  .gym-line-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.875rem;
+    margin-top: 0.625rem;
   }
   .gym-line-remove {
-    grid-area: remove;
-    justify-self: end;
-    min-height: 44px;
-    padding-inline: 4px;
-    font-size: 0.9375rem;
-    color: var(--color-ink-soft);
+    color: var(--color-soft);
+    font-size: 0.8125rem;
     text-decoration: underline;
-    text-decoration-thickness: 2px;
     text-underline-offset: 3px;
     cursor: pointer;
   }
   .gym-line-remove:hover {
     color: var(--color-chalk);
   }
-
+  .gym-line-total {
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.9375rem;
+    text-align: right;
+  }
+  .gym-stepper {
+    display: inline-flex;
+    border: 2px solid var(--color-rule);
+  }
+  .gym-stepper-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    color: var(--color-chalk);
+    font-weight: 700;
+    font-size: 1.125rem;
+    cursor: pointer;
+  }
+  .gym-stepper-btn:hover:not(:disabled) {
+    background: var(--color-plate);
+  }
+  .gym-stepper-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .gym-stepper-input {
+    width: 2.5rem;
+    border-inline: 2px solid var(--color-rule);
+    background: transparent;
+    color: var(--color-chalk);
+    text-align: center;
+    font-weight: 800;
+    -moz-appearance: textfield;
+  }
+  .gym-stepper-input::-webkit-outer-spin-button,
+  .gym-stepper-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
   .gym-kit {
-    padding: 20px;
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 2px solid var(--color-rule);
   }
-  @media (min-width: 640px) {
-    .gym-kit {
-      padding: 26px;
-    }
-  }
-  .gym-kit-head {
+  .gym-kit-row {
     display: flex;
-    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
-    gap: 6px 16px;
+    gap: 1rem;
   }
   .gym-kit-name {
-    font-family: var(--font-display);
+    font-stretch: 112%;
     font-weight: 900;
-    font-size: 3rem;
-    line-height: 0.85;
+    font-size: 1rem;
     text-transform: uppercase;
   }
   .gym-kit-price {
-    font-size: 2.75rem;
-    line-height: 0.9;
+    font-stretch: 112%;
+    font-weight: 800;
   }
   .gym-kit-contents {
-    margin-top: 12px;
-    font-weight: 700;
-    font-size: 1.0625rem;
+    margin-top: 0.25rem;
+    color: var(--color-chalk);
+    font-size: 0.8125rem;
   }
-  .gym-kit-lead {
-    margin-top: 4px;
-    color: #3d3c38;
-  }
+  .gym-kit-lead,
   .gym-kit-note {
-    margin-top: 8px;
-    font-weight: 600;
+    margin-top: 0.25rem;
+    color: var(--color-soft);
+    font-size: 0.8125rem;
   }
-
-  .gym-till {
+  .gym-kit .gym-btn {
+    margin-top: 0.875rem;
+    min-height: 2.75rem;
+    font-size: 0.8125rem;
+  }
+  .gym-drawer-foot {
     display: grid;
-    gap: 18px;
-    padding: 20px;
-    border: 3px solid var(--color-concrete);
-    background-color: var(--color-slab);
-    background-image: var(--grain-light);
+    gap: 0.875rem;
+    padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--color-rule);
+    background: var(--color-iron);
   }
-  @media (min-width: 1024px) {
-    .gym-till {
-      position: sticky;
-      top: 24px;
-      padding: 26px;
-    }
+  .gym-ship {
+    display: grid;
+    gap: 0.5rem;
+    border: 0;
+    padding: 0;
+    margin: 0;
   }
-  .gym-till:empty {
-    display: none;
-  }
-  /* The checkout's words and total stay on one line in a 360px till. */
-  .gym-till .gym-btn-xl {
-    padding: 0 16px;
-    font-size: clamp(1.25rem, 6.2vw, 1.75rem);
-    white-space: nowrap;
-  }
-  @media (max-width: 399px) {
-    .gym-till {
-      padding: 16px;
-    }
-  }
-  .gym-till-label {
-    margin-bottom: 10px;
-    font-family: var(--font-display);
+  .gym-ship-legend {
+    margin-bottom: 0.5rem;
+    color: var(--color-soft);
+    font-stretch: 112%;
     font-weight: 800;
-    font-size: 1.375rem;
-    line-height: 1;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
   }
-  .gym-delivery {
-    display: grid;
-    gap: 8px;
-  }
-  .gym-delivery-option {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border: 3px solid #3a3a37;
-    cursor: pointer;
-  }
-  .gym-delivery-option:hover {
-    border-color: #6f6d67;
-  }
-  .gym-delivery-option[data-checked] {
-    border-color: var(--color-hazard);
-  }
-  .gym-delivery-option:has(:focus-visible) {
-    outline: 3px solid var(--color-chalk);
-    outline-offset: 2px;
-  }
-  .gym-delivery-name {
+  .gym-ship-option {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.375rem;
-    line-height: 1;
-    text-transform: uppercase;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border: 2px solid var(--color-rule);
+    cursor: pointer;
+    transition: border-color 0.15s ease;
   }
-  /* The chosen option's square fills, so the choice is not colour alone. */
-  .gym-delivery-name::before {
-    content: "";
-    flex: none;
-    width: 16px;
-    height: 16px;
-    border: 3px solid currentColor;
-  }
-  .gym-delivery-option[data-checked] .gym-delivery-name::before {
+  .gym-ship-option[data-checked] {
     border-color: var(--color-hazard);
-    background: var(--color-hazard);
   }
-  .gym-delivery-detail {
-    display: block;
-    margin-top: 5px;
-    padding-left: 26px;
+  .gym-ship-option:has(:focus-visible) {
+    outline: 3px solid var(--color-hazard);
+    outline-offset: 2px;
+  }
+  .gym-ship-radio {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex: none;
+    accent-color: var(--color-hazard);
+  }
+  .gym-ship-radio:focus-visible {
+    outline: none;
+  }
+  .gym-ship-text {
+    display: grid;
+    min-width: 0;
+  }
+  .gym-ship-name {
+    font-weight: 700;
     font-size: 0.875rem;
-    line-height: 1.35;
-    color: var(--color-ink-soft);
   }
-  .gym-delivery-price {
-    font-size: 1.5rem;
+  .gym-ship-detail {
+    color: var(--color-soft);
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+  .gym-ship-price {
+    margin-left: auto;
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 0.875rem;
+    white-space: nowrap;
   }
   .gym-totals {
     display: grid;
-    gap: 8px;
+    gap: 0.25rem;
+    font-size: 0.875rem;
   }
   .gym-totals > div {
     display: flex;
-    align-items: baseline;
     justify-content: space-between;
-    gap: 12px;
+    gap: 1rem;
   }
   .gym-totals dt {
-    color: var(--color-ink-soft);
-  }
-  .gym-totals dd {
-    font-size: 1.375rem;
+    color: var(--color-soft);
   }
   .gym-totals-detail {
     display: block;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
   }
-  .gym-totals-grand {
-    margin-top: 4px;
-    padding-top: 12px;
-    border-top: 3px solid var(--color-chalk);
+  .gym-totals dd {
+    font-weight: 700;
+  }
+  .gym-totals .gym-totals-grand {
+    margin-top: 0.375rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--color-rule);
+    font-stretch: 125%;
+    font-weight: 900;
+    font-size: 1.125rem;
+    text-transform: uppercase;
   }
   .gym-totals .gym-totals-grand dt {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: 2rem;
-    line-height: 1;
-    text-transform: uppercase;
     color: var(--color-chalk);
   }
   .gym-totals .gym-totals-grand dd {
-    font-size: 2.5rem;
-    line-height: 1;
-    color: var(--color-hazard);
-  }
-  .gym-shortfall {
-    padding: 10px 12px;
-    border: 3px dashed var(--color-hazard);
-    font-weight: 700;
+    font-weight: 900;
   }
   .gym-payby {
-    margin-top: -8px;
-    font-size: 0.875rem;
-    text-align: center;
-    color: var(--color-ink-soft);
-  }
-
-  /* ── What you get ────────────────────────────────────────────────── */
-  .gym-box,
-  .gym-answers {
-    padding-block: 64px;
-  }
-  @media (min-width: 1024px) {
-    .gym-box,
-    .gym-answers {
-      padding-block: 104px;
-    }
-  }
-  .gym-box {
-    border-top: 3px solid var(--color-concrete);
-  }
-  .gym-box-grid,
-  .gym-answers-grid {
-    display: grid;
-    gap: 40px;
-  }
-  @media (min-width: 1024px) {
-    .gym-box-grid {
-      grid-template-columns: 5fr 7fr;
-      align-items: center;
-      gap: 72px;
-    }
-    .gym-answers-grid {
-      grid-template-columns: 5fr 7fr;
-      align-items: start;
-      gap: 72px;
-    }
-  }
-  /* The crate where the product photo will go: a concrete-grey box face
-     in a black frame, hazard-banded corners, its markings stencilled. */
-  .gym-crate {
-    position: relative;
-    display: grid;
-    aspect-ratio: 4 / 3;
-    place-items: center;
-    overflow: hidden;
-    padding: 9%;
-    border: 6px solid var(--color-rubber);
-    outline: 3px solid var(--color-concrete);
-    background-color: #2a2a27;
-    background-image:
-      repeating-linear-gradient(180deg, transparent 0 calc(25% - 3px), rgb(0 0 0 / 0.45) calc(25% - 3px) 25%),
-      var(--grain-light),
-      var(--mottle);
-  }
-  .gym-crate::before,
-  .gym-crate::after {
-    content: "";
-    position: absolute;
-    width: 26%;
-    aspect-ratio: 1;
-    background: repeating-linear-gradient(-45deg, var(--color-hazard) 0 10px, var(--color-rubber) 10px 20px);
-  }
-  .gym-crate::before {
-    top: 0;
-    left: 0;
-    clip-path: polygon(0 0, 100% 0, 0 100%);
-  }
-  .gym-crate::after {
-    right: 0;
-    bottom: 0;
-    clip-path: polygon(100% 0, 100% 100%, 0 100%);
-  }
-  .gym-crate-face {
-    position: relative;
-    display: grid;
-    justify-items: center;
-    gap: 8px;
-    color: var(--color-chalk);
+    color: var(--color-soft);
+    font-size: 0.75rem;
     text-align: center;
   }
-  .gym-crate-mark {
-    font-family: var(--font-stencil);
-    font-weight: 900;
-    font-size: clamp(2rem, 9vw, 3.75rem);
-    line-height: 0.9;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-  .gym-crate-count {
-    font-size: clamp(3rem, 15vw, 6.5rem);
-    line-height: 0.85;
-    color: var(--color-hazard);
-  }
-  .gym-crate-contents,
-  .gym-crate-up {
-    font-family: var(--font-stencil);
-    font-weight: 700;
-    font-size: 0.9375rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .gym-crate-up {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .gym-crate-arrows {
-    width: 34px;
-    height: 24px;
-    fill: currentColor;
-  }
-  .gym-facts {
-    margin-top: 28px;
-  }
-  .gym-facts > div {
+  .gym-pay-list {
     display: grid;
-    gap: 4px;
-    padding-block: 16px;
-    border-top: 3px solid var(--color-concrete);
-  }
-  @media (min-width: 768px) {
-    .gym-facts > div {
-      grid-template-columns: 190px minmax(0, 1fr);
-      gap: 24px;
-    }
-  }
-  .gym-facts dt {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.375rem;
-    line-height: 1.1;
-    text-transform: uppercase;
-  }
-  .gym-facts dd {
-    max-width: 60ch;
-    color: var(--color-ink-soft);
-  }
-  .gym-facts-hot {
-    font-weight: 700;
-    color: var(--color-chalk);
+    gap: 0.5rem;
   }
 
-  /* ── Straight answers ────────────────────────────────────────────── */
-  .gym-qa-list {
-    border-top: 3px solid var(--color-chalk);
-  }
-  .gym-qa {
-    border-bottom: 3px solid #3a3a37;
-  }
-  .gym-qa summary {
-    display: flex;
-    min-height: 64px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding-block: 16px;
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.625rem;
-    line-height: 1;
-    text-transform: uppercase;
-    list-style: none;
-    cursor: pointer;
-  }
-  .gym-qa summary::-webkit-details-marker {
-    display: none;
-  }
-  /* A plus drawn in two bars that turns to a cross when open. */
-  .gym-qa summary::after {
-    content: "";
-    flex: none;
-    width: 22px;
-    height: 22px;
-    background:
-      linear-gradient(currentColor, currentColor) center / 100% 4px no-repeat,
-      linear-gradient(currentColor, currentColor) center / 4px 100% no-repeat;
-    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-  .gym-qa[open] summary::after {
-    transform: rotate(45deg);
-  }
-  .gym-qa summary:hover {
-    color: var(--color-hazard);
-  }
-  .gym-qa p,
-  .gym-qa ul {
-    max-width: 60ch;
-    padding-bottom: 20px;
-    font-size: 1.0625rem;
-    color: var(--color-ink-soft);
-  }
-  @media (min-width: 1024px) {
-    .gym-qa summary {
-      font-size: 2rem;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .gym-qa summary::after {
-      transition: none;
-    }
-  }
-
-  /* ── Restock band ────────────────────────────────────────────────── */
-  .gym-signup {
-    padding-block: 56px;
-  }
-  @media (min-width: 1024px) {
-    .gym-signup {
-      padding-block: 88px;
-    }
-  }
-  .gym-signup-grid {
-    display: grid;
-    gap: 24px;
-  }
-  @media (min-width: 1024px) {
-    .gym-signup-grid {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      align-items: end;
-      gap: 64px;
-    }
-  }
-  .gym-signup-lead {
-    max-width: 40ch;
-    margin-top: 14px;
-    font-weight: 600;
-    font-size: 1.125rem;
-  }
-  .gym-signup-form {
-    display: grid;
-    gap: 12px;
-  }
-  .gym-signup-row {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  @media (min-width: 640px) {
-    .gym-signup-row {
-      flex-direction: row;
-    }
-  }
-  .gym-signup-input {
-    width: 100%;
-    min-height: 60px;
-    padding: 0 16px;
-    border: 3px solid var(--color-rubber);
-    background: var(--color-rubber);
-    color: var(--color-chalk);
-    font-size: 1.0625rem;
-  }
-  .gym-signup-input::placeholder {
-    color: #a9a8a2;
-  }
-  .gym-signup-consent {
-    max-width: 62ch;
-    font-size: 0.8125rem;
-    color: #1a1a1a;
-  }
-  .gym-signup-error {
-    padding: 8px 12px;
-    background: var(--color-rubber);
-    color: var(--color-warn);
-    font-weight: 600;
-  }
-  .gym-signup-done {
-    padding: 14px 16px;
-    background: var(--color-rubber);
-    color: var(--color-chalk);
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.5rem;
-    text-transform: uppercase;
-  }
-
-  /* ── Footer ──────────────────────────────────────────────────────── */
-  .gym-footer {
-    padding-bottom: 20px;
-    border-top: 3px solid var(--color-concrete);
-  }
-  .gym-footer-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 26px;
-    padding-top: 32px;
-  }
-  .gym-footer-link {
-    display: inline-flex;
-    min-height: 44px;
-    align-items: center;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--color-chalk);
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.375rem;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    cursor: pointer;
-  }
-  .gym-footer-link:hover {
-    color: var(--color-hazard);
-  }
-  .gym-footer-disclaimer {
-    max-width: 70ch;
-    margin-top: 14px;
-    font-size: 0.875rem;
-    color: var(--color-ink-soft);
-  }
-  .gym-footer-mark {
-    margin-top: 36px;
-    padding-bottom: 0.04em;
-    font-family: var(--font-stencil);
-    font-weight: 900;
-    font-size: min(22vw, 18rem);
-    line-height: 0.84;
-    white-space: nowrap;
-    text-transform: uppercase;
-    color: var(--color-concrete);
-  }
-
-  /* ── The phone's buy bar ─────────────────────────────────────────── */
+  /* ── Phone add-to-cart bar ─────────────────────────────────────────── */
   .gym-bar {
     position: fixed;
-    right: 0;
+    inset-inline: 0;
     bottom: 0;
-    left: 0;
-    z-index: 40;
-    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 30;
     background: var(--color-rubber);
-    color: var(--color-chalk);
-    transform: translateY(110%);
+    translate: 0 110%;
     visibility: hidden;
     transition:
-      transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
-      visibility 0s linear 0.22s;
+      translate 0.3s var(--ease-out),
+      visibility 0s linear 0.3s;
   }
   .gym-bar[data-shown] {
-    transform: none;
+    translate: 0 0;
     visibility: visible;
-    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-  @media (min-width: 768px) {
-    .gym-bar {
-      display: none;
-    }
+    transition:
+      translate 0.3s var(--ease-out),
+      visibility 0s;
   }
   @media (prefers-reduced-motion: reduce) {
     .gym-bar,
@@ -1374,303 +1647,426 @@
       transition: none;
     }
   }
-  .gym-bar-hazard {
-    height: 6px;
-    background: var(--hazard-band);
+  @media (min-width: 768px) {
+    .gym-bar {
+      display: none;
+    }
   }
   .gym-bar-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 16px 12px;
+    gap: 0.5rem;
+    padding: 0.625rem var(--gutter) calc(0.625rem + env(safe-area-inset-bottom));
   }
-  .gym-bar-what {
-    display: grid;
-    gap: 2px;
-    line-height: 1;
+  .gym-bar-select {
+    flex: 1;
+    min-width: 0;
+    height: 3rem;
+    padding: 0 0.75rem;
+    border: 2px solid var(--color-rule);
+    border-radius: 0;
+    background: var(--color-iron);
+    color: var(--color-chalk);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 0.9375rem;
   }
-  .gym-bar-big {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: 1.5rem;
-    text-transform: uppercase;
-  }
-  .gym-bar-price {
-    font-size: 1.75rem;
-    color: var(--color-hazard);
+  .gym-bar-summary {
+    flex: 1;
+    min-width: 0;
+    font-weight: 700;
+    font-size: 0.9375rem;
   }
   .gym-bar-btn {
     flex: none;
-    min-height: 54px;
-    padding: 0 18px;
-    font-size: 1.375rem;
+    min-height: 3rem;
+    padding: 0 1.25rem;
   }
 
-  /* ── Cookie banner (the kit's, in this brand's slots) ────────────── */
+  /* ── The kit's cookie banner ───────────────────────────────────────── */
   .gym-cookie {
-    max-width: 640px;
+    max-width: 40rem;
     margin-inline: auto;
-    padding: 18px;
-    border: 3px solid var(--color-chalk);
-    background: var(--color-rubber);
+    padding: 1rem 1.25rem 1.25rem;
+    border: 2px solid var(--color-rule);
+    background: var(--color-iron);
     color: var(--color-chalk);
   }
   .gym-cookie-heading {
-    font-family: var(--font-display);
+    font-stretch: 112%;
     font-weight: 900;
-    font-size: 1.75rem;
-    line-height: 1;
+    font-size: 1rem;
     text-transform: uppercase;
-  }
-  .gym-cookie-heading:focus {
     outline: none;
   }
   .gym-cookie-text {
-    margin-top: 8px;
-    font-size: 0.9375rem;
-    color: var(--color-ink-soft);
+    margin-top: 0.375rem;
+    color: var(--color-soft);
+    font-size: 0.8125rem;
+    line-height: 1.5;
   }
   .gym-cookie-actions {
     display: flex;
-    gap: 10px;
-    margin-top: 14px;
+    gap: 0.5rem;
+    margin-top: 0.875rem;
   }
 
-  /* ── Interior pages ──────────────────────────────────────────────── */
+  /* ── Inner pages: contact, legal, confirmation ────────────────────── */
   .gym-page {
-    padding-block: 44px 80px;
+    background: var(--color-paper);
+    color: var(--color-rubber);
   }
-  @media (min-width: 1024px) {
-    .gym-page {
-      padding-block: 72px 112px;
+  .gym-page-band {
+    background: var(--color-rubber);
+    color: var(--color-chalk);
+  }
+  .gym-page-band-inner {
+    padding-top: 3rem;
+    padding-bottom: 2.5rem;
+  }
+  @media (min-width: 768px) {
+    .gym-page-band-inner {
+      padding-top: 4.5rem;
+      padding-bottom: 3.5rem;
     }
   }
   .gym-page-title {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: clamp(3.25rem, 13vw, 7rem);
-    line-height: 0.85;
-    text-transform: uppercase;
-    text-wrap: balance;
+    font-size: clamp(2.5rem, 9vw, 5rem);
+    line-height: 0.9;
   }
   .gym-page-lead {
-    max-width: 60ch;
-    margin-top: 18px;
-    font-size: 1.0625rem;
-    color: var(--color-ink-soft);
-  }
-  .gym-narrow {
-    max-width: 860px;
-  }
-
-  /* The kit's legal page, through its slots. */
-  .gym-legal-title {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: clamp(3rem, 12vw, 6rem);
-    line-height: 0.85;
-    text-transform: uppercase;
-    text-wrap: balance;
-  }
-  .gym-legal-intro {
-    max-width: 62ch;
-    margin-top: 18px;
-    font-size: 1.0625rem;
-  }
-  .gym-legal-meta {
-    margin-top: 12px;
-    font-size: 0.875rem;
-    color: var(--color-ink-soft);
-  }
-  .gym-legal-toc {
-    margin-top: 36px;
-    padding: 20px;
-    border: 3px solid var(--color-concrete);
-    background-color: var(--color-slab);
-    background-image: var(--grain-light);
-  }
-  .gym-legal-toc-heading {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.375rem;
-    text-transform: uppercase;
-  }
-  .gym-legal-toc-list {
-    margin-top: 10px;
-    padding-left: 1.4rem;
-    list-style: decimal;
-    font-size: 0.9375rem;
-  }
-  .gym-legal-toc-list li + li {
-    margin-top: 4px;
-  }
-  .gym-legal-section {
-    scroll-margin-top: 24px;
-    padding-block: 28px;
-    border-bottom: 3px solid var(--color-concrete);
-  }
-  .gym-legal-heading {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.75rem;
-    line-height: 1;
-    text-transform: uppercase;
-  }
-  /* The contract spaces a list after a paragraph, not a paragraph after a list. */
-  .legal-prose ul + p,
-  .legal-prose ol + p,
-  .legal-prose dl + p {
+    max-width: 38rem;
     margin-top: 1rem;
+    color: #c9ccd1;
+    font-size: 1.0625rem;
   }
-  .gym-legal-foot {
-    margin-top: 32px;
-    font-size: 0.9375rem;
-    color: var(--color-ink-soft);
+  .gym-page-lead .gym-link:hover {
+    text-decoration-color: var(--color-hazard);
+  }
+  .gym-page-body {
+    padding-top: 3rem;
+    padding-bottom: 5rem;
+  }
+  @media (min-width: 768px) {
+    .gym-page-body {
+      padding-top: 4rem;
+      padding-bottom: 7rem;
+    }
   }
 
-  /* The kit's contact form, through its slots. */
+  /* Contact */
+  .gym-contact-grid {
+    display: grid;
+    gap: 2.5rem;
+  }
+  @media (min-width: 1024px) {
+    .gym-contact-grid {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+      gap: 4rem;
+      align-items: start;
+    }
+  }
+  .gym-form-panel {
+    padding: 1.5rem 1.25rem;
+    background: var(--color-surface);
+  }
+  @media (min-width: 768px) {
+    .gym-form-panel {
+      padding: 2.5rem;
+    }
+  }
   .gym-form {
     display: grid;
-    gap: 20px;
+    gap: 1.25rem;
   }
   .gym-form-label {
     display: block;
-    margin-bottom: 8px;
-    font-family: var(--font-display);
+    margin-bottom: 0.375rem;
+    font-stretch: 112%;
     font-weight: 800;
-    font-size: 1.25rem;
-    line-height: 1;
+    font-size: 0.8125rem;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
-  .gym-input {
+  .gym-field {
     width: 100%;
-    min-height: 52px;
-    padding: 10px 14px;
-    border: 3px solid #5a5954;
-    background: var(--color-rubber);
-    color: var(--color-chalk);
+    min-height: 3rem;
+    padding: 0.75rem 0.875rem;
+    border: 2px solid var(--color-rubber);
+    border-radius: 0;
+    background: var(--color-surface);
+    color: var(--color-rubber);
     font-size: 1rem;
   }
-  .gym-input:hover {
-    border-color: var(--color-aggregate);
+  .gym-field:focus-visible {
+    outline: 3px solid var(--color-hazard);
+    outline-offset: 0;
   }
-  .gym-input:focus-visible {
-    border-color: var(--color-hazard);
-    outline-offset: 2px;
-  }
-  .gym-input::placeholder {
-    color: #8d8c86;
+  textarea.gym-field {
+    min-height: 10rem;
   }
   .gym-form-hint {
-    margin-top: 6px;
-    font-size: 0.875rem;
+    margin-top: 0.375rem;
     color: var(--color-ink-soft);
+    font-size: 0.8125rem;
   }
   .gym-form-note {
-    font-size: 0.8125rem;
     color: var(--color-ink-soft);
+    font-size: 0.75rem;
   }
   .gym-sent {
-    padding: 24px;
-    border: 3px solid var(--color-hazard);
+    padding: 1.5rem;
+    border: 3px solid var(--color-rubber);
   }
   .gym-sent-heading {
-    font-family: var(--font-display);
+    font-stretch: 125%;
     font-weight: 900;
-    font-size: 2.25rem;
-    line-height: 0.9;
+    font-size: 1.5rem;
     text-transform: uppercase;
-  }
-  .gym-sent-heading:focus {
     outline: none;
   }
   .gym-sent-text {
-    margin-top: 10px;
+    margin-top: 0.5rem;
     color: var(--color-ink-soft);
   }
-
-  /* The order confirmation. */
-  .gym-receipt {
-    margin-top: 32px;
-    padding: 20px;
-    border: 3px solid var(--color-concrete);
-    background-color: var(--color-slab);
-    background-image: var(--grain-light);
+  .gym-aside {
+    border-top: 3px solid var(--color-rubber);
+    padding-top: 1.25rem;
   }
-  .gym-receipt-head {
+  .gym-aside-heading {
+    font-stretch: 112%;
+    font-weight: 900;
+    font-size: 1rem;
+    text-transform: uppercase;
+  }
+  .gym-aside-list {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+    color: var(--color-ink-soft);
+    font-size: 0.9375rem;
+  }
+  .gym-aside-list strong {
+    display: block;
+    color: var(--color-rubber);
+  }
+  .gym-company {
+    margin-top: 2rem;
+    color: var(--color-ink-soft);
+    font-size: 0.8125rem;
+  }
+
+  /* The kit's legal page: on a wide screen the contents sit in a sticky
+     left column and the clauses read beside them. */
+  .gym-legal {
+    display: grid;
+    gap: 0;
+  }
+  @media (min-width: 1024px) {
+    .gym-legal {
+      grid-template-columns: 16rem minmax(0, 46rem);
+      column-gap: 4rem;
+      align-items: start;
+    }
+    .gym-legal > * {
+      grid-column: 1 / -1;
+    }
+    .gym-legal > .gym-legal-toc {
+      grid-column: 1;
+      grid-row: span 2;
+      position: sticky;
+      top: 6.5rem;
+    }
+    .gym-legal > .gym-legal-sections,
+    .gym-legal > .gym-legal-foot {
+      grid-column: 2;
+    }
+  }
+  .gym-legal-title {
+    font-size: clamp(2.25rem, 7vw, 4.25rem);
+    line-height: 0.92;
+  }
+  .gym-legal-intro {
+    max-width: 46rem;
+    margin-top: 1rem;
+    color: var(--color-ink-soft);
+    font-size: 1.0625rem;
+  }
+  .gym-legal-meta {
+    margin-top: 0.75rem;
+    color: var(--color-ink-soft);
+    font-size: 0.8125rem;
+  }
+  .gym-legal-toc {
+    margin-top: 2.5rem;
+    padding: 1.25rem;
+    background: var(--color-surface);
+    border-top: 6px solid var(--color-hazard);
+  }
+  .gym-legal-toc-heading {
+    font-stretch: 112%;
+    font-weight: 900;
+    font-size: 0.8125rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .gym-legal-toc-list {
+    display: grid;
+    gap: 0.375rem;
+    margin-top: 0.75rem;
+    padding-left: 1.25rem;
+    list-style: decimal;
+    font-size: 0.875rem;
+  }
+  .gym-legal-toc-list a:hover {
+    text-decoration: underline;
+  }
+  .gym-legal-sections {
+    margin-top: 2.5rem;
+  }
+  .gym-legal-section {
+    padding: 2rem 0;
+    border-top: 1px solid var(--color-line);
+  }
+  .gym-legal-section:first-child {
+    border-top: 3px solid var(--color-rubber);
+  }
+  .gym-legal-heading {
+    font-stretch: 112%;
+    font-weight: 900;
+    font-size: 1.125rem;
+    text-transform: uppercase;
+  }
+  .gym-legal-foot {
+    margin-top: 2rem;
+    color: var(--color-ink-soft);
+    font-size: 0.8125rem;
+  }
+
+  /* Order confirmation: the docket. */
+  .gym-docket {
+    max-width: 46rem;
+    background: var(--color-surface);
+  }
+  .gym-docket-head {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    gap: 6px 16px;
-    padding-bottom: 14px;
-    border-bottom: 3px solid var(--color-concrete);
-    font-size: 0.9375rem;
+    gap: 0.5rem 1.5rem;
+    padding: 1.25rem 1.25rem 1rem;
+    border-bottom: 3px solid var(--color-rubber);
+    font-size: 0.875rem;
+  }
+  .gym-docket-head dt {
     color: var(--color-ink-soft);
   }
-  .gym-receipt-row {
+  .gym-docket-id {
+    font-weight: 800;
+    word-break: break-all;
+  }
+  .gym-docket-row {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
-    padding-block: 12px;
+    gap: 1rem;
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid var(--color-line);
   }
-  .gym-receipt-row + .gym-receipt-row {
-    border-top: 3px solid var(--color-concrete);
+  .gym-docket-detail {
+    display: block;
+    color: var(--color-ink-soft);
+    font-size: 0.8125rem;
   }
-  .gym-receipt-total {
+  .gym-docket-figure {
+    flex: none;
+    font-stretch: 112%;
+    font-weight: 800;
+  }
+  .gym-docket-total {
     display: flex;
-    align-items: baseline;
     justify-content: space-between;
-    gap: 16px;
-    margin-top: 4px;
-    padding-top: 14px;
-    border-top: 3px solid var(--color-chalk);
-  }
-  .gym-receipt-total dt {
-    font-family: var(--font-display);
+    gap: 1rem;
+    padding: 1rem 1.25rem 1.25rem;
+    font-stretch: 125%;
     font-weight: 900;
-    font-size: 1.75rem;
-    line-height: 1;
+    font-size: 1.25rem;
     text-transform: uppercase;
   }
-  .gym-receipt-total dd {
-    font-size: 2.25rem;
-    line-height: 1;
-    color: var(--color-hazard);
+  .gym-h3 {
+    font-stretch: 112%;
+    font-weight: 900;
+    font-size: 1.125rem;
+    text-transform: uppercase;
+  }
+  .gym-facts {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    color: var(--color-ink-soft);
+  }
+  .gym-facts dd {
+    color: var(--color-rubber);
+    font-weight: 600;
   }
   .gym-steps {
     display: grid;
-    gap: 14px;
-    margin-top: 18px;
+    gap: 0.875rem;
+    margin-top: 1.25rem;
     counter-reset: step;
   }
   .gym-steps li {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
-    align-items: center;
-    gap: 12px;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: baseline;
     color: var(--color-ink-soft);
     counter-increment: step;
   }
   .gym-steps li::before {
     content: counter(step);
     font-family: var(--font-stencil);
-    font-weight: 900;
-    font-size: 2.5rem;
+    font-weight: 800;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--color-rubber);
+  }
+
+  /* 404 */
+  .gym-lost {
+    position: relative;
+    background: var(--color-rubber);
+    overflow: hidden;
+  }
+  .gym-lost-inner {
+    padding-top: 4rem;
+    padding-bottom: 5rem;
+  }
+  @media (min-width: 768px) {
+    .gym-lost-inner {
+      padding-top: 6rem;
+      padding-bottom: 8rem;
+    }
+  }
+  .gym-lost-code {
+    font-family: var(--font-stencil);
+    font-weight: 800;
+    font-size: clamp(8rem, 42vw, 22rem);
     line-height: 0.8;
     color: var(--color-hazard);
   }
-  .gym-h3 {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: 2.5rem;
-    line-height: 0.9;
-    text-transform: uppercase;
+  .gym-lost .gym-page-title {
+    margin-top: 1.5rem;
   }
+  .gym-lost .gym-btn {
+    margin-top: 2rem;
+  }
+}
 
-  /* The contract's alert, on black. */
-  .alert-error {
-    border: 3px solid currentColor;
-    font-weight: 600;
+@media print {
+  .no-print,
+  .gym-marquee,
+  .gym-header,
+  .gym-footer,
+  .gym-drawer {
+    display: none !important;
   }
 }

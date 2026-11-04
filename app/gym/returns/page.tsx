@@ -15,10 +15,9 @@ export default function ReturnsPage() {
   return (
     <main id="main" tabIndex={-1} className="gym-page outline-none">
       <JsonLd data={breadcrumbSchema(doc.title, doc.path, brand.id)} />
-      <div className="gym-wrap">
-        <div className="gym-narrow">
-          <LegalPage identity={legalIdentity(brand)} doc={doc} classNames={LEGAL_CLASSES} />
-        </div>
+      <div className="gym-tape gym-tape-thin" aria-hidden="true" />
+      <div className="gym-wrap gym-page-body">
+        <LegalPage identity={legalIdentity(brand)} doc={doc} classNames={LEGAL_CLASSES} />
       </div>
     </main>
   );

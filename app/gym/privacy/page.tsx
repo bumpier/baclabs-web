@@ -30,15 +30,14 @@ export default async function PrivacyPage() {
   return (
     <main id="main" tabIndex={-1} className="gym-page outline-none">
       <JsonLd data={breadcrumbSchema(TITLE, PATH, brand.id)} />
-      <div className="gym-wrap">
-        <div className="gym-narrow">
-          <LegalPage identity={legalIdentity(brand)} doc={doc} classNames={LEGAL_CLASSES} />
-          <p className="mt-6">
-            <CookieSettingsButton ga4Id={STOREFRONT.tracking.ga4Id} className="gym-btn gym-btn-ghost">
-              {SITE.cookieSettings}
-            </CookieSettingsButton>
-          </p>
-        </div>
+      <div className="gym-tape gym-tape-thin" aria-hidden="true" />
+      <div className="gym-wrap gym-page-body">
+        <LegalPage identity={legalIdentity(brand)} doc={doc} classNames={LEGAL_CLASSES} />
+        <p className="mt-8">
+          <CookieSettingsButton ga4Id={STOREFRONT.tracking.ga4Id} className="gym-btn gym-btn-ghost-ink">
+            {SITE.cookieSettings}
+          </CookieSettingsButton>
+        </p>
       </div>
     </main>
   );

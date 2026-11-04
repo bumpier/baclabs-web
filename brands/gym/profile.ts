@@ -1,8 +1,7 @@
 /**
- * Brute Lab, the `gym` brand. A skeleton: the name is a working name, the
- * palette (black and concrete with hazard orange) a placeholder for the
- * design work, and nothing here is live. Empty values render nothing, as
- * everywhere else.
+ * Brute Lab, the `gym` brand. The name is a working name and nothing here is
+ * live. The palette is the site's (black, steel and hazard yellow, see
+ * brands/gym/styles.css). Empty values render nothing, as everywhere else.
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
@@ -20,18 +19,21 @@ export function gymProfile(): BrandProfile {
     // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
     domains: [...hosts.gym],
     logo: "/icon.svg",
+    // The emails', the packing slip's and the payment page's colours: the
+    // site's own on light paper. Hazard yellow is the button (black on it,
+    // 12:1), never a link or a text colour on paper, where it cannot be read.
     colours: {
-      paper: "#F2F1EE",
+      paper: "#EEEFF0",
       surface: "#FFFFFF",
-      neutral: "#E4E2DD",
-      ink: "#111111",
-      inkSoft: "#4A4A4A",
-      line: "#D6D3CC",
-      primary: "#C2410C",
-      cta: "#C2410C",
-      header: "#111111",
-      onHeader: "#F2F1EE",
-      onCta: "#FFFFFF",
+      neutral: "#E4E5E7",
+      ink: "#000000",
+      inkSoft: "#45484E",
+      line: "#D2D4D8",
+      primary: "#000000",
+      cta: "#F5C400",
+      header: "#000000",
+      onHeader: "#F5C400",
+      onCta: "#000000",
     },
     email: {
       // TODO(launch): a mailbox on the brand's own domain, verified in Resend.

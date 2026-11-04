@@ -1,49 +1,57 @@
 import { formatGbp, type PackView } from "@/lib/commerce/view";
-import { HERO, LADDER } from "@/brands/gym/copy/home";
-import { HeroBuyButton } from "./HeroBuyButton";
+import { HERO } from "@/brands/gym/copy/home";
+import { HERO_TALL, HERO_WIDE } from "@/brands/gym/copy/images";
+import { photoProps, photoSrcSet } from "./photo";
 
 /**
- * The first screen is the offer itself, set as big as it will go: "10
- * vials. £49.99. Done." The count and the price are the catalogue's (the
- * page picks the pack), the price in the stencil face and the hazard orange,
- * and the one button beside it buys exactly that.
+ * The first screen: the box on the gym floor, full bleed, the headline
+ * stacked big over the dark side of the photograph, and one button to the
+ * packs. The photograph is art-directed: a tall frame on a phone, with the
+ * subject in its top half and the type over the floor below it, and the wide
+ * one from the md breakpoint, the subject on the right and the type on the
+ * left. A hazard band closes the frame.
  *
- * A server component: only the button is client code. With no pack on sale
- * there is no price to lead with, so the headline is the ladder's own and
- * there is no button (an empty catalogue renders no offer).
+ * The "from" line is the catalogue's: the smallest and largest pack on sale,
+ * and the lowest price a vial among them. With nothing on sale it is left out.
+ * A server component; the button is a plain link to #shop.
  */
-export function Hero({ pack, freeOption }: { pack: PackView | null; freeOption: string | null }) {
-  const price = pack ? formatGbp(pack.priceMinor) : null;
-  return (
-    <section aria-labelledby="hero-heading" className="gym-hero gym-rubber">
-      <div className="gym-wrap gym-hero-grid">
-        <h1 id="hero-heading" className="gym-hero-title">
-          {pack && price ? (
-            <>
-              <span className="gym-hero-line">{HERO.count(pack.vials)}</span>{" "}
-              <span className="gym-hero-line gym-hero-price">{HERO.price(price)}</span>{" "}
-              <span className="gym-hero-line">{HERO.done}</span>
-            </>
-          ) : (
-            <span className="gym-hero-line">{LADDER.heading}</span>
-          )}
-        </h1>
+export function Hero({ packs }: { packs: readonly PackView[] }) {
+  const img = photoProps(HERO_WIDE, { sizes: "100vw", priority: true, className: "gym-hero-img" });
+  const cheapest = packs.length > 0 ? packs.reduce((a, b) => (b.perVialMinor < a.perVialMinor ? b : a)) : null;
+  const counts = packs.map((p) => p.vials);
 
-        <div className="gym-hero-aside">
-          <p className="gym-hero-lead">{HERO.lead}</p>
-          {pack && price ? (
-            <div className="mt-6">
-              <HeroBuyButton sku={pack.sku} label={HERO.add(pack.vials)} price={price} />
-              {freeOption ? <p className="gym-hero-note">{HERO.freeDelivery(freeOption)}</p> : null}
-            </div>
+  return (
+    <section aria-labelledby="hero-heading" className="gym-hero">
+      <picture className="gym-hero-media">
+        <source media="(max-width: 767px)" srcSet={photoSrcSet(HERO_TALL)} sizes="100vw" width={HERO_TALL.width} height={HERO_TALL.height} />
+        {/* next/image's own props (alt included), in a <picture> for the two frames. */}
+        <img {...img} />
+      </picture>
+      <div className="gym-hero-scrim" aria-hidden="true" />
+      <div className="gym-wrap gym-hero-body">
+        <h1 id="hero-heading" className="gym-hero-title">
+          {HERO.lines.map((line, i) => (
+            <span key={line}>
+              <span className="gym-hero-line" style={{ animationDelay: `${120 + i * 110}ms` }}>
+                {line}
+              </span>{" "}
+            </span>
+          ))}
+        </h1>
+        <p className="gym-hero-lead">
+          {HERO.lead}
+          {cheapest ? (
+            <>
+              {" "}
+              <strong>{HERO.from(Math.min(...counts), Math.max(...counts), formatGbp(cheapest.perVialMinor))}</strong>
+            </>
           ) : null}
-          <p className="mt-5">
-            <a href="#packs" className="gym-link-strong">
-              {HERO.morePacks}
-            </a>
-          </p>
-        </div>
+        </p>
+        <a id="hero-cta" href="#shop" className="gym-btn gym-btn-hazard gym-btn-lg">
+          {HERO.cta}
+        </a>
       </div>
+      <div className="gym-tape" aria-hidden="true" />
     </section>
   );
 }
