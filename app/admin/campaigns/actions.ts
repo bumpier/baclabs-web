@@ -98,8 +98,9 @@ export async function createOfferAction(_prev: FormState, formData: FormData): P
   const c = await draft(o.id);
   if (c.status !== "draft") return { error: "This campaign has been sent." };
   if (c.promoCode) return { error: "Remove the current offer first." };
-  // The code would live in BacLab's Stripe account, which no other brand
-  // may touch, and no other brand's checkout takes a code.
+  // The code would live in BacLab's Stripe account, and no other brand's
+  // checkout takes one: the brands' sessions on that account never allow
+  // promotion codes (lib/commerce/payments/stripe.ts).
   if (c.brand !== DEFAULT_BRAND) return { error: "Offer codes are BacLab's only: no other brand's checkout takes one." };
   if (!process.env.STRIPE_SECRET_KEY) return { error: "Stripe is not configured, so a code cannot be created." };
 

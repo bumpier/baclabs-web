@@ -16,18 +16,20 @@ import { getPayPalOrder, paypalCredentials } from "@/lib/commerce/payments/paypa
  * - Card: Stripe keeps a Checkout page payable for 24 hours and retries a
  *   failed webhook for days after, so Stripe is asked. Only an expired
  *   session clears. A complete one means the customer paid but our webhook
- *   never landed — that is logged and the order kept.
+ *   never landed — that is logged and the order kept. The other brands'
+ *   card orders are sessions on the same account (lib/commerce/payments/
+ *   stripe.ts), so they are asked about in exactly the same way.
  * - Crypto: the gateway sets a payment window, kept in the order's notes. The
  *   order clears a day after it closes, so a deposit sent in time can still
  *   confirm.
- * - PayPal (the brands; never Stripe): money moves only when we capture, so
- *   PayPal is asked about its order with the brand's own credentials. One it
- *   no longer has clears; one it has completed is paid with our side
- *   unconfirmed, logged and kept. Otherwise it is kept until PayPal's
- *   longest window has passed (an order can be captured for at most 72
- *   hours, per its docs), then cleared: by then nothing can take payment for
- *   it. Without the brand's credentials nothing can capture it either, so the
- *   same 72 hours apply.
+ * - PayPal (a brand moved to PayPal; never Stripe): money moves only when
+ *   we capture, so PayPal is asked about its order with the brand's own
+ *   credentials. One it no longer has clears; one it has completed is paid
+ *   with our side unconfirmed, logged and kept. Otherwise it is kept until
+ *   PayPal's longest window has passed (an order can be captured for at
+ *   most 72 hours, per its docs), then cleared: by then nothing can take
+ *   payment for it. Without the brand's credentials nothing can capture it
+ *   either, so the same 72 hours apply.
  * - No payment attached (checkout failed before reaching a provider): after
  *   an hour, long enough that the checkout is not still in progress.
  * - Anything else that cannot be asked (the dev Stripe simulator, a crypto

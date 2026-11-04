@@ -6,7 +6,7 @@
  * profile, nothing from config/.
  *
  * SERVER CODE: it reads config/funnel.ts (the Lab Kit's switch and parts)
- * and whether the brand's payment credentials are set (never their values).
+ * and whether the brand's payment providers are configured (never a value).
  * What it returns is plain, serialisable data. BacLab has no catalogue and
  * never comes here; its storefront is config/funnel.ts as it always was.
  */
@@ -58,11 +58,12 @@ export function storefrontView(brand: BrandProfile): StorefrontView {
     limits: { maxVials: catalogue.maxVials, maxLineQty: MAX_LINE_QTY, maxLines: MAX_BRAND_LINES },
     flags: { businessDetails: catalogue.collectBusinessDetails, promotionCodes: catalogue.allowPromotionCodes },
     // What the checkout will take right now: the profile's providers that
-    // have the brand's own credentials (lib/commerce/payments), in the
-    // profile's words when it has some. Empty, the storefront shows no
-    // checkout button at all. Read where the view is built: the brand's
-    // pages are prerendered and revalidated, so credentials set or removed
-    // show from the next render.
+    // are configured (lib/commerce/payments: BacLab's Stripe settings for
+    // Stripe, the brand's own credentials for any other), in the profile's
+    // words when it has some. Empty, the storefront shows no checkout
+    // button at all. Read where the view is built: the brand's pages are
+    // prerendered and revalidated, so settings changed show from the next
+    // render.
     payment: {
       methods: brandPaymentAdapters(brand).map((adapter) => {
         const words = brand.payment?.methods.find((m) => m.id === adapter.id);

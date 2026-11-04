@@ -168,9 +168,11 @@ export default async function AdminOrderDetailPage({
             <dd className="capitalize">{providerLabel(order.paymentProvider)}</dd>
           </div>
         </dl>
-        {/* Cancelling never refunds, for any provider. A brand's PayPal
-            payment is refunded in that brand's own PayPal account; nothing
-            here calls Stripe for it. */}
+        {/* Cancelling never refunds, for any provider. A brand's card order
+            is BacLab's Stripe account's, refunded there as BacLab's are, so
+            it shows exactly as they do. A brand moved to PayPal is refunded
+            in that brand's own PayPal account; nothing here calls Stripe
+            for it. */}
         {order.paymentProvider === "paypal" && order.paidAt ? (
           <p className="alert-note mt-3">
             Cancelling this order does not refund it. Refund it in {chip.name}&rsquo;s PayPal account, transaction{" "}

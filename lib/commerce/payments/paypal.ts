@@ -14,8 +14,10 @@
  *   PAYPAL_WEBHOOK_ID__<ID>, PAYPAL_ENV__<ID> = sandbox | live
  * There is no shared PAYPAL_CLIENT_ID, no default environment and no
  * fallback to another brand's account, so a brand reaches PayPal only by
- * deliberate config. The gym brand lists no provider at all
- * (brands/gym/profile.ts): it must never share an account with the others.
+ * deliberate config. No brand lists PayPal today: all four take cards on
+ * BacLab's Stripe account (lib/commerce/payments/stripe.ts), and a brand
+ * moves here by its profile and these four variables alone. Never the gym
+ * brand (brands/gym/profile.ts gives the reason).
  *
  * Every field below was checked against PayPal's own documentation on
  * 4 Nov 2026:
