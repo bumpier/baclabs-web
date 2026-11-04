@@ -15,17 +15,26 @@ export const brand = wholesaleProfile();
  */
 export const LIVE = false;
 
-export const DESCRIPTION = "Coming soon.";
+export const DESCRIPTION = "10ml bacteriostatic water by the pack, priced per vial. Order online, or ask for a quote on larger volumes.";
 
 /** Every public page, for the sitemap. Not the order confirmation: it is per order, and noindex. */
-export const PAGES: readonly string[] = ["/", "/contact", "/terms", "/privacy", "/returns", "/disclaimer"];
+export const PAGES: readonly string[] = ["/", "/quote", "/contact", "/terms", "/privacy", "/returns", "/disclaimer"];
 
 /**
  * The catalogue as the browser sees it (lib/commerce/storefront.ts), built
  * with the pages: the root layout hands it to the basket, and the buy
  * section reads it from there.
+ *
+ * Without each payment method's `terms` sentence: no page outside the legal
+ * pages shows it, and it names the payment provider, which the legal pages
+ * alone should. The view travels to the browser with every page, so it is
+ * cut here rather than left unshown.
  */
-export const STOREFRONT = storefrontView(brand);
+const view = storefrontView(brand);
+export const STOREFRONT = {
+  ...view,
+  payment: { methods: view.payment.methods.map((m) => ({ ...m, terms: "" })) },
+};
 
 /**
  * The basket's localStorage key. Each brand's domain has its own storage, so

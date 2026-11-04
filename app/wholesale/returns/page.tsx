@@ -3,6 +3,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { LegalPage } from "@/components/commerce/LegalPage";
 import { brandReturns, legalIdentity } from "@/lib/commerce/legal";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
+import { LEGAL_CLASSES, LEGAL_MAIN, LEGAL_SHEET } from "@/brands/wholesale/components/legal-classes";
 import { brand } from "../site";
 
 /** The brand's returns policy, written from its profile and catalogue (lib/commerce/legal.ts). */
@@ -12,9 +13,11 @@ export const metadata: Metadata = pageMetadata({ title: doc.title, description: 
 
 export default function ReturnsPage() {
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-16">
+    <main id="main" className={LEGAL_MAIN}>
       <JsonLd data={breadcrumbSchema(doc.title, doc.path, brand.id)} />
-      <LegalPage identity={legalIdentity(brand)} doc={doc} />
+      <div className={LEGAL_SHEET}>
+        <LegalPage identity={legalIdentity(brand)} doc={doc} classNames={LEGAL_CLASSES} />
+      </div>
     </main>
   );
 }
