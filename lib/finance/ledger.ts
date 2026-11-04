@@ -41,6 +41,8 @@ export interface LedgerOrder extends TakingsOrder {
   id: string;
   /** Order.brand. Absent (fixtures, rows from before brands): BacLab. */
   brand?: string;
+  /** Order.paymentProvider: "stripe", the crypto gateway, "paypal". Absent: unknown. */
+  paymentProvider?: string | null;
   customerName: string;
   customerEmail: string;
   items: string;
@@ -72,6 +74,8 @@ export interface LedgerRow {
   id: string;
   /** The order's brand id. */
   brand: string;
+  /** Who took the payment (Order.paymentProvider), or "" when unknown. */
+  provider: string;
   /** sale | plan_box | plan_upgrade (lib/plans/kinds.ts). */
   kind: OrderKind;
   /** The UK day it was paid for. */
@@ -205,6 +209,7 @@ export function ledgerRow(order: LedgerOrder, ctx: LedgerContext): LedgerRow {
   return {
     id: order.id,
     brand,
+    provider: order.paymentProvider ?? "",
     kind,
     day,
     saleTime: at,

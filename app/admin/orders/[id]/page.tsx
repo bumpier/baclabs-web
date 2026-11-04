@@ -12,6 +12,8 @@ import { SHOP_TIME_ZONE, formatSaleDateTime } from "@/lib/saleTime";
 import { statusLabel } from "@/lib/order-status";
 import { brandChip } from "@/lib/admin/brand-chip";
 import { BrandChip } from "@/components/admin/BrandChip";
+import { providerLabel } from "@/lib/payments/config";
+import { DEFAULT_BRAND } from "@/brands/types";
 
 export const dynamic = "force-dynamic";
 
@@ -155,7 +157,7 @@ export default async function AdminOrderDetailPage({
           </div>
           <div>
             <dt className="label">Payment</dt>
-            <dd className="capitalize">{order.paymentMethod}</dd>
+            <dd className="capitalize">{providerLabel(order.paymentMethod)}</dd>
           </div>
           <div>
             <dt className="label">Gateway ref</dt>
@@ -163,9 +165,27 @@ export default async function AdminOrderDetailPage({
           </div>
           <div>
             <dt className="label">Provider</dt>
-            <dd className="capitalize">{order.paymentProvider ?? "—"}</dd>
+            <dd className="capitalize">{providerLabel(order.paymentProvider)}</dd>
           </div>
         </dl>
+        {/* Cancelling never refunds, for any provider. A brand's PayPal
+            payment is refunded in that brand's own PayPal account; nothing
+            here calls Stripe for it. */}
+        {order.paymentProvider === "paypal" && order.paidAt ? (
+          <p className="alert-note mt-3">
+            Cancelling this order does not refund it. Refund it in {chip.name}&rsquo;s PayPal account, transaction{" "}
+            <span className="font-mono">{order.paymentRef}</span>. PayPal&rsquo;s refund notice is then added to the notes below.
+          </p>
+        ) : null}
+
+        {/* A brand order's notes: a trade buyer's company and VAT number,
+            and any refund or reversal PayPal has reported. */}
+        {order.brand !== DEFAULT_BRAND && order.notes ? (
+          <div className="card mt-4 p-6 text-sm">
+            <p className="label">Notes</p>
+            <p className="mt-1 whitespace-pre-wrap">{order.notes}</p>
+          </div>
+        ) : null}
 
         <div className="card mt-4 p-6 text-sm">
           <p className="label">Emails sent</p>

@@ -13,6 +13,7 @@ import { PARCEL_KINDS } from "@/lib/plans/kinds";
 import { adminBrandScope, keepBrandParam, ordersWhere } from "@/lib/admin/brand-scope";
 import { brandChip } from "@/lib/admin/brand-chip";
 import { BrandChip } from "@/components/admin/BrandChip";
+import { providerLabel } from "@/lib/payments/config";
 
 export const dynamic = "force-dynamic";
 
@@ -133,7 +134,7 @@ export default async function AdminOrdersPage({
                         {formatPrice(o.totalAmount.toString(), o.currency as Currency)}
                       </td>
                     )}
-                    <td className="px-5 py-3 capitalize text-ink-soft">{o.paymentMethod}</td>
+                    <td className="px-5 py-3 capitalize text-ink-soft">{providerLabel(o.paymentMethod)}</td>
                     <td className="px-5 py-3">
                       <span
                         className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${

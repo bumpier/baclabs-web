@@ -237,17 +237,18 @@ async function main() {
   const OLD_PERIOD = "period,from,to,orders,vials,welcome_vials,gift_vials,order_value,delivery,taken,discounts,vat,postage,postage_cancelled_orders,packages,fulfilment,after_shipping_costs,cancelled_orders,cancelled_value";
   const OLD_ORDER = "order_id,kind,paid_at,day,status,customer_name,customer_email,customer,pack,vials,welcome_vials,gift_vials,delivery_option,order_value,delivery,taken,discount,vat,postage,postage_status,packages,fulfilment,after_shipping_costs";
   check("period CSV keeps its columns, then brand", PERIOD_CSV_HEADER.join(",") === `${OLD_PERIOD},brand`);
-  check("order CSV keeps its columns, then brand", ORDER_CSV_HEADER.join(",") === `${OLD_ORDER},brand`);
+  check("order CSV keeps its columns, then brand, then the payment provider", ORDER_CSV_HEADER.join(",") === `${OLD_ORDER},brand,payment_provider`);
   const line = orderCsvLine(rows[1]!);
   check("an order line has a cell per column", line.length === ORDER_CSV_HEADER.length);
-  check("an order line ends with its brand", line[line.length - 1] === TEST_BRAND_ID && line[0] === "f1");
+  check("an order line ends with its brand and provider", line[line.length - 2] === TEST_BRAND_ID && line[line.length - 1] === "" && line[0] === "f1");
+  check("an order line names its provider", orderCsvLine({ ...rows[1]!, provider: "paypal" }).at(-1) === "paypal");
   const buckets = bucket(rows, "2026-10-06", "2026-10-06", "day");
   const pLine = periodCsvLine(buckets[0]!, "all");
   check("a period line has a cell per column", pLine.length === PERIOD_CSV_HEADER.length);
   check("a period line ends with the scope", pLine[pLine.length - 1] === "all" && periodCsvLine(buckets[0]!, TEST_BRAND_ID).at(-1) === TEST_BRAND_ID);
   const csv = toCsv(ORDER_CSV_HEADER, [line]);
-  check("the CSV header row ends with brand", csv.split("\r\n")[0]!.endsWith(",brand"));
-  check("the CSV data row ends with the quoted brand", csv.split("\r\n")[1]!.endsWith(`,"${TEST_BRAND_ID}"`));
+  check("the CSV header row ends with brand and payment_provider", csv.split("\r\n")[0]!.endsWith(",brand,payment_provider"));
+  check("the CSV data row ends with the quoted brand and provider", csv.split("\r\n")[1]!.endsWith(`,"${TEST_BRAND_ID}",""`));
   check("CSV cells still defuse formulas", csvCell("=SUM(A1)") === `"'=SUM(A1)"` && csvCell("-3.10") === `"-3.10"`);
 
   // ── Packing: brand by brand, oldest first within each, each slip in its order's brand.

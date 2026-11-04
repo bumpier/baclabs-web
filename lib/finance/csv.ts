@@ -6,7 +6,7 @@ import { formatSaleDateTime } from "@/lib/saleTime";
  * The finance CSVs behind /admin/finance/export: one row per day/week/month
  * (period) or one row per order (order). Columns are only ever added at the
  * end, so a spreadsheet built on an older export keeps its columns: `brand`
- * came last when brands arrived.
+ * came last when brands arrived, then the order's `payment_provider`.
  */
 
 /**
@@ -97,6 +97,8 @@ export const ORDER_CSV_HEADER = [
   "after_shipping_costs",
   // The order's brand id.
   "brand",
+  // Who took the payment: "stripe", the crypto gateway or "paypal".
+  "payment_provider",
 ] as const;
 
 export function orderCsvLine(r: LedgerRow): string[] {
@@ -126,6 +128,7 @@ export function orderCsvLine(r: LedgerRow): string[] {
     money(r.fulfilmentMinor),
     money(r.afterCostsMinor),
     r.brand,
+    r.provider,
   ];
 }
 
