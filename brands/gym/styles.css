@@ -3,11 +3,32 @@
    scans this brand's folders (see the @source not lines there).
 
    source(none) turns off Tailwind's scan of the whole repo, so only the
-   folders named here contribute classes. The palette is a placeholder from
-   brands/gym/profile.ts until the brand's design lands.
+   folders named here contribute classes. The shared class contract
+   (styles/commerce-contract.css) and the commerce kit's folder come with
+   it: the kit's default classes are built here, themed by the tokens below.
 
-   The shared class contract (styles/commerce-contract.css) and the commerce
-   kit's folder come with it: the kit's default classes are built here. */
+   THE DIRECTION, as built.
+   Thesis: the shop is a loading bay, not a boutique. One product in four
+   weights, sold the way a lifter reads a gym floor: the price stamped huge,
+   the packs drawn as plates on a bar, the rest stencilled on a crate. It
+   refuses the soft supplement-shop look (gradients, rounded cards, lifestyle
+   photos) and any refinement a dark luxury site would use.
+   World: rubber-floor black, poured concrete, hazard orange, chalk. Hard
+   edges everywhere, 3px rules instead of hairlines, real grain on every
+   field (SVG noise below, no images). Big Shoulders in capitals for the
+   voice, its stencil cut for every figure, Archivo for reading.
+   Story: the visitor sees one price, buys it in one tap, or climbs the
+   ladder to a bigger pack and sees the saving; the basket offers the kit,
+   the phone keeps a buy bar in reach.
+   First viewport: "10 vials. £49.99. Done." filling the screen, the price
+   in orange stencil; the lead and the one orange button under it on a
+   phone, beside it from the large breakpoint.
+   Colour: committed. Orange owns the price, the chosen rung, every action,
+   the hazard bands and the restock band; never a glow, never a gradient.
+
+   Contrast, measured: hazard orange #ff6b00 on black is 7.3:1 and black on
+   it the same, so it carries small text either way; white on orange fails
+   (2.9:1), so nothing on orange is ever white. */
 @import "tailwindcss" source(none);
 @import "../../styles/commerce-contract.css";
 @source "../../app/gym";
@@ -15,25 +36,1641 @@
 @source "../../components/commerce";
 
 @theme {
-  --color-paper: #f2f1ee;
-  --color-surface: #ffffff;
-  --color-neutral: #e4e2dd;
-  --color-ink: #111111;
-  --color-ink-soft: #4a4a4a;
-  --color-line: #d6d3cc;
-  --color-primary: #c2410c;
-  --color-cta: #c2410c;
+  /* The contract's tokens, for the kit's own defaults (contact form, legal pages). */
+  --color-paper: #000000;
+  --color-surface: #1b1b19;
+  --color-neutral: #262624;
+  --color-ink: #f2f2ed;
+  --color-ink-soft: #b8b7b0;
+  --color-line: #4a4944;
+  --color-primary: #ff6b00;
+  --color-cta: #ff6b00;
+  --color-on-cta: #000000;
+  --color-warn: #ffb4a6;
+  --color-warn-tint: #2b0f0a;
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: Impact, "Arial Narrow", sans-serif;
+  /* The brand's own names for the same world. */
+  --color-rubber: #000000;
+  --color-slab: #1b1b19;
+  --color-concrete: #2c2c29;
+  --color-aggregate: #9b9992;
+  --color-chalk: #f2f2ed;
+  --color-hazard: #ff6b00;
+
+  --font-sans: var(--font-gym-body), Arial, sans-serif;
+  --font-display: var(--font-gym-display), "Arial Narrow", sans-serif;
+  --font-stencil: var(--font-gym-stencil), var(--font-gym-display), "Arial Narrow", sans-serif;
+}
+
+/* Grit, drawn rather than photographed: SVG noise tiles, each one feTurbulence
+   mapped to white or black specks with a ceiling on their opacity, so a tile
+   is decided once and costs nothing to paint. Concrete is three layers: fine
+   grain, the cloudy mottle of a poured slab, and the odd dark air void. */
+:root {
+  --grain-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .36 0 0 0 -.13'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .42 0 0 0 -.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --mottle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .3 0 0 0 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
+  --voids: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 0 -2.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)'/%3E%3C/svg%3E");
+  --hazard-band: repeating-linear-gradient(-45deg, var(--color-hazard) 0 14px, var(--color-rubber) 14px 28px);
 }
 
 @layer base {
   :root {
-    color-scheme: light;
+    color-scheme: dark;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 
   body {
-    @apply bg-paper font-sans text-ink antialiased;
+    background-color: var(--color-rubber);
+    color: var(--color-chalk);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: var(--color-hazard);
+    color: var(--color-rubber);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-hazard);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  /* ── Fields: the materials every section is poured in ─────────────── */
+  .gym-rubber {
+    background-color: var(--color-rubber);
+    background-image: var(--grain-light);
+  }
+  .gym-concrete {
+    background-color: var(--color-slab);
+    background-image: var(--voids), var(--grain-light), var(--mottle);
+  }
+  .gym-chalk {
+    background-color: var(--color-chalk);
+    background-image: var(--grain-dark);
+    color: var(--color-rubber);
+  }
+  .gym-hot {
+    background-color: var(--color-hazard);
+    background-image: var(--grain-dark);
+    color: var(--color-rubber);
+  }
+  /* On a light field the focus ring is black: orange on orange is no ring. */
+  .gym-chalk :focus-visible,
+  .gym-hot :focus-visible {
+    outline-color: var(--color-rubber);
+  }
+
+  .gym-hazard {
+    height: 18px;
+    background: var(--hazard-band);
+  }
+  .gym-hazard-thin {
+    height: 8px;
+  }
+
+  .gym-wrap {
+    width: 100%;
+    max-width: 1360px;
+    margin-inline: auto;
+    padding-inline: 16px;
+  }
+  @media (min-width: 768px) {
+    .gym-wrap {
+      padding-inline: 32px;
+    }
+  }
+  @media (min-width: 1280px) {
+    .gym-wrap {
+      padding-inline: 48px;
+    }
+  }
+
+  /* ── Type ──────────────────────────────────────────────────────── */
+  .gym-figure {
+    font-family: var(--font-stencil);
+    font-weight: 800;
+  }
+  .gym-h2 {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(3.5rem, 15vw, 8rem);
+    line-height: 0.85;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+  .gym-section-head {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  @media (min-width: 1024px) {
+    .gym-section-head {
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: end;
+      gap: 48px;
+      margin-bottom: 44px;
+    }
+  }
+  .gym-section-lead {
+    max-width: 40ch;
+    font-size: 1.0625rem;
+    color: var(--color-ink-soft);
+  }
+  @media (min-width: 1024px) {
+    .gym-section-lead {
+      font-size: 1.1875rem;
+      padding-bottom: 0.4em;
+    }
+  }
+
+  .gym-link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+  .gym-link:hover {
+    text-decoration-color: var(--color-hazard);
+  }
+  .gym-chalk .gym-link:hover,
+  .gym-hot .gym-link:hover {
+    text-decoration-thickness: 3px;
+    text-decoration-color: currentColor;
+  }
+  .gym-link-strong {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.375rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-decoration: underline;
+    text-decoration-color: var(--color-hazard);
+    text-decoration-thickness: 3px;
+    text-underline-offset: 6px;
+  }
+  .gym-link-strong:hover {
+    color: var(--color-hazard);
+  }
+
+  /* ── Actions ────────────────────────────────────────────────────
+     A slab of orange with black capitals. Hover goes to chalk, press
+     drops it 2px: a plate set down, nothing that glows or bounces. */
+  .gym-btn {
+    display: inline-flex;
+    min-height: 52px;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 0 20px;
+    border: 3px solid var(--color-hazard);
+    background: var(--color-hazard);
+    color: var(--color-rubber);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.375rem;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      background-color 0.12s,
+      border-color 0.12s,
+      color 0.12s,
+      transform 0.06s;
+  }
+  .gym-btn:has(> span + span) {
+    justify-content: space-between;
+  }
+  .gym-btn .gym-figure {
+    font-size: 1.12em;
+  }
+  .gym-btn:hover {
+    border-color: var(--color-chalk);
+    background: var(--color-chalk);
+  }
+  .gym-btn:active {
+    transform: translateY(2px);
+  }
+  .gym-btn:focus-visible {
+    outline-color: var(--color-chalk);
+  }
+  .gym-btn:disabled {
+    border-color: #3a3a37;
+    background: #3a3a37;
+    color: #a3a29b;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .gym-btn-lg {
+    min-height: 60px;
+    font-size: 1.5rem;
+  }
+  .gym-btn-xl {
+    min-height: 68px;
+    padding: 0 22px;
+    font-size: 1.75rem;
+  }
+  /* On chalk and on orange: a black slab. */
+  .gym-btn-ink {
+    border-color: var(--color-rubber);
+    background: var(--color-rubber);
+    color: var(--color-chalk);
+  }
+  .gym-btn-ink:hover {
+    border-color: var(--color-rubber);
+    background: transparent;
+    color: var(--color-rubber);
+  }
+  .gym-btn-ink:focus-visible {
+    outline-color: var(--color-rubber);
+  }
+  .gym-btn-ink:disabled {
+    border-color: #6f6d67;
+    background: transparent;
+    color: #4a4944;
+  }
+  .gym-btn-ghost {
+    border-color: var(--color-chalk);
+    background: transparent;
+    color: var(--color-chalk);
+  }
+  .gym-btn-ghost:hover {
+    background: var(--color-chalk);
+    color: var(--color-rubber);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .gym-btn {
+      transition: none;
+    }
+    .gym-btn:active {
+      transform: none;
+    }
+  }
+
+  .gym-status {
+    min-height: 1.55em;
+    margin-top: 10px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  /* ── Header ─────────────────────────────────────────────────────── */
+  .gym-header {
+    position: relative;
+    background: var(--color-rubber);
+    border-bottom: 3px solid var(--color-concrete);
+  }
+  .gym-header-row {
+    display: flex;
+    min-height: 64px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .gym-wordmark {
+    font-family: var(--font-stencil);
+    font-weight: 900;
+    font-size: 1.875rem;
+    line-height: 1;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  .gym-wordmark:hover {
+    color: var(--color-hazard);
+  }
+  .gym-basket-link {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.375rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .gym-basket-link:hover {
+    color: var(--color-hazard);
+  }
+  .gym-basket-count {
+    display: inline-grid;
+    min-width: 34px;
+    height: 34px;
+    place-items: center;
+    padding: 0 6px;
+    background: var(--color-hazard);
+    color: var(--color-rubber);
+    font-size: 1.25rem;
+  }
+  .gym-skip {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 60;
+    padding: 10px 14px;
+    background: var(--color-hazard);
+    color: var(--color-rubber);
+    font-weight: 700;
+    transform: translateY(-200%);
+  }
+  .gym-skip:focus {
+    transform: none;
+  }
+
+  /* ── Hero: the price, as big as the screen allows ─────────────────── */
+  .gym-hero {
+    padding-block: 28px 44px;
+  }
+  .gym-hero-grid {
+    display: grid;
+    gap: 28px;
+  }
+  /* The price line is the widest, about 3.9 times the title size: 22vw keeps
+     it inside a phone's 16px gutters down to 320px, and from the large
+     breakpoint 14vw keeps it inside the column beside the aside. */
+  .gym-hero-title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(4rem, 22vw, 12.5rem);
+    line-height: 0.8;
+    text-transform: uppercase;
+  }
+  .gym-hero-line {
+    display: block;
+  }
+  .gym-hero-price {
+    margin-block: 0.04em 0.02em;
+    font-family: var(--font-stencil);
+    font-size: 1.3em;
+    line-height: 0.82;
+    color: var(--color-hazard);
+  }
+  .gym-hero-lead {
+    max-width: 36ch;
+    font-size: 1.0625rem;
+    color: var(--color-ink-soft);
+  }
+  .gym-hero-note {
+    margin-top: 12px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+  @media (min-width: 1024px) {
+    .gym-hero {
+      display: flex;
+      min-height: min(78vh, 840px);
+      align-items: flex-end;
+      padding-block: 48px 72px;
+    }
+    .gym-hero-grid {
+      grid-template-columns: minmax(0, 1fr) 340px;
+      align-items: end;
+      gap: 56px;
+    }
+    .gym-hero-title {
+      font-size: min(14vw, 13.5rem);
+    }
+    .gym-hero-lead {
+      font-size: 1.1875rem;
+    }
+  }
+
+  /* ── The ladder ───────────────────────────────────────────────────
+     A phone stacks the rungs, each with its plates loaded on a sleeve;
+     from the large breakpoint the rungs stand side by side and the plates
+     stack on the floor, so the four tops climb like stairs. */
+  .gym-packs {
+    padding-block: 52px 44px;
+  }
+  @media (min-width: 1024px) {
+    .gym-packs {
+      padding-block: 96px 72px;
+    }
+  }
+  .gym-ladder {
+    display: grid;
+    gap: 6px;
+  }
+  .gym-rung {
+    position: relative;
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "tick count price"
+      "tick plates meta";
+    align-items: center;
+    gap: 8px 14px;
+    padding: 14px 16px;
+    border: 3px solid var(--color-rubber);
+    background: var(--color-rubber);
+    color: var(--color-chalk);
+    cursor: pointer;
+  }
+  .gym-rung:hover {
+    border-color: #5a5954;
+  }
+  .gym-rung[data-checked] {
+    border-color: var(--color-hazard);
+    background-color: var(--color-hazard);
+    background-image: var(--grain-dark);
+    color: var(--color-rubber);
+  }
+  .gym-rung[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .gym-rung:has(:focus-visible) {
+    outline: 3px solid var(--color-chalk);
+    outline-offset: 3px;
+  }
+  .gym-tick {
+    grid-area: tick;
+    position: relative;
+    width: 26px;
+    height: 26px;
+    border: 3px solid currentColor;
+  }
+  .gym-rung[data-checked] .gym-tick {
+    background: var(--color-rubber);
+  }
+  .gym-rung[data-checked] .gym-tick::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 6px;
+    width: 8px;
+    height: 13px;
+    border: solid var(--color-hazard);
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+  }
+  .gym-rung-count {
+    grid-area: count;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .gym-rung-n {
+    font-size: 3.25rem;
+    line-height: 0.82;
+  }
+  .gym-rung-unit {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.375rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .gym-rung-price {
+    grid-area: price;
+    justify-self: end;
+    font-size: 2.5rem;
+    line-height: 0.9;
+  }
+  .gym-rung-meta {
+    grid-area: meta;
+    justify-self: end;
+    display: grid;
+    gap: 2px;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+    text-align: right;
+    color: var(--color-ink-soft);
+  }
+  .gym-rung-save {
+    font-weight: 700;
+    color: var(--color-hazard);
+  }
+  .gym-rung[data-checked] .gym-rung-meta,
+  .gym-rung[data-checked] .gym-rung-save {
+    color: var(--color-rubber);
+  }
+  .gym-rung-badge {
+    position: absolute;
+    top: -12px;
+    right: 12px;
+    padding: 3px 8px;
+    background: var(--color-chalk);
+    color: var(--color-rubber);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.9375rem;
+    text-transform: uppercase;
+  }
+
+  .gym-plates {
+    grid-area: plates;
+    position: relative;
+    display: flex;
+    width: max-content;
+    height: 34px;
+    align-items: center;
+    gap: 3px;
+    padding: 0 18px 0 8px;
+    color: var(--color-aggregate);
+  }
+  /* The sleeve the plates sit on. */
+  .gym-plates::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 4px;
+    margin-top: -2px;
+    background: currentColor;
+    opacity: 0.6;
+  }
+  .gym-plate {
+    position: relative;
+    width: 7px;
+    height: 100%;
+    background: currentColor;
+  }
+  .gym-rung[data-checked] .gym-plates {
+    color: var(--color-rubber);
+  }
+
+  @media (min-width: 1024px) {
+    .gym-ladder {
+      grid-auto-columns: minmax(0, 1fr);
+      grid-auto-flow: column;
+      gap: 10px;
+    }
+    .gym-rung {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "count tick"
+        "plates plates"
+        "price price"
+        "meta meta";
+      align-items: start;
+      gap: 18px;
+      padding: 22px;
+    }
+    .gym-rung-count {
+      flex-direction: column;
+      gap: 6px;
+    }
+    .gym-rung-n {
+      font-size: 6.5rem;
+    }
+    .gym-rung-unit {
+      font-size: 1.625rem;
+    }
+    .gym-rung-price {
+      justify-self: start;
+      font-size: 3.75rem;
+    }
+    .gym-rung-meta {
+      justify-self: start;
+      font-size: 1rem;
+      text-align: left;
+    }
+    .gym-plates {
+      width: 100%;
+      height: calc(var(--plates-max, 1) * 14px + 7px);
+      flex-direction: column-reverse;
+      align-items: stretch;
+      gap: 4px;
+      padding: 0 0 4px;
+      border-bottom: 3px solid currentColor;
+    }
+    .gym-plates::before {
+      display: none;
+    }
+    .gym-plate {
+      width: 100%;
+      height: 10px;
+      flex: none;
+    }
+  }
+
+  .gym-ladder-foot {
+    margin-top: 14px;
+    display: grid;
+    gap: 6px;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+  /* The button takes the rest of the row, and drops under the stepper
+     when the row is too narrow for its words and price on one line. */
+  .gym-add {
+    margin-top: 22px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .gym-add > .gym-btn {
+    flex: 1 1 260px;
+  }
+  @media (min-width: 1024px) {
+    .gym-add {
+      max-width: 620px;
+    }
+  }
+
+  /* The kit's QuantityStepper, as a steel collar. */
+  .gym-stepper {
+    display: inline-flex;
+    flex: none;
+    align-items: stretch;
+    border: 3px solid var(--color-chalk);
+    background: var(--color-rubber);
+  }
+  .gym-stepper-btn {
+    width: 46px;
+    min-height: 54px;
+    background: transparent;
+    color: var(--color-chalk);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.75rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .gym-stepper-btn:hover {
+    background: var(--color-chalk);
+    color: var(--color-rubber);
+  }
+  .gym-stepper-btn:disabled {
+    background: transparent;
+    color: #5d5c57;
+    cursor: not-allowed;
+  }
+  .gym-stepper-btn:focus-visible {
+    outline-offset: -5px;
+  }
+  .gym-stepper-input {
+    width: 50px;
+    border-inline: 3px solid var(--color-chalk);
+    background: transparent;
+    color: var(--color-chalk);
+    font-family: var(--font-stencil);
+    font-weight: 800;
+    font-size: 1.5rem;
+    text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .gym-stepper-input::-webkit-inner-spin-button,
+  .gym-stepper-input::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+  }
+  .gym-stepper-input:focus-visible {
+    outline-offset: -5px;
+  }
+  .gym-stepper-sm .gym-stepper-btn {
+    width: 40px;
+    min-height: 44px;
+    font-size: 1.375rem;
+  }
+  .gym-stepper-sm .gym-stepper-input {
+    width: 44px;
+    font-size: 1.25rem;
+  }
+
+  /* ── Basket and till ─────────────────────────────────────────────── */
+  .gym-basket {
+    padding-block: 56px 64px;
+    border-top: 3px solid var(--color-concrete);
+    background-color: var(--color-rubber);
+    background-image: var(--grain-light);
+  }
+  @media (min-width: 1024px) {
+    .gym-basket {
+      padding-block: 96px;
+    }
+  }
+  .gym-basket h2:focus {
+    outline: none;
+  }
+  .gym-basket h2:focus-visible {
+    outline: 3px solid var(--color-hazard);
+  }
+  .gym-basket-grid {
+    margin-top: 28px;
+    display: grid;
+    gap: 28px;
+  }
+  @media (min-width: 1024px) {
+    .gym-basket-grid {
+      grid-template-columns: minmax(0, 1fr) 420px;
+      align-items: start;
+      gap: 56px;
+      margin-top: 44px;
+    }
+  }
+  .gym-basket-empty {
+    padding: 22px;
+    border: 3px dashed #4a4944;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.75rem;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--color-ink-soft);
+  }
+  .gym-lines {
+    border-top: 3px solid var(--color-chalk);
+  }
+  .gym-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name total"
+      "stepper remove";
+    align-items: center;
+    gap: 10px 12px;
+    padding-block: 16px;
+    border-bottom: 3px solid var(--color-concrete);
+  }
+  @media (min-width: 640px) {
+    .gym-line {
+      grid-template-columns: minmax(0, 1fr) auto auto auto;
+      grid-template-areas: "name stepper total remove";
+      gap: 20px;
+    }
+  }
+  .gym-line-name {
+    grid-area: name;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.625rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .gym-line .gym-stepper {
+    grid-area: stepper;
+    justify-self: start;
+  }
+  .gym-line-total {
+    grid-area: total;
+    justify-self: end;
+    font-size: 1.75rem;
+    line-height: 1;
+  }
+  .gym-line-remove {
+    grid-area: remove;
+    justify-self: end;
+    min-height: 44px;
+    padding-inline: 4px;
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .gym-line-remove:hover {
+    color: var(--color-chalk);
+  }
+
+  .gym-kit {
+    padding: 20px;
+  }
+  @media (min-width: 640px) {
+    .gym-kit {
+      padding: 26px;
+    }
+  }
+  .gym-kit-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 16px;
+  }
+  .gym-kit-name {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 3rem;
+    line-height: 0.85;
+    text-transform: uppercase;
+  }
+  .gym-kit-price {
+    font-size: 2.75rem;
+    line-height: 0.9;
+  }
+  .gym-kit-contents {
+    margin-top: 12px;
+    font-weight: 700;
+    font-size: 1.0625rem;
+  }
+  .gym-kit-lead {
+    margin-top: 4px;
+    color: #3d3c38;
+  }
+  .gym-kit-note {
+    margin-top: 8px;
+    font-weight: 600;
+  }
+
+  .gym-till {
+    display: grid;
+    gap: 18px;
+    padding: 20px;
+    border: 3px solid var(--color-concrete);
+    background-color: var(--color-slab);
+    background-image: var(--grain-light);
+  }
+  @media (min-width: 1024px) {
+    .gym-till {
+      position: sticky;
+      top: 24px;
+      padding: 26px;
+    }
+  }
+  .gym-till:empty {
+    display: none;
+  }
+  /* The checkout's words and total stay on one line in a 360px till. */
+  .gym-till .gym-btn-xl {
+    padding: 0 16px;
+    font-size: clamp(1.25rem, 6.2vw, 1.75rem);
+    white-space: nowrap;
+  }
+  @media (max-width: 399px) {
+    .gym-till {
+      padding: 16px;
+    }
+  }
+  .gym-till-label {
+    margin-bottom: 10px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.375rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .gym-delivery {
+    display: grid;
+    gap: 8px;
+  }
+  .gym-delivery-option {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 3px solid #3a3a37;
+    cursor: pointer;
+  }
+  .gym-delivery-option:hover {
+    border-color: #6f6d67;
+  }
+  .gym-delivery-option[data-checked] {
+    border-color: var(--color-hazard);
+  }
+  .gym-delivery-option:has(:focus-visible) {
+    outline: 3px solid var(--color-chalk);
+    outline-offset: 2px;
+  }
+  .gym-delivery-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.375rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  /* The chosen option's square fills, so the choice is not colour alone. */
+  .gym-delivery-name::before {
+    content: "";
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border: 3px solid currentColor;
+  }
+  .gym-delivery-option[data-checked] .gym-delivery-name::before {
+    border-color: var(--color-hazard);
+    background: var(--color-hazard);
+  }
+  .gym-delivery-detail {
+    display: block;
+    margin-top: 5px;
+    padding-left: 26px;
+    font-size: 0.875rem;
+    line-height: 1.35;
+    color: var(--color-ink-soft);
+  }
+  .gym-delivery-price {
+    font-size: 1.5rem;
+  }
+  .gym-totals {
+    display: grid;
+    gap: 8px;
+  }
+  .gym-totals > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .gym-totals dt {
+    color: var(--color-ink-soft);
+  }
+  .gym-totals dd {
+    font-size: 1.375rem;
+  }
+  .gym-totals-detail {
+    display: block;
+    font-size: 0.8125rem;
+  }
+  .gym-totals-grand {
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 3px solid var(--color-chalk);
+  }
+  .gym-totals .gym-totals-grand dt {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 2rem;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--color-chalk);
+  }
+  .gym-totals .gym-totals-grand dd {
+    font-size: 2.5rem;
+    line-height: 1;
+    color: var(--color-hazard);
+  }
+  .gym-shortfall {
+    padding: 10px 12px;
+    border: 3px dashed var(--color-hazard);
+    font-weight: 700;
+  }
+  .gym-payby {
+    margin-top: -8px;
+    font-size: 0.875rem;
+    text-align: center;
+    color: var(--color-ink-soft);
+  }
+
+  /* ── What you get ────────────────────────────────────────────────── */
+  .gym-box,
+  .gym-answers {
+    padding-block: 64px;
+  }
+  @media (min-width: 1024px) {
+    .gym-box,
+    .gym-answers {
+      padding-block: 104px;
+    }
+  }
+  .gym-box {
+    border-top: 3px solid var(--color-concrete);
+  }
+  .gym-box-grid,
+  .gym-answers-grid {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 1024px) {
+    .gym-box-grid {
+      grid-template-columns: 5fr 7fr;
+      align-items: center;
+      gap: 72px;
+    }
+    .gym-answers-grid {
+      grid-template-columns: 5fr 7fr;
+      align-items: start;
+      gap: 72px;
+    }
+  }
+  /* The crate where the product photo will go: a concrete-grey box face
+     in a black frame, hazard-banded corners, its markings stencilled. */
+  .gym-crate {
+    position: relative;
+    display: grid;
+    aspect-ratio: 4 / 3;
+    place-items: center;
+    overflow: hidden;
+    padding: 9%;
+    border: 6px solid var(--color-rubber);
+    outline: 3px solid var(--color-concrete);
+    background-color: #2a2a27;
+    background-image:
+      repeating-linear-gradient(180deg, transparent 0 calc(25% - 3px), rgb(0 0 0 / 0.45) calc(25% - 3px) 25%),
+      var(--grain-light),
+      var(--mottle);
+  }
+  .gym-crate::before,
+  .gym-crate::after {
+    content: "";
+    position: absolute;
+    width: 26%;
+    aspect-ratio: 1;
+    background: repeating-linear-gradient(-45deg, var(--color-hazard) 0 10px, var(--color-rubber) 10px 20px);
+  }
+  .gym-crate::before {
+    top: 0;
+    left: 0;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  .gym-crate::after {
+    right: 0;
+    bottom: 0;
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+  .gym-crate-face {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    color: var(--color-chalk);
+    text-align: center;
+  }
+  .gym-crate-mark {
+    font-family: var(--font-stencil);
+    font-weight: 900;
+    font-size: clamp(2rem, 9vw, 3.75rem);
+    line-height: 0.9;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .gym-crate-count {
+    font-size: clamp(3rem, 15vw, 6.5rem);
+    line-height: 0.85;
+    color: var(--color-hazard);
+  }
+  .gym-crate-contents,
+  .gym-crate-up {
+    font-family: var(--font-stencil);
+    font-weight: 700;
+    font-size: 0.9375rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .gym-crate-up {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .gym-crate-arrows {
+    width: 34px;
+    height: 24px;
+    fill: currentColor;
+  }
+  .gym-facts {
+    margin-top: 28px;
+  }
+  .gym-facts > div {
+    display: grid;
+    gap: 4px;
+    padding-block: 16px;
+    border-top: 3px solid var(--color-concrete);
+  }
+  @media (min-width: 768px) {
+    .gym-facts > div {
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 24px;
+    }
+  }
+  .gym-facts dt {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.375rem;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+  .gym-facts dd {
+    max-width: 60ch;
+    color: var(--color-ink-soft);
+  }
+  .gym-facts-hot {
+    font-weight: 700;
+    color: var(--color-chalk);
+  }
+
+  /* ── Straight answers ────────────────────────────────────────────── */
+  .gym-qa-list {
+    border-top: 3px solid var(--color-chalk);
+  }
+  .gym-qa {
+    border-bottom: 3px solid #3a3a37;
+  }
+  .gym-qa summary {
+    display: flex;
+    min-height: 64px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-block: 16px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.625rem;
+    line-height: 1;
+    text-transform: uppercase;
+    list-style: none;
+    cursor: pointer;
+  }
+  .gym-qa summary::-webkit-details-marker {
+    display: none;
+  }
+  /* A plus drawn in two bars that turns to a cross when open. */
+  .gym-qa summary::after {
+    content: "";
+    flex: none;
+    width: 22px;
+    height: 22px;
+    background:
+      linear-gradient(currentColor, currentColor) center / 100% 4px no-repeat,
+      linear-gradient(currentColor, currentColor) center / 4px 100% no-repeat;
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .gym-qa[open] summary::after {
+    transform: rotate(45deg);
+  }
+  .gym-qa summary:hover {
+    color: var(--color-hazard);
+  }
+  .gym-qa p,
+  .gym-qa ul {
+    max-width: 60ch;
+    padding-bottom: 20px;
+    font-size: 1.0625rem;
+    color: var(--color-ink-soft);
+  }
+  @media (min-width: 1024px) {
+    .gym-qa summary {
+      font-size: 2rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .gym-qa summary::after {
+      transition: none;
+    }
+  }
+
+  /* ── Restock band ────────────────────────────────────────────────── */
+  .gym-signup {
+    padding-block: 56px;
+  }
+  @media (min-width: 1024px) {
+    .gym-signup {
+      padding-block: 88px;
+    }
+  }
+  .gym-signup-grid {
+    display: grid;
+    gap: 24px;
+  }
+  @media (min-width: 1024px) {
+    .gym-signup-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: end;
+      gap: 64px;
+    }
+  }
+  .gym-signup-lead {
+    max-width: 40ch;
+    margin-top: 14px;
+    font-weight: 600;
+    font-size: 1.125rem;
+  }
+  .gym-signup-form {
+    display: grid;
+    gap: 12px;
+  }
+  .gym-signup-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  @media (min-width: 640px) {
+    .gym-signup-row {
+      flex-direction: row;
+    }
+  }
+  .gym-signup-input {
+    width: 100%;
+    min-height: 60px;
+    padding: 0 16px;
+    border: 3px solid var(--color-rubber);
+    background: var(--color-rubber);
+    color: var(--color-chalk);
+    font-size: 1.0625rem;
+  }
+  .gym-signup-input::placeholder {
+    color: #a9a8a2;
+  }
+  .gym-signup-consent {
+    max-width: 62ch;
+    font-size: 0.8125rem;
+    color: #1a1a1a;
+  }
+  .gym-signup-error {
+    padding: 8px 12px;
+    background: var(--color-rubber);
+    color: var(--color-warn);
+    font-weight: 600;
+  }
+  .gym-signup-done {
+    padding: 14px 16px;
+    background: var(--color-rubber);
+    color: var(--color-chalk);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+  }
+
+  /* ── Footer ──────────────────────────────────────────────────────── */
+  .gym-footer {
+    padding-bottom: 20px;
+    border-top: 3px solid var(--color-concrete);
+  }
+  .gym-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 26px;
+    padding-top: 32px;
+  }
+  .gym-footer-link {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-chalk);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.375rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .gym-footer-link:hover {
+    color: var(--color-hazard);
+  }
+  .gym-footer-disclaimer {
+    max-width: 70ch;
+    margin-top: 14px;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+  .gym-footer-mark {
+    margin-top: 36px;
+    padding-bottom: 0.04em;
+    font-family: var(--font-stencil);
+    font-weight: 900;
+    font-size: min(22vw, 18rem);
+    line-height: 0.84;
+    white-space: nowrap;
+    text-transform: uppercase;
+    color: var(--color-concrete);
+  }
+
+  /* ── The phone's buy bar ─────────────────────────────────────────── */
+  .gym-bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--color-rubber);
+    color: var(--color-chalk);
+    transform: translateY(110%);
+    visibility: hidden;
+    transition:
+      transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+      visibility 0s linear 0.22s;
+  }
+  .gym-bar[data-shown] {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @media (min-width: 768px) {
+    .gym-bar {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .gym-bar,
+    .gym-bar[data-shown] {
+      transition: none;
+    }
+  }
+  .gym-bar-hazard {
+    height: 6px;
+    background: var(--hazard-band);
+  }
+  .gym-bar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px 12px;
+  }
+  .gym-bar-what {
+    display: grid;
+    gap: 2px;
+    line-height: 1;
+  }
+  .gym-bar-big {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+  }
+  .gym-bar-price {
+    font-size: 1.75rem;
+    color: var(--color-hazard);
+  }
+  .gym-bar-btn {
+    flex: none;
+    min-height: 54px;
+    padding: 0 18px;
+    font-size: 1.375rem;
+  }
+
+  /* ── Cookie banner (the kit's, in this brand's slots) ────────────── */
+  .gym-cookie {
+    max-width: 640px;
+    margin-inline: auto;
+    padding: 18px;
+    border: 3px solid var(--color-chalk);
+    background: var(--color-rubber);
+    color: var(--color-chalk);
+  }
+  .gym-cookie-heading {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.75rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .gym-cookie-heading:focus {
+    outline: none;
+  }
+  .gym-cookie-text {
+    margin-top: 8px;
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+  }
+  .gym-cookie-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  /* ── Interior pages ──────────────────────────────────────────────── */
+  .gym-page {
+    padding-block: 44px 80px;
+  }
+  @media (min-width: 1024px) {
+    .gym-page {
+      padding-block: 72px 112px;
+    }
+  }
+  .gym-page-title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(3.25rem, 13vw, 7rem);
+    line-height: 0.85;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+  .gym-page-lead {
+    max-width: 60ch;
+    margin-top: 18px;
+    font-size: 1.0625rem;
+    color: var(--color-ink-soft);
+  }
+  .gym-narrow {
+    max-width: 860px;
+  }
+
+  /* The kit's legal page, through its slots. */
+  .gym-legal-title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(3rem, 12vw, 6rem);
+    line-height: 0.85;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+  .gym-legal-intro {
+    max-width: 62ch;
+    margin-top: 18px;
+    font-size: 1.0625rem;
+  }
+  .gym-legal-meta {
+    margin-top: 12px;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+  .gym-legal-toc {
+    margin-top: 36px;
+    padding: 20px;
+    border: 3px solid var(--color-concrete);
+    background-color: var(--color-slab);
+    background-image: var(--grain-light);
+  }
+  .gym-legal-toc-heading {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.375rem;
+    text-transform: uppercase;
+  }
+  .gym-legal-toc-list {
+    margin-top: 10px;
+    padding-left: 1.4rem;
+    list-style: decimal;
+    font-size: 0.9375rem;
+  }
+  .gym-legal-toc-list li + li {
+    margin-top: 4px;
+  }
+  .gym-legal-section {
+    scroll-margin-top: 24px;
+    padding-block: 28px;
+    border-bottom: 3px solid var(--color-concrete);
+  }
+  .gym-legal-heading {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.75rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  /* The contract spaces a list after a paragraph, not a paragraph after a list. */
+  .legal-prose ul + p,
+  .legal-prose ol + p,
+  .legal-prose dl + p {
+    margin-top: 1rem;
+  }
+  .gym-legal-foot {
+    margin-top: 32px;
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* The kit's contact form, through its slots. */
+  .gym-form {
+    display: grid;
+    gap: 20px;
+  }
+  .gym-form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.25rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .gym-input {
+    width: 100%;
+    min-height: 52px;
+    padding: 10px 14px;
+    border: 3px solid #5a5954;
+    background: var(--color-rubber);
+    color: var(--color-chalk);
+    font-size: 1rem;
+  }
+  .gym-input:hover {
+    border-color: var(--color-aggregate);
+  }
+  .gym-input:focus-visible {
+    border-color: var(--color-hazard);
+    outline-offset: 2px;
+  }
+  .gym-input::placeholder {
+    color: #8d8c86;
+  }
+  .gym-form-hint {
+    margin-top: 6px;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+  .gym-form-note {
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+  .gym-sent {
+    padding: 24px;
+    border: 3px solid var(--color-hazard);
+  }
+  .gym-sent-heading {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 2.25rem;
+    line-height: 0.9;
+    text-transform: uppercase;
+  }
+  .gym-sent-heading:focus {
+    outline: none;
+  }
+  .gym-sent-text {
+    margin-top: 10px;
+    color: var(--color-ink-soft);
+  }
+
+  /* The order confirmation. */
+  .gym-receipt {
+    margin-top: 32px;
+    padding: 20px;
+    border: 3px solid var(--color-concrete);
+    background-color: var(--color-slab);
+    background-image: var(--grain-light);
+  }
+  .gym-receipt-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 6px 16px;
+    padding-bottom: 14px;
+    border-bottom: 3px solid var(--color-concrete);
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+  }
+  .gym-receipt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding-block: 12px;
+  }
+  .gym-receipt-row + .gym-receipt-row {
+    border-top: 3px solid var(--color-concrete);
+  }
+  .gym-receipt-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 4px;
+    padding-top: 14px;
+    border-top: 3px solid var(--color-chalk);
+  }
+  .gym-receipt-total dt {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.75rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .gym-receipt-total dd {
+    font-size: 2.25rem;
+    line-height: 1;
+    color: var(--color-hazard);
+  }
+  .gym-steps {
+    display: grid;
+    gap: 14px;
+    margin-top: 18px;
+    counter-reset: step;
+  }
+  .gym-steps li {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    color: var(--color-ink-soft);
+    counter-increment: step;
+  }
+  .gym-steps li::before {
+    content: counter(step);
+    font-family: var(--font-stencil);
+    font-weight: 900;
+    font-size: 2.5rem;
+    line-height: 0.8;
+    color: var(--color-hazard);
+  }
+  .gym-h3 {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 2.5rem;
+    line-height: 0.9;
+    text-transform: uppercase;
+  }
+
+  /* The contract's alert, on black. */
+  .alert-error {
+    border: 3px solid currentColor;
+    font-weight: 600;
   }
 }
