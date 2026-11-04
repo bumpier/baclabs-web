@@ -28,6 +28,8 @@ import { deliveryQuote, freeDeliveryShortfallMinor, packSavingMinor, priceBasket
 import { priceBrandLines } from "@/lib/commerce/pricing";
 import { catalogueDeliveryOptions } from "@/lib/commerce/catalogue";
 import { GIFT_NOTE_MAX } from "@/lib/commerce/gift-note";
+import { formatCutoffHour } from "@/lib/delivery-date";
+import { serviceFacts } from "@/brands/luxury/service";
 import { parseBuyParam } from "@/lib/commerce/links";
 import { isRedirectTarget } from "@/lib/commerce/start-checkout";
 import { cleanLines } from "@/components/commerce/cart";
@@ -162,7 +164,20 @@ for (const id of BRANDS) {
     check(`${id}: delivery at ${goods}p is the checkout's`, server === shown, `${shown} vs ${server}`);
   }
 }
+// The order-by time is a field of its own, the one the sentence names.
+for (const id of BRANDS) {
+  for (const o of storefrontView(profiles[id]!).delivery.options) {
+    check(
+      `${id}: ${o.id}'s cutoff is its own field`,
+      o.id === "next_day" ? o.cutoff === formatCutoffHour() && o.transit.endsWith(`if ordered by ${o.cutoff}`) : o.cutoff === null,
+      `${o.cutoff} / ${o.transit}`
+    );
+  }
+}
 const lux = storefrontView(profiles.luxury!);
+const facts = serviceFacts(lux);
+check("luxury: the timetable reads the cutoff from the view", facts?.cutoff === formatCutoffHour() && facts.arrives === "Next working day", JSON.stringify(facts));
+check("luxury: no cutoff, no clause dropped", serviceFacts({ ...lux, delivery: { ...lux.delivery, options: [{ ...lux.delivery.options[0]!, cutoff: null, transit: "two working days" }] } })?.arrives === "Two working days");
 check("luxury: next day is free on every order", deliveryQuote(lux, 799).every((o) => o.priceMinor === 0));
 check("luxury: never short of free delivery", freeDeliveryShortfallMinor(lux, 0) === null);
 const gymView = storefrontView(profiles.gym!);

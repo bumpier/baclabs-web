@@ -63,6 +63,13 @@ export interface DeliveryOptionView {
   carrier: string;
   /** "2–3 working days". */
   transit: string;
+  /**
+   * The time an order must be placed by, on a working day, for `transit` to
+   * hold ("3pm"), or null for an option that names none. Next day's: its
+   * transit is "next working day if ordered by 3pm", and this is that time
+   * on its own, so a page can set it without reading the sentence.
+   */
+  cutoff: string | null;
   /** Carrier and transit together. */
   detail: string;
   /** Below the free-delivery threshold, in pence. */

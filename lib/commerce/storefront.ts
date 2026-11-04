@@ -12,6 +12,7 @@
  */
 import type { BrandProfile } from "@/brands/types";
 import { labKitContents, labKitEnabled } from "@/config/funnel";
+import { formatCutoffHour } from "@/lib/delivery-date";
 import { packPerVialMinor } from "@/lib/commerce/catalogue";
 import { GIFT_NOTE_MAX } from "@/lib/commerce/gift-note";
 import { MAX_BRAND_LINES, MAX_LINE_QTY } from "@/lib/commerce/pricing";
@@ -50,6 +51,10 @@ export function storefrontView(brand: BrandProfile): StorefrontView {
         label: o.label,
         carrier: o.carrier,
         transit: o.transit,
+        // Next day is the one option whose transit depends on the time of
+        // order, as config/funnel.ts words it and deliveryDetailAt dates
+        // it: the warehouse's dispatch cutoff (lib/delivery-date.ts).
+        cutoff: o.id === "next_day" ? formatCutoffHour() : null,
         detail: o.detail,
         priceMinor: o.priceMinor,
         overThreshold: o.overThreshold,
