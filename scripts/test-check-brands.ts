@@ -298,6 +298,11 @@ check("an unregistered id in hosts.json fails", fails(checkRegistry(registry(goo
 // ── The real tree, and the command line ─────────────────────────────
 const tree = runChecks();
 check("the real tree has no failures", tree.registry.length === 0 && tree.brands.every((r) => failuresOf(r, new Set()).length === 0), show([...tree.registry, ...tree.brands.flatMap((r) => r.findings.filter((f) => f.level === "fail"))]));
+check("the template passes every brand's rules", tree.template.length === 0, show(tree.template));
+// The template's copy is held to every brand's rules, not just one: a word
+// only one brand bans still fails it.
+const templateLine: CopyString[] = [{ where: "brands/_template/app/page.tsx:1", text: "Our winter sale", kind: "source" }];
+check("a word only luxury bans fails the template", (["beauty", "gym", "wholesale", "baclab"] as const).every((id) => checkCopy("_template", id, templateLine).length === 0) && fails(checkCopy("_template", "luxury", templateLine), /breaks luxury's/));
 const lux = tree.brands.find((r) => r.id === "luxury")!;
 const cli = (...args: string[]) => spawnSync(process.execPath, [require.resolve("tsx/cli"), path.join(ROOT, "scripts/check-brands.ts"), ...args], { cwd: ROOT, encoding: "utf8" });
 check("the command passes on the tree", cli().status === 0);

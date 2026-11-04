@@ -22,6 +22,10 @@
  *  - leaks: none of those strings names another brand, its domains or its
  *    SKUs, or BacLab, except the internal codes in LEAK_ALLOW.
  *
+ * It checks brands/_template/ too (checkTemplate): never registered or
+ * routed, LIVE off, no payment provider, and placeholder copy that passes
+ * every brand's rules and names no brand.
+ *
  * A brand that has not launched runs on placeholders: development hosts,
  * .invalid mailboxes, empty legal details, TODO(launch) and TODO(confirm)
  * notes. Those are "not ready for launch" warnings, so the tree passes while
@@ -43,6 +47,7 @@ import ts from "typescript";
 import hostsJson from "@/brands/hosts.json";
 import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { BRAND_IDS, type BrandId } from "@/brands/types";
+import { templateProfile } from "@/brands/_template/profile";
 import { checkBrandCopy } from "@/lib/content-rules";
 import { paymentAdapter } from "@/lib/commerce/payments";
 import { BRAND_ICON_PATH } from "@/lib/brand/site";
@@ -667,7 +672,7 @@ export interface BrandReport {
 }
 
 /** Every check for every registered brand but BacLab. */
-export function runChecks(reg: Registry = diskRegistry()): { registry: Finding[]; brands: BrandReport[] } {
+export function runChecks(reg: Registry = diskRegistry()): { registry: Finding[]; brands: BrandReport[]; template: Finding[] } {
   const reports: BrandReport[] = [];
   for (const b of reg.brands) {
     if (b.id === DEFAULT_BRAND) continue;
@@ -687,7 +692,51 @@ export function runChecks(reg: Registry = diskRegistry()): { registry: Finding[]
     else if (files.live === null) out.push({ brand: b.id, level: "fail", message: `app/${b.id}/site.ts: LIVE must be the literal true or false` });
     reports.push({ id: b.id, name: b.name, live: files.live === true, findings: out });
   }
-  return { registry: checkRegistry(reg), brands: reports };
+  return { registry: checkRegistry(reg), brands: reports, template: checkTemplate(reg) };
+}
+
+// ── The template ────────────────────────────────────────────────────
+
+/** brands/_template/, which scripts/new-brand.ts copies: profile and catalogue at the top, app/ and public/ inside. */
+export const TEMPLATE = {
+  // A string, not a literal: it is never a BrandId, which is what the checks below make sure of.
+  id: "_template" as string,
+  dir: "brands/_template",
+  app: "brands/_template/app",
+  public: "brands/_template/public",
+  site: "brands/_template/app/site.ts",
+} as const;
+
+/**
+ * The template is never a brand (not registered, routed or scanned by
+ * BacLab's Tailwind), starts with LIVE = false and no payment provider, and
+ * its placeholder copy passes EVERY brand's rules and names no brand at all,
+ * so whatever brand is made from it starts clean. Its TODO notes are not
+ * reported: they are there to be copied.
+ */
+export function checkTemplate(reg: Registry): Finding[] {
+  const { out, fail } = findings(TEMPLATE.id);
+  if (TEMPLATE.id in reg.hosts) fail("brands/hosts.json lists the template: it must never be routed");
+  if (reg.brands.some((b) => b.id === TEMPLATE.id)) fail("the template is registered: it must never be a brand");
+  for (const p of [`app/${TEMPLATE.id}`, `public/${TEMPLATE.id}`]) if (existsInRepo(p)) fail(`${p} exists: the template is never routed or served`);
+  if (!/^@source not "\.\.\/brands";$/m.test(read("app/globals.css"))) {
+    fail(`app/globals.css has lost @source not "../brands": BacLab's stylesheet would scan the brands and the template`);
+  }
+
+  const t = templateProfile();
+  if (t.id !== TEMPLATE.id) fail(`the template's profile id is "${t.id}", not "${TEMPLATE.id}" (scripts/new-brand.ts replaces exactly that)`);
+  if ((t.paymentProviders ?? []).length > 0) fail("the template must take no payment: its paymentProviders stays []");
+  const files = readBrandFiles([TEMPLATE.dir], TEMPLATE.site);
+  if (!files.siteFound || files.live !== false) fail(`${TEMPLATE.site} must start with LIVE = false`);
+
+  const strings = [...files.strings, ...profileStrings(t)];
+  for (const id of BRAND_IDS) out.push(...checkCopy(TEMPLATE.id, id, strings.filter((s) => s.kind !== "asset")));
+  const seeded = brandSkuSpecs([t]);
+  out.push(...checkLeaks(TEMPLATE.id, [...strings, ...seeded.flatMap(seedStrings)], leakMarkers(TEMPLATE.id, reg.brands)));
+  out.push(...checkCatalogue(t, { ...reg, brands: [...reg.brands, t], seeded }));
+  out.push(...checkPayments(t, reg).filter((f) => f.level === "fail"));
+  out.push(...checkAssets(t, files.assets, { app: TEMPLATE.app, public: TEMPLATE.public }, existsInRepo));
+  return out;
 }
 
 /** A brand's warnings count as failures once it launches: on --launch, or when its LIVE flag is on. */
@@ -717,8 +766,8 @@ function main() {
     }
   }
 
-  const { registry, brands } = runChecks(reg);
-  const failed: Finding[] = [...registry];
+  const { registry, brands, template } = runChecks(reg);
+  const failed: Finding[] = [...registry, ...template];
   for (const r of brands) failed.push(...failuresOf(r, launching));
   for (const f of failed) console.error(`  ✗ ${f.brand}: ${f.message}`);
 
@@ -740,7 +789,7 @@ function main() {
     console.error(`\n${failed.length} brand check(s) failed.`);
     process.exit(1);
   }
-  console.log(`✓ brands: ${brands.length} brand(s) checked, BacLab apart (its own scripts check it)`);
+  console.log(`✓ brands: ${brands.length} brand(s) and the template checked, BacLab apart (its own scripts check it)`);
 }
 
 if (require.main === module) main();
