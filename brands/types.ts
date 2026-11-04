@@ -140,25 +140,14 @@ export interface BrandProfile {
    */
   payment?: BrandPayment;
   /**
-   * The brand on Stripe's page and the card statement (lib/commerce/checkout.ts).
-   * BacLab sets none: its sessions are built as they always were.
+   * What the customer's statement shows for the brand, after the payment
+   * provider's own prefix: the brand checkout sends it with every payment
+   * (lib/commerce/payments). 22 characters at most, letters required, none of
+   * < > \ ' " *. Neutral, like the line items. Unset: the provider's account
+   * default. BacLab sets none: its Stripe sessions are built as they always
+   * were.
    */
-  stripe?: {
-    /**
-     * After the account's own prefix on the customer's card statement:
-     * "PREFIX* SUFFIX", 22 characters at most in all, letters required, none
-     * of < > \ ' " *. Neutral, like the line items.
-     */
-    statementDescriptorSuffix?: string;
-    /**
-     * Stripe's page shows these instead of the account's own. Paths on the
-     * brand's origin, used only once it is https (Stripe fetches them), and
-     * PNG or JPG, square, 128px or more: Stripe takes no SVG, so the
-     * profile's `logo` cannot stand in.
-     */
-    logo?: string;
-    icon?: string;
-  };
+  statementDescriptor?: string;
   /**
    * What the brand sells and how it is delivered (brands/<id>/catalogue.ts):
    * the brand checkout (lib/commerce/checkout.ts) prices every line from it,
@@ -208,7 +197,7 @@ export interface BrandPayment {
 
 /** One pack a brand sells. */
 export interface CataloguePack {
-  /** Stable within the brand ("x10"). Never shown; the stem of its Stripe Product. */
+  /** Stable within the brand ("x10"). Never shown. */
   id: string;
   /**
    * The pack's SKU, `${parentSku}-X${vials}`: what the storefront sends to
@@ -275,14 +264,8 @@ export interface BrandCatalogue {
    * available; this keeps several smaller packs from adding up past it.
    */
   maxVials: number;
-  /**
-   * The env var naming the brand's persistent Stripe Products
-   * (`STRIPE_PRODUCT__<ID>`, printed by `scripts/stripe-setup.ts --brand`).
-   * Unset, the checkout names each line inline and says so in the log.
-   */
-  stripeProductEnv: string;
-  /** Whether Stripe's page takes promotion codes. false for every brand in v1. */
+  /** Whether the checkout takes promotion codes. false for every brand: no brand checkout takes one yet. */
   allowPromotionCodes: boolean;
-  /** Ask for a company name and VAT number on Stripe's page (trade buyers). */
+  /** Ask trade buyers for a company name and VAT number with the order. */
   collectBusinessDetails: boolean;
 }

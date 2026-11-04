@@ -32,7 +32,6 @@ export const luxuryCatalogue: BrandCatalogue = {
     freeFromMinor: 0,
   },
   maxVials: 100,
-  stripeProductEnv: "STRIPE_PRODUCT__LUXURY",
   // Never: the brand does not discount (Phase 4 of the plan).
   allowPromotionCodes: false,
   collectBusinessDetails: false,

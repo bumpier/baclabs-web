@@ -43,32 +43,13 @@ export function packSizeName(vials: number): string {
 }
 
 /**
- * A line's name on Stripe's page, the receipt Stripe keeps and its reports:
- * neutral, whatever the brand's own voice. Never slang, never marketing
- * copy, never the brand's name. The checkout names inline lines with it and
- * scripts/stripe-setup.ts names the brand's Products with it, so the two
- * read the same.
+ * A line's name as the payment provider shows it: on its page, in the
+ * buyer's account history and in the provider's own records. Neutral,
+ * whatever the brand's own voice: never slang, never marketing copy, never
+ * the brand's name, because the provider reviews what it is selling.
  */
 export function brandLineName(line: { kind: "pack" | "addOn"; vials?: number; name?: string }): string {
   return line.kind === "pack" ? `${VIAL_ML}ml bacteriostatic water × ${line.vials}` : (line.name ?? "");
-}
-
-/**
- * A line's persistent Stripe Product: `<stem>_<catalogue id>`, the stem
- * being the brand's STRIPE_PRODUCT__<ID>. Created by
- * `scripts/stripe-setup.ts --brand <id>` with the brand in its metadata, so
- * coupons and reports can be scoped to one brand. One Product per pack
- * rather than one per brand, because a Product's name IS the line's name on
- * Stripe's page: one Product would show a 3-pack and a 12-pack as the same
- * item.
- */
-export function brandStripeProductId(stem: string, catalogueId: string): string {
-  return `${stem}_${catalogueId}`;
-}
-
-/** The stem stripe-setup gives a brand's Products, and prints as STRIPE_PRODUCT__<ID>. */
-export function defaultBrandProductStem(brandId: string): string {
-  return `brand_${brandId}`;
 }
 
 /** Whether goods of this value clear the brand's free-delivery threshold. */
@@ -79,8 +60,8 @@ export function catalogueShipsFree(catalogue: BrandCatalogue, goodsMinor: number
 
 /**
  * The delivery options offered on an order of this value, each at the price
- * it will be charged, in the catalogue's order: the first is the one
- * Stripe's page preselects. The same rules as config/funnel.ts
+ * it will be charged, in the catalogue's order: the first is the one the
+ * storefront preselects. The same rules as config/funnel.ts
  * deliveryOptionsFor, read from the brand's own options and threshold.
  */
 export function catalogueDeliveryOptions(

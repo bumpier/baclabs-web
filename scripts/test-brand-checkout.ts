@@ -1,37 +1,30 @@
 /**
  * The new brands' commerce backend: catalogues, pricing, order lines, the
- * Stripe session, the per-brand Stripe account, the brand checks on the
- * public routes, and that BacLab never reaches any of it. Run with
+ * brand checks on the public routes, that BacLab never reaches any of it,
+ * and that no brand ever reaches BacLab's Stripe account. Run with
  * `npm run test:brand-checkout`. Exits non-zero on any failure, like the
- * other tsx test scripts. Never calls Stripe: the session is built by a
- * pure function, and the database part stubs the client.
+ * other tsx test scripts. Never calls Stripe, and no request leaves the
+ * process.
  *
  * The database part is opt-in. It writes rows, so give it a fresh file:
  *
  *   export DATABASE_URL="file:/path/to/scratch/brand-checkout.db"
  *   BRAND_CHECKOUT_DB=1 npm run -s test:brand-checkout
  *
- * It migrates that file itself, seeds the brand SKUs, checks out through
- * the real route with Stripe stubbed, pays through fulfillPaidOrder and the
- * real webhook, and checks the stock that came off the shared shelves.
+ * It migrates that file itself, seeds the brand SKUs and checks out through
+ * the real route.
  */
+// First: it counts every Stripe client made from here on (see the file).
+import { stripeClientsMade } from "./fixtures/stripe-trap";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { allBrands, belongsToHost, brandFor, brandFromHost, BRAND_IDS, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import type { BrandCatalogue } from "@/brands/types";
 import { DELIVERY, DELIVERY_OPTIONS, LAB_KIT, PRODUCT, SINGLE_BUNDLE, bundleById, deliveryOptionById, priceOrder } from "@/config/funnel";
-import {
-  brandLineName,
-  brandStripeProductId,
-  catalogueDeliveryOptions,
-  catalogueItem,
-  defaultBrandProductStem,
-  packPerVialMinor,
-} from "@/lib/commerce/catalogue";
+import { catalogueDeliveryOptions, catalogueItem, packPerVialMinor } from "@/lib/commerce/catalogue";
 import { MAX_LINE_QTY, priceBrandLines, type PricedBrandOrder } from "@/lib/commerce/pricing";
 import { brandBuyLink, parseBuyParam } from "@/lib/commerce/links";
-import { brandSessionParams, businessDetailsNote, COMPANY_FIELD } from "@/lib/commerce/checkout";
 import { buildBrandOrderItems, buildOrderItems, isKitLine } from "@/lib/order-items";
 import { LAB_KIT_SKU_CODE, VIAL_SKU_CODE, soldLines } from "@/lib/inventory/demand";
 import { brandSkuSpecs } from "@/lib/inventory/brand-skus";
@@ -42,7 +35,6 @@ import { ledgerRow, packMix, packName, type LedgerOrder } from "@/lib/finance/le
 import { brandReorderOffer } from "@/lib/reorder";
 import { purchaseContents } from "@/lib/meta-capi-event";
 import { checkCompliance } from "@/lib/content-rules";
-import { getStripe, stripeFor, stripeKeyFor, verifyStripeWebhook, webhookAccounts } from "@/lib/payments/stripe";
 
 let failures = 0;
 function check(name: string, condition: boolean, detail = "") {
@@ -93,7 +85,6 @@ for (const b of NEW_BRANDS) {
   check(`${b.id}: no code names BacLab`, ![...c.packs.map((p) => p.sku), ...c.addOns.map((a) => a.sku), c.boxSku].some((s) => /baclab/i.test(s)));
   check(`${b.id}: no promotion codes in v1`, c.allowPromotionCodes === false);
   check(`${b.id}: business details only for wholesale`, c.collectBusinessDetails === (b.id === "wholesale"));
-  check(`${b.id}: Stripe product env is STRIPE_PRODUCT__${b.id.toUpperCase()}`, c.stripeProductEnv === `STRIPE_PRODUCT__${b.id.toUpperCase()}`);
   const biggestSold = Math.max(...c.packs.filter((p) => p.available).map((p) => p.vials));
   check(`${b.id}: one order can hold the biggest pack on sale`, c.maxVials >= biggestSold);
   for (const o of c.delivery.options) {
@@ -103,10 +94,10 @@ for (const b of NEW_BRANDS) {
     const plan = selectService([], { weightGrams: 100, lengthMm: 100, widthMm: 100, heightMm: 30 }, "GB", null, o.id);
     check(`${b.id}: lib/shipping knows delivery "${o.id}"`, plan.note.startsWith("No service is linked to"), plan.note);
   }
-  const copy = [...c.packs.map((p) => p.label), ...c.addOns.map((a) => a.name), b.mailingList?.consentText ?? "", b.stripe?.statementDescriptorSuffix ?? ""];
+  const copy = [...c.packs.map((p) => p.label), ...c.addOns.map((a) => a.name), b.mailingList?.consentText ?? "", b.statementDescriptor ?? ""];
   check(`${b.id}: catalogue copy passes the content rules`, checkCompliance(copy).length === 0, JSON.stringify(checkCompliance(copy)));
-  const suffix = b.stripe?.statementDescriptorSuffix ?? "";
-  check(`${b.id}: descriptor suffix fits Stripe's rules`, suffix.length <= 22 && /[A-Z]/i.test(suffix) && !/[<>\\'"*]/.test(suffix), suffix);
+  const descriptor = b.statementDescriptor ?? "";
+  check(`${b.id}: the statement descriptor fits`, descriptor.length <= 22 && /[A-Z]/i.test(descriptor) && !/[<>\\'"*]/.test(descriptor), descriptor);
 }
 check("every brand SKU is unique across brands", new Set(allSkus).size === allSkus.length);
 for (const id of ["beauty", "gym", "wholesale"]) {
@@ -260,113 +251,46 @@ check("refused: the kit while it is switched off", refusal("gym", [{ sku: "GYM-1
   check("reorder: nothing for a pack no longer sold", brandReorderOffer(JSON.stringify([{ sku: "LUX-10ML-X99", bundleQty: 1, qty: 99 }]), cat("luxury")) === null);
 }
 
-// ── The Stripe session ───────────────────────────────────────────────
-// The order id is "ord-fixture" because Tailwind scans scripts/ too: an id
-// spelled like a utility class (order, then a dash and a digit) would add
-// that class to BacLab's stylesheet.
-const NOW = new Date("2026-11-04T10:00:00Z");
-function session(b: BrandProfile, lines: { sku: string; qty: number }[], extra: { productStem?: string | null; preselect?: "standard" | "next_day" } = {}) {
-  const r = priceBrandLines(b.catalogue!, lines, { labKitOnSale: true });
-  if (!r.ok) throw new Error(r.error);
-  return brandSessionParams({
-    brand: b,
-    catalogue: b.catalogue!,
-    orderId: "ord-fixture",
-    order: r.order,
-    productStem: extra.productStem ?? null,
-    preselect: extra.preselect ?? null,
-    now: NOW,
-  });
-}
-for (const b of NEW_BRANDS) {
-  const first = b.catalogue!.packs.find((p) => p.available)!;
-  const lines = [{ sku: first.sku, qty: 2 }, ...b.catalogue!.addOns.map((a) => ({ sku: a.sku, qty: 1 }))];
-  const s = session(b, lines);
-  const names = (s.line_items ?? []).map((l) => l.price_data?.product_data?.name ?? "");
-  check(`${b.id} session: neutral line names`, names.every((n) => /^10ml bacteriostatic water × \d+$/.test(n) || n === LAB_KIT.name), names.join(" | "));
-  check(`${b.id} session: no brand name or slang on Stripe's lines`, names.every((n) => !n.includes(b.name)) && checkCompliance(names).length === 0);
-  check(`${b.id} session: prices from the catalogue`, s.line_items?.[0]?.price_data?.unit_amount === first.priceMinor && s.line_items?.[0]?.quantity === 2);
-  check(`${b.id} session: no promotion codes`, s.allow_promotion_codes === false);
-  check(`${b.id} session: metadata`, JSON.stringify(s.metadata) === JSON.stringify({ orderId: "ord-fixture", brand: b.id, kind: "brand" }));
-  check(`${b.id} session: same metadata on the PaymentIntent`, JSON.stringify(s.payment_intent_data?.metadata) === JSON.stringify(s.metadata));
-  check(`${b.id} session: descriptor suffix from the profile`, s.payment_intent_data?.statement_descriptor_suffix === b.stripe?.statementDescriptorSuffix);
-  check(`${b.id} session: no branding while the origin is http`, s.branding_settings === undefined);
-  check(`${b.id} session: success URL on the brand's origin`, s.success_url === `${b.origin}/order-confirmation/ord-fixture?session_id={CHECKOUT_SESSION_ID}`);
-  check(`${b.id} session: cancel URL on the brand's origin`, s.cancel_url === `${b.origin}/#buy`);
-  check(`${b.id} session: cards only`, JSON.stringify(s.payment_method_types) === '["card"]');
-  const rates = (s.shipping_options ?? []).map((o) => String(o.shipping_rate_data?.metadata?.deliveryOption ?? ""));
-  check(`${b.id} session: every rate carries an id the webhook knows`, rates.length > 0 && rates.every((id) => !!deliveryOptionById(id)), rates.join());
-  check(`${b.id} session: delivery instructions field`, (s.custom_fields ?? []).some((f) => f.key === "deliveryinstructions"));
-  const company = (s.custom_fields ?? []).some((f) => f.key === COMPANY_FIELD);
-  check(`${b.id} session: business fields only for wholesale`, company === (b.id === "wholesale") && !!s.tax_id_collection?.enabled === (b.id === "wholesale"));
-  const stem = defaultBrandProductStem(b.id);
-  const persistent = session(b, lines, { productStem: stem });
-  check(
-    `${b.id} session: lines on the brand's persistent Products when set`,
-    (persistent.line_items ?? []).every((l) => l.price_data?.product?.startsWith(`${stem}_`) && !l.price_data.product_data)
-  );
-  check(`${b.id} session: the pack's own Product`, persistent.line_items?.[0]?.price_data?.product === brandStripeProductId(stem, first.id));
-}
-{
-  // Preselect: the requested option is listed first (Stripe preselects the first).
-  const beauty = brandFor("beauty");
-  const s = session(beauty, [{ sku: "BEA-10ML-X1", qty: 1 }], { preselect: "next_day" });
-  const ids = (s.shipping_options ?? []).map((o) => o.shipping_rate_data?.metadata?.deliveryOption).join();
-  check("session: the requested delivery is listed first", ids === "next_day,standard", ids);
-  check("session: names the brand nowhere in delivery", (s.shipping_options ?? []).every((o) => !String(o.shipping_rate_data?.display_name).includes(beauty.name)));
-  // Branding only on https, with the logo only when the profile has a PNG for it.
-  const https = { ...brandFor("luxury"), origin: "https://reserve.example", stripe: { statementDescriptorSuffix: "RESERVE NO10", logo: "/stripe/logo.png" } };
-  const live = session(https, [{ sku: "LUX-10ML-X1", qty: 1 }]);
-  check("session: branding once the origin is https", live.branding_settings?.display_name === https.name);
-  check("session: logo is a public https URL", live.branding_settings?.logo?.url === "https://reserve.example/stripe/logo.png");
-  check("session: no icon when the profile has none", live.branding_settings?.icon === undefined);
-  const plain = session({ ...https, stripe: undefined }, [{ sku: "LUX-10ML-X1", qty: 1 }]);
-  check("session: no descriptor suffix when the profile has none", plain.payment_intent_data?.statement_descriptor_suffix === undefined);
-  check("session: line names match stripe-setup's Product names", brandLineName({ kind: "pack", vials: 12 }) === "10ml bacteriostatic water × 12");
-}
-check(
-  "business details: company and VAT into the notes",
-  businessDetailsNote({
-    custom_fields: [{ key: COMPANY_FIELD, text: { value: "  Acme   Labs Ltd " } }] as never,
-    customer_details: { business_name: "Ignored Ltd", tax_ids: [{ type: "gb_vat", value: "GB123456789" }] },
-  }) === "Company: Acme Labs Ltd\nVAT number: GB123456789"
-);
-check(
-  "business details: Stripe's business name when the field is empty",
-  businessDetailsNote({ custom_fields: [], customer_details: { business_name: "Beta Ltd", tax_ids: [] } }) === "Company: Beta Ltd"
-);
-check("business details: nothing for a consumer", businessDetailsNote({ custom_fields: [], customer_details: null }) === "");
-
-// ── One Stripe account per brand, by config ─────────────────────────────
-{
-  const saved = { ...process.env };
-  process.env.STRIPE_SECRET_KEY = "sk_test_shared_fixture";
-  process.env.STRIPE_WEBHOOK_SECRET = "whsec_shared_fixture";
-  delete process.env.STRIPE_SECRET_KEY__GYM;
-  delete process.env.STRIPE_WEBHOOK_SECRET__GYM;
-  check("stripe: BacLab is the shared client", stripeFor({ id: DEFAULT_BRAND }) === getStripe());
-  check("stripe: a brand without a key shares it", stripeFor({ id: "gym" }) === getStripe() && stripeKeyFor("gym") === "sk_test_shared_fixture");
-  check("stripe: only the shared secret, by default", JSON.stringify(webhookAccounts().map((a) => a.env)) === '["STRIPE_SECRET_KEY"]');
-  const payload = JSON.stringify({ id: "evt_fixture", object: "event", livemode: false, type: "ping", data: { object: {} } });
-  const header = (secret: string) => getStripe().webhooks.generateTestHeaderString({ payload, secret });
-  const shared = verifyStripeWebhook(payload, header("whsec_shared_fixture"));
-  check("stripe: the shared secret verifies, as before", shared.event.id === "evt_fixture" && shared.keyEnv === "STRIPE_SECRET_KEY" && shared.stripe === getStripe());
-  let refused = false;
-  try {
-    verifyStripeWebhook(payload, header("whsec_someone_else"));
-  } catch {
-    refused = true;
+// ── No brand reaches Stripe: the checkout's code never loads it ─────────
+// BacLab's Stripe account is BacLab's alone. Every module the brand checkout
+// can run, followed import by import from lib/commerce/checkout.ts, must
+// stay clear of lib/payments/stripe.ts and the SDK itself: code that is
+// never loaded cannot make a client, by a fallback or any other way. The
+// trap check in routeChecks proves the same at run time.
+const ROOT = process.cwd();
+function moduleFile(spec: string, from: string): string | null {
+  const base = spec.startsWith("@/") ? resolve(ROOT, spec.slice(2)) : spec.startsWith(".") ? resolve(dirname(from), spec) : null;
+  if (!base) return null;
+  for (const ext of ["", ".ts", ".tsx", "/index.ts", "/index.tsx"]) {
+    if (existsSync(base + ext) && /\.tsx?$/.test(base + ext)) return base + ext;
   }
-  check("stripe: an unknown secret is refused", refused);
-  process.env.STRIPE_SECRET_KEY__GYM = "sk_live_gym_fixture";
-  process.env.STRIPE_WEBHOOK_SECRET__GYM = "whsec_gym_fixture";
-  check("stripe: a brand's own key gets its own client", stripeFor({ id: "gym" }) !== getStripe() && stripeKeyFor("gym") === "sk_live_gym_fixture");
-  check("stripe: BacLab never uses a brand's key", stripeKeyFor(DEFAULT_BRAND) === "sk_test_shared_fixture");
-  const own = verifyStripeWebhook(payload, header("whsec_gym_fixture"));
-  check("stripe: the brand's secret verifies with the brand's key", own.keyEnv === "STRIPE_SECRET_KEY__GYM" && own.secretKey === "sk_live_gym_fixture" && own.stripe === stripeFor({ id: "gym" }));
-  check("stripe: the shared secret still verifies first", verifyStripeWebhook(payload, header("whsec_shared_fixture")).keyEnv === "STRIPE_SECRET_KEY");
-  for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
-  Object.assign(process.env, saved);
+  return null;
+}
+function moduleGraph(entry: string): { files: Set<string>; packages: Set<string> } {
+  const files = new Set<string>();
+  const packages = new Set<string>();
+  const queue = [resolve(ROOT, entry)];
+  while (queue.length > 0) {
+    const file = queue.pop()!;
+    if (files.has(file)) continue;
+    files.add(file);
+    const src = readFileSync(file, "utf8");
+    // Type-only imports are erased: they load nothing.
+    for (const m of src.matchAll(/^\s*(?:import|export)\s+(?!type\b)[^'"]*?from\s+["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)/gm)) {
+      const spec = m[1] ?? m[2]!;
+      const next = moduleFile(spec, file);
+      if (next) queue.push(next);
+      else if (!spec.startsWith(".") && !spec.startsWith("@/")) packages.add(spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0]!);
+    }
+  }
+  return { files, packages };
+}
+{
+  const graph = moduleGraph("lib/commerce/checkout.ts");
+  const stripeModule = resolve(ROOT, "lib/payments/stripe.ts");
+  check("no Stripe: the brand checkout's modules were followed", graph.files.size > 1, String(graph.files.size));
+  check("no Stripe: the brand checkout never loads lib/payments/stripe.ts", !graph.files.has(stripeModule));
+  check("no Stripe: the brand checkout never loads the Stripe SDK", !graph.packages.has("stripe"), [...graph.packages].join());
 }
 
 // ── Public routes: a row only on its own brand's host ───────────────────
@@ -395,8 +319,10 @@ for (const host of ["baclab.co.uk", "www.baclab.co.uk", "BACLAB.CO.UK:443", "loc
 }
 
 async function routeChecks() {
-  const { brandCheckout } = await import("@/lib/commerce/checkout");
+  const { brandCheckout, CHECKOUT_UNAVAILABLE } = await import("@/lib/commerce/checkout");
   const saved = { ...process.env };
+  // BacLab's Stripe fully configured, as in production: a brand must still
+  // never come near it.
   process.env.STRIPE_ENABLED = "true";
   process.env.STRIPE_SECRET_KEY = "sk_test_route_fixture";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_route_fixture";
@@ -431,18 +357,41 @@ async function routeChecks() {
   check("brandCheckout: an unavailable pack is a 400 { error }", unavailable.status === 400 && /can't be ordered online/.test(unavailable.body.error ?? ""));
   const big = await answer(await post(brandFor("wholesale"), { lines: [{ sku: "WHL-10ML-X100", qty: 2 }] }));
   check("brandCheckout: too many vials is a 400 { error }", big.status === 400 && /up to 100 vials/.test(big.body.error ?? ""));
-  delete process.env.STRIPE_SECRET_KEY;
-  const keyless = await answer(await post(lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] }));
-  check("brandCheckout: no Stripe key is a 503, before any order is written", keyless.status === 503);
+  const none = await answer(await post(lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] }));
+  check("brandCheckout: no way to pay is a 503, before any order is written", none.status === 503 && none.body.error === CHECKOUT_UNAVAILABLE);
+  check("brandCheckout: the refusal names no provider or method", !/stripe|paypal|card/i.test(CHECKOUT_UNAVAILABLE));
+
+  // Every brand's host, through the real route, with BacLab's Stripe keys
+  // set: not one Stripe client is made. The route itself loads the SDK (for
+  // BacLab), so this is the trap's word, not just the import graph's.
+  const { POST: route } = await import("@/app/api/checkout/route");
+  const before = stripeClientsMade();
+  let n = 0;
+  for (const b of NEW_BRANDS) {
+    const first = b.catalogue!.packs.find((p) => p.available)!;
+    const host = new URL(b.origin).host;
+    const res = await route(
+      new Request(`http://${host}/api/checkout`, {
+        method: "POST",
+        headers: { "content-type": "application/json", host, origin: `http://${host}`, "x-forwarded-for": `198.51.100.${++n}` },
+        body: JSON.stringify({ lines: [{ sku: first.sku, qty: 1 }] }),
+      })
+    );
+    check(`no Stripe: ${b.id}'s checkout is answered without BacLab's`, res.status === 503, String(res.status));
+  }
+  check("no Stripe: no brand's checkout made a Stripe client", stripeClientsMade() === before, `${stripeClientsMade() - before} made`);
+  // The control: the trap does see a client being made.
+  const { getStripe } = await import("@/lib/payments/stripe");
+  getStripe();
+  check("no Stripe: the trap counts a client when one is made", stripeClientsMade() === before + 1);
   for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
   Object.assign(process.env, saved);
 }
 
 /**
- * Against a throwaway SQLite file: migrate it, seed the brand SKUs, check
- * out through the real route with Stripe's session call stubbed, pay, and
- * read back the order and the shared stock. Refuses the real database and
- * any database that already has orders.
+ * Against a throwaway SQLite file: migrate it, seed the brand SKUs, and check
+ * out through the real route. Refuses the real database and any database
+ * that already has orders.
  */
 async function databaseChecks() {
   const url = process.env.DATABASE_URL ?? "";
@@ -452,8 +401,7 @@ async function databaseChecks() {
   }
   execFileSync("npx", ["prisma", "migrate", "deploy"], { env: process.env, stdio: "ignore" });
 
-  // Nothing leaves this process: Stripe's session call is stubbed below,
-  // and every fetch (FX rates, Meta, Resend) fails at once.
+  // Nothing leaves this process: every fetch (FX rates, Meta, Resend) fails at once.
   process.env.STRIPE_ENABLED = "true";
   process.env.STRIPE_SECRET_KEY = "sk_test_db_fixture";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_db_fixture";
@@ -461,14 +409,6 @@ async function databaseChecks() {
   globalThis.fetch = (async () => {
     throw new Error("no network in test-brand-checkout");
   }) as typeof fetch;
-  const log = console.log;
-  const error = console.error;
-  console.log = (...a: unknown[]) => {
-    if (!String(a[0]).startsWith("[dev email]")) log(...a);
-  };
-  console.error = (...a: unknown[]) => {
-    if (!/fx rate fetch failed/.test(String(a[0]))) error(...a);
-  };
 
   const { prisma } = await import("@/lib/db");
   if ((await prisma.order.count()) > 0) {
@@ -476,16 +416,12 @@ async function databaseChecks() {
     process.exit(1);
   }
   const { seedBrandSkus } = await import("@/lib/inventory/brand-skus");
-  const { setInventoryMode } = await import("@/lib/inventory/mode");
-  const { receiveStock } = await import("@/lib/inventory/store");
-  const { fulfillPaidOrder } = await import("@/lib/payments/fulfillment");
   const { POST: checkout } = await import("@/app/api/checkout/route");
-  const { POST: webhook } = await import("@/app/api/webhooks/stripe/route");
 
-  const vial = await prisma.product.create({
+  await prisma.product.create({
     data: { slug: "baclab-10ml", name: `${PRODUCT.name} ${PRODUCT.size}`, description: "x", priceGbp: SINGLE_BUNDLE.priceMinor / 100, stock: 200, supplyDays: 30 },
   });
-  const kit = await prisma.product.create({ data: { slug: LAB_KIT.sku, name: LAB_KIT.name, description: "x", priceGbp: 5.99, stock: 20 } });
+  await prisma.product.create({ data: { slug: LAB_KIT.sku, name: LAB_KIT.name, description: "x", priceGbp: 5.99, stock: 20 } });
   const seeded = await seedBrandSkus(prisma, { apply: true });
   check("db: the seed creates every box and pack", seeded.created.includes("LUX-BOX") && seeded.created.includes("GYM-10ML-X10"));
   check("db: the seed is idempotent", (await seedBrandSkus(prisma, { apply: true })).created.length === 0);
@@ -497,110 +433,28 @@ async function databaseChecks() {
     JSON.stringify(luxKit?.components.map((c) => [c.component.code, c.quantity]))
   );
 
-  // Stripe, stubbed: what the checkout would have sent, and a session back.
-  const sent: { params: Record<string, unknown>; key?: string }[] = [];
-  const sessions = getStripe().checkout.sessions as unknown as { create: (p: unknown, o?: { idempotencyKey?: string }) => Promise<unknown> };
-  sessions.create = async (params, opts) => {
-    sent.push({ params: params as Record<string, unknown>, key: opts?.idempotencyKey });
-    return { id: `cs_test_stub_${sent.length}`, url: `https://checkout.stripe.test/c/pay/cs_test_stub_${sent.length}` };
-  };
+  let ip = 0;
   const post = (host: string, body: unknown) =>
     checkout(
       new Request(`http://${host}/api/checkout`, {
         method: "POST",
-        headers: { "content-type": "application/json", host, origin: `http://${host}` },
+        headers: { "content-type": "application/json", host, origin: `http://${host}`, "x-forwarded-for": `203.0.113.${++ip}` },
         body: JSON.stringify(body),
       })
     );
 
   // BacLab's host never reaches the brand checkout, whatever the body.
   const bl = await post("baclab.co.uk", { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
-  check("db: on BacLab's host a brand body is BacLab's to refuse", bl.status === 400 && sent.length === 0 && (await prisma.order.count()) === 0);
+  check("db: on BacLab's host a brand body is BacLab's to refuse", bl.status === 400 && (await prisma.order.count()) === 0);
 
-  // Legacy stock: the gym's 10-pack and two kits.
-  const gymRes = await post("gym.localhost:3000", { lines: [{ sku: "GYM-10ML-X10", qty: 1 }, { sku: "GYM-LAB-KIT", qty: 2 }], consent: { tracking: false } });
-  const gymBody = (await gymRes.json()) as { url?: string; error?: string };
-  check("db: the gym checks out", gymRes.status === 200 && gymBody.url === "https://checkout.stripe.test/c/pay/cs_test_stub_1", JSON.stringify(gymBody));
-  const gymOrder = await prisma.order.findFirst({ where: { brand: "gym" } });
-  check("db: the order is the gym's, pending, priced from its catalogue", gymOrder?.status === "pending" && Number(gymOrder.totalAmount) === 59.97);
-  check("db: the order holds the session", gymOrder?.paymentRef === "cs_test_stub_1");
-  check("db: the session is keyed on the order", sent[0]?.key === `checkout:${gymOrder?.id}`);
-  check("db: the session names the order and brand", JSON.stringify(sent[0]?.params.metadata) === JSON.stringify({ orderId: gymOrder?.id, brand: "gym", kind: "brand" }));
-  const paid = await fulfillPaidOrder(gymOrder!.id, { paymentRef: "pi_stub_gym", provider: "stripe", deliveryMinor: 0, amountPaidMinor: 5997 });
-  const gymAfter = await prisma.order.findUnique({ where: { id: gymOrder!.id } });
-  check("db: fulfilment marks it paid", !paid.alreadyPaid && gymAfter?.status === "paid");
-  check("db: and keeps the brand", gymAfter?.brand === "gym");
-  check("db: the shared vials came off the shelf", (await prisma.product.findUnique({ where: { id: vial.id } }))?.stock === 190);
-  check("db: the shared kits came off theirs", (await prisma.product.findUnique({ where: { id: kit.id } }))?.stock === 18);
-
-  // Through the real webhook: a trade order's company and VAT number.
-  const whlRes = await post("wholesale.localhost:3000", { lines: [{ sku: "WHL-10ML-X50", qty: 1 }] });
-  check("db: wholesale checks out", whlRes.status === 200);
-  const whl = await prisma.order.findFirst({ where: { brand: "wholesale" } });
-  const event = {
-    id: "evt_db_fixture",
-    object: "event",
-    livemode: false,
-    type: "checkout.session.completed",
-    data: {
-      object: {
-        id: "cs_test_stub_2",
-        object: "checkout.session",
-        payment_status: "paid",
-        payment_intent: "pi_stub_whl",
-        client_reference_id: whl?.id,
-        metadata: { orderId: whl?.id, brand: "wholesale", kind: "brand" },
-        amount_total: 19999,
-        currency: "gbp",
-        total_details: { amount_shipping: 0 },
-        shipping_cost: { shipping_rate: { id: "shr_stub", metadata: { deliveryOption: "next_day" } } },
-        custom_fields: [{ key: COMPANY_FIELD, text: { value: "Acme Labs Ltd" } }],
-        customer_details: { email: "buyer@acme.example", name: "Sam Buyer", phone: "", business_name: null, tax_ids: [{ type: "gb_vat", value: "GB123456789" }], address: null },
-        collected_information: { shipping_details: { name: "Sam Buyer", address: { line1: "1 Mill Lane", line2: null, city: "Leeds", postal_code: "LS1 1AA", country: "GB", state: null } } },
-      },
-    },
-  };
-  const payload = JSON.stringify(event);
-  const hook = await webhook(
-    new Request("http://127.0.0.1:3000/api/webhooks/stripe", {
-      method: "POST",
-      headers: { "stripe-signature": getStripe().webhooks.generateTestHeaderString({ payload, secret: "whsec_db_fixture" }) },
-      body: payload,
-    })
-  );
-  const whlAfter = await prisma.order.findUnique({ where: { id: whl!.id } });
-  check("db: the webhook accepts the brand's session", hook.status === 200);
-  check("db: paid, and still wholesale's", whlAfter?.status === "paid" && whlAfter.brand === "wholesale");
-  check("db: company and VAT number in the notes", !!whlAfter?.notes?.includes("Company: Acme Labs Ltd") && !!whlAfter.notes.includes("VAT number: GB123456789"), String(whlAfter?.notes));
-  check("db: the delivery the customer chose is recorded", whlAfter?.deliveryOption === "next_day");
-  check("db: 50 more shared vials came off the shelf", (await prisma.product.findUnique({ where: { id: vial.id } }))?.stock === 140);
-
-  // Warehouse mode: the pack is allocated as its kit, from the shared vials and the brand's boxes.
-  const warehouse = await prisma.warehouse.create({ data: { code: "MAIN", name: "Main" } });
-  const shelf = await prisma.location.create({ data: { warehouseId: warehouse.id, code: "A1" } });
-  for (const [code, quantity] of [[VIAL_SKU_CODE, 40], ["LUX-BOX", 5]] as const) {
-    const sku = await prisma.sku.findUniqueOrThrow({ where: { code } });
-    await receiveStock({ skuId: sku.id, locationId: shelf.id, quantity, reference: "test", actor: "test" });
+  // No brand has a way to pay: refused, and nothing is written.
+  const made = stripeClientsMade();
+  for (const host of ["gym.localhost:3000", "luxury.localhost:3000"]) {
+    const res = await post(host, { lines: [{ sku: host.startsWith("gym") ? "GYM-10ML-X10" : "LUX-10ML-X3", qty: 1 }] });
+    check(`db: ${host} without a way to pay is a 503`, res.status === 503);
   }
-  await setInventoryMode("warehouse");
-  const luxRes = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 2 }], deliveryOption: "next_day" });
-  check("db: luxury checks out against the shelves", luxRes.status === 200);
-  const tooMany = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X3", qty: 6 }] });
-  check("db: the brand's boxes limit what it can sell", tooMany.status === 409);
-  const lux = await prisma.order.findFirst({ where: { brand: "luxury" } });
-  await fulfillPaidOrder(lux!.id, { paymentRef: "pi_stub_lux", provider: "stripe", deliveryMinor: 0 });
-  const picks = await prisma.pickLine.findMany({ where: { orderId: lux!.id }, include: { sku: true } });
-  const picked = Object.fromEntries(picks.map((p) => [p.sku.code, p.quantity]));
-  check("db: allocated as 6 shared vials and 2 brand boxes", picked[VIAL_SKU_CODE] === 6 && picked["LUX-BOX"] === 2, JSON.stringify(picked));
-  check("db: paid, and still luxury's", (await prisma.order.findUnique({ where: { id: lux!.id } }))?.status === "paid");
-
-  // The confirmations go out after the webhook answers; wait for them.
-  for (let i = 0; i < 60 && (await prisma.emailLog.count({ where: { type: "confirmation" } })) < 3; i++) {
-    await new Promise((r) => setTimeout(r, 250));
-  }
-  check("db: each brand's order is confirmed by email", (await prisma.emailLog.count({ where: { type: "confirmation" } })) === 3);
-  console.log = log;
-  console.error = error;
+  check("db: no order is written without a way to pay", (await prisma.order.count()) === 0);
+  check("db: and no Stripe client is made", stripeClientsMade() === made);
   await prisma.$disconnect();
 }
 

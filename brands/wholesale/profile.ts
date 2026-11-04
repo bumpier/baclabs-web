@@ -45,8 +45,8 @@ export function wholesaleProfile(): BrandProfile {
     legalName: "",
     // No mailingList: the trade site runs no list (no popups, no welcome
     // vial), so its signups are refused.
-    // TODO(launch): the final name's descriptor, and PNG logo and icon for Stripe's page.
-    stripe: { statementDescriptorSuffix: "VIALHOUSE" },
+    // TODO(launch): the final name's statement descriptor.
+    statementDescriptor: "VIALHOUSE",
     catalogue: wholesaleCatalogue,
   };
 }

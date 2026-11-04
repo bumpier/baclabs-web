@@ -1,6 +1,6 @@
 /**
  * Vialhouse's catalogue: bulk packs at a tiered per-vial price, open to
- * anyone, with the company name and VAT number asked for on Stripe's page.
+ * anyone, with the company name and VAT number asked for with the order.
  * Delivery is BacLab's own options and threshold, by the same ids (every
  * pack here is over the threshold, so next day is free on all of them).
  *
@@ -33,7 +33,6 @@ export const wholesaleCatalogue: BrandCatalogue = {
   addOns: [],
   delivery: { options: DELIVERY_OPTIONS, freeFromMinor: DELIVERY.freeFromMinor },
   maxVials: 100,
-  stripeProductEnv: "STRIPE_PRODUCT__WHOLESALE",
   allowPromotionCodes: false,
   collectBusinessDetails: true,
 };

@@ -27,7 +27,6 @@ export const beautyCatalogue: BrandCatalogue = {
   addOns: [],
   delivery: { options: DELIVERY_OPTIONS, freeFromMinor: DELIVERY.freeFromMinor },
   maxVials: 100,
-  stripeProductEnv: "STRIPE_PRODUCT__BEAUTY",
   allowPromotionCodes: false,
   collectBusinessDetails: false,
 };

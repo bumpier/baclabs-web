@@ -48,8 +48,8 @@ export function gymProfile(): BrandProfile {
       consentText:
         "By signing up you agree to receive marketing emails from Brute Lab: offers, restocks and new pack sizes. Unsubscribe at any time from any email.",
     },
-    // TODO(launch): the final name's descriptor, and PNG logo and icon for Stripe's page.
-    stripe: { statementDescriptorSuffix: "BRUTE LAB" },
+    // TODO(launch): the final name's statement descriptor.
+    statementDescriptor: "BRUTE LAB",
     catalogue: gymCatalogue,
   };
 }

@@ -19,18 +19,6 @@
  * Prices in Stripe are immutable. Changing a price in config/funnel.ts and
  * re-running therefore creates a NEW Price and archives the old one, which is
  * correct: existing sessions keep working, new ones use the new figure.
- *
- * Another brand (brands/<id>/catalogue.ts):
- *   npx tsx scripts/stripe-setup.ts --brand luxury            # dry run
- *   npx tsx scripts/stripe-setup.ts --brand luxury --apply    # write
- *
- * Creates or finds that brand's persistent Products, one per pack and
- * add-on, neutrally named, with the brand in their metadata, and prints the
- * STRIPE_PRODUCT__<ID> line to set. No Prices: the brand checkout prices
- * each line from the catalogue (price_data), so a price change needs no
- * re-run; a new pack does. Uses STRIPE_SECRET_KEY__<ID> when the brand has
- * a Stripe account of its own, else STRIPE_SECRET_KEY. Touches nothing of
- * BacLab's and no database row.
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -51,8 +39,6 @@ import {
   labKitContents,
   type KitTier,
 } from "../config/funnel";
-import { allBrands, brandFor } from "../brands/registry";
-import { brandLineName, brandStripeProductId, defaultBrandProductStem } from "../lib/commerce/catalogue";
 
 // ── env ───────────────────────────────────────────────────────────
 // tsx does not load .env files the way `next` does, so do it here.
@@ -71,12 +57,7 @@ loadEnv(".env.local");
 loadEnv(".env");
 
 const APPLY = process.argv.includes("--apply");
-// `--brand <id>`: that brand's Products instead of BacLab's (brandSetup).
-const brandArg = process.argv.indexOf("--brand");
-const BRAND = brandArg === -1 ? null : (process.argv[brandArg + 1] ?? "");
-// A brand on a Stripe account of its own is set up in that account
-// (lib/payments/stripe.ts stripeKeyFor); BacLab always uses the shared key.
-const SECRET = (BRAND ? process.env[`STRIPE_SECRET_KEY__${BRAND.toUpperCase()}`] : undefined) || process.env.STRIPE_SECRET_KEY;
+const SECRET = process.env.STRIPE_SECRET_KEY;
 
 if (!SECRET) {
   console.error(
@@ -101,98 +82,6 @@ function banner() {
   console.log(`  Stripe mode : ${mode}`);
   console.log(`  Key         : ${SECRET!.slice(0, 12)}…`);
   console.log(`  Action      : ${APPLY ? "APPLY (writing)" : "DRY RUN (no writes)"}`);
-  if (BRAND !== null) console.log(`  Brand       : ${BRAND}`);
-  console.log("─".repeat(64));
-}
-
-/**
- * Create a brand Product, or bring an existing one back in line with its
- * name, description and brand. "ok" when nothing needed changing.
- */
-async function ensureBrandProduct(
-  id: string,
-  name: string,
-  description: string,
-  metadata: Record<string, string>
-): Promise<"CREATE" | "UPDATE" | "ok"> {
-  try {
-    const existing = await stripe.products.retrieve(id);
-    const current =
-      existing.active &&
-      existing.name === name &&
-      (existing.description ?? "") === description &&
-      Object.entries(metadata).every(([k, v]) => existing.metadata?.[k] === v);
-    if (current) return "ok";
-    if (APPLY) await stripe.products.update(id, { active: true, name, description, metadata });
-    return "UPDATE";
-  } catch (err) {
-    if ((err as Stripe.errors.StripeError).code !== "resource_missing") throw err;
-    if (APPLY) await stripe.products.create({ id, name, description, metadata });
-    return "CREATE";
-  }
-}
-
-/**
- * One brand's persistent Products: one per pack and add-on in its
- * catalogue, at `<stem>_<catalogue id>` (lib/commerce/catalogue.ts
- * brandStripeProductId), named exactly as the checkout names its lines.
- * Quote-only packs get theirs too, so making one available needs no re-run.
- */
-async function brandSetup(id: string) {
-  const b = brandFor(id);
-  const catalogue = b.catalogue;
-  if (b.id !== id || !catalogue) {
-    const known = allBrands()
-      .filter((x) => x.catalogue)
-      .map((x) => x.id)
-      .join(", ");
-    console.error(`"${id}" is not a brand with a catalogue. Brands with one: ${known}.`);
-    process.exitCode = 1;
-    return;
-  }
-
-  const stem = defaultBrandProductStem(b.id);
-  const kitDescription = LAB_KIT.parts.map((p) => `${p.perKit} × ${p.name}`).join(", ");
-  const items = [
-    ...catalogue.packs.map((p) => ({
-      id: p.id,
-      sku: p.sku,
-      priceMinor: p.priceMinor,
-      available: p.available,
-      name: brandLineName({ kind: "pack", vials: p.vials }),
-      description: `${p.vials} × ${PRODUCT.size}. ${PRODUCT.composition}`,
-    })),
-    ...catalogue.addOns.map((a) => ({
-      id: a.id,
-      sku: a.sku,
-      priceMinor: a.priceMinor,
-      available: a.available,
-      name: brandLineName({ kind: "addOn", name: a.name }),
-      description: a.ships === "lab-kit" ? kitDescription : "",
-    })),
-  ];
-
-  for (const item of items) {
-    const productId = brandStripeProductId(stem, item.id);
-    const action = await ensureBrandProduct(productId, item.name, item.description, {
-      brand: b.id,
-      sku: item.sku,
-      source: "scripts/stripe-setup.ts",
-    });
-    console.log(
-      `${item.id.padEnd(9)} ${item.sku.padEnd(16)} ${formatMinor(item.priceMinor).padStart(9)}  ` +
-        `product ${action.padEnd(6)}  ${productId}${item.available ? "" : "  (not available yet)"}`
-    );
-  }
-
-  const envLine = `${catalogue.stripeProductEnv}=${stem}`;
-  console.log("\n" + "─".repeat(64));
-  if (APPLY) {
-    console.log(`Set in the container's env (${IS_LIVE ? "LIVE" : "TEST"} account):\n`);
-    console.log(envLine);
-  } else {
-    console.log(`Dry run complete. Re-run with --apply to write, then set:\n\n${envLine}`);
-  }
   console.log("─".repeat(64));
 }
 
@@ -249,9 +138,6 @@ async function main() {
   if (IS_LIVE && !APPLY) {
     console.log("Live key detected. Nothing will be written without --apply.\n");
   }
-
-  // Another brand: its Products only. Nothing of BacLab's below runs.
-  if (BRAND !== null) return brandSetup(BRAND);
 
   const envLines: string[] = [];
 

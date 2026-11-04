@@ -33,7 +33,6 @@ export const gymCatalogue: BrandCatalogue = {
   ],
   delivery: { options: DELIVERY_OPTIONS, freeFromMinor: DELIVERY.freeFromMinor },
   maxVials: 100,
-  stripeProductEnv: "STRIPE_PRODUCT__GYM",
   allowPromotionCodes: false,
   collectBusinessDetails: false,
 };

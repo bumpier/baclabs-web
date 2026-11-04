@@ -48,8 +48,8 @@ export function luxuryProfile(): BrandProfile {
       consentText:
         "By signing up you agree to receive marketing emails from Reserve No.10: news, restocks and new releases. Unsubscribe at any time from any email.",
     },
-    // TODO(launch): the final name's descriptor, and PNG logo and icon for Stripe's page.
-    stripe: { statementDescriptorSuffix: "RESERVE NO10" },
+    // TODO(launch): the final name's statement descriptor.
+    statementDescriptor: "RESERVE NO10",
     catalogue: luxuryCatalogue,
   };
 }

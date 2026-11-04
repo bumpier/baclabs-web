@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { stripeFor } from "@/lib/payments/stripe";
+import { getStripe } from "@/lib/payments/stripe";
 import { GATEWAY_PROVIDER, parsePendingNote } from "@/lib/crypto-gateway";
 
 /**
@@ -120,7 +120,6 @@ export async function clearAbandonedCheckouts(now = new Date()): Promise<ClearRe
     where: { status: "pending" },
     select: {
       id: true,
-      brand: true,
       paymentProvider: true,
       paymentRef: true,
       notes: true,
@@ -131,17 +130,15 @@ export async function clearAbandonedCheckouts(now = new Date()): Promise<ClearRe
     orderBy: { createdAt: "asc" },
   });
 
-  // Asked of the account the session was made in: a brand with a Stripe
-  // account of its own (stripeFor) keeps its sessions there.
-  const stripeStatus = (brand: string) => async (sessionId: string): Promise<StripeSessionStatus> =>
-    (await stripeFor({ id: brand }).checkout.sessions.retrieve(sessionId)).status;
+  const stripeStatus = async (sessionId: string): Promise<StripeSessionStatus> =>
+    (await getStripe().checkout.sessions.retrieve(sessionId)).status;
 
   const ids: string[] = [];
   const kept: Record<string, number> = {};
   // Ten Stripe lookups at a time: the first run can meet a long backlog.
   for (let i = 0; i < pending.length; i += 10) {
     const batch = pending.slice(i, i + 10);
-    const verdicts = await Promise.all(batch.map((o) => abandonedVerdict(o, now, stripeStatus(o.brand))));
+    const verdicts = await Promise.all(batch.map((o) => abandonedVerdict(o, now, stripeStatus)));
     verdicts.forEach((v, j) => {
       if (v.clear) ids.push(batch[j]!.id);
       else kept[v.reason] = (kept[v.reason] ?? 0) + 1;

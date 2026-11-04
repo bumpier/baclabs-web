@@ -17,6 +17,7 @@ import {
   type AudienceSpec,
 } from "@/lib/campaigns";
 import { getStripe } from "@/lib/payments/stripe";
+import { DEFAULT_BRAND } from "@/brands/types";
 
 const CampaignSchema = z.object({
   subject: z.string().trim().min(1, "Add a subject").max(200),
@@ -97,6 +98,9 @@ export async function createOfferAction(_prev: FormState, formData: FormData): P
   const c = await draft(o.id);
   if (c.status !== "draft") return { error: "This campaign has been sent." };
   if (c.promoCode) return { error: "Remove the current offer first." };
+  // The code would live in BacLab's Stripe account, which no other brand
+  // may touch, and no other brand's checkout takes a code.
+  if (c.brand !== DEFAULT_BRAND) return { error: "Offer codes are BacLab's only: no other brand's checkout takes one." };
   if (!process.env.STRIPE_SECRET_KEY) return { error: "Stripe is not configured, so a code cannot be created." };
 
   const value = o.kind === "percent" ? Math.round(o.value) : Math.round(o.value * 100);

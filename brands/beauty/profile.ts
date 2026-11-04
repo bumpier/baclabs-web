@@ -48,8 +48,8 @@ export function beautyProfile(): BrandProfile {
       consentText:
         "By signing up you agree to receive marketing emails from Aurelle: offers, restocks and new sets. Unsubscribe at any time from any email.",
     },
-    // TODO(launch): the final name's descriptor, and PNG logo and icon for Stripe's page.
-    stripe: { statementDescriptorSuffix: "AURELLE" },
+    // TODO(launch): the final name's statement descriptor.
+    statementDescriptor: "AURELLE",
     catalogue: beautyCatalogue,
   };
 }

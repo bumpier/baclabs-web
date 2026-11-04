@@ -15,6 +15,7 @@ import {
   resolveAudience,
   type AudienceSpec,
 } from "@/lib/campaigns";
+import { DEFAULT_BRAND } from "@/brands/types";
 import { brandChip } from "@/lib/admin/brand-chip";
 import { BrandChip } from "@/components/admin/BrandChip";
 import { formatSaleDateTime } from "@/lib/saleTime";
@@ -119,6 +120,9 @@ async function DraftView({
                 <input type="hidden" name="id" value={c.id} />
               </ActionForm>
             </>
+          ) : c.brand !== DEFAULT_BRAND ? (
+            // A code would live in BacLab's Stripe account; no other brand's checkout takes one.
+            <p className="mt-1 text-sm text-ink-soft">Offer codes are BacLab&rsquo;s only: no other brand&rsquo;s checkout takes one.</p>
           ) : (
             <>
               <p className="mt-1 text-sm text-ink-soft">
