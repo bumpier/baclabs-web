@@ -81,13 +81,23 @@ export interface StorefrontView {
     /** Goods value, in pence, from which the over-threshold prices apply. null: never. */
     freeFromMinor: number | null;
   };
-  /** What one order may hold; the checkout refuses anything past them. */
-  limits: { maxVials: number; maxLineQty: number; maxLines: number };
+  /**
+   * What one order may hold; the checkout refuses anything past them.
+   * `maxGiftNote` is the gift note's length in characters, for a site whose
+   * flags.giftNote is set.
+   */
+  limits: { maxVials: number; maxLineQty: number; maxLines: number; maxGiftNote: number };
   flags: {
     /** Trade buyers may give a company name and VAT number with the order (the checkout's `business`). */
     businessDetails: boolean;
     /** The checkout takes promotion codes. */
     promotionCodes: boolean;
+    /**
+     * The buyer may add a gift note (the checkout's `giftNote`), printed on
+     * the packing slip and packed in the box. The checkout refuses one on a
+     * site where this is false.
+     */
+    giftNote: boolean;
   };
   /**
    * The ways the checkout takes payment, as the brand's profile lists them,

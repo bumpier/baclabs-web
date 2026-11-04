@@ -730,6 +730,59 @@
     margin-top: 0.75rem;
   }
 
+  /* The gift option, on the lacquer, under its own hairline: the tick in
+     the delivery choice's champagne, the note field square and drawn in the
+     edge colour (the 3:1 a control needs here), its text the vellum. */
+  .rx-gift {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-rule);
+  }
+  .rx-gift__option {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9375rem;
+    cursor: pointer;
+  }
+  .rx-gift__option input {
+    width: 1.125rem;
+    height: 1.125rem;
+    accent-color: var(--color-champagne);
+  }
+  .rx-gift__note {
+    margin-top: 0.75rem;
+  }
+  .rx-gift__label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9375rem;
+    color: var(--color-mist);
+  }
+  .rx-gift__field {
+    width: 100%;
+    min-height: 6.5rem;
+    resize: vertical;
+    border: 1px solid var(--color-edge);
+    border-radius: 0;
+    background: transparent;
+    padding: 0.75rem 1rem;
+    font-family: var(--font-display);
+    font-size: 1.1875rem;
+    line-height: 1.5;
+    color: inherit;
+    transition: border-color 0.25s;
+  }
+  .rx-gift__field:hover {
+    border-color: var(--color-mist);
+  }
+  .rx-gift__field:focus-visible {
+    border-color: var(--color-vellum);
+    outline: 2px solid var(--color-vellum);
+    outline-offset: 2px;
+  }
+
   /* ── Arrival: the photograph frame and what is in the box ───────── */
   .rx-arrival {
     display: grid;

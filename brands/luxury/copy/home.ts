@@ -78,6 +78,12 @@ export const BUY = {
   included: "Included",
   total: "Total",
   shortfall: (amount: string) => `Add ${amount} more and delivery is included.`,
+  // The gift option is the note itself: it is printed on the packing slip,
+  // which goes in the box (lib/commerce/gift-note.ts). Nothing here promises
+  // wrapping or a hidden price, which the order does not carry.
+  giftOption: "Include a gift note",
+  giftNoteLabel: "Your note",
+  giftNoteHint: (max: number) => `Printed and packed in the box with the vials. Up to ${max} characters.`,
   pay: "Proceed to payment",
   paying: "Going to payment…",
   payWith: (label: string) => `Pay by ${label}`,

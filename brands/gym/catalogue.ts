@@ -35,4 +35,5 @@ export const gymCatalogue: BrandCatalogue = {
   maxVials: 100,
   allowPromotionCodes: false,
   collectBusinessDetails: false,
+  collectGiftNote: false,
 };

@@ -66,6 +66,7 @@ const catalogue: BrandCatalogue = {
   maxVials: 100,
   allowPromotionCodes: false,
   collectBusinessDetails: false,
+  collectGiftNote: false,
 };
 const DOMAINS = ["fixturebrand.co.uk", "www.fixturebrand.co.uk", `${TEST_BRAND_ID}.localhost`];
 const good: BrandProfile = {

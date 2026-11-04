@@ -5,6 +5,7 @@ import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { parseAddress, type Address } from "@/lib/orderAddress";
 import { isKitLine, kitPartsFor } from "@/lib/order-items";
 import { brandLogoDataUri } from "@/lib/brand/logo";
+import { giftNoteFrom } from "@/lib/commerce/gift-note";
 
 interface OrderItem {
   name: string;
@@ -36,10 +37,14 @@ function slipLogo(b: BrandProfile): string | null {
  * The A4 sheet that goes in the box. Shared by the order page and the batch
  * print. In the order's own brand (brands/registry.ts): its logo, name,
  * contact and thank-you line, and what to pack it in when the brand says.
+ * A brand order's gift note (lib/commerce/gift-note.ts) is printed under the
+ * address, set large, because this sheet is how it reaches the box. BacLab's
+ * checkout takes no gift note, so its slips are as they were.
  */
 export function PackingSlip({ order }: { order: Order }) {
   const b = brandFor(order.brand);
   const packIn = b.shipping?.packingNote;
+  const giftNote = order.brand === DEFAULT_BRAND ? null : giftNoteFrom(order.notes);
   const items = JSON.parse(order.items) as OrderItem[];
   const address: Address = parseAddress(order) ?? {
     line1: "",
@@ -99,6 +104,13 @@ export function PackingSlip({ order }: { order: Order }) {
           </p>
         </div>
       </div>
+
+      {giftNote ? (
+        <div className="mt-6 border-t border-line pt-6">
+          <p className="label">Gift note</p>
+          <p className="mt-1 whitespace-pre-wrap font-display text-xl text-brand-deep">{giftNote}</p>
+        </div>
+      ) : null}
 
       <table className="mt-8 w-full text-sm">
         <thead>

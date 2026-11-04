@@ -13,6 +13,7 @@
 import type { BrandProfile } from "@/brands/types";
 import { labKitContents, labKitEnabled } from "@/config/funnel";
 import { packPerVialMinor } from "@/lib/commerce/catalogue";
+import { GIFT_NOTE_MAX } from "@/lib/commerce/gift-note";
 import { MAX_BRAND_LINES, MAX_LINE_QTY } from "@/lib/commerce/pricing";
 import { listedPaymentAdapters } from "@/lib/commerce/payments";
 import type { StorefrontView } from "@/lib/commerce/view";
@@ -55,8 +56,12 @@ export function storefrontView(brand: BrandProfile): StorefrontView {
       })),
       freeFromMinor: catalogue.delivery.freeFromMinor,
     },
-    limits: { maxVials: catalogue.maxVials, maxLineQty: MAX_LINE_QTY, maxLines: MAX_BRAND_LINES },
-    flags: { businessDetails: catalogue.collectBusinessDetails, promotionCodes: catalogue.allowPromotionCodes },
+    limits: { maxVials: catalogue.maxVials, maxLineQty: MAX_LINE_QTY, maxLines: MAX_BRAND_LINES, maxGiftNote: GIFT_NOTE_MAX },
+    flags: {
+      businessDetails: catalogue.collectBusinessDetails,
+      promotionCodes: catalogue.allowPromotionCodes,
+      giftNote: catalogue.collectGiftNote,
+    },
     // The ways to pay the profile lists (lib/commerce/payments), in its
     // words when it has some. Never whether they are configured: the
     // brand's pages are prerendered by `next build`, which has no payment

@@ -33,6 +33,7 @@ import { registerPayPalTestBrand } from "./fixtures/test-brand";
 import type { BrandCatalogue } from "@/brands/types";
 import { DELIVERY, DELIVERY_OPTIONS, LAB_KIT, PRODUCT, SINGLE_BUNDLE, bundleById, deliveryOptionById, priceOrder } from "@/config/funnel";
 import { catalogueDeliveryOptions, catalogueItem, packPerVialMinor } from "@/lib/commerce/catalogue";
+import { GIFT_NOTE_MAX, cleanGiftNote, giftNoteFrom, giftNoteLine } from "@/lib/commerce/gift-note";
 import { MAX_LINE_QTY, priceBrandLines, type PricedBrandOrder } from "@/lib/commerce/pricing";
 import { brandBuyLink, parseBuyParam } from "@/lib/commerce/links";
 import { buildBrandOrderItems, buildOrderItems, isKitLine } from "@/lib/order-items";
@@ -98,6 +99,7 @@ for (const b of NEW_BRANDS) {
   check(`${b.id}: no code names BacLab`, ![...c.packs.map((p) => p.sku), ...c.addOns.map((a) => a.sku), c.boxSku].some((s) => /baclab/i.test(s)));
   check(`${b.id}: no promotion codes in v1`, c.allowPromotionCodes === false);
   check(`${b.id}: business details only for wholesale`, c.collectBusinessDetails === (b.id === "wholesale"));
+  check(`${b.id}: a gift note only for luxury`, c.collectGiftNote === (b.id === "luxury"));
   const biggestSold = Math.max(...c.packs.filter((p) => p.available).map((p) => p.vials));
   check(`${b.id}: one order can hold the biggest pack on sale`, c.maxVials >= biggestSold);
   for (const o of c.delivery.options) {
@@ -551,6 +553,16 @@ async function routeChecks() {
     ["no delivery choice while there are two", brandFor("beauty"), { lines: [{ sku: "BEA-10ML-X1", qty: 1 }] }, /^Choose a delivery option\.$/],
     ["business details on a consumer site", lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], business: { company: "Acme" } }, /Invalid order details/],
     ["an unknown business field", brandFor("wholesale"), { lines: [{ sku: "WHL-10ML-X50", qty: 1 }], business: { iban: "x" } }, /Invalid order details/],
+    // A gift note only where the catalogue offers one (luxury's), as business details only on a trade site.
+    ...NEW_BRANDS.filter((b) => !b.catalogue!.collectGiftNote).map((b): [string, BrandProfile, unknown, RegExp] => [
+      `a gift note on ${b.id}, which offers none`,
+      b,
+      { lines: [{ sku: b.catalogue!.packs.find((p) => p.available)!.sku, qty: 1 }], deliveryOption: "standard", giftNote: "Happy birthday" },
+      /Invalid order details/,
+    ]),
+    ["an empty gift note where none is offered", brandFor("gym"), { lines: [{ sku: "GYM-10ML-X10", qty: 1 }], giftNote: "" }, /Invalid order details/],
+    ["a gift note past its limit", lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], giftNote: "x".repeat(GIFT_NOTE_MAX + 1) }, /Invalid order details/],
+    ["a gift note that is not text", lux, { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], giftNote: { text: "hi" } }, /Invalid order details/],
   ];
   for (const [what, b, body, re] of refusals) {
     const r = await answer(await post(b, body));
@@ -561,6 +573,15 @@ async function routeChecks() {
     businessDetailsNote({ company: "  Acme   Labs Ltd ", vatNumber: "GB123456789" }) === "Company: Acme Labs Ltd\nVAT number: GB123456789"
   );
   check("business details: nothing when none given", businessDetailsNote(undefined) === "" && businessDetailsNote({ company: "  " }) === "");
+  check("gift note: trimmed, one line, as plain text", giftNoteLine("  Happy birthday,\r\n\tlove   from Ann  ") === "Gift note: Happy birthday, love from Ann");
+  check("gift note: zero-width, direction and control characters dropped", cleanGiftNote("To‮you​\u0007 x") === "To you x", JSON.stringify(cleanGiftNote("To‮you​\u0007 x")));
+  check("gift note: nothing when none given", giftNoteLine(undefined) === "" && giftNoteLine(" \n\t ") === "");
+  check("gift note: never past its limit", cleanGiftNote("y".repeat(GIFT_NOTE_MAX * 2)).length === GIFT_NOTE_MAX);
+  check(
+    "gift note: read back from the notes it was written to",
+    giftNoteFrom(["Payment by card", giftNoteLine("With love"), "PayPal refunded: 1.00 GBP"].join("\n")) === "With love"
+  );
+  check("gift note: none in notes that hold none", giftNoteFrom("Payment by card\nCompany: Acme") === null && giftNoteFrom(null) === null);
   __clearTestPaymentAdapters();
 
   // Through the real route, before anything in this run has made a Stripe
@@ -842,6 +863,15 @@ async function databaseChecks() {
   const whl = await prisma.order.findFirst({ where: { brand: "wholesale" } });
   check("db: company and VAT number in the notes", !!whl?.notes?.includes("Company: Acme Labs Ltd") && !!whl.notes.includes("VAT number: GB123456789"), String(whl?.notes));
 
+  // Luxury: the gift note goes into the notes, cleaned, and the provider is never told it.
+  const NOTE = "Happy birthday, Ann. With love from Tom";
+  const giftRes = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], giftNote: `  Happy birthday, Ann.\n  With love from Tom  ` });
+  check("db: luxury checks out with a gift note", giftRes.status === 200);
+  const giftOrder = await prisma.order.findFirst({ where: { brand: "luxury", notes: { contains: "Gift note:" } } });
+  check("db: the gift note is in the notes, on one line", giftNoteFrom(giftOrder?.notes) === NOTE && giftOrder!.notes!.split("\n").includes(`Gift note: ${NOTE}`), String(giftOrder?.notes));
+  check("db: the provider is asked for that order", asked.at(-1)?.id === giftOrder?.id);
+  check("db: the provider is never told the gift note", !/birthday|love from/i.test(JSON.stringify(asked.at(-1))), JSON.stringify(asked.at(-1)));
+
   // A provider that refuses: the order stays unpaid, with nothing attached.
   __registerTestPaymentAdapter({ ...standInAdapter([]), createPayment: async () => Promise.reject(new Error("refused")) });
   const refused = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X1", qty: 1 }] });
@@ -1094,6 +1124,13 @@ async function stripeDatabaseChecks(post: (host: string, body: unknown) => Promi
   check("stripe db: the clear-up removes a brand order whose session expired", !(await prisma.order.findUnique({ where: { id: five.order!.id } })));
   check("stripe db: and keeps one whose session is still open", !!(await prisma.order.findUnique({ where: { id: six.order!.id } })));
   await prisma.order.delete({ where: { id: six.order!.id } });
+
+  // 10. A gift note: on the order, never in anything Stripe is sent.
+  const seven = await checkoutAs("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X1", qty: 1 }], giftNote: "For Sam, with love" });
+  check("stripe db: luxury checks out to Stripe's page with a gift note", seven.res.status === 200 && !!seven.session, JSON.stringify(seven.data));
+  check("stripe db: the gift note is on the order", giftNoteFrom(seven.order?.notes) === "For Sam, with love", String(seven.order?.notes));
+  check("stripe db: and nowhere in the session", !/for sam|with love|gift/i.test(JSON.stringify(seven.session)), JSON.stringify(seven.session?.params));
+  await prisma.order.delete({ where: { id: seven.order!.id } });
 }
 
 /**

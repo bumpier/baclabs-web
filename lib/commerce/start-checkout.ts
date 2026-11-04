@@ -28,6 +28,8 @@ export interface StartCheckoutInput {
   method?: string;
   /** A trade buyer's details, for a catalogue that asks (flags.businessDetails). Both optional. */
   business?: { company?: string; vatNumber?: string };
+  /** The buyer's gift note, for a catalogue that offers one (flags.giftNote). Blank sends none. */
+  giftNote?: string;
   /** The cookie banner's answer at this moment (hasTrackingConsent()). */
   tracking: boolean;
 }
@@ -52,6 +54,7 @@ export async function startCheckout(input: StartCheckoutInput): Promise<StartChe
         ...(input.deliveryOption ? { deliveryOption: input.deliveryOption } : {}),
         ...(input.method ? { method: input.method } : {}),
         ...(input.business && (input.business.company || input.business.vatNumber) ? { business: input.business } : {}),
+        ...(input.giftNote?.trim() ? { giftNote: input.giftNote } : {}),
         consent: { tracking: input.tracking },
       }),
     });

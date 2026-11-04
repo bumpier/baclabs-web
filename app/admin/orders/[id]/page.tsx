@@ -14,6 +14,7 @@ import { brandChip } from "@/lib/admin/brand-chip";
 import { BrandChip } from "@/components/admin/BrandChip";
 import { providerLabel } from "@/lib/payments/config";
 import { DEFAULT_BRAND } from "@/brands/types";
+import { giftNoteFrom } from "@/lib/commerce/gift-note";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ export default async function AdminOrderDetailPage({
   // the order releases its stock but leaves the plan running.
   const planBoxOne = order.plan && order.planBox === 1 && actions.some((a) => a.status === "cancelled") ? order.plan : null;
   const chip = brandChip(order.brand);
+  const giftNote = order.brand === DEFAULT_BRAND ? null : giftNoteFrom(order.notes);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
@@ -180,8 +182,18 @@ export default async function AdminOrderDetailPage({
           </p>
         ) : null}
 
+        {/* A gift order: the buyer's note, which the packing slip below
+            prints, so the packer knows it goes in the box. */}
+        {giftNote ? (
+          <div className="card mt-4 p-6 text-sm">
+            <p className="label">Gift note</p>
+            <p className="mt-1 whitespace-pre-wrap">{giftNote}</p>
+            <p className="mt-1 text-ink-soft">Printed on the packing slip below, which goes in the box.</p>
+          </div>
+        ) : null}
+
         {/* A brand order's notes: a trade buyer's company and VAT number,
-            and any refund or reversal PayPal has reported. */}
+            a gift note, and any refund or reversal PayPal has reported. */}
         {order.brand !== DEFAULT_BRAND && order.notes ? (
           <div className="card mt-4 p-6 text-sm">
             <p className="label">Notes</p>

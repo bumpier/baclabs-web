@@ -23,7 +23,7 @@ import { paymentReturnMessage, priceBasket, type BasketLine } from "@/lib/commer
  *
  * `opts` carries what the buyer chose on the page: the delivery option, the
  * payment method (one of the view's payment.methods) and, on a trade site,
- * their business details.
+ * their business details, or on a site that offers one, their gift note.
  */
 export function useBrandCheckout() {
   const cart = useCart();
@@ -63,6 +63,7 @@ export function useBrandCheckout() {
         deliveryOption?: string;
         method?: string;
         business?: { company?: string; vatNumber?: string };
+        giftNote?: string;
       } = {}
     ) => {
       const lines = opts.lines ?? basket;
@@ -92,6 +93,7 @@ export function useBrandCheckout() {
         deliveryOption: opts.deliveryOption,
         method: opts.method,
         business: opts.business,
+        giftNote: opts.giftNote,
         tracking: hasTrackingConsent(),
       });
       if (!result.ok) {

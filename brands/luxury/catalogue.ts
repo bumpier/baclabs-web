@@ -35,4 +35,6 @@ export const luxuryCatalogue: BrandCatalogue = {
   // Never: the brand does not discount (Phase 4 of the plan).
   allowPromotionCodes: false,
   collectBusinessDetails: false,
+  // The plan's "gift option and note": printed on the packing slip, packed in the box.
+  collectGiftNote: true,
 };

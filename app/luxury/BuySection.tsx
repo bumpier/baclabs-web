@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useCart } from "@/components/commerce/cart";
 import { useBrandCheckout } from "@/components/commerce/useBrandCheckout";
 import { PackPicker } from "@/components/commerce/PackPicker";
@@ -21,6 +21,11 @@ import { BUY } from "@/brands/luxury/copy/home";
  * answer is shown as it stands. Prices are set small and never as a saving
  * or a per-vial figure: this brand does not sell on price. While the view
  * lists no way to pay there is no payment button at all.
+ *
+ * The gift option sits in the order, above payment, while the view offers
+ * one (flags.giftNote): ticked, it opens a note field, and the note goes with
+ * the order to be printed on the packing slip. Unticked, nothing is sent,
+ * whatever was typed.
  */
 export function BuySection() {
   const cart = useCart();
@@ -30,8 +35,17 @@ export function BuySection() {
   const [qty, setQty] = useState(1);
   const [deliveryId, setDeliveryId] = useState<string | null>(null);
   const [added, setAdded] = useState<string | null>(null);
+  const [gift, setGift] = useState(false);
+  const [note, setNote] = useState("");
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const orderId = useId();
   const deliveryName = useId();
+  const giftId = useId();
+
+  // Ticking the gift option takes the customer straight to the note.
+  useEffect(() => {
+    if (gift) noteRef.current?.focus();
+  }, [gift]);
 
   const empty = priced.items.length === 0;
   const delivery = deliveryQuote(storefront, priced.goodsMinor);
@@ -44,7 +58,8 @@ export function BuySection() {
   const message = error ?? priced.problem;
   const methods = storefront.payment.methods;
   const totalMinor = priced.goodsMinor + (chosen?.priceMinor ?? 0);
-  const pay = (method: string) => checkout({ deliveryOption: chosen?.option.id, method });
+  const giftNote = storefront.flags.giftNote && gift ? note : undefined;
+  const pay = (method: string) => checkout({ deliveryOption: chosen?.option.id, method, giftNote });
   const nameOf = (pack: { label: string; vials: number }) => pack.label || BUY.vials(pack.vials);
   const price = (minor: number) => (minor === 0 ? BUY.included : formatGbp(minor));
 
@@ -208,6 +223,35 @@ export function BuySection() {
               </fieldset>
             ) : null}
             {shortfall !== null && shortfall > 0 ? <p className="rx-note">{BUY.shortfall(formatGbp(shortfall))}</p> : null}
+
+            {storefront.flags.giftNote ? (
+              <div className="rx-gift">
+                <label className="rx-gift__option">
+                  <input type="checkbox" checked={gift} onChange={(e) => setGift(e.target.checked)} />
+                  {BUY.giftOption}
+                </label>
+                {gift ? (
+                  <div className="rx-gift__note">
+                    <label htmlFor={`${giftId}-note`} className="rx-gift__label">
+                      {BUY.giftNoteLabel}
+                    </label>
+                    <textarea
+                      ref={noteRef}
+                      id={`${giftId}-note`}
+                      className="rx-gift__field"
+                      rows={3}
+                      value={note}
+                      maxLength={storefront.limits.maxGiftNote}
+                      onChange={(e) => setNote(e.target.value)}
+                      aria-describedby={`${giftId}-hint`}
+                    />
+                    <p id={`${giftId}-hint`} className="rx-note">
+                      {BUY.giftNoteHint(storefront.limits.maxGiftNote)}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </>
         )}
 

@@ -19,8 +19,8 @@ import { BuySection } from "./BuySection";
  * through the storefront view (brands/luxury/service.ts), so the page never
  * promises what the checkout does not sell.
  *
- * Left out on purpose: promotions, codes, popups, plans and any countdown. The
- * gift note waits for the checkout to carry one (it is not in the contract).
+ * Left out on purpose: promotions, codes, popups, plans and any countdown.
+ * The gift option and its note are part of the order, in the buy section.
  */
 export default function Home() {
   const facts = serviceFacts(STOREFRONT);

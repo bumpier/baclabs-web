@@ -309,4 +309,12 @@ export interface BrandCatalogue {
   allowPromotionCodes: boolean;
   /** Ask trade buyers for a company name and VAT number with the order. */
   collectBusinessDetails: boolean;
+  /**
+   * Offer a gift note with the order: a few words the buyer writes on our
+   * page, printed on the packing slip for the packer to put in the box. The
+   * checkout keeps it on the order and never sends it to the payment
+   * provider (lib/commerce/gift-note.ts), and refuses one wherever this is
+   * false.
+   */
+  collectGiftNote: boolean;
 }

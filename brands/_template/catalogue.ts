@@ -26,4 +26,5 @@ export const templateCatalogue: BrandCatalogue = {
   maxVials: 100,
   allowPromotionCodes: false,
   collectBusinessDetails: false,
+  collectGiftNote: false,
 };

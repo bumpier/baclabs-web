@@ -35,4 +35,5 @@ export const wholesaleCatalogue: BrandCatalogue = {
   maxVials: 100,
   allowPromotionCodes: false,
   collectBusinessDetails: true,
+  collectGiftNote: false,
 };

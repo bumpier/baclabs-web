@@ -15,7 +15,7 @@
  *   POST /api/checkout
  *   { lines: [{ sku: string, qty: int }], deliveryOption?: string,
  *     method?: string, business?: { company?: string, vatNumber?: string },
- *     consent?: { tracking?: boolean } }
+ *     giftNote?: string, consent?: { tracking?: boolean } }
  *   → 200 { url }       the provider's page, to send the browser to
  *   → 4xx { error }     a sentence the storefront can show
  *   → 503 { error }     the brand has no way to pay right now
@@ -26,7 +26,11 @@
  * offered for the order; it may be left out only when one is offered.
  * `method` is one of the storefront view's payment.methods ids; it may be
  * left out only when one is offered. `business` is for a trade catalogue
- * (collectBusinessDetails) and refused anywhere else. `consent.tracking` is
+ * (collectBusinessDetails) and refused anywhere else. `giftNote`, at most
+ * GIFT_NOTE_MAX characters, is for a catalogue that offers one
+ * (collectGiftNote) and refused anywhere else, as `business` is; it is kept
+ * on the order's notes as plain text and never sent to the payment
+ * provider (lib/commerce/gift-note.ts). `consent.tracking` is
  * the cookie banner's answer, as `trackingConsent` is on BacLab's: it decides
  * whether the purchase is reported to Meta from the server
  * (lib/meta-capi-event.ts attributionFor).
@@ -40,6 +44,7 @@ import { DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { LAB_KIT, labKitEnabled } from "@/config/funnel";
 import { buildBrandOrderItems } from "@/lib/order-items";
 import { catalogueDeliveryOptions } from "@/lib/commerce/catalogue";
+import { GIFT_NOTE_MAX, giftNoteLine } from "@/lib/commerce/gift-note";
 import { MAX_BRAND_LINES, MAX_LINE_QTY, priceBrandLines } from "@/lib/commerce/pricing";
 import { choosePaymentAdapter } from "@/lib/commerce/payments";
 import { attributionFor } from "@/lib/meta-capi-event";
@@ -74,6 +79,7 @@ export const BrandCheckoutSchema = z
       })
       .strict()
       .optional(),
+    giftNote: z.string().max(GIFT_NOTE_MAX).optional(),
     consent: z.object({ tracking: z.boolean().optional() }).strict().optional(),
   })
   .strict();
@@ -122,6 +128,7 @@ export async function brandCheckout(req: Request, brand: BrandProfile): Promise<
     if (!parsed.success) return fail("Invalid order details", 400);
     const input = parsed.data;
     if (input.business && !catalogue.collectBusinessDetails) return fail("Invalid order details", 400);
+    if (input.giftNote !== undefined && !catalogue.collectGiftNote) return fail("Invalid order details", 400);
 
     // ── Pricing: every figure from the catalogue, none from the request.
     const pricing = priceBrandLines(catalogue, input.lines, { labKitOnSale: labKitEnabled() });
@@ -215,7 +222,9 @@ export async function brandCheckout(req: Request, brand: BrandProfile): Promise<
         paymentProvider: adapter.id,
         deliveryOption: delivery.option.id,
         deliveryMinor: delivery.priceMinor,
-        notes: [`Payment by ${adapter.label}`, business].filter(Boolean).join("\n"),
+        // The gift note goes here and nowhere else: the payment provider
+        // is handed the lines, goods and delivery below, never the notes.
+        notes: [`Payment by ${adapter.label}`, business, giftNoteLine(input.giftNote)].filter(Boolean).join("\n"),
         // Read now, as BacLab's checkout does: the provider's confirmation
         // never sees the customer's browser. Kept only with consent.
         ...attributionFor(input.consent?.tracking === true, {

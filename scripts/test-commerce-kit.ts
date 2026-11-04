@@ -27,6 +27,7 @@ import { __clearTestPaymentAdapters, __registerTestPaymentAdapter } from "@/lib/
 import { deliveryQuote, freeDeliveryShortfallMinor, packSavingMinor, priceBasket } from "@/lib/commerce/view";
 import { priceBrandLines } from "@/lib/commerce/pricing";
 import { catalogueDeliveryOptions } from "@/lib/commerce/catalogue";
+import { GIFT_NOTE_MAX } from "@/lib/commerce/gift-note";
 import { parseBuyParam } from "@/lib/commerce/links";
 import { isRedirectTarget } from "@/lib/commerce/start-checkout";
 import { cleanLines } from "@/components/commerce/cart";
@@ -78,9 +79,11 @@ for (const id of BRANDS) {
   );
   check(`${id}: its mailing list words are the profile's`, (view.mailingList?.consentText ?? null) === (b.mailingList?.consentText ?? null));
   check(`${id}: the free-delivery threshold is the catalogue's`, view.delivery.freeFromMinor === b.catalogue!.delivery.freeFromMinor);
+  check(`${id}: a gift note offered only where the catalogue takes one`, view.flags.giftNote === b.catalogue!.collectGiftNote && view.limits.maxGiftNote === GIFT_NOTE_MAX);
   for (const pack of view.packs) check(`${id}: ${pack.sku} saves nothing negative`, packSavingMinor(view, pack) >= 0);
 }
 check("wholesale runs no list", storefrontView(profiles.wholesale!).mailingList === null);
+check("luxury offers a gift note", storefrontView(profiles.luxury!).flags.giftNote);
 // A listed provider is offered whether or not it is configured (the
 // checkout answers 503 while it is off), in the profile's words when it has
 // some; a brand that lists none is offered none whatever is set.
