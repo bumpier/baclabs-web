@@ -23,18 +23,10 @@ export const PAGES: readonly string[] = ["/", "/quote", "/contact", "/terms", "/
 /**
  * The catalogue as the browser sees it (lib/commerce/storefront.ts), built
  * with the pages: the root layout hands it to the basket, and the buy
- * section reads it from there.
- *
- * Without each payment method's `terms` sentence: no page outside the legal
- * pages shows it, and it names the payment provider, which the legal pages
- * alone should. The view travels to the browser with every page, so it is
- * cut here rather than left unshown.
+ * section reads it from there. It carries each payment method's label
+ * only: the sentences that name the provider stay with the legal pages.
  */
-const view = storefrontView(brand);
-export const STOREFRONT = {
-  ...view,
-  payment: { methods: view.payment.methods.map((m) => ({ ...m, terms: "" })) },
-};
+export const STOREFRONT = storefrontView(brand);
 
 /**
  * The basket's localStorage key. Each brand's domain has its own storage, so

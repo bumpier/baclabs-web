@@ -14,13 +14,17 @@
  * holds them to the checkout's own functions.
  */
 
-/** A way to pay (BrandProfile.payment), as the buy section may show it. */
+/**
+ * A way to pay (BrandProfile.payment), as the buy section may show it: its
+ * id and label, and nothing else. The method's `terms` and `refunds`
+ * sentences stay on the server, for the legal pages (lib/commerce/legal.ts
+ * reads them from the profile): they name the provider, and the view
+ * travels to the browser with every page.
+ */
 export interface PaymentMethodView {
   /** The id a payment-method choice would send with the order. */
   id: string;
   label: string;
-  /** One sentence: how and when payment is taken by this method. */
-  terms: string;
 }
 
 /** One pack, as the storefront lists it (CataloguePack in brands/types.ts). */

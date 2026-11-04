@@ -65,11 +65,13 @@ export function storefrontView(brand: BrandProfile): StorefrontView {
     // customer pays, and answers the neutral 503 while a listed provider is
     // off (BacLab's cards switched off, a brand's own credentials unset).
     // Empty only when the profile lists none: then the storefront shows no
-    // checkout button at all.
+    // checkout button at all. The label only: each method's terms and
+    // refunds sentences name the provider, so they stay here, for the
+    // legal pages, and never ride to the browser with every page.
     payment: {
       methods: listedPaymentAdapters(brand).map((adapter) => {
         const words = brand.payment?.methods.find((m) => m.id === adapter.id);
-        return { id: adapter.id, label: words?.label ?? adapter.label, terms: words?.terms ?? "" };
+        return { id: adapter.id, label: words?.label ?? adapter.label };
       }),
     },
     tracking: { ga4Id: brand.analytics?.ga4Id?.trim() || null },

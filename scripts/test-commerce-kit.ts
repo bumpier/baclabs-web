@@ -68,6 +68,7 @@ for (const id of BRANDS) {
   check(`${id}: every pack is listed`, view.packs.map((p) => p.sku).join() === b.catalogue!.packs.map((p) => p.sku).join());
   check(`${id}: prices are the catalogue's`, view.packs.every((p, i) => p.priceMinor === b.catalogue!.packs[i]!.priceMinor));
   check(`${id}: it is serialisable`, JSON.stringify(JSON.parse(json)) === json);
+  check(`${id}: the view names Stripe only as the method's id`, !/stripe/i.test(json.replaceAll('"id":"stripe"', "")), json);
   // No payment env is set here, as in `next build`: the view still offers
   // what the profile lists, so a prerendered page keeps its checkout button.
   check(
@@ -90,7 +91,11 @@ for (const configured of [false, true]) {
     const listed = profiles[id]!.paymentProviders ?? [];
     check(`${id}: the view offers what is listed, ${configured ? "configured" : "not configured"}`, methods.map((m) => m.id).join() === listed.join(), JSON.stringify(methods));
     const words = profiles[id]!.payment?.methods.find((m) => m.id === "stripe");
-    if (methods[0]) check(`${id}: the method is in the profile's words`, methods[0].label === (words?.label ?? "Stand-in") && methods[0].terms === (words?.terms ?? ""));
+    if (methods[0]) check(`${id}: the method is in the profile's words`, methods[0].label === (words?.label ?? "Stand-in"));
+    // Its terms and refunds sentences name the provider: the legal pages
+    // read them from the profile, and the view the browser gets carries
+    // the id and label alone.
+    check(`${id}: the view carries no method's terms`, methods.every((m) => JSON.stringify(Object.keys(m)) === '["id","label"]'), JSON.stringify(methods));
   }
   check("a brand that lists no provider is offered no way to pay", storefrontView({ ...profiles.gym!, paymentProviders: [] }).payment.methods.length === 0);
 }
