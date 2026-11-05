@@ -191,8 +191,9 @@ check("stripe: the rule is Stripe's alone", payments({ ...good, statementDescrip
 check("stripe: no images for Stripe's page warns", warns(stripeWith({ ...onStripe, paymentPage: undefined }, "FIXCO"), /Stripe's page shows the account's own, which are BacLab's/));
 check("stripe: a logo without an icon warns", warns(stripeWith({ ...onStripe, paymentPage: { logo: "/checkout-logo.png" } }, "FIXCO"), /has no paymentPage\.logo and \.icon/));
 for (const b of [brandFor("beauty"), gym, brandFor("wholesale"), luxury]) {
-  // Each fits after a prefix of up to 8 characters: deploy/BRAND-PAYMENTS.md says to choose one no longer.
-  check(`${b.id}'s descriptor fits after an 8-character prefix`, stripeDescriptorProblems(b.statementDescriptor ?? "", "ABCDEFGH").length === 0, b.statementDescriptor);
+  // Each fits after Stripe's longest prefix (10), so the account's shortened
+  // descriptor may be any length Stripe allows (deploy/BRAND-PAYMENTS.md).
+  check(`${b.id}'s descriptor fits after any prefix`, stripeDescriptorProblems(b.statementDescriptor ?? "", null).length === 0, b.statementDescriptor);
 }
 const prefixed = (prefix: string) => checkRegistry(registry(good, { stripePrefix: prefix }));
 check("prefix: a good one passes", prefixed("FIXCO").length === 0, show(prefixed("FIXCO")));

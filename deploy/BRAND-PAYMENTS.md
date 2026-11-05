@@ -81,9 +81,9 @@ Once, on BacLab's Stripe account, before the first brand takes a payment:
      descriptor".
    - **What:** 2 to 10 characters, at least one letter, nothing of
      BacLab's.
-   - **Length:** at most 8 characters, so that the longest brand
-     descriptor today (`RESERVE NO10`, 12) still fits Stripe's 22 with the
-     `* `.
+   - **Length:** any Stripe allows. Every brand descriptor today is 10
+     characters or fewer (the longest is `RESERVE 10`), so each still fits
+     Stripe's 22 after a 10-character prefix and the `* `.
    - **Then:** record it in `STRIPE_STATEMENT_PREFIX`
      (`lib/commerce/payments/stripe.ts`). `npm run check:brands` checks
      every brand's descriptor against it, and keeps the brands "not ready

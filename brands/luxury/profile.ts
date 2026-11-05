@@ -54,7 +54,9 @@ export function luxuryProfile(): BrandProfile {
         "By signing up you agree to receive marketing emails from Reserve No.10: news, restocks and new releases. Unsubscribe at any time from any email.",
     },
     // TODO(launch): the final name's statement descriptor.
-    statementDescriptor: "RESERVE NO10",
+    // Ten characters, so it prints whole after any shortened descriptor
+    // Stripe allows (10 at most) and its "* ".
+    statementDescriptor: "RESERVE 10",
     // Stripe, on BacLab's own account and key, as every brand is: the site
     // is declared to Stripe before it takes a payment. Moving to PayPal is
     // this list and PAYPAL_PAYMENT, plus PAYPAL_*__LUXURY

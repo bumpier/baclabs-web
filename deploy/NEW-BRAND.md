@@ -207,8 +207,9 @@ placeholder:
      most);
    - `statementDescriptor`: letters, digits, spaces, `.` and `-` only.
      Stripe prints it after the account's shortened descriptor
-     (`<prefix>* <descriptor>`, 22 characters in all), so after an
-     8-character prefix it has 12;
+     (`<prefix>* <descriptor>`, 22 characters in all). Ten characters fit
+     after any prefix Stripe allows; `check:brands` holds a longer one to
+     the prefix recorded in `STRIPE_STATEMENT_PREFIX`;
    - `paymentProviders: ["stripe"]` and `payment: STRIPE_PAYMENT`, as
      BRAND-PAYMENTS.md says, once the site is declared to Stripe (step 1.7);
    - `paymentPage: { logo, icon }`, the PNG or JPG images from step 1.7, in
