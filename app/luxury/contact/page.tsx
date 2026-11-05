@@ -8,6 +8,7 @@ import { Seal } from "@/brands/luxury/components/Marks";
 import { photoProps } from "@/brands/luxury/components/photo";
 import { CONCIERGE } from "@/brands/luxury/copy/concierge";
 import { GALLERY } from "@/brands/luxury/copy/images";
+import { tradingAs } from "@/lib/commerce/legal";
 import { brand, TRADE_TOPIC } from "../site";
 
 export const metadata: Metadata = pageMetadata({
@@ -82,7 +83,7 @@ export default function ContactPage() {
 
         {brand.legalName ? (
           <p className="rv-aside">
-            {brand.legalName}
+            {tradingAs(brand)}
             {company.number ? `, ${CONCIERGE.companyNo} ${company.number}` : ""}
             {company.registeredAddress ? `, ${company.registeredAddress}` : ""}
             {company.vatNumber ? `, ${CONCIERGE.vat} ${company.vatNumber}` : ""}

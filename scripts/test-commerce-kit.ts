@@ -25,6 +25,7 @@ import { ContactForm } from "@/components/commerce/ContactForm";
 import { cookieBannerBody } from "@/components/commerce/CookieBanner";
 import { DEFAULT_QUIET_PATHS } from "@/components/commerce/SignupPopup";
 import { brandFor, type BrandProfile } from "@/brands/registry";
+import { OPERATOR } from "@/brands/operator";
 import { BRAND_IDS, type BrandId } from "@/brands/types";
 import { PAYPAL_PAYMENT, STRIPE_PAYMENT } from "@/brands/payment-methods";
 import { checkBrandCopy } from "@/lib/content-rules";
@@ -264,7 +265,10 @@ for (const id of BRANDS) {
   for (const doc of docs) {
     const text = legalDocText(doc).join("\n");
     const where = `${id} ${doc.path}`;
-    for (const re of foreignMarkers(id)) check(`${where}: never names ${re}`, !re.test(text));
+    // The business behind the brands is BacLab's (brands/operator.ts), so its
+    // name, and nothing else of BacLab's, may be the party.
+    const others = text.split(OPERATOR.legalName).join("·");
+    for (const re of foreignMarkers(id)) check(`${where}: never names ${re}`, !re.test(others), others.match(new RegExp(`.{0,40}${re.source}.{0,40}`, "i"))?.[0] ?? "");
     // A provider, and cards, are named only when the brand's own profile takes it.
     const takes = (provider: "stripe" | "paypal") =>
       (b.paymentProviders ?? []).includes(provider) && !!b.payment?.methods.some((m) => m.id === provider);
@@ -289,6 +293,9 @@ for (const id of BRANDS) {
   }
   const terms = legalDocText(brandTerms(b)).join("\n");
   check(`${id}: the terms name the party`, terms.includes(legalIdentity(b).party));
+  check(`${id}: the party is the business behind the brands`, legalIdentity(b).party === OPERATOR.legalName);
+  check(`${id}: the terms say whose trading name it is`, terms.includes(`${b.name} is a trading name of ${OPERATOR.legalName}.`));
+  check(`${id}: no "Registered name" without a company number`, OPERATOR.company.number ? true : !terms.includes("Registered name"));
   check(`${id}: the terms name the brand on its logo clause`, terms.includes(`the ${b.name} name and logo`));
   check(`${id}: the terms state the order limit`, terms.includes(`no more than ${b.catalogue!.maxVials} vials`));
   check(`${id}: the terms list each delivery option`, b.catalogue!.delivery.options.every((o) => terms.includes(o.carrier)));

@@ -7,6 +7,7 @@
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
+import { OPERATOR } from "../operator";
 import { STRIPE_PAYMENT } from "../payment-methods";
 import { wholesaleCatalogue } from "./catalogue";
 
@@ -44,7 +45,10 @@ export function wholesaleProfile(): BrandProfile {
     disclaimer:
       "Sold as a laboratory reagent. Not a medicine and not a medical device. No therapeutic claim is made.",
     packingSlipThankYou: "Thank you for your order.",
-    legalName: "",
+    // The business behind the brand, BacLab's (brands/operator.ts): the
+    // owner's decision, 5 Nov 2026. Its company details live in config/brand.ts.
+    legalName: OPERATOR.legalName,
+    company: OPERATOR.company,
     // No mailingList: the trade site runs no list (no popups, no welcome
     // vial), so its signups are refused.
     // TODO(launch): the final name's statement descriptor.

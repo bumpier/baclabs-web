@@ -89,7 +89,7 @@ function legalDoc(meta: Omit<LegalDoc, "sections" | "lastUpdated">, defs: Sectio
 
 // ── Facts from the brand ───────────────────────────────────────────
 
-/** The party to the contract: the registered name, or the brand's own until one is set. */
+/** The party to the contract: the business behind the brand (BacLab's, brands/operator.ts), or the brand's own name if a profile names none. */
 function party(brand: BrandProfile): string {
   return brand.legalName || brand.name;
 }
@@ -153,11 +153,16 @@ function quoteOnlyPacks(brand: BrandProfile): number[] {
   return (brand.catalogue?.packs ?? []).filter((p) => !p.available).map((p) => p.vials);
 }
 
-/** The company's details, each only when set. */
+/**
+ * The company's details, each only when set. A name is a "Registered name"
+ * only once a company number says it is one: the brands run as BacLab
+ * (brands/operator.ts), which has none yet, and the trading-name line
+ * already says who that is.
+ */
 function companyRows(brand: BrandProfile, opts: { vat: boolean; ico: boolean }): [string, LegalInline[]][] {
   const c = brand.company ?? {};
   const rows: [string, LegalInline[]][] = [];
-  if (brand.legalName) rows.push(["Registered name", [brand.legalName]]);
+  if (brand.legalName && c.number) rows.push(["Registered name", [brand.legalName]]);
   if (c.number) rows.push(["Company number", [`Registered in England & Wales, no. ${c.number}`]]);
   if (c.registeredAddress) rows.push(["Registered office", [c.registeredAddress]]);
   if (opts.vat && c.vatNumber) rows.push(["VAT number", [c.vatNumber]]);
@@ -165,9 +170,20 @@ function companyRows(brand: BrandProfile, opts: { vat: boolean; ico: boolean }):
   return rows;
 }
 
-/** "Aurelle is a trading name of X Ltd." once a registered name differs from the brand's. */
+/**
+ * Who runs the brand, in one line for a footer or a contact page: "Aurelle
+ * is a trading name of BacLab", or the name alone when it is the brand's
+ * own. "" while the profile names no business. No full stop, so a page can
+ * add the company number and office after it.
+ */
+export function tradingAs(brand: Pick<BrandProfile, "name" | "legalName">): string {
+  if (!brand.legalName) return "";
+  return brand.legalName === brand.name ? brand.legalName : `${brand.name} is a trading name of ${brand.legalName}`;
+}
+
+/** "Aurelle is a trading name of BacLab." once the business's name differs from the brand's. */
 function tradingName(brand: BrandProfile): LegalBlock[] {
-  return brand.legalName && brand.legalName !== brand.name ? [p(`${brand.name} is a trading name of ${brand.legalName}.`)] : [];
+  return brand.legalName && brand.legalName !== brand.name ? [p(`${tradingAs(brand)}.`)] : [];
 }
 
 // ── Terms ──────────────────────────────────────────────────────────

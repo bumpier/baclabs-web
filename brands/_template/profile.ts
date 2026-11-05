@@ -14,6 +14,7 @@
  * nothing, as everywhere else.
  */
 import type { BrandId, BrandProfile } from "../types";
+import { OPERATOR } from "../operator";
 import { templateCatalogue } from "./catalogue";
 
 export function templateProfile(): BrandProfile {
@@ -50,11 +51,14 @@ export function templateProfile(): BrandProfile {
     disclaimer:
       "Sold as a laboratory reagent. Not a medicine and not a medical device. No therapeutic claim is made.",
     packingSlipThankYou: "Thank you for your order.",
-    // TODO(launch): the company that trades as the brand, with its number and registered office.
-    legalName: "",
+    // The business behind the brand, BacLab's (brands/operator.ts): the
+    // owner's decision, 5 Nov 2026. Its company details live in config/brand.ts.
+    legalName: OPERATOR.legalName,
+    company: OPERATOR.company,
     shipping: {
-      // TODO(confirm): the sender name on the carrier label (25 characters at most).
-      senderCompany: "Template Brand",
+      // No senderCompany: the carrier label names the warehouse's company,
+      // as every brand's does (the owner, 5 Nov 2026). A name of the brand's
+      // own goes here, 25 characters at most.
       packingNote: "Template Brand box",
     },
     // No mailingList: the brand runs no list until its consent wording is

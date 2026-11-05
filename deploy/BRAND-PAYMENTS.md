@@ -71,31 +71,30 @@ Once, on BacLab's Stripe account, before the first brand takes a payment:
      the full list.
    - **Then:** keep Stripe's written confirmation with the brand's records.
      Do the same for every brand added later, before it takes a payment.
-2. **Set a neutral shortened descriptor.**
-   - **Why:** Stripe prints a brand's card payment as
-     `<shortened descriptor>* <statementDescriptor>`, for example
-     `ABC LTD* AURELLE`. Unset, Stripe uses the start of the account's
-     statement descriptor, which is BacLab's name, so every brand's buyers
-     would see BacLab on their statements.
-   - **Where:** *Settings → Business → Public details*, "Shortened
-     descriptor".
-   - **What:** 2 to 10 characters, at least one letter, nothing of
-     BacLab's.
-   - **Length:** any Stripe allows. Every brand descriptor today is 10
-     characters or fewer (the longest is `RESERVE 10`), so each still fits
-     Stripe's 22 after a 10-character prefix and the `* `.
-   - **Then:** record it in `STRIPE_STATEMENT_PREFIX`
-     (`lib/commerce/payments/stripe.ts`). `npm run check:brands` checks
-     every brand's descriptor against it, and keeps the brands "not ready
-     for launch" until it is recorded.
-   - **Check BacLab's own statement:** BacLab's sessions send no suffix.
+2. **The shortened descriptor: nothing to do.**
+   - **What buyers see:** Stripe prints a brand's card payment as
+     `<shortened descriptor>* <statementDescriptor>`. The account's
+     shortened descriptor is BacLab's, so a Brute Lab payment reads like
+     `BACLAB* BRUTE LAB`. The owner is content with that: the brands are a
+     front for BacLab, and any company reference may name it (5 Nov 2026).
+   - **Length:** every brand descriptor today is 10 characters or fewer
+     (the longest is `RESERVE 10`), so each fits Stripe's 22 after any
+     prefix Stripe allows (10 characters at most) and the `* `.
+     `npm run check:brands` holds each descriptor to that longest prefix
+     while `STRIPE_STATEMENT_PREFIX` (`lib/commerce/payments/stripe.ts`)
+     is `null`.
+   - **To change it later:** *Settings → Business → Public details*,
+     "Shortened descriptor", 2 to 10 characters with at least one letter.
+     Record the new one in `STRIPE_STATEMENT_PREFIX`, and open a BacLab
+     test-mode payment in the Dashboard before and after to compare its
+     calculated statement descriptor: BacLab's sessions send no suffix, and
      Stripe's page does not say what such a payment prints once a prefix is
-     set. Before and after setting it, open a BacLab test-mode payment in
-     the Dashboard and compare its calculated statement descriptor.
-3. **Turn Stripe's own receipt emails off.**
+     set.
+3. **Turn Stripe's own receipt emails off (optional).**
    - **Why:** each brand already sends its own confirmation, from its own
-     address. Stripe's receipt would carry the account's name and
-     branding, which are BacLab's.
+     address. Stripe's receipt would be a second email, in the account's
+     name and branding, which are BacLab's. BacLab's name is acceptable
+     (above), so this only spares buyers the duplicate.
    - **Where:** *Settings → Business → Customer emails*: turn off
      "Successful payments" (and "Refunds").
    - **BacLab too:** this is account-wide, so BacLab's customers stop

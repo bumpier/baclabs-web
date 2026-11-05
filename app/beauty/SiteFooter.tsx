@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CookieSettingsButton } from "@/components/commerce/CookieSettingsButton";
 import { FOOTER } from "@/brands/beauty/copy/site";
 import { Mark, Wordmark } from "@/brands/beauty/components/Wordmark";
+import { tradingAs } from "@/lib/commerce/legal";
 import { brand, STOREFRONT } from "./site";
 
 /**
@@ -86,7 +87,7 @@ export function SiteFooter() {
         <p>{brand.disclaimer}</p>
         {brand.legalName ? (
           <p>
-            {brand.name} is a trading name of {brand.legalName}
+            {tradingAs(brand)}
             {company.number ? `, company no. ${company.number}` : ""}
             {company.registeredAddress ? `, ${company.registeredAddress}` : ""}.
           </p>

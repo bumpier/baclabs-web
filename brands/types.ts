@@ -102,14 +102,19 @@ export interface BrandProfile {
     /** What the packer puts in with this brand's orders (its box or insert), for the slip and packing screen. */
     packingNote?: string;
   };
-  /** Registered company name for legal lines. "" renders nothing. */
+  /**
+   * The business that trades as the brand, as its legal lines name it
+   * ("Aurelle is a trading name of BacLab"): its registered name once it
+   * has one. Every brand's is BacLab's, from brands/operator.ts (the
+   * owner's decision, 5 Nov 2026). "" renders nothing.
+   */
   legalName: string;
   /**
-   * The registered company's other details, for the brand's legal pages
-   * (lib/commerce/legal.ts). The Trading Disclosures Regulations 2008 want
-   * the number and registered office on every site, so fill them before
-   * launch. One company runs every brand, so they are normally the same on
-   * each. Empty or unset renders nothing. BacLab's are config/brand.ts.
+   * The business's other details, for the brand's legal pages
+   * (lib/commerce/legal.ts), footer and contact page. A registered company
+   * must show its number and registered office (Trading Disclosures
+   * Regulations 2008). Every brand's are BacLab's, from brands/operator.ts,
+   * which reads config/brand.ts. Empty or unset renders nothing.
    */
   company?: {
     number?: string;

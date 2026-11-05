@@ -10,7 +10,7 @@
  *  - payments: every provider it lists has an adapter, the statement
  *    descriptor is one a card statement prints as written (on Stripe, after
  *    the account's shortened descriptor, STRIPE_STATEMENT_PREFIX, which
- *    must itself be Stripe's 2 to 10 characters and never BacLab's name),
+ *    must itself be Stripe's 2 to 10 characters; unrecorded, the longest),
  *    a Stripe brand has its own PNG or JPG logo and icon for Stripe's page,
  *    and the label's sender name fits SmartTrack;
  *  - catalogue: the per-vial price falls as the packs grow, and every pack
@@ -24,14 +24,16 @@
  *    compiler, never comments) and in its profile passes its rules
  *    (lib/content-rules.ts brandRules);
  *  - leaks: none of those strings names another brand, its domains or its
- *    SKUs, or BacLab, except the internal codes in LEAK_ALLOW.
+ *    SKUs, or BacLab, except the internal codes in LEAK_ALLOW and the
+ *    business behind the brands (brands/operator.ts, BacLab's) in a
+ *    profile's legalName and company fields.
  *
  * It checks brands/_template/ too (checkTemplate): never registered or
  * routed, LIVE off, no payment provider, and placeholder copy that passes
  * every brand's rules and names no brand.
  *
  * A brand that has not launched runs on placeholders: development hosts,
- * .invalid mailboxes, empty legal details, TODO(launch) and TODO(confirm)
+ * .invalid mailboxes, TODO(launch) and TODO(confirm)
  * notes. Those are "not ready for launch" warnings, so the tree passes while
  * brands are being built. `--launch <id>` makes that brand's warnings
  * failures; deploy/NEW-BRAND.md runs it before the brand's LIVE flag is
@@ -49,6 +51,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import hostsJson from "@/brands/hosts.json";
+import { OPERATOR } from "@/brands/operator";
 import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { BRAND_IDS, type BrandId } from "@/brands/types";
 import { templateProfile } from "@/brands/_template/profile";
@@ -76,7 +79,7 @@ export interface CopyString {
   where: string;
   text: string;
   /** Where it came from. The leak allow-list is scoped by it. */
-  kind: "source" | "profile" | "seed" | "asset";
+  kind: "source" | "profile" | "seed" | "asset" | "operator";
 }
 
 /** A file a page names: a static import, or a site path such as "/hero.jpg". */
@@ -260,9 +263,12 @@ export function checkIdentity(b: BrandProfile, reg: Registry): Finding[] {
     else if (!publicDomains.some((d) => isOn(domain, d))) fail(`${field} ${value} is not on the brand's own domain (${publicDomains.join(", ")})`);
   }
 
-  if (!b.legalName) warn("legalName is empty: the legal pages must name the company that trades as the brand");
-  if (!b.company?.number || !b.company.registeredAddress) {
-    warn("company number and registered office are not set (Trading Disclosures Regulations 2008)");
+  // The business is BacLab's, which has no company number or office to
+  // show yet (the owner, 5 Nov 2026), so only half a set of company
+  // details is a problem.
+  if (!b.legalName) warn("legalName is empty: the legal pages must name the business that trades as the brand (brands/operator.ts)");
+  if (b.company?.number && !b.company.registeredAddress) {
+    warn("has a company number but no registered office (Trading Disclosures Regulations 2008)");
   }
   return out;
 }
@@ -314,7 +320,8 @@ const STRIPE_SEPARATOR = "* ";
 
 /**
  * Why a shortened descriptor cannot be the account's prefix; [] when it
- * can. Never BacLab's name: it would be on every brand's statements.
+ * can. BacLab's own name may be it: the owner is content for every brand's
+ * statements to start with BacLab's (5 Nov 2026).
  */
 export function stripePrefixProblems(prefix: string): string[] {
   const out: string[] = [];
@@ -323,7 +330,6 @@ export function stripePrefixProblems(prefix: string): string[] {
   }
   if (!DESCRIPTOR_CHARS.test(prefix)) out.push(`may only use letters, digits, spaces, "." and "-"`);
   if (!/[A-Za-z]/.test(prefix)) out.push("needs at least one letter");
-  if (/bac\s*lab/i.test(prefix)) out.push("names BacLab, which would put BacLab on every brand's statements");
   return out;
 }
 
@@ -370,19 +376,17 @@ export function checkPayments(b: BrandProfile, reg: Registry): Finding[] {
       // Known prefix: a hard rule. Unknown: a launch warning, with the worst case.
       for (const problem of problems) (prefix ? fail : warn)(`statementDescriptor "${d}" ${problem}`);
     }
-    if (prefix === null) {
-      warn(
-        `Stripe prints "<prefix>* ${d ?? ""}", and the account's shortened descriptor is not recorded in STRIPE_STATEMENT_PREFIX (lib/commerce/payments/stripe.ts): set a neutral one in Stripe and record it there`
-      );
-    }
+    // No prefix recorded: the descriptor is held to Stripe's longest above,
+    // and whatever the account's is, BacLab's included, may lead it.
     if (!b.paymentPage?.logo || !b.paymentPage.icon) {
       warn("has no paymentPage.logo and .icon: Stripe's page shows the account's own, which are BacLab's");
     }
   }
 
+  // Unset: the label names the warehouse's company, as the owner is content
+  // for every brand's to (5 Nov 2026).
   const sender = b.shipping?.senderCompany;
-  if (!sender) warn("has no shipping.senderCompany: its carrier labels name the warehouse's company instead");
-  else if (sender.length > LIMITS.senderCompany) {
+  if (sender && sender.length > LIMITS.senderCompany) {
     fail(`shipping.senderCompany "${sender}" is ${sender.length} characters; SmartTrack takes ${LIMITS.senderCompany}`);
   }
   return out;
@@ -613,12 +617,23 @@ export function sourceFacts(file: string, text: string): SourceFacts {
   return path.posix.basename(file) === "site.ts" ? { strings, assets, notes, live, defaultImageLoader } : { strings, assets, notes, defaultImageLoader };
 }
 
+/**
+ * A legal field holding exactly the business behind the brands
+ * (brands/operator.ts): the one place a brand may name BacLab, because the
+ * owner decided every company reference names it (5 Nov 2026).
+ */
+function isOperatorField(at: string, v: string): boolean {
+  if (at === "legalName") return v === OPERATOR.legalName;
+  const [group, key] = at.split(".");
+  return group === "company" && key !== undefined && v === (OPERATOR.company as Record<string, string | undefined>)[key];
+}
+
 /** Every string in a profile, catalogue included: names, mailboxes, legal and payment words, pack labels. */
 export function profileStrings(b: BrandProfile): CopyString[] {
   const out: CopyString[] = [];
   const walk = (v: unknown, at: string): void => {
     if (typeof v === "string") {
-      if (v.trim()) out.push({ where: `profile ${at}`, text: v, kind: "profile" });
+      if (v.trim()) out.push({ where: `profile ${at}`, text: v, kind: isOperatorField(at, v) ? "operator" : "profile" });
     } else if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${at}[${i}]`));
     else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) walk(x, at ? `${at}.${k}` : k);
   };
@@ -702,10 +717,14 @@ export const LEAK_ALLOW: readonly { token: string; in: CopyString["kind"]; reaso
   },
 ];
 
-/** No string names another brand or BacLab, bar LEAK_ALLOW's tokens where they are allowed. */
+/**
+ * No string names another brand or BacLab, bar LEAK_ALLOW's tokens where
+ * they are allowed and the business behind the brands in a legal field.
+ */
 export function checkLeaks(brand: string, strings: readonly CopyString[], markers: readonly LeakMarker[]): Finding[] {
   const { out, fail } = findings(brand);
   for (const s of strings) {
+    if (s.kind === "operator") continue;
     let text = s.text;
     for (const a of LEAK_ALLOW) if (a.in === s.kind) text = text.split(a.token).join("·");
     const named = markers.filter((m) => m.re.test(text)).map((m) => m.what);

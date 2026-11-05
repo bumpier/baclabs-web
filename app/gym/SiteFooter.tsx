@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CookieSettingsButton } from "@/components/commerce/CookieSettingsButton";
 import { SITE } from "@/brands/gym/copy/site";
 import { Mark, Wordmark } from "@/brands/gym/components/Logo";
+import { tradingAs } from "@/lib/commerce/legal";
 import { brand, STOREFRONT } from "./site";
 
 const COLUMNS = [
@@ -71,7 +72,7 @@ export function SiteFooter() {
       </div>
       <div className="gym-wrap">
         <p className="gym-footer-small">{brand.disclaimer}</p>
-        {brand.legalName ? <p className="gym-footer-small">{brand.legalName}</p> : null}
+        {brand.legalName ? <p className="gym-footer-small">{tradingAs(brand)}.</p> : null}
       </div>
       <div className="gym-wrap gym-footer-word" aria-hidden="true">
         <Wordmark className="gym-footer-wordmark" />

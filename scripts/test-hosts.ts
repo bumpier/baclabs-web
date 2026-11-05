@@ -18,6 +18,7 @@ import { stripBrandPrefix } from "@/lib/brand/use-brand-pathname";
 import { breadcrumbSchema, pageMetadata, siteOf } from "@/lib/seo";
 import { organizationRef, returnPolicySchema } from "@/lib/product-schema";
 import { legalName, supportEmail } from "@/lib/legal";
+import { OPERATOR } from "@/brands/operator";
 import { robotsTxt, sitemapXml, webManifest } from "@/lib/brand/site";
 import { brand as baclabConfig } from "@/config/brand";
 import { canonicalOrigin } from "@/lib/site-url";
@@ -173,14 +174,16 @@ for (const id of nonDefault) {
     pageMetadata({ title: "Page", description: "D", path: "/page", brandId: id }),
     organizationRef(id),
     returnPolicySchema(id),
-    legalName(id),
     supportEmail(id),
     robotsTxt(b, true),
     sitemapXml(b, ["/", "/page"]),
     webManifest(b),
   ]);
   check(`${id}: helpers use its own origin`, out.includes(b.origin) && !out.includes(canonicalOrigin()));
-  check(`${id}: helpers name it, not BacLab`, out.includes(b.name) && !/baclab/i.test(out), out.slice(0, 200));
+  check(`${id}: helpers name it, not BacLab`, out.includes(b.name) && !/baclab/i.test(out), out.match(/.{0,60}baclab.{0,60}/i)?.[0] ?? out.slice(0, 200));
+  // The contract's party is the business behind the brands, BacLab's
+  // (brands/operator.ts): the owner's decision, 5 Nov 2026.
+  check(`${id}: the contract's party is the business behind the brands`, legalName(id) === OPERATOR.legalName, legalName(id));
   check(`${id}: robots.txt disallows everything until launch`, robotsTxt(b, false) === "User-agent: *\nDisallow: /\n");
 }
 

@@ -36,10 +36,10 @@ import { DELIVERY_INSTRUCTIONS_FIELD, getStripe } from "@/lib/payments/stripe";
  * payment as "<prefix>* <statementDescriptor>", 22 characters at most in
  * all. The prefix is set there and never sent with a payment; this records
  * what it is set to, so npm run check:brands can hold each brand's
- * descriptor to the room it leaves. null while it has not been chosen: the
- * check then assumes Stripe's longest prefix and calls the brands not ready
- * for launch. Neutral, like the descriptors: BacLab's name here would be on
- * every brand's statements.
+ * descriptor to the room it leaves. null while it is not recorded: the
+ * check then holds each descriptor to Stripe's longest prefix, which every
+ * brand's fits. The owner is content for it to be BacLab's name, so every
+ * brand's statement starts with it (5 Nov 2026).
  */
 export const STRIPE_STATEMENT_PREFIX: string | null = null;
 

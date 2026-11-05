@@ -83,17 +83,20 @@ design work.
      the company listed so that no other processor will take it on.
    - **Then:** keep Stripe's written confirmation with the brand's records.
    - **The first brand only:** the account's one-off settings in
-     BRAND-PAYMENTS.md (a neutral shortened descriptor, Stripe's receipt
-     emails off).
+     BRAND-PAYMENTS.md. Since 5 Nov 2026 none is required: statements may
+     start with BacLab's shortened descriptor, and turning Stripe's receipt
+     emails off is optional.
    - **A brand on PayPal instead** has an account and credentials of its
      own, declared to PayPal the same way ("Switching a brand to PayPal
      later" in BRAND-PAYMENTS.md).
    - **Images for Stripe's page:** a PNG or JPG logo and a square icon,
      for step 6.
-8. **Company details.** The legal name, company number and registered
-   office the brand's legal pages must show (Trading Disclosures
-   Regulations 2008). One company runs every brand, so they are normally
-   the same on each.
+8. **Company details: nothing to collect.** Every brand trades as BacLab
+   (the owner, 5 Nov 2026), so its legal pages, footer and contact page
+   say "<Brand> is a trading name of BacLab". The profile takes them from
+   `brands/operator.ts`, which reads BacLab's own `config/brand.ts`: fill
+   a legal name, company number and registered office in there once, and
+   all five sites show them.
 9. **Packaging.** The brand's box or insert, and the real packed weight of
    every pack size in it (box included, read off a scale). Labels are
    bought by weight, so a guessed weight buys the wrong service.
@@ -226,9 +229,10 @@ placeholder:
    - `origin: "https://<apex>"`;
    - `email.from` on `<apex>`, plus `contact` and `inbox` (the Email
      Routing addresses from step 1.3);
-   - `legalName` and `company` from step 1.8;
-   - `shipping.senderCompany`, the label's sender name (25 characters at
-     most);
+   - `legalName` and `company` stay `OPERATOR`'s (step 1.8);
+   - `shipping.senderCompany` only if the label should name something
+     other than the warehouse's company (25 characters at most). Unset is
+     what every brand does today;
    - `statementDescriptor`: letters, digits, spaces, `.` and `-` only.
      Stripe prints it after the account's shortened descriptor
      (`<prefix>* <descriptor>`, 22 characters in all). Ten characters fit
@@ -255,10 +259,10 @@ placeholder:
 
    `--launch` turns every "not ready for launch" warning for that brand
    into a failure: a development origin or host, a placeholder or missing
-   mailbox, missing company details, no label sender, no payment provider,
-   no images for Stripe's page, the account's shortened descriptor not yet
-   recorded in `STRIPE_STATEMENT_PREFIX`, any TODO note left. Run the full
-   test set as for any change.
+   mailbox, no legal name, a company number without a registered office,
+   no payment provider, no images for Stripe's page, a descriptor too long
+   for Stripe's longest prefix, any TODO note left. Run the full test set
+   as for any change.
 8. **Build it in a scratch copy**, as for every change (never in the repo,
    where another session's dev server shares `.next`):
 

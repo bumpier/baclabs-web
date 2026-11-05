@@ -6,6 +6,7 @@
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
+import { OPERATOR } from "../operator";
 import { STRIPE_PAYMENT } from "../payment-methods";
 import { luxuryCatalogue } from "./catalogue";
 
@@ -47,7 +48,10 @@ export function luxuryProfile(): BrandProfile {
     disclaimer:
       "Sold as a laboratory reagent. Not a medicine and not a medical device. No therapeutic claim is made.",
     packingSlipThankYou: "Thank you for your order.",
-    legalName: "",
+    // The business behind the brand, BacLab's (brands/operator.ts): the
+    // owner's decision, 5 Nov 2026. Its company details live in config/brand.ts.
+    legalName: OPERATOR.legalName,
+    company: OPERATOR.company,
     // TODO(confirm): the wording, with the signup form that shows it.
     mailingList: {
       consentText:

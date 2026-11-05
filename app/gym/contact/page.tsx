@@ -6,6 +6,7 @@ import { brandContactTopics, CONTACT_MESSAGE_MAX } from "@/lib/commerce/contact"
 import { COMPLAINT_ACK_DAYS } from "@/lib/legal";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
 import { CONTACT } from "@/brands/gym/copy/site";
+import { tradingAs } from "@/lib/commerce/legal";
 import { brand, TRADE_TOPIC } from "../site";
 
 export const metadata: Metadata = pageMetadata({
@@ -100,7 +101,7 @@ export default function ContactPage() {
             </ul>
             {brand.legalName ? (
               <p className="gym-company">
-                {brand.legalName}
+                {tradingAs(brand)}
                 {company.number ? `, no. ${company.number}` : ""}
                 {company.registeredAddress ? `, ${company.registeredAddress}` : ""}
                 {company.vatNumber ? `, VAT ${company.vatNumber}` : ""}

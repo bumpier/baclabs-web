@@ -4,6 +4,7 @@ import { SignupForm } from "@/components/commerce/SignupForm";
 import { Wordmark } from "@/brands/luxury/components/Marks";
 import { LETTERS } from "@/brands/luxury/copy/home";
 import { FOOTER } from "@/brands/luxury/copy/site";
+import { tradingAs } from "@/lib/commerce/legal";
 import { brand, STOREFRONT } from "./site";
 
 /**
@@ -86,7 +87,7 @@ export function SiteFooter() {
         <p>{brand.disclaimer}</p>
         {brand.legalName ? (
           <p>
-            {brand.legalName}
+            {tradingAs(brand)}
             {company.number ? `, ${FOOTER.companyNo} ${company.number}` : ""}
             {company.registeredAddress ? `, ${company.registeredAddress}` : ""}
           </p>

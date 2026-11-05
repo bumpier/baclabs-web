@@ -7,12 +7,14 @@ import { canonicalOrigin } from "@/lib/site-url";
 /**
  * The origin and organisation name for a brand's structured data, BacLab by
  * default. Another brand's come from its profile, never canonicalOrigin():
- * its pages are prerendered with no Host header to go on.
+ * its pages are prerendered with no Host header to go on. Its organisation
+ * is the brand itself: the business behind it (BacLab's, brands/operator.ts)
+ * is named on its legal pages, never as the site's entity in search.
  */
 function schemaSite(brandId: string): { origin: string; orgName: string } {
   if (brandId === DEFAULT_BRAND) return { origin: canonicalOrigin(), orgName: brand.company.legalName || brand.name };
   const b = brandFor(brandId);
-  return { origin: b.origin, orgName: b.legalName || b.name };
+  return { origin: b.origin, orgName: b.name };
 }
 
 /**

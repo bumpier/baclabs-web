@@ -8,6 +8,7 @@ import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
 import { Photo } from "@/brands/beauty/components/Photo";
 import { CONTACT } from "@/brands/beauty/copy/site";
 import { IMAGES } from "@/brands/beauty/copy/images";
+import { tradingAs } from "@/lib/commerce/legal";
 import { brand, TRADE_TOPIC } from "../site";
 
 export const metadata: Metadata = pageMetadata({
@@ -70,7 +71,7 @@ export default function ContactPage() {
           </div>
           {brand.legalName ? (
             <p className="au-fine mt-10">
-              {brand.legalName}
+              {tradingAs(brand)}
               {company.number ? `, no. ${company.number}` : ""}
               {company.registeredAddress ? `, ${company.registeredAddress}` : ""}
               {company.vatNumber ? `, VAT ${company.vatNumber}` : ""}

@@ -11,6 +11,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { brandFor, type BrandProfile } from "@/brands/registry";
+import { OPERATOR } from "@/brands/operator";
 import { PAYPAL_PAYMENT, STRIPE_PAYMENT } from "@/brands/payment-methods";
 import type { BrandCatalogue } from "@/brands/types";
 import { DELIVERY, DELIVERY_OPTIONS } from "@/config/funnel";
@@ -146,7 +147,8 @@ check("warns: placeholder mailbox", warns(b1, /is a placeholder mailbox/));
 check("warns: no contact address", warns(b1, /email\.contact is empty/));
 check("warns: no inbox", warns(b1, /email\.inbox is empty/));
 check("warns: no legal name", warns(b1, /legalName is empty/));
-check("warns: no company details", warns(b1, /company number and registered office/));
+check("no company details is no finding: BacLab's has none yet", !b1.some((f) => /company number|registered office/.test(f.message)), show(b1));
+check("a company number without an office warns", warns(identity({ ...building, company: { number: "01234567" } }), /has a company number but no registered office/));
 const realMailNoHosts = identity({ ...building, email: { ...building.email, from: "Fixture <hello@fixturebrand.co.uk>" } });
 check("a real mailbox before the domain is in hosts.json warns", noFailures(realMailNoHosts) && warns(realMailNoHosts, /does not list for the brand yet/), show(realMailNoHosts));
 
@@ -182,7 +184,11 @@ check(
   show(fit("RESERVE NO10", "ABCDEFGHI"))
 );
 check("stripe: a short prefix leaves more room", noFailures(fit("FIXTURE COMPANY LT", "FX")));
-check("stripe: with no prefix recorded, a launch warning", noFailures(fit("FIXTURE CO", null)) && warns(fit("FIXTURE CO", null), /shortened descriptor is not recorded in STRIPE_STATEMENT_PREFIX/));
+check(
+  "stripe: no prefix recorded, and a descriptor that fits after any, is no finding",
+  !fit("FIXTURE CO", null).some((f) => /prefix|STRIPE_STATEMENT_PREFIX/.test(f.message)),
+  show(fit("FIXTURE CO", null))
+);
 check(
   "stripe: and the worst case is warned of, never failed",
   noFailures(fit("RESERVE NO10", null)) && warns(fit("RESERVE NO10", null), /is 12 characters; after Stripe's longest prefix \(10\) and "\* " there is room for 10/),
@@ -202,12 +208,12 @@ check("prefix: 1 character fails", fails(prefixed("F"), /is 1 characters; Stripe
 check("prefix: 11 characters fails", fails(prefixed("FIXTURECOMP"), /is 11 characters/));
 check("prefix: no letter fails", fails(prefixed("12345"), /needs at least one letter/));
 check("prefix: \"*\" fails", fails(prefixed("FIX*CO"), /may only use letters, digits, spaces/));
-check("prefix: BacLab's name fails", fails(prefixed("BACLAB"), /names BacLab/) && fails(prefixed("BAC LAB CO"), /names BacLab/));
+check("prefix: BacLab's name passes, the owner's choice", prefixed("BACLAB").length === 0, show(prefixed("BACLAB")));
 check("prefix: unset is no registry finding", checkRegistry(registry(good, { stripePrefix: null })).length === 0);
 const sender = (s: string) => payments({ ...good, shipping: { senderCompany: s } });
 check("sender company: 26 characters fails", fails(sender("Fixture Company Trading Lt"), /is 26 characters; SmartTrack takes 25/));
 check("sender company: 25 characters passes", noFailures(sender("Fixture Company Trading L")));
-check("sender company: unset warns", warns(payments({ ...good, shipping: undefined }), /has no shipping\.senderCompany/));
+check("sender company: unset is no finding, the warehouse's name", !payments({ ...good, shipping: undefined }).some((f) => /senderCompany/.test(f.message)));
 // A provider id outside BRAND_PAYMENT_PROVIDERS can only arrive by a cast: that is the mistake being caught.
 const unknownProvider = { ...good, paymentProviders: ["airwallex"] as unknown as BrandProfile["paymentProviders"] };
 check("a provider without an adapter fails", fails(payments(unknownProvider), /payment provider "airwallex" has no adapter/));
@@ -329,6 +335,11 @@ check("another brand's SKU fails", fails(leaks(src("GYM-10ML-X10")), /Brute Lab'
 check("BacLab's name fails", fails(leaks(src("By BacLab")), /names BacLab/));
 check("BacLab's domain fails", fails(leaks(src("https://baclab.co.uk/terms")), /names BacLab/));
 check("the brand's own name passes", noFailures(leaks(src("Reserve No.10, sealed"))));
+const asOperator = profileStrings({ ...luxury, legalName: OPERATOR.legalName, company: { ...OPERATOR.company, registeredAddress: "1 Fixture Street" } });
+check("the business behind the brands passes in legalName", asOperator.some((s) => s.kind === "operator" && s.text === OPERATOR.legalName) && noFailures(leaks(asOperator)), show(leaks(asOperator)));
+check("BacLab anywhere else in a profile fails", fails(leaks(profileStrings({ ...luxury, disclaimer: "Sold by BacLab." })), /profile disclaimer: names BacLab/));
+check("a legalName naming BacLab that is not the business's fails", fails(leaks(profileStrings({ ...luxury, legalName: "BacLab Imitation Ltd" })), /profile legalName: names BacLab/));
+check("a company field that is not the business's is still scanned", fails(leaks(profileStrings({ ...luxury, company: { registeredAddress: "c/o baclab.co.uk" } })), /profile company\.registeredAddress: names BacLab/));
 const seeded = brandSkuSpecs([luxury])[0]!;
 check("the seed names the shared vial", seedStrings(seeded).some((s) => s.text.includes(VIAL_SKU_CODE)));
 check("the allow-list lets the shared vial code through in the seed", noFailures(leaks(seedStrings(seeded))), show(leaks(seedStrings(seeded))));

@@ -4,6 +4,7 @@ import { ContactForm } from "@/components/commerce/ContactForm";
 import { brandContactTopics, CONTACT_MESSAGE_MAX } from "@/lib/commerce/contact";
 import { COMPLAINT_ACK_DAYS } from "@/lib/legal";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
+import { tradingAs } from "@/lib/commerce/legal";
 import { brand, TRADE_TOPIC } from "../site";
 
 export const metadata: Metadata = pageMetadata({
@@ -51,7 +52,7 @@ export default function ContactPage() {
 
       {brand.legalName ? (
         <p className="mt-12 text-sm text-ink-soft">
-          {brand.legalName}
+          {tradingAs(brand)}
           {company.number ? `, no. ${company.number}` : ""}
           {company.registeredAddress ? `, ${company.registeredAddress}` : ""}
           {company.vatNumber ? `, VAT ${company.vatNumber}` : ""}

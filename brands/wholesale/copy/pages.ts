@@ -50,7 +50,7 @@ export const FOOTER = {
       ],
     },
   ],
-  company: "Company",
+  company: "Operated by",
   number: "Company no.",
   address: "Registered office",
   vat: "VAT no.",

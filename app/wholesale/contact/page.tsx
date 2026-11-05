@@ -7,6 +7,7 @@ import { COMPLAINT_ACK_DAYS } from "@/lib/legal";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
 import { CONTACT, CRUMBS } from "@/brands/wholesale/copy/pages";
 import { FORM_CLASSES } from "@/brands/wholesale/components/form-classes";
+import { tradingAs } from "@/lib/commerce/legal";
 import { brand, TRADE_TOPIC } from "../site";
 
 export const metadata: Metadata = pageMetadata({
@@ -86,7 +87,7 @@ export default function ContactPage() {
             </ul>
             {brand.legalName ? (
               <p className="mt-6 text-sm text-ink-soft">
-                {brand.legalName}
+                {tradingAs(brand)}
                 {company.number ? `, no. ${company.number}` : ""}
                 {company.registeredAddress ? `, ${company.registeredAddress}` : ""}
                 {company.vatNumber ? `, VAT ${company.vatNumber}` : ""}
