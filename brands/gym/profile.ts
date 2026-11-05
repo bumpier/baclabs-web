@@ -19,6 +19,10 @@ export function gymProfile(): BrandProfile {
     // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
     domains: [...hosts.gym],
     logo: "/icon.svg",
+    // Stripe's page shows these (PNG: Stripe takes no SVG), rendered from
+    // components/Logo.tsx: the lockup as the header sets it, and the mark,
+    // which is also the favicon. Sent once the origin is https.
+    paymentPage: { logo: "/payment-logo.png", icon: "/payment-icon.png" },
     // The emails', the packing slip's and the payment page's colours: the
     // site's own on light paper. Hazard yellow is the button (black on it,
     // 12:1), never a link or a text colour on paper, where it cannot be read.

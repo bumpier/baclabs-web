@@ -20,6 +20,10 @@ export function luxuryProfile(): BrandProfile {
     // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
     domains: [...hosts.luxury],
     logo: "/icon.svg",
+    // Stripe's page shows these (PNG: Stripe takes no SVG), rendered from
+    // components/mark-paths.ts: the seal beside the wordmark, and the seal
+    // alone as the favicon draws it. Sent once the origin is https.
+    paymentPage: { logo: "/payment-logo.png", icon: "/payment-icon.png" },
     colours: {
       paper: "#E4E1DC",
       surface: "#F2EFEB",
