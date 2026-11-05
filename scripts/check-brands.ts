@@ -17,7 +17,8 @@
  *    and box is a SKU that scripts/seed-brand-skus.ts creates, unique across
  *    the brands;
  *  - assets: its logo, its icon and every file its pages name are in
- *    public/<id>/;
+ *    public/<id>/, and next/image is never left on its default loader,
+ *    which cannot fetch them (checkImages);
  *  - copy: every string a customer can see in brands/<id>/** and app/<id>/**
  *    (string literals, template text and JSX text, read with the TypeScript
  *    compiler, never comments) and in its profile passes its rules
@@ -100,6 +101,8 @@ export interface SourceFacts {
   notes: LaunchNote[];
   /** site.ts only: the LIVE flag, or null if the file has none. */
   live?: boolean | null;
+  /** Where it imports next/image without a loader of its own (checkImages). */
+  defaultImageLoader?: string[];
 }
 
 /** Everything the checks need from outside the profile: the registry, as it is on disk. */
@@ -468,6 +471,21 @@ export function checkAssets(
   return out;
 }
 
+/**
+ * next/image only with a loader of the brand's own. The default one sends
+ * every image through /_next/image, whose optimiser fetches the file from
+ * this server without the brand's Host, so the host rewrite never maps it
+ * to public/<id>/ and the image answers 400. deploy/NEW-BRAND.md "Images"
+ * says what to do instead. `imports` is SourceFacts.defaultImageLoader.
+ */
+export function checkImages(brand: string, imports: readonly string[]): Finding[] {
+  const { out, fail } = findings(brand);
+  for (const where of imports) {
+    fail(`${where} uses next/image with its default loader, which cannot fetch the brand's images (/_next/image answers 400): give it a loader over widths made ahead, or unoptimized (deploy/NEW-BRAND.md "Images")`);
+  }
+  return out;
+}
+
 // ── Reading a brand's files ─────────────────────────────────────────
 
 /** JSX attributes that hold code, never words a customer reads. */
@@ -476,6 +494,9 @@ const NOT_COPY_ATTRIBUTES = new Set(["className", "key", "id", "htmlFor", "rel",
 const SITE_FILE = /^\/[A-Za-z0-9._/-]+\.(?:svg|png|jpe?g|webp|avif|gif|ico|pdf|txt|xml|json|webmanifest|woff2?|mp4|webm)$/;
 const ASSET_IMPORT = /\.(?:svg|png|jpe?g|webp|avif|gif|ico|css|woff2?)$/;
 const NOTE = /TODO\((launch|confirm)\):?\s*(.*)/;
+const NEXT_IMAGE = /^next\/(?:legacy\/)?image$/;
+/** A prop or option that takes next/image off its default loader. */
+const OWN_LOADER = /^(?:loader|unoptimized)$/;
 
 function cssFacts(file: string, text: string): SourceFacts {
   const strings: CopyString[] = [];
@@ -501,7 +522,10 @@ function cssFacts(file: string, text: string): SourceFacts {
  * code, not words: module specifiers, type positions, directives ("use
  * client"), object keys, element-access keys, and the JSX attributes in
  * NOT_COPY_ATTRIBUTES. Also the files it imports, the site paths it names,
- * its TODO(launch) and TODO(confirm) notes, and, for site.ts, its LIVE flag.
+ * its TODO(launch) and TODO(confirm) notes, for site.ts its LIVE flag, and
+ * its next/image imports when nothing in the file (a `loader` or
+ * `unoptimized` prop or option, comments aside) takes it off the default
+ * loader.
  */
 export function sourceFacts(file: string, text: string): SourceFacts {
   if (file.endsWith(".css")) return cssFacts(file, text);
@@ -523,14 +547,18 @@ export function sourceFacts(file: string, text: string): SourceFacts {
 
   let live: boolean | null = null;
   const liveCommentLines = new Set<number>();
+  const imageImports: string[] = [];
+  let ownLoader = false;
 
   const visit = (node: ts.Node): void => {
+    if ((ts.isJsxAttribute(node) || ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node)) && OWN_LOADER.test(node.name.getText(sf))) ownLoader = true;
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
       const spec = node.moduleSpecifier;
       if (spec && ts.isStringLiteral(spec) && ASSET_IMPORT.test(spec.text)) {
         const resolved = resolveImport(spec.text);
         if (resolved) assets.push({ where: at(node), file: resolved });
       }
+      if (spec && ts.isStringLiteral(spec) && NEXT_IMAGE.test(spec.text)) imageImports.push(at(node));
       if (ts.isExportDeclaration(node) && node.exportClause) visit(node.exportClause);
       return;
     }
@@ -581,7 +609,8 @@ export function sourceFacts(file: string, text: string): SourceFacts {
     const m = NOTE.exec(line);
     if (m && !liveCommentLines.has(i)) notes.push({ where: `${file}:${i + 1}`, text: `TODO(${m[1]}): ${m[2]!.trim()}` });
   });
-  return path.posix.basename(file) === "site.ts" ? { strings, assets, notes, live } : { strings, assets, notes };
+  const defaultImageLoader = ownLoader ? [] : imageImports;
+  return path.posix.basename(file) === "site.ts" ? { strings, assets, notes, live, defaultImageLoader } : { strings, assets, notes, defaultImageLoader };
 }
 
 /** Every string in a profile, catalogue included: names, mailboxes, legal and payment words, pack labels. */
@@ -726,8 +755,18 @@ export function diskRegistry(): Registry {
  * Everything a brand's files say, read from its folders. `siteFile` is its
  * site.ts, which holds the LIVE flag.
  */
-export function readBrandFiles(folders: readonly string[], siteFile: string): SourceFacts & { live: boolean | null; siteFound: boolean } {
-  const facts = { strings: [] as CopyString[], assets: [] as AssetRef[], notes: [] as LaunchNote[], live: null as boolean | null, siteFound: false };
+export function readBrandFiles(
+  folders: readonly string[],
+  siteFile: string
+): SourceFacts & { live: boolean | null; siteFound: boolean; defaultImageLoader: string[] } {
+  const facts = {
+    strings: [] as CopyString[],
+    assets: [] as AssetRef[],
+    notes: [] as LaunchNote[],
+    live: null as boolean | null,
+    siteFound: false,
+    defaultImageLoader: [] as string[],
+  };
   for (const folder of folders) {
     for (const file of filesUnder(folder)) {
       if (/\.(?:tsx?|css)$/.test(file)) {
@@ -735,6 +774,7 @@ export function readBrandFiles(folders: readonly string[], siteFile: string): So
         facts.strings.push(...f.strings);
         facts.assets.push(...f.assets);
         facts.notes.push(...f.notes);
+        facts.defaultImageLoader.push(...(f.defaultImageLoader ?? []));
         if (file === siteFile) {
           facts.siteFound = true;
           facts.live = f.live ?? null;
@@ -767,6 +807,7 @@ export function runChecks(reg: Registry = diskRegistry()): { registry: Finding[]
       ...checkPayments(b, reg),
       ...checkCatalogue(b, reg),
       ...checkAssets(b, files.assets, { app: `app/${b.id}`, public: `public/${b.id}` }, existsInRepo),
+      ...checkImages(b.id, files.defaultImageLoader),
       ...checkCopy(b.id, b.id, strings.filter((s) => s.kind !== "asset")),
       ...checkLeaks(b.id, [...strings, ...(spec ? seedStrings(spec) : [])], leakMarkers(b.id, reg.brands)),
       ...checkNotes(b.id, files.notes),
@@ -819,6 +860,7 @@ export function checkTemplate(reg: Registry): Finding[] {
   out.push(...checkCatalogue(t, { ...reg, brands: [...reg.brands, t], seeded }));
   out.push(...checkPayments(t, reg).filter((f) => f.level === "fail"));
   out.push(...checkAssets(t, files.assets, { app: TEMPLATE.app, public: TEMPLATE.public }, existsInRepo));
+  out.push(...checkImages(TEMPLATE.id, files.defaultImageLoader));
   return out;
 }
 

@@ -7,6 +7,14 @@ import { BuySection } from "./BuySection";
  * a buy section (#buy, where a checkout that is abandoned returns to) and,
  * when the brand runs a list, the signup. Enough to test the funnel end to
  * end; the design replaces all of it.
+ *
+ * Photographs, when the design adds them: files in public/<id>/, drawn
+ * through next/image only with a loader of the brand's own over widths made
+ * ahead with sharp (or unoptimized with a srcSet), never its default loader.
+ * The default sends them through /_next/image, which fetches the file
+ * without the brand's Host, misses the host rewrite and answers 400.
+ * deploy/NEW-BRAND.md "Images" has the pattern; npm run check:brands fails
+ * a file that leaves next/image on the default.
  */
 export default function Home() {
   const list = STOREFRONT.mailingList;

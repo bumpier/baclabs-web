@@ -130,6 +130,30 @@ npx tsc --noEmit && npm run check:brands && npm run test:hosts && npm run test:b
 Then the brand's design and copy go into `brands/<id>/` and `app/<id>/`. That
 is design work, not this runbook.
 
+**Images.** A brand's photographs and other images go in `public/<id>/`
+and are served at their site paths (`/images/hero.webp`) on the brand's
+host, by the host rewrite in `middleware.ts`.
+
+- **Never next/image's default loader.** It sends every image through
+  `/_next/image`, whose optimiser fetches the file from inside the server
+  without the brand's `Host`, so the rewrite never runs, the file is not
+  found and every image answers 400.
+- **Instead:** make the widths the pages need ahead of time with sharp
+  (`hero-480.webp` and `hero-960.webp` beside `hero.webp`, say), and give
+  next/image a loader that picks the narrowest copy at least as wide as it
+  asks for. The width, height, `sizes`, srcset and lazy loading all still
+  work. Each brand has one to copy:
+  - `brands/beauty/components/Photo.tsx` and `app/wholesale/Photo.tsx`, a
+    client component around `<Image>` (the loader is a function, which
+    cannot cross from a server component);
+  - `brands/luxury/components/photo.ts`, `getImageProps` with the loader on
+    the server, for a plain `<img>`;
+  - `brands/gym/components/photo.ts`, `getImageProps` with `unoptimized`
+    and its own srcset of the copies.
+- **The check:** `npm run check:brands` fails any file in a brand's tree
+  (and the template) that imports `next/image` and sets neither a `loader`
+  nor `unoptimized`.
+
 ## 3. Seed its SKUs and weigh them (once the code is deployed)
 
 Every pack is a warehouse kit: N × the shared vial + 1 × the brand's box

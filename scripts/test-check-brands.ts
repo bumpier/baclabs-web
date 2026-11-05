@@ -21,6 +21,7 @@ import {
   checkCatalogue,
   checkCopy,
   checkIdentity,
+  checkImages,
   checkLeaks,
   checkNotes,
   checkPayments,
@@ -254,6 +255,19 @@ check("a file served by a route passes", noFailures(pageAssets(have(icon, "publi
 const layout = sourceFacts("app/fixture/layout.tsx", `import "@/brands/fixture/styles.css";\nimport hero from "./hero.png";\nexport const x = hero;`);
 check("imported files are read", layout.assets.map((a) => a.file).join() === "brands/fixture/styles.css,app/fixture/hero.png", JSON.stringify(layout.assets));
 check("a missing import fails", fails(checkAssets({ id: TEST_BRAND_ID, logo: "/icon.svg" }, layout.assets, roots, have(icon, "brands/fixture/styles.css")), /imports app\/fixture\/hero\.png/));
+// next/image on its default loader cannot fetch a brand's images (/_next/image
+// answers 400): a file that imports it must give it a loader or unoptimized.
+const imageFacts = (src: string) => sourceFacts("app/fixture/Photo.tsx", src).defaultImageLoader ?? [];
+const IMAGE = `import Image from "next/image";\n`;
+const bare = imageFacts(`${IMAGE}export const P = () => <Image src="/images/hero.webp" alt="" width={10} height={10} />;`);
+check("next/image on the default loader is found", bare.join() === "app/fixture/Photo.tsx:1", bare.join());
+check("and fails the brand", fails(checkImages(TEST_BRAND_ID, bare), /Photo\.tsx:1 uses next\/image with its default loader/));
+check("a loader prop passes", imageFacts(`${IMAGE}const pick = ({ src }: { src: string }) => src;\nexport const P = () => <Image loader={pick} src="/a.webp" alt="" width={10} height={10} />;`).length === 0);
+check("a loader in an options object passes", imageFacts(`${IMAGE}const common = { src: "/a.webp", alt: "", loader: ({ src }: { src: string }) => src };\nexport const P = () => <Image {...common} width={10} height={10} />;`).length === 0);
+check("a shorthand loader in getImageProps passes", imageFacts(`import { getImageProps } from "next/image";\nconst loader = ({ src }: { src: string }) => src;\nexport const p = getImageProps({ src: "/a.webp", alt: "", width: 1, height: 1, loader });`).length === 0);
+check("unoptimized passes", imageFacts(`${IMAGE}export const P = () => <Image unoptimized src="/a.webp" alt="" width={10} height={10} />;`).length === 0);
+check("a loader named only in a comment does not count", imageFacts(`${IMAGE}// TODO: a loader\nexport const P = () => <Image src="/a.webp" alt="" width={10} height={10} />;`).length === 1);
+check("a plain <img> is not next/image", imageFacts(`export const P = () => <img src="/a.webp" alt="" />;`).length === 0);
 
 // ── Reading copy: strings, template text and JSX, never comments ─────
 const texts = (file: string, src: string) => sourceFacts(file, src).strings.map((s) => s.text);
