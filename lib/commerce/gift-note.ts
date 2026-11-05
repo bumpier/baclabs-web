@@ -3,8 +3,9 @@
  * brand whose catalogue asks for one (BrandCatalogue.collectGiftNote). The
  * checkout (lib/commerce/checkout.ts) keeps it as one line of the order's
  * notes, "Gift note: …", as it keeps a trade buyer's company and VAT
- * number. The packing slip prints it, for the packer to put in the box
- * (components/admin/PackingSlip.tsx), and the admin's order page shows it.
+ * number. The packing slip prints it, for the packer to put in the box,
+ * and leaves the prices off (components/admin/PackingSlip.tsx); the admin's
+ * order page shows it.
  *
  * It never goes to a payment provider: the order a provider is asked to
  * take payment for (lib/commerce/payments/types.ts PaymentOrder) carries

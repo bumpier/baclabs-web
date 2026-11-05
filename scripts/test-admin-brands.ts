@@ -14,6 +14,7 @@ import type { Order } from "@prisma/client";
 import { BRAND_IDS, brandFor, DEFAULT_BRAND } from "@/brands/registry";
 import { PackingSlip } from "@/components/admin/PackingSlip";
 import { giftNoteLine } from "@/lib/commerce/gift-note";
+import { kitPartsFor } from "@/lib/order-items";
 import { brandLogoDataUri } from "@/lib/brand/logo";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -301,6 +302,34 @@ async function main() {
   check("and none of the other notes", !luxGift.includes("Payment by card") && !luxGift.includes("PayPal refunded"));
   check("a brand slip without one prints no gift note", !withNotes("luxury", "Payment by card").includes("Gift note"));
   check("BacLab's slip never prints one", withNotes("baclab", giftNotes) === blSlip);
+  // The slip goes in the box, so a gift's slip shows the recipient no
+  // prices: the packer gets every item and quantity, kit parts included,
+  // and nothing else. Every other slip keeps its prices, BacLab's whatever
+  // its notes say.
+  const priced = (html: string) => ["Unit price", "Order total", "£"].filter((t) => html.includes(t));
+  const giftOrder = (brand: string, notes: string) =>
+    ({
+      ...slipOrder(brand),
+      notes,
+      items: JSON.stringify([
+        { name: "5-vial pack", qty: 2, unitPrice: "21.99", lineTotal: "43.98" },
+        { name: "Lab Kit", qty: 1, unitPrice: "5.99", lineTotal: "5.99", kit: true },
+        { name: "Welcome vial", qty: 1, unitPrice: "0", welcome: true },
+      ]),
+      totalAmount: "49.97",
+    }) as unknown as Order;
+  const giftSlip = (brand: string, notes: string) => renderToStaticMarkup(createElement(PackingSlip, { order: giftOrder(brand, notes) }));
+  check("a brand's slip prices its lines and total", priced(fxSlip).length === 3 && fxSlip.includes("£21.99"), priced(fxSlip).join());
+  check("a brand's slip without a gift note keeps its prices", priced(withNotes("luxury", "Payment by card")).length === 3);
+  check("BacLab's slip keeps its prices, a gift line in its notes or not", priced(blSlip).length === 3 && priced(withNotes("baclab", giftNotes)).length === 3);
+  for (const brand of [TEST_BRAND_ID, "luxury"]) {
+    const g = giftSlip(brand, giftNotes);
+    check(`${brand}'s gift slip prints no price, total or "Free"`, priced(g).length === 0 && !g.includes("Free"), priced(g).join());
+    check(`${brand}'s gift slip still lists every item and quantity`, ["5-vial pack", "Lab Kit", "Welcome vial"].every((n) => g.includes(`>${n}</td>`)) && g.includes(">2</td>"));
+    check(`${brand}'s gift slip lists the kit's parts with their counts`, kitPartsFor(1).every((p) => g.includes(`>${p.name}</td>`) && g.includes(`>${p.quantity}</td>`)));
+    check(`${brand}'s gift slip has two columns, no empty price cells`, (g.match(/<th\b/g) ?? []).length === 2 && !/colSpan|colspan/.test(g));
+  }
+  check("the same order without its gift note is priced again", priced(giftSlip("luxury", "Payment by card")).length === 3);
   // Every registered brand but BacLab, so a brand made by scripts/new-brand.ts is covered too.
   for (const id of BRAND_IDS.filter((x) => x !== DEFAULT_BRAND)) {
     const b = brandFor(id);

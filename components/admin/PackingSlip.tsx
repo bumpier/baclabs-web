@@ -40,11 +40,16 @@ function slipLogo(b: BrandProfile): string | null {
  * A brand order's gift note (lib/commerce/gift-note.ts) is printed under the
  * address, set large, because this sheet is how it reaches the box. BacLab's
  * checkout takes no gift note, so its slips are as they were.
+ *
+ * A slip with a gift note prints no prices: it goes in the box, and the box
+ * goes to whoever the gift is for. The packer still has every item and
+ * quantity; the prices stay on the order page.
  */
 export function PackingSlip({ order }: { order: Order }) {
   const b = brandFor(order.brand);
   const packIn = b.shipping?.packingNote;
   const giftNote = order.brand === DEFAULT_BRAND ? null : giftNoteFrom(order.notes);
+  const prices = !giftNote;
   const items = JSON.parse(order.items) as OrderItem[];
   const address: Address = parseAddress(order) ?? {
     line1: "",
@@ -117,8 +122,8 @@ export function PackingSlip({ order }: { order: Order }) {
           <tr className="border-b border-line text-left text-xs uppercase tracking-wider text-ink-soft">
             <th className="py-2 font-semibold">Item</th>
             <th className="py-2 text-center font-semibold">Qty</th>
-            <th className="py-2 text-right font-semibold">Unit price</th>
-            <th className="py-2 text-right font-semibold">Total</th>
+            {prices ? <th className="py-2 text-right font-semibold">Unit price</th> : null}
+            {prices ? <th className="py-2 text-right font-semibold">Total</th> : null}
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -127,15 +132,19 @@ export function PackingSlip({ order }: { order: Order }) {
               <tr className={isKitLine(item) ? "border-b-0" : undefined}>
                 <td className="py-3">{item.name}</td>
                 <td className="py-3 text-center">{item.qty}</td>
-                <td className="py-3 text-right">{item.welcome || item.gift ? "Free" : formatPrice(item.unitPrice, currency)}</td>
-                <td className="py-3 text-right font-medium">
-                  {item.welcome || item.gift
-                    ? "Free"
-                    : formatPrice(
-                        item.lineTotal ? parseFloat(item.lineTotal) : parseFloat(item.unitPrice) * item.qty,
-                        currency
-                      )}
-                </td>
+                {prices ? (
+                  <td className="py-3 text-right">{item.welcome || item.gift ? "Free" : formatPrice(item.unitPrice, currency)}</td>
+                ) : null}
+                {prices ? (
+                  <td className="py-3 text-right font-medium">
+                    {item.welcome || item.gift
+                      ? "Free"
+                      : formatPrice(
+                          item.lineTotal ? parseFloat(item.lineTotal) : parseFloat(item.unitPrice) * item.qty,
+                          currency
+                        )}
+                  </td>
+                ) : null}
               </tr>
               {/* What the packer counts into the box: each part, multiplied out. */}
               {isKitLine(item) &&
@@ -143,22 +152,24 @@ export function PackingSlip({ order }: { order: Order }) {
                   <tr key={part.sku} className={i < parts.length - 1 ? "border-b-0 text-ink-soft" : "text-ink-soft"}>
                     <td className="py-1 pl-6">{part.name}</td>
                     <td className="py-1 text-center tabular">{part.quantity}</td>
-                    <td colSpan={2} />
+                    {prices ? <td colSpan={2} /> : null}
                   </tr>
                 ))}
             </Fragment>
           ))}
         </tbody>
-        <tfoot>
-          <tr className="border-t border-line">
-            <td colSpan={3} className="py-3 text-right font-semibold">
-              Order total
-            </td>
-            <td className="py-3 text-right font-semibold text-brand-deep">
-              {formatPrice(order.totalAmount.toString(), currency)}
-            </td>
-          </tr>
-        </tfoot>
+        {prices ? (
+          <tfoot>
+            <tr className="border-t border-line">
+              <td colSpan={3} className="py-3 text-right font-semibold">
+                Order total
+              </td>
+              <td className="py-3 text-right font-semibold text-brand-deep">
+                {formatPrice(order.totalAmount.toString(), currency)}
+              </td>
+            </tr>
+          </tfoot>
+        ) : null}
       </table>
 
       <p className="mt-10 border-t border-line pt-6 text-center text-sm italic text-ink-soft">

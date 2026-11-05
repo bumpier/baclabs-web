@@ -188,7 +188,7 @@ export default async function AdminOrderDetailPage({
           <div className="card mt-4 p-6 text-sm">
             <p className="label">Gift note</p>
             <p className="mt-1 whitespace-pre-wrap">{giftNote}</p>
-            <p className="mt-1 text-ink-soft">Printed on the packing slip below, which goes in the box.</p>
+            <p className="mt-1 text-ink-soft">Printed on the packing slip below, which goes in the box, so the slip shows no prices.</p>
           </div>
         ) : null}
 
