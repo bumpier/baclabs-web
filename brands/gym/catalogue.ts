@@ -1,5 +1,5 @@
 /**
- * Brute Lab's catalogue: the stock-up ladder (1, 5, 10 and 20 vials, the
+ * GymWater's catalogue: the stock-up ladder (1, 5, 10 and 20 vials, the
  * same four sizes as the beauty and luxury brands sell) and the Lab Kit
  * beside it. Delivery is BacLab's own options and threshold, by the same
  * ids.

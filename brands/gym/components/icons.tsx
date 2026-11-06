@@ -25,7 +25,7 @@ function Icon({ className, children }: { className?: string; children: ReactNode
   );
 }
 
-/** The cart: the product's own box, lid line and the hazard band across its corner. */
+/** The cart: a box and its lid line, with the site's hazard cut across its corner. */
 export function CartIcon({ className }: { className?: string }) {
   return (
     <Icon className={className}>
