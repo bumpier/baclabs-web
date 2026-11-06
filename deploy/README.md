@@ -277,7 +277,24 @@ As `baclab` (`crontab -e`):
 */15 * * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/welcome-reminders
 # Every 30 minutes: move orders on from SmartTrack tracking (first carrier scan → shipped, delivery scan → delivered)
 */30 * * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/tracking
+# Daily at 06:30: email the encrypted data export (customers, orders, mailing list, stock, database copy) to DAILY_EXPORT_TO
+30 6 * * * curl -fsS -H "Authorization: Bearer $(grep -m1 '^CRON_SECRET=' /srv/baclab/.env.local | cut -d= -f2)" https://YOUR_DOMAIN/api/cron/daily-export
 ```
+
+The daily export needs two lines in `.env.local` first, then a restart
+(`docker compose --env-file .env.local up -d`; no rebuild):
+
+```bash
+DAILY_EXPORT_TO=you@yourdomain.tld,partner@yourdomain.tld
+DAILY_EXPORT_PASSWORD=          # openssl rand -base64 24; keep it in a password manager
+```
+
+Without both, the job sends nothing and answers 503 naming what is missing.
+The zip is AES-256 encrypted and the password is never emailed; open it with
+7-Zip, Keka or The Unarchiver (the built-in Windows and macOS unzip cannot).
+Run the curl line once by hand after setting it up and check the email
+arrives with the attachment: a 200 answer carries Resend's `emailId`, and a
+502 means Resend refused it (the `[email]` line in the container log says why).
 
 Before adding the tracking line the first time, check what SmartTrack's
 tracking says for a few real parcels — read-only, nothing changes:

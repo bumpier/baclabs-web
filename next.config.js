@@ -60,6 +60,10 @@ const SITE_HOST = (() => {
 
 const nextConfig = {
   poweredByHeader: false,
+  // Loaded from node_modules at runtime rather than bundled: zip.js carries a
+  // WebAssembly fallback and worker scripts the server bundler would mangle.
+  // The image ships full node_modules (see Dockerfile), so it is there.
+  serverExternalPackages: ["@zip.js/zip.js"],
   experimental: {
     // Inline the stylesheet into the HTML. The one render-blocking resource
     // on the home page was a 14KB synchronous <link rel="stylesheet">, and

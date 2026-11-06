@@ -27,10 +27,16 @@ export function emailEnabled(): boolean {
 }
 
 export async function send(
-  to: string,
+  to: string | string[],
   subject: string,
   html: string,
-  opts?: { bcc?: string; replyTo?: string; headers?: Record<string, string> }
+  opts?: {
+    bcc?: string;
+    replyTo?: string;
+    headers?: Record<string, string>;
+    /** Resend allows 40 MB per email in all, after base64. */
+    attachments?: { filename: string; content: Buffer }[];
+  }
 ) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -62,6 +68,7 @@ export async function send(
       ...(opts?.bcc ? { bcc: opts.bcc } : {}),
       ...(opts?.replyTo ? { replyTo: opts.replyTo } : {}),
       ...(opts?.headers ? { headers: opts.headers } : {}),
+      ...(opts?.attachments?.length ? { attachments: opts.attachments } : {}),
     });
     if (error) {
       console.error("[email] Resend send failed", JSON.stringify(error));

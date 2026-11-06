@@ -34,6 +34,7 @@
     "test:finance": "tsx scripts/test-finance.ts",
     "test:tracking": "tsx scripts/test-tracking.ts",
     "test:recheck": "tsx scripts/test-recheck-orders.ts",
+    "test:daily-export": "tsx scripts/test-daily-export.ts",
     "test:plans": "NEXT_PUBLIC_DELIVERY_CHOICE=on tsx scripts/test-plans.ts",
     "preview:smarttrack": "tsx scripts/preview-smarttrack.ts",
     "preview:reminders": "tsx scripts/preview-welcome-reminders.ts",
@@ -50,6 +51,7 @@
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@prisma/client": "5.22.0",
+    "@zip.js/zip.js": "2.24.0",
     "bcryptjs": "3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
