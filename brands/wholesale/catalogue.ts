@@ -20,7 +20,9 @@ import { PLAIN_BOX_SKU } from "../packaging";
 
 export const wholesaleCatalogue: BrandCatalogue = {
   parentSku: "WHL-10ML",
-  // TODO(confirm): the outer carton's SKU and its packed weight (scripts/seed-brand-skus.ts).
+  // The plain box every brand shares (brands/packaging.ts). TODO(confirm):
+  // whether bulk packs ship in it or in an outer carton of their own, which
+  // would be its own SKU here (scripts/seed-brand-skus.ts).
   boxSku: PLAIN_BOX_SKU,
   packs: [
     // TODO(confirm): all five prices.
