@@ -18,18 +18,18 @@ export function SiteHeader({ announcement }: { announcement: { offer: string; cu
   return (
     <>
       {announcement ? (
-        <p className="au-announce no-print">
+        <p className="bb-announce no-print">
           {announcement.offer}
           {announcement.cutoff ? <span className="hidden sm:inline"> {announcement.cutoff}</span> : null}
         </p>
       ) : null}
-      <header className="au-header no-print">
-        <div className="au-wrap au-header-row">
+      <header className="bb-header no-print">
+        <div className="bb-wrap bb-header-row">
           <div className="justify-self-start">
             <HeaderNav />
           </div>
           <Link href="/" aria-label={NAV.home} className="justify-self-center rounded-md">
-            <Wordmark className="au-wordmark" />
+            <Wordmark className="bb-wordmark" />
           </Link>
           <div className="flex items-center gap-x-5 justify-self-end">
             <ContactLink />

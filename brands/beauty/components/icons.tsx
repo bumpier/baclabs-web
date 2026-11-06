@@ -1,8 +1,8 @@
 /**
- * Aurelle's few icons, drawn here in one 1.5px stroke on a 24px grid, so
- * they share a hand: the basket is the Aurelle pouch itself (its rounded
- * flap and its stud), the rest are as plain as they can be. Always
- * decorative: the control that holds one names itself.
+ * BeautyBac's few icons, drawn here in one 1.5px stroke on a 24px grid, so
+ * they share a hand: the basket is the box a set arrives in (a lid on a
+ * plain body, nothing on its face), the rest are as plain as they can be.
+ * Always decorative: the control that holds one names itself.
  */
 const base = {
   width: 24,
@@ -17,13 +17,12 @@ const base = {
   focusable: "false" as const,
 };
 
-/** The pouch: the basket's icon. */
-export function PouchIcon({ className }: { className?: string }) {
+/** The box: the basket's icon. */
+export function BoxIcon({ className }: { className?: string }) {
   return (
     <svg {...base} className={className}>
-      <rect x="3.25" y="6.25" width="17.5" height="12.5" rx="2.25" />
-      <path d="M3.6 7.6c2.4 4.1 5.2 5.9 8.4 5.9s6-1.8 8.4-5.9" />
-      <circle cx="12" cy="13.5" r="1" fill="currentColor" stroke="none" />
+      <rect x="3.25" y="5.75" width="17.5" height="4.5" rx="1.25" />
+      <path d="M4.75 10.25v7.5a1.5 1.5 0 0 0 1.5 1.5h11.5a1.5 1.5 0 0 0 1.5-1.5v-7.5" />
     </svg>
   );
 }
@@ -44,7 +43,7 @@ export function CloseIcon({ className }: { className?: string }) {
   );
 }
 
-/** A fold's sign: a plus that turns to a cross when open (styles.css .au-fold). */
+/** A fold's sign: a plus that turns to a cross when open (styles.css .bb-fold). */
 export function PlusIcon({ className }: { className?: string }) {
   return (
     <svg {...base} width={18} height={18} className={className}>

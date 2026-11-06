@@ -17,23 +17,23 @@ export const metadata: Metadata = brandNotFoundMetadata(brand, DESCRIPTION);
 
 export default function NotFound() {
   return (
-    <main id="main" className="au-wrap pt-8 md:pt-14">
+    <main id="main" className="bb-wrap pt-8 md:pt-14">
       <div className="grid items-center gap-12 md:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] md:gap-16">
         <div>
-          <h1 className="au-display max-w-[12ch] text-[clamp(2.75rem,1.9rem+3vw,4.75rem)]">
+          <h1 className="bb-display max-w-[12ch] text-[clamp(2.75rem,1.9rem+3vw,4.75rem)]">
             <SealedLine text={`${NOT_FOUND.title}.`} />
           </h1>
-          <p className="au-lead mt-6">{NOT_FOUND.body}</p>
+          <p className="bb-lead mt-6">{NOT_FOUND.body}</p>
           <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
             <Link href="/#essentials" className="btn-cta">
               {NOT_FOUND.shop}
             </Link>
-            <Link href="/" className="au-link inline-flex min-h-11 items-center font-semibold">
+            <Link href="/" className="bb-link inline-flex min-h-11 items-center font-semibold">
               {NOT_FOUND.home}
             </Link>
           </div>
         </div>
-        <div className="au-frame aspect-square">
+        <div className="bb-frame aspect-square">
           <Photo image={IMAGES.vial} fill sizes="(min-width: 768px) 40vw, 100vw" />
         </div>
       </div>

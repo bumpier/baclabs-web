@@ -39,20 +39,20 @@ export function Gallery() {
   };
 
   return (
-    <div className="au-gallery" role="group" aria-label={label}>
-      <div ref={track} className="au-track" onScroll={onScroll} tabIndex={0} aria-label={label}>
+    <div className="bb-gallery" role="group" aria-label={label}>
+      <div ref={track} className="bb-track" onScroll={onScroll} tabIndex={0} aria-label={label}>
         {items.map((item, i) => (
-          <div key={item.image.src} className="au-slide" aria-hidden={i !== active || undefined}>
+          <div key={item.image.src} className="bb-slide" aria-hidden={i !== active || undefined}>
             <Photo image={item.image} fill sizes="(min-width: 1024px) 50vw, (min-width: 640px) 80vw, 100vw" />
           </div>
         ))}
       </div>
-      <div className="au-thumbs">
+      <div className="bb-thumbs">
         {items.map((item, i) => (
           <button
             key={item.image.src}
             type="button"
-            className="au-thumb"
+            className="bb-thumb"
             aria-current={i === active}
             aria-label={ESSENTIALS.showPicture(i + 1, item.label)}
             onClick={() => go(i)}

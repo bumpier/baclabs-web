@@ -32,7 +32,7 @@ export function WelcomePopup({ consentText, ga4Id }: { consentText: string; ga4I
       config={{ quietPaths: QUIET_PATHS }}
       tracking={{ ga4Id }}
       labelledBy={headingId}
-      className="au-dialog au-on-plum no-print"
+      className="bb-dialog bb-on-plum no-print"
     >
       {(close) => (
         <div className="relative">
@@ -48,7 +48,7 @@ export function WelcomePopup({ consentText, ga4Id }: { consentText: string; ga4I
             <CloseIcon />
           </button>
           <div className="px-7 pb-8 pt-7 sm:px-9">
-            <h2 id={headingId} className="au-h2 text-[2.25rem]">
+            <h2 id={headingId} className="bb-h2 text-[2.25rem]">
               {LETTERS.title}
             </h2>
             <p className="mt-3 text-on-plum-soft">{LETTERS.body}</p>
@@ -69,7 +69,7 @@ export function WelcomePopup({ consentText, ga4Id }: { consentText: string; ga4I
                   input: "field",
                   button: "btn-cta w-full",
                   consent: "text-[0.8125rem] leading-relaxed text-on-plum-soft",
-                  link: "au-link text-on-plum",
+                  link: "bb-link text-on-plum",
                   done: "rounded-[1rem] bg-plum-raised px-4 py-3",
                 }}
               />

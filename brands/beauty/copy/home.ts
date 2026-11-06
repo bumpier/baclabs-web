@@ -54,9 +54,8 @@ export function announcement(
 export const HERO = {
   /** The promise. Its full stop is drawn as the seal on the page. */
   title: "Your ritual, done properly.",
-  // TODO(confirm): the pouch, as ESSENTIALS.pouch.
   lead: (sizes: string) =>
-    `Sterile water with a bacteriostatic preservative, in a sealed 10ml vial. In sets of ${sizes}, each in the Aurelle pouch, sent to your door.`,
+    `Sterile water with a bacteriostatic preservative, in a sealed 10ml vial. In sets of ${sizes}, sent to your door by tracked delivery.`,
   cta: "Shop the Essentials",
   clinics: "For clinics and salons",
   from: (minor: number) => `A single vial is ${gbpShort(minor)}.`,
@@ -72,9 +71,9 @@ export const ESSENTIALS = {
   sizeName: (vials: number) =>
     vials === 1 ? "Single vial" : vials === 5 ? "Set of five" : vials === 10 ? "Set of ten" : vials === 20 ? "Set of twenty" : `Set of ${vials}`,
   contents: (vials: number) => (vials === 1 ? "One sealed vial" : `${vials} sealed vials`),
-  // TODO(confirm): the pouch. The catalogue packs each set in a gift-ready
-  // pouch (brands/beauty/catalogue.ts boxSku); say so only once it is real.
-  pouch: "Every size comes in the Aurelle pouch.",
+  // TODO(confirm): the box. Every brand's sets go out in the same plain,
+  // unprinted white box (brands/beauty/catalogue.ts boxSku).
+  box: "Every size comes in a plain white box, with nothing printed on it.",
   quantity: "Quantity",
   add: "Add to basket",
   deliveryTitle: "Delivery",
@@ -103,22 +102,22 @@ export const RITUAL = {
   title: "The ritual",
   voice: "The right thing, kept well, and in its place for when you want it.",
   /** A sequence: it arrives, it is kept, it comes again. */
-  // TODO(confirm): the pouch, as ESSENTIALS.pouch; the caption describes it too.
+  // TODO(confirm): the box, as ESSENTIALS.box.
   moments: [
     {
       title: "It arrives",
-      body: "Your set comes in the Aurelle pouch, every vial sealed, sent by tracked delivery from the UK.",
+      body: "Your set comes in a plain white box, every vial sealed, sent by tracked delivery from the UK.",
     },
     {
       title: "It is kept",
-      body: "The pouch holds the set together in a drawer or on a shelf, each vial sealed until the day you open it.",
+      body: "The box keeps the set together in a drawer or on a shelf, each vial sealed until the day you open it.",
     },
     {
       title: "It comes again",
       body: "When a set runs low, the next is a few minutes away, in whichever size suits you.",
     },
   ],
-  caption: "The Aurelle pouch: blush suede, a rounded flap, a rose-gold stud.",
+  caption: "A set, as it arrives.",
   cta: "Choose your set",
 } as const;
 
@@ -128,16 +127,16 @@ export const DETAILS = {
   vialTerm: "The vial",
   vial: "Sterile water with a bacteriostatic preservative, in a sealed 10ml vial of clear glass. It is sold as a laboratory reagent.",
   capTerm: "The cap",
-  cap: "Every vial is sealed under a blue flip-off cap and a silver crimp, and the label is left plain. Our name is on the pouch, not the vial.",
-  pouchTerm: "The pouch",
-  // TODO(confirm): the pouch, as ESSENTIALS.pouch.
-  pouch: "Every set comes in a soft blush pouch with a rose-gold stud, so it arrives as something you would be glad to open.",
+  cap: "Every vial is sealed under a blue flip-off cap and a silver crimp, and the label is left plain. Our name is on the packing slip, not on the vial or its box.",
+  boxTerm: "The box",
+  // TODO(confirm): the box, as ESSENTIALS.box.
+  box: "Plain white card, with the vials held upright in a card divider inside.",
   sentTerm: "From the UK",
   sent: "Packed and sent from the UK by tracked delivery. When it ships, we email you its tracking number.",
 } as const;
 
 export const LETTERS = {
-  title: "Letters from Aurelle",
+  title: "Letters from BeautyBac",
   body: "New sets, restocks and offers, now and then, by email.",
   placeholder: "Your email address",
   submit: "Join the list",

@@ -7,7 +7,7 @@ import { useBrandCheckout } from "@/components/commerce/useBrandCheckout";
 import { QuantityStepper } from "@/components/commerce/QuantityStepper";
 import { deliveryQuote, formatGbp, freeDeliveryShortfallMinor } from "@/lib/commerce/view";
 import { BASKET, packName } from "@/brands/beauty/copy/site";
-import { IMAGES } from "@/brands/beauty/copy/images";
+import { BOX_THUMB, IMAGES } from "@/brands/beauty/copy/images";
 import { useBasketDrawer } from "@/brands/beauty/components/basket-drawer";
 import { Photo } from "@/brands/beauty/components/Photo";
 import { CloseIcon } from "@/brands/beauty/components/icons";
@@ -76,7 +76,7 @@ export function BasketDrawer() {
     <dialog
       ref={dialog}
       aria-labelledby={headingId}
-      className="au-drawer no-print"
+      className="bb-drawer no-print"
       onCancel={(e) => {
         e.preventDefault();
         drawer.hide();
@@ -89,10 +89,10 @@ export function BasketDrawer() {
     >
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between gap-4 px-6 pb-4 pt-5 sm:px-8 sm:pt-7">
-          <h2 id={headingId} className="au-h3">
+          <h2 id={headingId} className="bb-h3">
             {BASKET.heading}
           </h2>
-          <button type="button" className="au-icon-btn -mr-2.5" onClick={() => drawer.hide()}>
+          <button type="button" className="bb-icon-btn -mr-2.5" onClick={() => drawer.hide()}>
             <CloseIcon />
             <span className="sr-only">{BASKET.close}</span>
           </button>
@@ -100,8 +100,8 @@ export function BasketDrawer() {
 
         {!empty && freeFrom !== null ? (
           <div className="px-6 pb-5 sm:px-8">
-            <p className="au-small">{shortfall !== null ? BASKET.shortfall(shortfall, freeOption?.label ?? null) : BASKET.freeReached(freeOption?.label ?? null)}</p>
-            <div className="au-meter mt-2.5" aria-hidden="true">
+            <p className="bb-small">{shortfall !== null ? BASKET.shortfall(shortfall, freeOption?.label ?? null) : BASKET.freeReached(freeOption?.label ?? null)}</p>
+            <div className="bb-meter mt-2.5" aria-hidden="true">
               <span style={{ transform: `scaleX(${progress.toFixed(3)})` }} />
             </div>
           </div>
@@ -110,11 +110,11 @@ export function BasketDrawer() {
         <div className="min-h-0 flex-1 overflow-y-auto px-6 sm:px-8">
           {!cart.hydrated ? null : empty ? (
             <div className="flex h-full flex-col items-start justify-center pb-16">
-              <div className="au-frame aspect-square w-32">
-                <Photo image={IMAGES.pouch} fill sizes="8rem" alt="" />
+              <div className="bb-frame aspect-square w-32">
+                <Photo image={IMAGES.box} fill sizes="8rem" alt="" className={BOX_THUMB} />
               </div>
-              <p className="au-h3 mt-6">{BASKET.empty}</p>
-              <p className="au-small mt-2">{BASKET.emptyBody}</p>
+              <p className="bb-h3 mt-6">{BASKET.empty}</p>
+              <p className="bb-small mt-2">{BASKET.emptyBody}</p>
               <Link href="/#essentials" className="btn-cta mt-7" onClick={() => drawer.hide()}>
                 {BASKET.emptyCta}
               </Link>
@@ -127,26 +127,26 @@ export function BasketDrawer() {
                 return (
                   <li
                     key={fresh ? `${item.sku}-${drawer.nonce}` : item.sku}
-                    className="au-line -mx-3 grid grid-cols-[4.5rem_minmax(0,1fr)_auto] gap-x-4 rounded-[1.25rem] p-3"
+                    className="bb-line -mx-3 grid grid-cols-[4.5rem_minmax(0,1fr)_auto] gap-x-4 rounded-[1.25rem] p-3"
                     data-new={fresh || undefined}
                   >
-                    <div className="au-frame row-span-2 aspect-square w-[4.5rem] rounded-[1rem]">
-                      <Photo image={IMAGES.pouch} fill sizes="4.5rem" alt="" />
+                    <div className="bb-frame row-span-2 aspect-square w-[4.5rem] rounded-[1rem]">
+                      <Photo image={IMAGES.box} fill sizes="4.5rem" alt="" className={BOX_THUMB} />
                     </div>
                     <div className="min-w-0">
                       <p className="font-display text-[1.25rem] leading-tight">{name}</p>
-                      {item.kind === "pack" ? <p className="au-fine mt-0.5">{BASKET.contents(item.pack.vials)}</p> : null}
+                      {item.kind === "pack" ? <p className="bb-fine mt-0.5">{BASKET.contents(item.pack.vials)}</p> : null}
                     </div>
-                    <p className="au-price text-right text-[1.25rem]">{formatGbp(item.lineMinor)}</p>
+                    <p className="bb-price text-right text-[1.25rem]">{formatGbp(item.lineMinor)}</p>
                     <div className="col-span-2 mt-2.5 flex items-center justify-between gap-3">
                       <QuantityStepper
                         value={item.qty}
                         onChange={(n) => cart.set(item.sku, n)}
                         max={storefront.limits.maxLineQty}
                         label={BASKET.quantityOf(name)}
-                        classNames={{ root: "au-qty au-qty-sm", button: "au-step", input: "au-count" }}
+                        classNames={{ root: "bb-qty bb-qty-sm", button: "bb-step", input: "bb-count" }}
                       />
-                      <button type="button" className="au-link text-[0.9375rem] text-ink-soft" onClick={() => cart.remove(item.sku)}>
+                      <button type="button" className="bb-link text-[0.9375rem] text-ink-soft" onClick={() => cart.remove(item.sku)}>
                         {BASKET.remove}
                         <span className="sr-only"> {name}</span>
                       </button>
@@ -169,7 +169,7 @@ export function BasketDrawer() {
                       {delivery.map(({ option, priceMinor }) => {
                         const checked = chosen?.option.id === option.id;
                         return (
-                          <label key={option.id} className="au-choice" data-checked={checked || undefined}>
+                          <label key={option.id} className="bb-choice" data-checked={checked || undefined}>
                             <input
                               type="radio"
                               name={deliveryName}
@@ -178,10 +178,10 @@ export function BasketDrawer() {
                               onChange={() => setDeliveryId(option.id)}
                               className="sr-only"
                             />
-                            <span className="au-dot mt-1 shrink-0" aria-hidden="true" />
+                            <span className="bb-dot mt-1 shrink-0" aria-hidden="true" />
                             <span className="min-w-0 flex-1">
                               <span className="block font-semibold leading-snug">{option.label}</span>
-                              <span className="au-fine block">{option.detail}</span>
+                              <span className="bb-fine block">{option.detail}</span>
                             </span>
                             <span className="shrink-0 font-semibold">{priceMinor === 0 ? BASKET.free : formatGbp(priceMinor)}</span>
                           </label>
@@ -192,7 +192,7 @@ export function BasketDrawer() {
                 ) : null}
                 <dl className="mt-5 flex items-baseline justify-between gap-4">
                   <dt className="font-semibold">{BASKET.subtotal}</dt>
-                  <dd className="au-price text-[1.75rem]">{formatGbp(priced.goodsMinor)}</dd>
+                  <dd className="bb-price text-[1.75rem]">{formatGbp(priced.goodsMinor)}</dd>
                 </dl>
               </>
             ) : null}
@@ -214,7 +214,7 @@ export function BasketDrawer() {
                 >
                   {pending ? BASKET.pending : BASKET.checkout}
                 </button>
-                <p className="au-fine mt-3 text-center">
+                <p className="bb-fine mt-3 text-center">
                   {BASKET.payBy(methods[0]!.label)} {BASKET.sent}
                 </p>
               </>
@@ -232,7 +232,7 @@ export function BasketDrawer() {
                     {pending ? BASKET.pending : BASKET.payWith(m.label)}
                   </button>
                 ))}
-                <p className="au-fine text-center">{BASKET.sent}</p>
+                <p className="bb-fine text-center">{BASKET.sent}</p>
               </div>
             ) : null}
           </div>

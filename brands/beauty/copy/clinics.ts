@@ -19,9 +19,9 @@ export const CLINICS = {
     { term: "Delivery", detail: "Tracked, from the UK" },
   ],
   priceTitle: "The price list",
-  // TODO(confirm): the pouch, as copy/home.ts ESSENTIALS.pouch.
+  // TODO(confirm): the box, as copy/home.ts ESSENTIALS.box.
   priceLead: (count: number) =>
-    `One product in ${count === 4 ? "four" : count} pack sizes, each pack in the Aurelle pouch. Choose a pack and how many, and it goes into your basket.`,
+    `One product in ${count === 4 ? "four" : count} pack sizes, each pack in a plain white box. Choose a pack and how many, and it goes into your basket.`,
   legend: "Pack",
   packName: (vials: number) => (vials === 1 ? "Single vial" : `Pack of ${vials}`),
   packContents: (vials: number) => (vials === 1 ? "One sealed 10ml vial" : `${vials} sealed 10ml vials`),

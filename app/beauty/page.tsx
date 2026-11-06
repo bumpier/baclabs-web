@@ -31,7 +31,7 @@ export default function Home() {
       {/* ── The promise, on the still life ─────────────────────────── */}
       {/* Below 640px the 3:2 photograph fills a 4:5 frame by its height, so it is drawn 1.875 times the frame's width. */}
       <section aria-labelledby="hero-title" className="relative px-2.5 pt-1 md:px-5">
-        <div className="au-hero-media au-arrive-media">
+        <div className="bb-hero-media bb-arrive-media">
           <Photo
             image={IMAGES.stillLife}
             fill
@@ -42,27 +42,27 @@ export default function Home() {
         </div>
         <div className="xl:absolute xl:inset-y-0 xl:left-5 xl:flex xl:items-start">
           <div className="px-3 pt-9 sm:px-6 xl:max-w-[50rem] xl:px-[clamp(3rem,5vw,6rem)] xl:pt-[clamp(3.5rem,11vh,6.5rem)]">
-            <h1 id="hero-title" className="au-display">
-              <span className="au-arrive block" style={{ "--i": 0 } as CSSProperties}>
+            <h1 id="hero-title" className="bb-display">
+              <span className="bb-arrive block" style={{ "--i": 0 } as CSSProperties}>
                 {lineOne},
               </span>
-              <span className="au-arrive block" style={{ "--i": 1 } as CSSProperties}>
-                <SealedLine text={lineTwo ?? ""} sealClassName="au-arrive-seal" />
+              <span className="bb-arrive block" style={{ "--i": 1 } as CSSProperties}>
+                <SealedLine text={lineTwo ?? ""} sealClassName="bb-arrive-seal" />
               </span>
             </h1>
-            <p className="au-lead au-arrive mt-6 xl:max-w-[27rem]" style={{ "--i": 2 } as CSSProperties}>
+            <p className="bb-lead bb-arrive mt-6 xl:max-w-[27rem]" style={{ "--i": 2 } as CSSProperties}>
               {HERO.lead(sizeWords(onSale.map((p) => p.vials)))}
             </p>
-            <div className="au-arrive mt-9 flex flex-wrap items-center gap-x-7 gap-y-4" style={{ "--i": 3 } as CSSProperties}>
+            <div className="bb-arrive mt-9 flex flex-wrap items-center gap-x-7 gap-y-4" style={{ "--i": 3 } as CSSProperties}>
               <a href="#essentials" className="btn-cta">
                 {HERO.cta}
               </a>
-              <Link href="/clinics" className="au-link inline-flex min-h-11 items-center font-semibold">
+              <Link href="/clinics" className="bb-link inline-flex min-h-11 items-center font-semibold">
                 {HERO.clinics}
               </Link>
             </div>
             {single ? (
-              <p className="au-small au-arrive mt-6" style={{ "--i": 4 } as CSSProperties}>
+              <p className="bb-small bb-arrive mt-6" style={{ "--i": 4 } as CSSProperties}>
                 {HERO.from(single.priceMinor)}
               </p>
             ) : null}
@@ -71,29 +71,29 @@ export default function Home() {
       </section>
 
       {/* ── The Essentials: gallery and purchase panel ─────────────── */}
-      <section id="buy" aria-labelledby="essentials-title" className="au-wrap pt-20 lg:pt-32">
+      <section id="buy" aria-labelledby="essentials-title" className="bb-wrap pt-20 lg:pt-32">
         <div id="essentials" className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16 xl:gap-20">
           <Gallery />
           <ProductPanel packs={ESSENTIAL_PACKS}>
-            <details className="au-fold">
+            <details className="bb-fold">
               <summary>
                 {ESSENTIALS.deliveryTitle}
                 <PlusIcon />
               </summary>
-              <div className="au-small space-y-2 pb-5">
+              <div className="bb-small space-y-2 pb-5">
                 {delivery.map((line) => (
                   <p key={line}>{line}</p>
                 ))}
               </div>
             </details>
-            <details className="au-fold">
+            <details className="bb-fold">
               <summary>
                 {ESSENTIALS.returnsTitle}
                 <PlusIcon />
               </summary>
-              <p className="au-small pb-5">
+              <p className="bb-small pb-5">
                 {ESSENTIALS.returns}{" "}
-                <Link href="/returns" className="au-link text-ink">
+                <Link href="/returns" className="bb-link text-ink">
                   {ESSENTIALS.returnsLink}
                 </Link>
               </p>
@@ -103,44 +103,44 @@ export default function Home() {
       </section>
 
       {/* ── The ritual: an editorial spread ────────────────────────── */}
-      <section id="ritual" aria-labelledby="ritual-title" className="au-wrap pt-28 lg:pt-40">
+      <section id="ritual" aria-labelledby="ritual-title" className="bb-wrap pt-28 lg:pt-40">
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-x-16">
           <div className="lg:col-span-5">
-            <div className="au-frame aspect-[4/5] lg:aspect-[2/3]">
+            <div className="bb-frame aspect-[4/5] lg:aspect-[2/3]">
               <Photo image={IMAGES.vanity} fill sizes="(min-width: 1024px) 38vw, 100vw" />
             </div>
           </div>
           <div className="lg:col-span-7 lg:pt-10">
-            <h2 id="ritual-title" className="au-h2">
+            <h2 id="ritual-title" className="bb-h2">
               {RITUAL.title}
             </h2>
-            <p className="au-voice mt-6 max-w-[34rem]">{RITUAL.voice}</p>
+            <p className="bb-voice mt-6 max-w-[34rem]">{RITUAL.voice}</p>
             <div className="mt-12 grid gap-12 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] sm:items-end lg:mt-16">
               <div>
                 <ol className="space-y-8">
                   {RITUAL.moments.map((m, i) => (
                     <li key={m.title} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3">
-                      <span className="au-caption pt-1" aria-hidden="true">
+                      <span className="bb-caption pt-1" aria-hidden="true">
                         {["i.", "ii.", "iii."][i]}
                       </span>
                       <div>
-                        <h3 className="au-h3">{m.title}</h3>
-                        <p className="au-small mt-2">{m.body}</p>
+                        <h3 className="bb-h3">{m.title}</h3>
+                        <p className="bb-small mt-2">{m.body}</p>
                       </div>
                     </li>
                   ))}
                 </ol>
                 <p className="mt-9 pl-[2.75rem]">
-                  <a href="#essentials" className="au-link font-semibold">
+                  <a href="#essentials" className="bb-link font-semibold">
                     {RITUAL.cta}
                   </a>
                 </p>
               </div>
               <figure>
-                <div className="au-frame aspect-[3/4]">
+                <div className="bb-frame aspect-[3/4]">
                   <Photo image={IMAGES.hands} fill sizes="(min-width: 1024px) 24vw, (min-width: 640px) 40vw, 100vw" />
                 </div>
-                <figcaption className="au-caption mt-3">{RITUAL.caption}</figcaption>
+                <figcaption className="bb-caption mt-3">{RITUAL.caption}</figcaption>
               </figure>
             </div>
           </div>
@@ -148,23 +148,23 @@ export default function Home() {
       </section>
 
       {/* ── Kept simple: the plain facts ───────────────────────────── */}
-      <section aria-labelledby="details-title" className="au-sheet au-blush mt-28 px-6 py-16 sm:px-12 lg:mt-40 lg:py-24">
+      <section aria-labelledby="details-title" className="bb-sheet bb-blush mt-28 px-6 py-16 sm:px-12 lg:mt-40 lg:py-24">
         <div className="mx-auto grid max-w-[74rem] gap-12 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-16">
           <div>
-            <h2 id="details-title" className="au-h2">
+            <h2 id="details-title" className="bb-h2">
               {DETAILS.title}
             </h2>
-            <p className="au-lead mt-4">{DETAILS.lead}</p>
+            <p className="bb-lead mt-4">{DETAILS.lead}</p>
           </div>
           <dl className="grid gap-x-12 gap-y-10 sm:grid-cols-2">
             {[
               [DETAILS.vialTerm, DETAILS.vial],
               [DETAILS.capTerm, DETAILS.cap],
-              [DETAILS.pouchTerm, DETAILS.pouch],
+              [DETAILS.boxTerm, DETAILS.box],
               [DETAILS.sentTerm, DETAILS.sent],
             ].map(([term, text]) => (
               <div key={term}>
-                <dt className="au-h3">{term}</dt>
+                <dt className="bb-h3">{term}</dt>
                 <dd className="mt-2 text-ink-soft">{text}</dd>
               </div>
             ))}
@@ -172,13 +172,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Letters from Aurelle ───────────────────────────────────── */}
+      {/* ── Letters from BeautyBac ─────────────────────────────────── */}
       {list ? (
-        <section aria-labelledby="letters-title" className="au-sheet au-on-plum mt-6 px-6 py-14 sm:px-12 md:mt-8 md:py-20">
+        <section aria-labelledby="letters-title" className="bb-sheet bb-on-plum mt-6 px-6 py-14 sm:px-12 md:mt-8 md:py-20">
           <div className="mx-auto grid max-w-[74rem] items-center gap-10 md:grid-cols-2 md:gap-16">
             <div>
               <Mark className="h-10 w-10 text-rose-light" />
-              <h2 id="letters-title" className="au-h2 mt-5">
+              <h2 id="letters-title" className="bb-h2 mt-5">
                 {LETTERS.title}
               </h2>
               <p className="mt-4 text-[1.1875rem] text-on-plum-soft">{LETTERS.body}</p>
@@ -198,7 +198,7 @@ export default function Home() {
                 input: "field sm:flex-1",
                 button: "btn-cta shrink-0",
                 consent: "text-[0.875rem] leading-relaxed text-on-plum-soft",
-                link: "au-link text-on-plum",
+                link: "bb-link text-on-plum",
                 done: "rounded-[1rem] bg-plum-raised px-4 py-3",
               }}
             />
@@ -208,16 +208,16 @@ export default function Home() {
 
       {/* ── For clinics and salons ─────────────────────────────────── */}
       {clinicOnSale.length > 0 ? (
-        <section aria-labelledby="clinics-title" className="au-wrap pt-28 lg:pt-36">
-          <div className="au-panel grid overflow-hidden md:grid-cols-2">
+        <section aria-labelledby="clinics-title" className="bb-wrap pt-28 lg:pt-36">
+          <div className="bb-panel grid overflow-hidden md:grid-cols-2">
             <div className="relative aspect-[3/2] md:aspect-auto md:min-h-[26rem]">
               <Photo image={IMAGES.clinicCounter} fill sizes="(min-width: 768px) 40vw, 100vw" className="object-[40%_50%]" />
             </div>
             <div className="flex flex-col justify-center px-7 py-10 sm:px-12 md:py-14">
-              <h2 id="clinics-title" className="au-h2">
+              <h2 id="clinics-title" className="bb-h2">
                 {CLINICS_TEASER.title}
               </h2>
-              <p className="au-lead mt-4">{CLINICS_TEASER.body(listSizes(clinicOnSale.map((p) => p.vials)))}</p>
+              <p className="bb-lead mt-4">{CLINICS_TEASER.body(listSizes(clinicOnSale.map((p) => p.vials)))}</p>
               <div className="mt-8">
                 <Link href="/clinics" className="btn-secondary">
                   {CLINICS_TEASER.cta}

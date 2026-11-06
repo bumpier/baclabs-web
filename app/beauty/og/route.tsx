@@ -25,13 +25,15 @@ const CRIMP = "#C9CDD3";
  * The card is the brand's first picture: the still life, and the wordmark
  * on its wall with the seal ringed in silver. No line of text beside it:
  * next/og cannot read the brand's woff2 faces, and a fallback face would
- * not be Aurelle's.
+ * not be BeautyBac's.
  */
 export async function GET() {
   const photo = await readFile(PHOTO);
   const src = `data:image/jpeg;base64,${photo.toString("base64")}`;
   const [, , vw, vh] = WORDMARK.viewBox.split(" ").map(Number);
-  const width = 470;
+  // Set by the height of its capitals (about 87px), on the wall left of
+  // the plinth.
+  const width = 620;
   const height = Math.round((width * vh!) / vw!);
   const { cx, cy, r } = WORDMARK.seal;
 
@@ -43,7 +45,7 @@ export async function GET() {
         <div style={{ position: "absolute", left: 84, top: 92, display: "flex" }}>
           <svg width={width} height={height} viewBox={WORDMARK.viewBox} aria-label={brand.name}>
             <path d={WORDMARK.d} fill={PLUM} />
-            <circle cx={cx} cy={cy} r={r + 18} fill={CRIMP} />
+            <circle cx={cx} cy={cy} r={r + 14} fill={CRIMP} />
             <circle cx={cx} cy={cy} r={r} fill={CAP} />
           </svg>
         </div>

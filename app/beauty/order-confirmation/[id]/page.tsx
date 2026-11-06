@@ -9,11 +9,11 @@ import { formatGbp } from "@/lib/commerce/view";
 import { Photo } from "@/brands/beauty/components/Photo";
 import { SealedLine } from "@/brands/beauty/components/Wordmark";
 import { ORDER } from "@/brands/beauty/copy/site";
-import { IMAGES } from "@/brands/beauty/copy/images";
+import { BOX_THUMB, IMAGES } from "@/brands/beauty/copy/images";
 import { brand } from "../../site";
 
 /**
- * The order, as Aurelle shows it. The order is loaded on the server and
+ * The order, as BeautyBac shows it. The order is loaded on the server and
  * shown only if it is this brand's: any other order id, BacLab's included,
  * is this site's 404 (brandOrderView). Per request, never cached: it shows
  * one customer's order.
@@ -60,7 +60,7 @@ export default async function OrderConfirmationPage({
   const parcel = order.parcel;
 
   return (
-    <main id="main" className="au-wrap pt-8 md:pt-14">
+    <main id="main" className="bb-wrap pt-8 md:pt-14">
       <OrderStatusWatcher orderId={order.id} status={order.status} />
       {order.tracker ? <PurchaseTracker {...order.tracker} /> : null}
       <ClearBasket when={order.paid} />
@@ -68,15 +68,15 @@ export default async function OrderConfirmationPage({
       <div className="grid gap-12 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
         <div>
           <div role="status">
-            <h1 className="au-display max-w-[14ch] text-[clamp(2.75rem,1.9rem+3vw,4.5rem)]">
+            <h1 className="bb-display max-w-[14ch] text-[clamp(2.75rem,1.9rem+3vw,4.5rem)]">
               {order.paid && !order.cancelled ? <SealedLine text={`${heading}.`} /> : heading}
             </h1>
-            <p className="au-lead mt-5">{status}</p>
+            <p className="bb-lead mt-5">{status}</p>
           </div>
 
           {order.sent && parcel ? (
             <section aria-labelledby="parcel-heading" className="mt-12">
-              <h2 id="parcel-heading" className="au-h3">
+              <h2 id="parcel-heading" className="bb-h3">
                 {ORDER.parcel}
               </h2>
               <dl className="mt-4 space-y-2 text-ink-soft">
@@ -91,7 +91,7 @@ export default async function OrderConfirmationPage({
                     <dt className="inline">{ORDER.tracking} </dt>
                     <dd className="inline text-ink">
                       {parcel.trackingUrl ? (
-                        <a href={parcel.trackingUrl} target="_blank" rel="noopener noreferrer" className="au-link">
+                        <a href={parcel.trackingUrl} target="_blank" rel="noopener noreferrer" className="bb-link">
                           {parcel.trackingNumber}
                         </a>
                       ) : (
@@ -121,7 +121,7 @@ export default async function OrderConfirmationPage({
             </section>
           ) : order.paid || order.confirming ? (
             <section aria-labelledby="next-heading" className="mt-12">
-              <h2 id="next-heading" className="au-h3">
+              <h2 id="next-heading" className="bb-h3">
                 {ORDER.next}
               </h2>
               <ol className="mt-5 space-y-5">
@@ -147,7 +147,7 @@ export default async function OrderConfirmationPage({
                   <>{ORDER.stepTracking}</>,
                 ].map((step, i) => (
                   <li key={i} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 text-ink-soft">
-                    <span className="au-caption" aria-hidden="true">
+                    <span className="bb-caption" aria-hidden="true">
                       {["i.", "ii.", "iii."][i]}
                     </span>
                     <span>{step}</span>
@@ -157,30 +157,30 @@ export default async function OrderConfirmationPage({
             </section>
           ) : null}
 
-          <p className="au-small mt-12">
+          <p className="bb-small mt-12">
             {ORDER.help}{" "}
-            <Link href="/contact" className="au-link text-ink">
+            <Link href="/contact" className="bb-link text-ink">
               {ORDER.helpLink}
             </Link>{" "}
             {ORDER.helpTail}
           </p>
           <p className="mt-5">
-            <Link href="/" className="au-link font-semibold">
+            <Link href="/" className="bb-link font-semibold">
               {ORDER.home}
             </Link>
           </p>
         </div>
 
-        <section aria-labelledby="summary-heading" className="au-panel self-start overflow-hidden">
+        <section aria-labelledby="summary-heading" className="bb-panel self-start overflow-hidden">
           <div className="flex items-center gap-4 bg-blush px-6 py-5 sm:px-8">
-            <div className="au-frame aspect-square w-16 shrink-0 rounded-[1rem] bg-surface">
-              <Photo image={IMAGES.pouch} fill sizes="4rem" alt="" />
+            <div className="bb-frame aspect-square w-16 shrink-0 rounded-[1rem] bg-surface">
+              <Photo image={IMAGES.box} fill sizes="4rem" alt="" className={BOX_THUMB} />
             </div>
             <div className="min-w-0">
-              <h2 id="summary-heading" className="au-h3">
+              <h2 id="summary-heading" className="bb-h3">
                 {ORDER.summary}
               </h2>
-              <p className="au-fine">{ORDER.pouch}</p>
+              <p className="bb-fine">{ORDER.box}</p>
             </div>
           </div>
           <dl className="px-6 pb-6 pt-4 text-[0.9375rem] sm:px-8 sm:pb-8">
@@ -200,7 +200,7 @@ export default async function OrderConfirmationPage({
               <div key={i} className="flex justify-between gap-4 border-t border-line py-3">
                 <dt className="text-ink">
                   {line.name} × {line.qty}
-                  {line.detail ? <span className="au-fine block">{line.detail}</span> : null}
+                  {line.detail ? <span className="bb-fine block">{line.detail}</span> : null}
                 </dt>
                 <dd className="shrink-0 text-ink">{line.totalMinor === null ? ORDER.free : formatGbp(line.totalMinor)}</dd>
               </div>
@@ -213,7 +213,7 @@ export default async function OrderConfirmationPage({
             ) : null}
             <div className="flex items-baseline justify-between gap-4 border-t border-line pt-4 text-ink">
               <dt className="font-semibold">{order.paidMinor !== null ? ORDER.totalPaid : ORDER.total}</dt>
-              <dd className="au-price text-[1.75rem]">{formatGbp(order.paidMinor ?? order.goodsMinor)}</dd>
+              <dd className="bb-price text-[1.75rem]">{formatGbp(order.paidMinor ?? order.goodsMinor)}</dd>
             </div>
           </dl>
         </section>
