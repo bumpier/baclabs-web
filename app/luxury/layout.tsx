@@ -38,7 +38,7 @@ const THUMB = photoProps(GALLERY[1]!, { sizes: "72px" });
 export default function BrandLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-GB" className={`${displayFace.variable} ${serifFace.variable} ${textFace.variable}`}>
-      <body className="rv-body">
+      <body className="lv-body">
         <BrandPathnameProvider id={brand.id}>
           <CartProvider storageKey={BASKET_KEY} storefront={STOREFRONT}>
             <BagProvider thumb={THUMB}>
@@ -49,14 +49,14 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
           </CartProvider>
           <CookieBanner
             ga4Id={STOREFRONT.tracking.ga4Id}
-            className="no-print rv-cookies"
+            className="no-print lv-cookies"
             classNames={{
-              panel: "rv-cookies__panel",
-              heading: "rv-cookies__heading",
-              text: "rv-cookies__text",
-              link: "rv-link",
-              actions: "rv-cookies__actions",
-              button: "rv-button rv-button--quiet",
+              panel: "lv-cookies__panel",
+              heading: "lv-cookies__heading",
+              text: "lv-cookies__text",
+              link: "lv-link",
+              actions: "lv-cookies__actions",
+              button: "lv-button lv-button--quiet",
             }}
             copy={COOKIES}
           />

@@ -22,7 +22,7 @@ import localFont from "next/font/local";
 
 export const displayFace = localFont({
   src: "./fonts/libre-caslon-display-latin-400.woff2",
-  variable: "--font-rv-display",
+  variable: "--font-lv-display",
   display: "swap",
   weight: "400",
   adjustFontFallback: "Times New Roman",
@@ -33,14 +33,14 @@ export const serifFace = localFont({
     { path: "./fonts/libre-caslon-text-latin-400.woff2", weight: "400", style: "normal" },
     { path: "./fonts/libre-caslon-text-latin-400-italic.woff2", weight: "400", style: "italic" },
   ],
-  variable: "--font-rv-serif",
+  variable: "--font-lv-serif",
   display: "swap",
   adjustFontFallback: "Times New Roman",
 });
 
 export const textFace = localFont({
   src: "./fonts/hanken-grotesk-latin-wght.woff2",
-  variable: "--font-rv-text",
+  variable: "--font-lv-text",
   display: "swap",
   weight: "300 700",
 });

@@ -7,16 +7,16 @@
  * change.
  */
 export const LEGAL_CLASSES = {
-  title: "rv-legal__title",
-  intro: "rv-legal__intro",
-  meta: "rv-legal__meta",
-  toc: "rv-legal__toc",
-  tocHeading: "rv-legal__toc-heading",
-  tocList: "rv-legal__toc-list",
-  sections: "rv-legal__sections",
-  section: "rv-legal__section",
-  heading: "rv-legal__heading",
-  body: "legal-prose rv-legal-body",
-  foot: "rv-legal__foot",
-  link: "rv-link",
+  title: "lv-legal__title",
+  intro: "lv-legal__intro",
+  meta: "lv-legal__meta",
+  toc: "lv-legal__toc",
+  tocHeading: "lv-legal__toc-heading",
+  tocList: "lv-legal__toc-list",
+  sections: "lv-legal__sections",
+  section: "lv-legal__section",
+  heading: "lv-legal__heading",
+  body: "legal-prose lv-legal-body",
+  foot: "lv-legal__foot",
+  link: "lv-link",
 };

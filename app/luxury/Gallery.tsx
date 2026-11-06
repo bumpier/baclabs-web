@@ -42,21 +42,21 @@ export function Gallery({ photos }: { photos: ImgHTMLAttributes<HTMLImageElement
   };
 
   return (
-    <div className="rv-gallery" role="group" aria-label={PRODUCT.gallery.label}>
-      <ul ref={track} className="rv-gallery__track">
+    <div className="lv-gallery" role="group" aria-label={PRODUCT.gallery.label}>
+      <ul ref={track} className="lv-gallery__track">
         {photos.map((p) => (
-          <li key={String(p.src)} className="rv-gallery__item">
+          <li key={String(p.src)} className="lv-gallery__item">
             {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- next/image's attributes, alt included (components/photo.ts) */}
-            <img {...p} className="rv-gallery__img" draggable={false} />
+            <img {...p} className="lv-gallery__img" draggable={false} />
           </li>
         ))}
       </ul>
-      <div className="rv-gallery__marks">
+      <div className="lv-gallery__marks">
         {photos.map((p, i) => (
           <button
             key={String(p.src)}
             type="button"
-            className="rv-gallery__mark"
+            className="lv-gallery__mark"
             aria-label={showing(i + 1, photos.length)}
             aria-current={i === current ? "true" : undefined}
             onClick={() => go(i)}

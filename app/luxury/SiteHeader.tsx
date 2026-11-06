@@ -16,29 +16,29 @@ export function SiteHeader() {
   const facts = serviceFacts(STOREFRONT);
   return (
     <>
-      <a href="#main" className="rv-skip">
+      <a href="#main" className="lv-skip">
         {NAV.skip}
       </a>
       {facts ? (
-        <div className="rv-announce">
+        <div className="lv-announce">
           <p>{ANNOUNCE(facts)}</p>
         </div>
       ) : null}
-      <header className="rv-header">
-        <nav aria-label={NAV.label} className="rv-header__inner">
-          <ul className="rv-header__links">
+      <header className="lv-header">
+        <nav aria-label={NAV.label} className="lv-header__inner">
+          <ul className="lv-header__links">
             <li>
               <Link href="/#buy">{NAV.shop}</Link>
             </li>
-            <li className="rv-wide-only">
+            <li className="lv-wide-only">
               <Link href="/#vial">{NAV.vial}</Link>
             </li>
           </ul>
-          <Link href="/" className="rv-header__mark" aria-label={NAV.home(brand.name)}>
-            <Wordmark className="rv-header__wordmark" />
+          <Link href="/" className="lv-header__mark" aria-label={NAV.home(brand.name)}>
+            <Wordmark className="lv-header__wordmark" />
           </Link>
-          <ul className="rv-header__links rv-header__links--end">
-            <li className="rv-wide-only">
+          <ul className="lv-header__links lv-header__links--end">
+            <li className="lv-wide-only">
               <Link href="/contact">{NAV.concierge}</Link>
             </li>
             <li>

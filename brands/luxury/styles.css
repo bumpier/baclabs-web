@@ -65,9 +65,9 @@
   --color-edge: #7f7775;
   --color-shadow: #1e1714;
 
-  --font-display: var(--font-rv-display), "Big Caslon", "Libre Caslon Display", "Times New Roman", serif;
-  --font-serif: var(--font-rv-serif), "Big Caslon", "Times New Roman", serif;
-  --font-sans: var(--font-rv-text), "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-display: var(--font-lv-display), "Big Caslon", "Libre Caslon Display", "Times New Roman", serif;
+  --font-serif: var(--font-lv-serif), "Big Caslon", "Times New Roman", serif;
+  --font-sans: var(--font-lv-text), "Helvetica Neue", Arial, system-ui, sans-serif;
 
   /* Exponential ease-out: everything arrives fast and settles slowly. */
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -76,22 +76,22 @@
 @layer base {
   :root {
     color-scheme: light;
-    --rv-gutter: clamp(16px, 4vw, 56px);
-    --rv-announce-h: 36px;
-    --rv-header-h: 60px;
-    --rv-wax: var(--color-claret);
-    --rv-impression: var(--color-bone);
+    --lv-gutter: clamp(16px, 4vw, 56px);
+    --lv-announce-h: 36px;
+    --lv-header-h: 60px;
+    --lv-wax: var(--color-claret);
+    --lv-impression: var(--color-bone);
   }
 
   @media (min-width: 760px) {
     :root {
-      --rv-header-h: 76px;
+      --lv-header-h: 76px;
     }
   }
 
   html {
     -webkit-text-size-adjust: 100%;
-    scroll-padding-top: var(--rv-header-h);
+    scroll-padding-top: var(--lv-header-h);
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -101,7 +101,7 @@
   }
 
   /* No page scroll behind the open bag. */
-  html:has(.rv-drawer[open]) {
+  html:has(.lv-drawer[open]) {
     overflow: hidden;
   }
 
@@ -156,14 +156,14 @@
 
 @layer components {
   /* ── Shared pieces ─────────────────────────────────────────────── */
-  .rv-wrap {
+  .lv-wrap {
     margin-inline: auto;
     width: 100%;
     max-width: 88rem;
-    padding-inline: var(--rv-gutter);
+    padding-inline: var(--lv-gutter);
   }
 
-  .rv-skip {
+  .lv-skip {
     position: absolute;
     left: 12px;
     top: -60px;
@@ -173,11 +173,11 @@
     padding: 10px 16px;
     font-size: 0.875rem;
   }
-  .rv-skip:focus {
+  .lv-skip:focus {
     top: 12px;
   }
 
-  .rv-link {
+  .lv-link {
     color: inherit;
     text-decoration: underline;
     text-decoration-thickness: 1px;
@@ -185,11 +185,11 @@
     text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
     transition: text-decoration-color 0.3s var(--ease-expo);
   }
-  .rv-link:hover {
+  .lv-link:hover {
     text-decoration-color: currentColor;
   }
 
-  .rv-label {
+  .lv-label {
     display: block;
     margin-bottom: 8px;
     font-size: 0.8125rem;
@@ -198,14 +198,14 @@
     color: var(--color-ink);
   }
 
-  .rv-hint {
+  .lv-hint {
     margin-top: 8px;
     font-size: 0.8125rem;
     line-height: 1.5;
     color: var(--color-smoke);
   }
 
-  .rv-input {
+  .lv-input {
     display: block;
     width: 100%;
     min-height: 48px;
@@ -218,18 +218,18 @@
     font-size: 1rem;
     transition: border-color 0.2s;
   }
-  .rv-input::placeholder {
+  .lv-input::placeholder {
     color: var(--color-smoke);
   }
-  .rv-input:hover {
+  .lv-input:hover {
     border-color: var(--color-ink);
   }
-  .rv-input:focus-visible {
+  .lv-input:focus-visible {
     outline: 2px solid var(--color-wax);
     outline-offset: 0;
     border-color: var(--color-wax);
   }
-  select.rv-input {
+  select.lv-input {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%231d1819' stroke-width='1.2'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
@@ -238,7 +238,7 @@
     padding-right: 40px;
   }
 
-  .rv-alert {
+  .lv-alert {
     margin-top: 16px;
     background: var(--color-warn-tint);
     padding: 12px 14px;
@@ -247,7 +247,7 @@
   }
 
   /* The brand's button: claret, square, the width it is given. */
-  .rv-button {
+  .lv-button {
     display: inline-flex;
     min-height: 52px;
     align-items: center;
@@ -270,53 +270,53 @@
       color 0.35s var(--ease-expo),
       transform 0.2s var(--ease-expo);
   }
-  .rv-button:hover {
+  .lv-button:hover {
     background: var(--color-claret-deep);
     border-color: var(--color-claret-deep);
   }
-  .rv-button:active {
+  .lv-button:active {
     transform: scale(0.99);
   }
-  .rv-button:disabled {
+  .lv-button:disabled {
     cursor: not-allowed;
     opacity: 0.55;
   }
-  .rv-button--wide {
+  .lv-button--wide {
     width: 100%;
   }
-  .rv-button--split {
+  .lv-button--split {
     justify-content: space-between;
     min-height: 56px;
   }
-  .rv-button__price {
+  .lv-button__price {
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
   }
-  .rv-button--quiet {
+  .lv-button--quiet {
     background: transparent;
     color: var(--color-ink);
     border-color: var(--color-ink);
   }
-  .rv-button--quiet:hover {
+  .lv-button--quiet:hover {
     background: var(--color-ink);
     border-color: var(--color-ink);
     color: var(--color-limestone);
   }
-  .rv-button--bone {
+  .lv-button--bone {
     background: transparent;
     border-color: var(--color-bone);
     color: var(--color-bone);
   }
-  .rv-button--bone:hover {
+  .lv-button--bone:hover {
     background: var(--color-bone);
     border-color: var(--color-bone);
     color: var(--color-claret);
   }
-  .rv-button--bone:focus-visible {
+  .lv-button--bone:focus-visible {
     outline-color: var(--color-bone);
   }
 
-  .rv-text-button {
+  .lv-text-button {
     background: none;
     border: 0;
     padding: 8px 0;
@@ -328,11 +328,11 @@
     text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
     cursor: pointer;
   }
-  .rv-text-button:hover {
+  .lv-text-button:hover {
     color: var(--color-ink);
   }
 
-  .rv-icon-button {
+  .lv-icon-button {
     display: inline-grid;
     place-items: center;
     width: 44px;
@@ -344,7 +344,7 @@
     cursor: pointer;
   }
 
-  .rv-check {
+  .lv-check {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -352,7 +352,7 @@
     font-size: 0.9375rem;
     cursor: pointer;
   }
-  .rv-check input {
+  .lv-check input {
     width: 18px;
     height: 18px;
     margin: 0;
@@ -360,13 +360,13 @@
   }
 
   /* ── The delivery line and the header ──────────────────────────── */
-  .rv-announce {
+  .lv-announce {
     display: flex;
-    min-height: var(--rv-announce-h);
+    min-height: var(--lv-announce-h);
     align-items: center;
     justify-content: center;
     background: var(--color-claret);
-    padding: 8px var(--rv-gutter);
+    padding: 8px var(--lv-gutter);
     color: var(--color-bone);
     text-align: center;
     font-size: 0.75rem;
@@ -374,7 +374,7 @@
     line-height: 1.4;
   }
 
-  .rv-header {
+  .lv-header {
     position: sticky;
     top: 0;
     z-index: 40;
@@ -382,25 +382,25 @@
     backdrop-filter: saturate(1.2) blur(10px);
     border-bottom: 1px solid var(--color-line);
   }
-  .rv-header__inner {
+  .lv-header__inner {
     display: grid;
-    height: var(--rv-header-h);
+    height: var(--lv-header-h);
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 12px;
-    padding-inline: var(--rv-gutter);
+    padding-inline: var(--lv-gutter);
   }
-  .rv-header__links {
+  .lv-header__links {
     display: flex;
     align-items: center;
     gap: clamp(16px, 2.4vw, 36px);
     font-size: 0.875rem;
   }
-  .rv-header__links--end {
+  .lv-header__links--end {
     justify-content: flex-end;
   }
-  .rv-header__links a,
-  .rv-bag-button {
+  .lv-header__links a,
+  .lv-bag-button {
     position: relative;
     display: inline-flex;
     min-height: 44px;
@@ -409,7 +409,7 @@
     color: var(--color-ink);
     text-decoration: none;
   }
-  .rv-header__links a::after {
+  .lv-header__links a::after {
     content: "";
     position: absolute;
     left: 0;
@@ -421,36 +421,36 @@
     transform-origin: right;
     transition: transform 0.45s var(--ease-expo);
   }
-  .rv-header__links a:hover::after {
+  .lv-header__links a:hover::after {
     transform: scaleX(1);
     transform-origin: left;
   }
-  .rv-header__mark {
+  .lv-header__mark {
     display: block;
     color: var(--color-ink);
     padding-block: 10px;
   }
-  .rv-header__wordmark {
+  .lv-header__wordmark {
     display: block;
     height: 12px;
     width: auto;
   }
   @media (min-width: 760px) {
-    .rv-header__wordmark {
+    .lv-header__wordmark {
       height: 17px;
     }
   }
-  .rv-wide-only {
+  .lv-wide-only {
     display: none;
   }
   @media (min-width: 760px) {
-    .rv-wide-only {
+    .lv-wide-only {
       display: list-item;
       list-style: none;
     }
   }
 
-  .rv-bag-button {
+  .lv-bag-button {
     border: 0;
     background: none;
     padding: 0;
@@ -460,21 +460,21 @@
   }
 
   /* The bag's count: a wax seal with the number pressed into it. */
-  .rv-count {
+  .lv-count {
     position: relative;
     display: inline-grid;
     width: 24px;
     height: 24px;
     place-items: center;
   }
-  .rv-count__wax {
+  .lv-count__wax {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     fill: var(--color-claret);
   }
-  .rv-count__n {
+  .lv-count__n {
     position: relative;
     color: var(--color-bone);
     font-size: 0.6875rem;
@@ -482,15 +482,15 @@
     font-variant-numeric: tabular-nums;
     line-height: 1;
   }
-  .rv-count-press {
+  .lv-count-press {
     display: inline-flex;
   }
   @media (prefers-reduced-motion: no-preference) {
-    .rv-count-press {
-      animation: rv-press 0.7s var(--ease-expo);
+    .lv-count-press {
+      animation: lv-press 0.7s var(--ease-expo);
     }
   }
-  @keyframes rv-press {
+  @keyframes lv-press {
     0% {
       transform: scale(1.45) rotate(-12deg);
       filter: blur(1.5px);
@@ -507,22 +507,22 @@
   }
 
   /* ── The hero ──────────────────────────────────────────────────── */
-  .rv-hero {
+  .lv-hero {
     position: relative;
     isolation: isolate;
-    height: calc(100svh - var(--rv-header-h) - var(--rv-announce-h));
+    height: calc(100svh - var(--lv-header-h) - var(--lv-announce-h));
     min-height: 540px;
     max-height: 980px;
     overflow: hidden;
     background: var(--color-shadow);
     color: var(--color-bone);
   }
-  .rv-hero picture {
+  .lv-hero picture {
     position: absolute;
     inset: 0;
     z-index: -2;
   }
-  .rv-hero__img {
+  .lv-hero__img {
     display: block;
     width: 100%;
     height: 100%;
@@ -530,12 +530,12 @@
     object-position: 50% 70%;
   }
   @media (min-width: 700px) {
-    .rv-hero__img {
+    .lv-hero__img {
       object-position: 22% 50%;
     }
   }
   /* A shade where the words sit: the top on a phone, the right on a screen. */
-  .rv-hero::after {
+  .lv-hero::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -544,14 +544,14 @@
     pointer-events: none;
   }
   @media (min-width: 700px) {
-    .rv-hero::after {
+    .lv-hero::after {
       background: linear-gradient(to left, rgb(20 14 12 / 0.5), rgb(20 14 12 / 0) 48%);
     }
   }
-  .rv-hero__copy {
+  .lv-hero__copy {
     position: absolute;
-    left: var(--rv-gutter);
-    right: var(--rv-gutter);
+    left: var(--lv-gutter);
+    right: var(--lv-gutter);
     top: clamp(36px, 9svh, 96px);
     display: flex;
     flex-direction: column;
@@ -559,21 +559,21 @@
     gap: 24px;
   }
   @media (min-width: 700px) {
-    .rv-hero__copy {
+    .lv-hero__copy {
       top: auto;
       left: auto;
       bottom: clamp(48px, 12vh, 120px);
       width: min(30rem, 38vw);
     }
   }
-  .rv-hero__heading {
+  .lv-hero__heading {
     font-family: var(--font-display);
     font-size: clamp(2.125rem, 4vw, 3.75rem);
     line-height: 1.04;
     letter-spacing: -0.012em;
     max-width: 11ch;
   }
-  .rv-hero__action {
+  .lv-hero__action {
     position: relative;
     display: inline-flex;
     min-height: 44px;
@@ -585,7 +585,7 @@
     text-transform: uppercase;
     text-decoration: none;
   }
-  .rv-hero__action::after {
+  .lv-hero__action::after {
     content: "";
     position: absolute;
     left: 0;
@@ -596,26 +596,26 @@
     transform-origin: left;
     transition: transform 0.6s var(--ease-expo);
   }
-  .rv-hero__action:hover::after {
+  .lv-hero__action:hover::after {
     transform: scaleX(0.4);
   }
-  .rv-hero__action:focus-visible {
+  .lv-hero__action:focus-visible {
     outline-color: var(--color-bone);
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .rv-hero__img {
-      animation: rv-settle 2.6s var(--ease-expo) both;
+    .lv-hero__img {
+      animation: lv-settle 2.6s var(--ease-expo) both;
     }
-    .rv-hero__copy > * {
-      animation: rv-rise 1.4s var(--ease-expo) both;
+    .lv-hero__copy > * {
+      animation: lv-rise 1.4s var(--ease-expo) both;
       animation-delay: 0.45s;
     }
-    .rv-hero__copy > :nth-child(2) {
+    .lv-hero__copy > :nth-child(2) {
       animation-delay: 0.7s;
     }
   }
-  @keyframes rv-settle {
+  @keyframes lv-settle {
     from {
       transform: scale(1.06);
       filter: brightness(0.62);
@@ -625,7 +625,7 @@
       filter: none;
     }
   }
-  @keyframes rv-rise {
+  @keyframes lv-rise {
     from {
       opacity: 0;
       transform: translateY(14px);
@@ -637,54 +637,54 @@
   }
 
   /* ── The product: the gallery and the purchase column ─────────── */
-  .rv-product {
+  .lv-product {
     display: grid;
     padding-top: 16px;
   }
   @media (min-width: 960px) {
-    .rv-product {
+    .lv-product {
       grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
       align-items: start;
       padding-top: 0;
     }
   }
 
-  .rv-gallery__track {
+  .lv-gallery__track {
     display: flex;
     gap: 8px;
     margin: 0;
-    padding: 0 var(--rv-gutter);
+    padding: 0 var(--lv-gutter);
     list-style: none;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
-    scroll-padding-inline: var(--rv-gutter);
+    scroll-padding-inline: var(--lv-gutter);
     scrollbar-width: none;
   }
-  .rv-gallery__track::-webkit-scrollbar {
+  .lv-gallery__track::-webkit-scrollbar {
     display: none;
   }
-  .rv-gallery__item {
+  .lv-gallery__item {
     flex: 0 0 84%;
     aspect-ratio: 3 / 4;
     overflow: hidden;
     background: var(--color-neutral);
     scroll-snap-align: start;
   }
-  .rv-gallery__img {
+  .lv-gallery__img {
     display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
     user-select: none;
   }
-  .rv-gallery__marks {
+  .lv-gallery__marks {
     display: flex;
     justify-content: center;
     gap: 4px;
     margin-top: 12px;
   }
-  .rv-gallery__mark {
+  .lv-gallery__mark {
     position: relative;
     width: 32px;
     height: 32px;
@@ -692,7 +692,7 @@
     background: none;
     cursor: pointer;
   }
-  .rv-gallery__mark::before {
+  .lv-gallery__mark::before {
     content: "";
     position: absolute;
     left: 6px;
@@ -704,35 +704,35 @@
       background-color 0.3s,
       height 0.3s var(--ease-expo);
   }
-  .rv-gallery__mark[aria-current="true"]::before {
+  .lv-gallery__mark[aria-current="true"]::before {
     height: 2px;
     margin-top: -0.5px;
     background: var(--color-claret);
   }
 
   @media (min-width: 960px) {
-    .rv-gallery__track {
+    .lv-gallery__track {
       display: grid;
       gap: 6px;
       padding: 0;
       overflow: visible;
     }
-    .rv-gallery__item {
+    .lv-gallery__item {
       flex: none;
     }
-    .rv-gallery__marks {
+    .lv-gallery__marks {
       display: none;
     }
   }
 
-  .rv-product__column {
-    padding: 28px var(--rv-gutter) 72px;
+  .lv-product__column {
+    padding: 28px var(--lv-gutter) 72px;
   }
   @media (min-width: 960px) {
-    .rv-product__column {
+    .lv-product__column {
       position: sticky;
-      top: var(--rv-header-h);
-      max-height: calc(100svh - var(--rv-header-h));
+      top: var(--lv-header-h);
+      max-height: calc(100svh - var(--lv-header-h));
       overflow-y: auto;
       overscroll-behavior: contain;
       scrollbar-width: thin;
@@ -741,52 +741,52 @@
     }
   }
 
-  .rv-purchase {
+  .lv-purchase {
     max-width: 30rem;
   }
-  .rv-purchase__name {
+  .lv-purchase__name {
     font-family: var(--font-display);
     font-size: clamp(2rem, 2.6vw, 2.5rem);
     line-height: 1.05;
     letter-spacing: -0.01em;
   }
-  .rv-purchase__lede {
+  .lv-purchase__lede {
     margin-top: 6px;
     font-family: var(--font-serif);
     font-style: italic;
     font-size: 1.0625rem;
     color: var(--color-smoke);
   }
-  .rv-purchase__price {
+  .lv-purchase__price {
     margin-top: 14px;
     min-height: 1.5em;
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
   }
-  .rv-purchase__intro {
+  .lv-purchase__intro {
     margin-top: 12px;
     font-size: 0.875rem;
     line-height: 1.6;
     color: var(--color-smoke);
   }
-  .rv-purchase__form {
+  .lv-purchase__form {
     display: grid;
     gap: 18px;
     margin-top: 22px;
   }
 
   /* The sizes: a list, the chosen one sealed. */
-  .rv-sizes {
+  .lv-sizes {
     margin: 0;
     border: 0;
     padding: 0;
     min-width: 0;
   }
-  .rv-sizes__list {
+  .lv-sizes__list {
     border-top: 1px solid var(--color-line);
   }
-  .rv-size {
+  .lv-size {
     position: relative;
     display: grid;
     grid-template-columns: 16px minmax(0, 1fr) auto 5.5rem;
@@ -798,22 +798,22 @@
     cursor: pointer;
     transition: background-color 0.3s var(--ease-expo);
   }
-  .rv-size:hover {
+  .lv-size:hover {
     background: color-mix(in srgb, var(--color-chalk) 60%, transparent);
   }
-  .rv-size:has(:focus-visible) {
+  .lv-size:has(:focus-visible) {
     outline: 2px solid var(--color-wax);
     outline-offset: 2px;
   }
-  .rv-size[data-disabled] {
+  .lv-size[data-disabled] {
     cursor: not-allowed;
     color: var(--color-smoke);
   }
-  .rv-size__seal {
+  .lv-size__seal {
     width: 16px;
     height: 16px;
   }
-  .rv-size__seal path {
+  .lv-size__seal path {
     fill: transparent;
     stroke: var(--color-edge);
     stroke-width: 5;
@@ -823,38 +823,38 @@
       stroke 0.3s var(--ease-expo),
       transform 0.45s var(--ease-expo);
   }
-  .rv-size__seal path.is-on {
+  .lv-size__seal path.is-on {
     fill: var(--color-claret);
     stroke: var(--color-claret);
     transform: rotate(-20deg);
   }
-  .rv-size__name {
+  .lv-size__name {
     font-family: var(--font-display);
     font-size: 1.25rem;
     line-height: 1.2;
   }
-  .rv-size[data-checked] .rv-size__name {
+  .lv-size[data-checked] .lv-size__name {
     color: var(--color-claret);
   }
-  .rv-size__vials {
+  .lv-size__vials {
     font-size: 0.8125rem;
     color: var(--color-smoke);
   }
-  .rv-size__price {
+  .lv-size__price {
     justify-self: end;
     font-size: 0.875rem;
     font-variant-numeric: tabular-nums;
   }
 
-  .rv-stepper {
+  .lv-stepper {
     display: flex;
     align-items: center;
     gap: 0;
   }
-  .rv-stepper__label {
+  .lv-stepper__label {
     margin: 0 auto 0 0;
   }
-  .rv-stepper__btn {
+  .lv-stepper__btn {
     display: inline-grid;
     width: 44px;
     height: 44px;
@@ -867,14 +867,14 @@
     line-height: 1;
     cursor: pointer;
   }
-  .rv-stepper__btn:hover:not(:disabled) {
+  .lv-stepper__btn:hover:not(:disabled) {
     background: var(--color-chalk);
   }
-  .rv-stepper__btn:disabled {
+  .lv-stepper__btn:disabled {
     cursor: not-allowed;
     color: var(--color-edge);
   }
-  .rv-stepper__input {
+  .lv-stepper__input {
     width: 52px;
     height: 44px;
     border: 1px solid var(--color-edge);
@@ -888,26 +888,26 @@
     appearance: textfield;
     -moz-appearance: textfield;
   }
-  .rv-stepper__input::-webkit-inner-spin-button,
-  .rv-stepper__input::-webkit-outer-spin-button {
+  .lv-stepper__input::-webkit-inner-spin-button,
+  .lv-stepper__input::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
-  .rv-stepper--small .rv-stepper__btn {
+  .lv-stepper--small .lv-stepper__btn {
     width: 36px;
     height: 36px;
     font-size: 1rem;
   }
-  .rv-stepper--small .rv-stepper__input {
+  .lv-stepper--small .lv-stepper__input {
     width: 40px;
     height: 36px;
     font-size: 0.875rem;
   }
 
-  .rv-gift__note {
+  .lv-gift__note {
     margin-top: 12px;
   }
-  .rv-gift__field {
+  .lv-gift__field {
     min-height: 96px;
     resize: vertical;
     font-family: var(--font-serif);
@@ -915,27 +915,27 @@
     line-height: 1.6;
   }
 
-  .rv-status {
+  .lv-status {
     min-height: 1.25rem;
     margin-top: -8px;
     font-size: 0.8125rem;
     color: var(--color-smoke);
   }
 
-  .rv-addons ul {
+  .lv-addons ul {
     display: grid;
     gap: 12px;
     margin-top: 20px;
     font-size: 0.875rem;
   }
-  .rv-addons li {
+  .lv-addons li {
     display: flex;
     justify-content: space-between;
     gap: 16px;
   }
 
   /* The quiet service lines, each marked with a drop of wax. */
-  .rv-service {
+  .lv-service {
     display: grid;
     gap: 8px;
     margin-top: 28px;
@@ -943,11 +943,11 @@
     line-height: 1.5;
     color: var(--color-smoke);
   }
-  .rv-service li {
+  .lv-service li {
     position: relative;
     padding-left: 18px;
   }
-  .rv-service li::before {
+  .lv-service li::before {
     content: "";
     position: absolute;
     left: 2px;
@@ -958,14 +958,14 @@
     background: var(--color-claret);
   }
 
-  .rv-details {
+  .lv-details {
     margin-top: 24px;
     border-top: 1px solid var(--color-line);
   }
-  .rv-details details {
+  .lv-details details {
     border-bottom: 1px solid var(--color-line);
   }
-  .rv-details summary {
+  .lv-details summary {
     position: relative;
     display: flex;
     min-height: 48px;
@@ -976,11 +976,11 @@
     list-style: none;
     cursor: pointer;
   }
-  .rv-details summary::-webkit-details-marker {
+  .lv-details summary::-webkit-details-marker {
     display: none;
   }
-  .rv-details summary::before,
-  .rv-details summary::after {
+  .lv-details summary::before,
+  .lv-details summary::after {
     content: "";
     position: absolute;
     right: 4px;
@@ -990,13 +990,13 @@
     background: currentColor;
     transition: transform 0.4s var(--ease-expo);
   }
-  .rv-details summary::after {
+  .lv-details summary::after {
     transform: rotate(90deg);
   }
-  .rv-details details[open] summary::after {
+  .lv-details details[open] summary::after {
     transform: rotate(0deg);
   }
-  .rv-details details p {
+  .lv-details details p {
     padding-bottom: 18px;
     font-family: var(--font-serif);
     font-size: 0.9375rem;
@@ -1005,94 +1005,94 @@
   }
 
   /* ── The chapters ──────────────────────────────────────────────── */
-  .rv-chapters {
+  .lv-chapters {
     margin-top: clamp(48px, 8vw, 120px);
-    scroll-margin-top: var(--rv-header-h);
+    scroll-margin-top: var(--lv-header-h);
   }
-  .rv-chapter {
+  .lv-chapter {
     display: grid;
   }
-  .rv-chapter__photo {
+  .lv-chapter__photo {
     margin: 0;
     overflow: hidden;
     aspect-ratio: 3 / 2;
     background: var(--color-shadow);
   }
-  .rv-chapter__photo img {
+  .lv-chapter__photo img {
     display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
-  .rv-chapter__text {
+  .lv-chapter__text {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: clamp(40px, 7vw, 96px) var(--rv-gutter);
+    padding: clamp(40px, 7vw, 96px) var(--lv-gutter);
   }
-  .rv-chapter__title {
+  .lv-chapter__title {
     font-family: var(--font-display);
     font-size: clamp(2rem, 3.2vw, 3rem);
     line-height: 1.06;
     letter-spacing: -0.01em;
   }
-  .rv-chapter__text p {
+  .lv-chapter__text p {
     max-width: 30rem;
     margin-top: 20px;
     font-family: var(--font-serif);
     font-size: clamp(1.0625rem, 1.25vw, 1.1875rem);
     line-height: 1.75;
   }
-  .rv-chapter__text .rv-chapter__aside {
+  .lv-chapter__text .lv-chapter__aside {
     margin-top: 14px;
     font-family: var(--font-sans);
     font-size: 0.8125rem;
     line-height: 1.55;
     color: var(--color-smoke);
   }
-  .rv-chapter--claret {
+  .lv-chapter--claret {
     background: var(--color-claret);
     color: var(--color-bone);
   }
-  .rv-chapter--claret :focus-visible {
+  .lv-chapter--claret :focus-visible {
     outline-color: var(--color-bone);
   }
   /* On a phone every chapter opens on its photograph. */
   @media (max-width: 959px) {
-    .rv-chapter--right .rv-chapter__photo {
+    .lv-chapter--right .lv-chapter__photo {
       order: -1;
     }
   }
 
   @media (min-width: 960px) {
-    .rv-chapter--left {
+    .lv-chapter--left {
       grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
     }
-    .rv-chapter--right {
+    .lv-chapter--right {
       grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     }
-    .rv-chapter--left .rv-chapter__photo,
-    .rv-chapter--right .rv-chapter__photo {
+    .lv-chapter--left .lv-chapter__photo,
+    .lv-chapter--right .lv-chapter__photo {
       aspect-ratio: auto;
       min-height: min(80vh, 760px);
     }
-    .rv-chapter--left .rv-chapter__text {
+    .lv-chapter--left .lv-chapter__text {
       padding-left: clamp(40px, 5vw, 96px);
     }
-    .rv-chapter--right .rv-chapter__text {
-      padding-left: var(--rv-gutter);
+    .lv-chapter--right .lv-chapter__text {
+      padding-left: var(--lv-gutter);
       padding-right: clamp(40px, 5vw, 96px);
     }
-    .rv-chapter--full {
+    .lv-chapter--full {
       position: relative;
     }
-    .rv-chapter--full .rv-chapter__photo {
+    .lv-chapter--full .lv-chapter__photo {
       position: relative;
       aspect-ratio: auto;
       height: min(92vh, 66vw);
     }
     /* A veil of limestone over the wall, so the words read on it. */
-    .rv-chapter--full .rv-chapter__photo::after {
+    .lv-chapter--full .lv-chapter__photo::after {
       content: "";
       position: absolute;
       inset: 0;
@@ -1100,15 +1100,15 @@
       pointer-events: none;
     }
     /* The words sit on the plaster wall the photograph leaves empty. */
-    .rv-chapter--full .rv-chapter__text {
+    .lv-chapter--full .lv-chapter__text {
       position: absolute;
-      left: var(--rv-gutter);
+      left: var(--lv-gutter);
       top: 50%;
       width: min(27rem, 34vw);
       padding: 0;
       transform: translateY(-50%);
     }
-    .rv-chapter--full .rv-chapter__text {
+    .lv-chapter--full .lv-chapter__text {
       z-index: 1;
     }
   }
@@ -1116,22 +1116,22 @@
   /* The photographs come up out of shadow as they scroll in. */
   @supports (animation-timeline: view()) {
     @media (prefers-reduced-motion: no-preference) {
-      .rv-reveal {
-        animation: rv-surface linear both;
+      .lv-reveal {
+        animation: lv-surface linear both;
         animation-timeline: view();
         animation-range: entry 0% cover 38%;
       }
     }
     /* The gallery only as a column: on a phone its strip is the scroller. */
     @media (prefers-reduced-motion: no-preference) and (min-width: 960px) {
-      .rv-gallery__img {
-        animation: rv-surface linear both;
+      .lv-gallery__img {
+        animation: lv-surface linear both;
         animation-timeline: view();
         animation-range: entry 0% cover 38%;
       }
     }
   }
-  @keyframes rv-surface {
+  @keyframes lv-surface {
     from {
       filter: brightness(0.55) saturate(0.85);
       transform: scale(1.07);
@@ -1143,28 +1143,28 @@
   }
 
   /* ── The concierge ─────────────────────────────────────────────── */
-  .rv-concierge {
-    --rv-wax: var(--color-bone);
-    --rv-impression: var(--color-claret);
+  .lv-concierge {
+    --lv-wax: var(--color-bone);
+    --lv-impression: var(--color-claret);
     display: flex;
     flex-direction: column;
     align-items: center;
     background: var(--color-claret-deep);
-    padding: clamp(72px, 10vw, 136px) var(--rv-gutter);
+    padding: clamp(72px, 10vw, 136px) var(--lv-gutter);
     color: var(--color-bone);
     text-align: center;
   }
-  .rv-concierge__seal {
+  .lv-concierge__seal {
     width: 64px;
     height: 64px;
   }
-  .rv-concierge__title {
+  .lv-concierge__title {
     margin-top: 28px;
     font-family: var(--font-display);
     font-size: clamp(2rem, 3.2vw, 3rem);
     line-height: 1.06;
   }
-  .rv-concierge__body {
+  .lv-concierge__body {
     max-width: 32rem;
     margin: 16px 0 32px;
     font-family: var(--font-serif);
@@ -1174,73 +1174,73 @@
   }
 
   /* ── The footer, in small capitals ─────────────────────────────── */
-  .rv-footer {
+  .lv-footer {
     padding-top: clamp(56px, 7vw, 96px);
     overflow: hidden;
   }
-  .rv-footer__grid {
+  .lv-footer__grid {
     display: grid;
     gap: 48px;
   }
   @media (min-width: 860px) {
-    .rv-footer__grid {
+    .lv-footer__grid {
       grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
       gap: 64px;
     }
   }
-  .rv-letters__heading {
+  .lv-letters__heading {
     font-family: var(--font-display);
     font-size: 1.75rem;
     line-height: 1.1;
   }
-  .rv-letters__lede {
+  .lv-letters__lede {
     margin-top: 8px;
     font-family: var(--font-serif);
     font-size: 1rem;
     color: var(--color-smoke);
   }
-  .rv-signup {
+  .lv-signup {
     margin-top: 20px;
     max-width: 30rem;
   }
-  .rv-signup__row {
+  .lv-signup__row {
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
   @media (min-width: 480px) {
-    .rv-signup__row {
+    .lv-signup__row {
       flex-direction: row;
     }
-    .rv-signup__row .rv-input {
+    .lv-signup__row .lv-input {
       flex: 1;
     }
   }
-  .rv-signup__consent {
+  .lv-signup__consent {
     margin-top: 12px;
     font-size: 0.75rem;
     line-height: 1.5;
     color: var(--color-smoke);
   }
-  .rv-footer__nav {
+  .lv-footer__nav {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 32px;
   }
-  .rv-footer__heading {
+  .lv-footer__heading {
     font-size: 0.6875rem;
     font-weight: 500;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--color-smoke);
   }
-  .rv-footer__nav ul {
+  .lv-footer__nav ul {
     display: grid;
     gap: 2px;
     margin-top: 14px;
   }
-  .rv-footer__nav a,
-  .rv-footer__cookie {
+  .lv-footer__nav a,
+  .lv-footer__cookie {
     display: inline-flex;
     min-height: 36px;
     align-items: center;
@@ -1256,11 +1256,11 @@
     text-decoration: none;
     cursor: pointer;
   }
-  .rv-footer__nav a:hover,
-  .rv-footer__cookie:hover {
+  .lv-footer__nav a:hover,
+  .lv-footer__cookie:hover {
     color: var(--color-claret);
   }
-  .rv-footer__legal {
+  .lv-footer__legal {
     display: grid;
     gap: 6px;
     margin-top: 56px;
@@ -1269,25 +1269,25 @@
     line-height: 1.6;
     color: var(--color-smoke);
   }
-  .rv-footer__legal::before {
+  .lv-footer__legal::before {
     content: "";
     height: 1px;
     margin-bottom: 14px;
     background: var(--color-line);
   }
-  .rv-footer__signature {
+  .lv-footer__signature {
     margin-top: 40px;
-    padding: 0 var(--rv-gutter) clamp(20px, 3vw, 40px);
+    padding: 0 var(--lv-gutter) clamp(20px, 3vw, 40px);
     color: var(--color-claret);
   }
-  .rv-footer__signature svg {
+  .lv-footer__signature svg {
     display: block;
     width: 100%;
     height: auto;
   }
 
   /* ── The bag drawer ────────────────────────────────────────────── */
-  .rv-drawer {
+  .lv-drawer {
     position: fixed;
     inset: 0 0 0 auto;
     width: min(440px, 100vw);
@@ -1306,53 +1306,53 @@
       overlay 0.55s allow-discrete,
       display 0.55s allow-discrete;
   }
-  .rv-drawer[open] {
+  .lv-drawer[open] {
     transform: none;
   }
   @starting-style {
-    .rv-drawer[open] {
+    .lv-drawer[open] {
       transform: translateX(100%);
     }
   }
-  .rv-drawer::backdrop {
+  .lv-drawer::backdrop {
     background: rgb(30 23 20 / 0);
     transition:
       background-color 0.55s var(--ease-expo),
       overlay 0.55s allow-discrete,
       display 0.55s allow-discrete;
   }
-  .rv-drawer[open]::backdrop {
+  .lv-drawer[open]::backdrop {
     background: rgb(30 23 20 / 0.45);
   }
   @starting-style {
-    .rv-drawer[open]::backdrop {
+    .lv-drawer[open]::backdrop {
       background: rgb(30 23 20 / 0);
     }
   }
-  .rv-drawer__panel {
+  .lv-drawer__panel {
     display: flex;
     height: 100%;
     flex-direction: column;
   }
-  .rv-drawer__head {
+  .lv-drawer__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--color-line);
     padding: 16px 24px;
   }
-  .rv-drawer__title {
+  .lv-drawer__title {
     font-family: var(--font-display);
     font-size: 1.625rem;
     line-height: 1.1;
   }
-  .rv-drawer__body {
+  .lv-drawer__body {
     flex: 1;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 8px 24px 24px;
   }
-  .rv-drawer__empty {
+  .lv-drawer__empty {
     display: grid;
     gap: 12px;
     justify-items: start;
@@ -1360,87 +1360,87 @@
     font-family: var(--font-serif);
     font-size: 1.0625rem;
   }
-  .rv-drawer__foot {
+  .lv-drawer__foot {
     border-top: 1px solid var(--color-line);
     padding: 16px 24px 0;
   }
-  .rv-drawer .rv-alert {
+  .lv-drawer .lv-alert {
     margin: 12px 24px 0;
   }
-  .rv-pay {
+  .lv-pay {
     display: grid;
     gap: 8px;
     padding: 16px 24px max(20px, env(safe-area-inset-bottom));
   }
-  .rv-pay .rv-hint {
+  .lv-pay .lv-hint {
     margin-top: 0;
     text-align: center;
   }
 
-  .rv-lines {
+  .lv-lines {
     display: grid;
   }
-  .rv-line {
+  .lv-line {
     display: grid;
     grid-template-columns: 64px minmax(0, 1fr) auto;
     gap: 16px;
     border-bottom: 1px solid var(--color-line);
     padding: 18px 0;
   }
-  .rv-line__thumb {
+  .lv-line__thumb {
     width: 64px;
     height: 85px;
     object-fit: cover;
     background: var(--color-neutral);
   }
-  .rv-line__name {
+  .lv-line__name {
     font-family: var(--font-display);
     font-size: 1.25rem;
     line-height: 1.2;
   }
-  .rv-line__meta {
+  .lv-line__meta {
     font-size: 0.8125rem;
     color: var(--color-smoke);
   }
-  .rv-line__controls {
+  .lv-line__controls {
     display: flex;
     align-items: center;
     gap: 16px;
     margin-top: 10px;
   }
-  .rv-line__price {
+  .lv-line__price {
     font-size: 0.875rem;
     font-variant-numeric: tabular-nums;
   }
-  .rv-drawer .rv-gift {
+  .lv-drawer .lv-gift {
     margin-top: 16px;
   }
 
-  .rv-sum {
+  .lv-sum {
     display: grid;
     gap: 10px;
     font-size: 0.875rem;
   }
-  .rv-sum > div {
+  .lv-sum > div {
     display: flex;
     justify-content: space-between;
     gap: 16px;
   }
-  .rv-sum dd {
+  .lv-sum dd {
     font-variant-numeric: tabular-nums;
   }
-  .rv-sum__detail {
+  .lv-sum__detail {
     display: block;
     font-size: 0.75rem;
     color: var(--color-smoke);
   }
-  .rv-sum__total {
+  .lv-sum__total {
     border-top: 1px solid var(--color-line);
     padding-top: 10px;
     font-size: 1rem;
     font-weight: 500;
   }
-  .rv-choice {
+  .lv-choice {
     display: grid;
     gap: 8px;
     margin: 0 0 12px;
@@ -1448,26 +1448,26 @@
     padding: 0;
     font-size: 0.875rem;
   }
-  .rv-choice__row {
+  .lv-choice__row {
     display: flex;
     justify-content: space-between;
     gap: 12px;
   }
-  .rv-choice input {
+  .lv-choice input {
     accent-color: var(--color-claret);
   }
 
   /* ── Inner pages ───────────────────────────────────────────────── */
-  .rv-page {
+  .lv-page {
     padding-block: clamp(48px, 8vw, 112px);
   }
-  .rv-page__heading {
+  .lv-page__heading {
     font-family: var(--font-display);
     font-size: clamp(2.375rem, 4.4vw, 3.75rem);
     line-height: 1.04;
     letter-spacing: -0.012em;
   }
-  .rv-page__lede {
+  .lv-page__lede {
     max-width: 36rem;
     margin-top: 18px;
     font-family: var(--font-serif);
@@ -1477,82 +1477,82 @@
   }
 
   /* A page set beside a photograph: the concierge and the 404. */
-  .rv-split {
+  .lv-split {
     display: grid;
   }
-  .rv-split__photo {
+  .lv-split__photo {
     margin: 0;
     aspect-ratio: 4 / 3;
     overflow: hidden;
     background: var(--color-shadow);
   }
-  .rv-split__photo img {
+  .lv-split__photo img {
     display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
-  .rv-split__body {
-    padding: clamp(40px, 6vw, 96px) var(--rv-gutter) clamp(64px, 8vw, 120px);
+  .lv-split__body {
+    padding: clamp(40px, 6vw, 96px) var(--lv-gutter) clamp(64px, 8vw, 120px);
   }
   @media (min-width: 960px) {
-    .rv-split {
+    .lv-split {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       align-items: start;
     }
-    .rv-split__photo {
+    .lv-split__photo {
       position: sticky;
-      top: var(--rv-header-h);
+      top: var(--lv-header-h);
       aspect-ratio: auto;
-      height: calc(100svh - var(--rv-header-h));
+      height: calc(100svh - var(--lv-header-h));
     }
-    .rv-split__body {
+    .lv-split__body {
       max-width: 44rem;
       padding-inline: clamp(40px, 6vw, 112px);
     }
   }
 
-  .rv-form {
+  .lv-form {
     display: grid;
     gap: 22px;
     margin-top: 40px;
   }
-  .rv-form__note {
+  .lv-form__note {
     margin-top: 12px;
     font-size: 0.75rem;
     color: var(--color-smoke);
   }
-  .rv-aside {
+  .lv-aside {
     margin-top: 40px;
     font-size: 0.75rem;
     letter-spacing: 0.04em;
     color: var(--color-smoke);
   }
 
-  .rv-sent {
+  .lv-sent {
     margin-top: 40px;
     background: var(--color-chalk);
     padding: 32px 28px;
   }
-  .rv-sent__heading {
+  .lv-sent__heading {
     font-family: var(--font-display);
     font-size: 1.75rem;
     line-height: 1.1;
     outline: none;
   }
-  .rv-sent__text {
+  .lv-sent__text {
     margin-top: 12px;
     font-family: var(--font-serif);
     line-height: 1.7;
   }
 
   /* The 404: the seal, unbroken. */
-  .rv-missing__seal {
+  .lv-missing__seal {
     width: 72px;
     height: 72px;
     margin-bottom: 32px;
   }
-  .rv-missing__links {
+  .lv-missing__links {
     display: flex;
     flex-wrap: wrap;
     gap: 12px 28px;
@@ -1561,17 +1561,17 @@
   }
 
   /* ── The order card ────────────────────────────────────────────── */
-  .rv-order {
+  .lv-order {
     max-width: 44rem;
     margin-inline: auto;
   }
-  .rv-order__head {
+  .lv-order__head {
     text-align: center;
   }
-  .rv-order__head .rv-page__lede {
+  .lv-order__head .lv-page__lede {
     margin-inline: auto;
   }
-  .rv-card {
+  .lv-card {
     position: relative;
     margin-top: 72px;
     background: var(--color-chalk);
@@ -1579,7 +1579,7 @@
     box-shadow: 0 30px 60px -40px rgb(30 23 20 / 0.45);
   }
   /* The card is closed with the seal, pressed across its top edge. */
-  .rv-card__seal {
+  .lv-card__seal {
     position: absolute;
     left: 50%;
     top: 0;
@@ -1588,7 +1588,7 @@
     transform: translate(-50%, -50%) rotate(-8deg);
     filter: drop-shadow(0 6px 8px rgb(30 23 20 / 0.25));
   }
-  .rv-card__meta {
+  .lv-card__meta {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -1598,11 +1598,11 @@
     font-size: 0.8125rem;
     color: var(--color-smoke);
   }
-  .rv-card__meta dd {
+  .lv-card__meta dd {
     color: var(--color-ink);
     font-variant-numeric: tabular-nums;
   }
-  .rv-card__row {
+  .lv-card__row {
     display: flex;
     justify-content: space-between;
     gap: 16px;
@@ -1610,41 +1610,41 @@
     padding: 14px 0;
     font-size: 0.9375rem;
   }
-  .rv-card__row dt {
+  .lv-card__row dt {
     font-family: var(--font-serif);
   }
-  .rv-card__row dd {
+  .lv-card__row dd {
     font-variant-numeric: tabular-nums;
   }
-  .rv-card__detail {
+  .lv-card__detail {
     display: block;
     font-family: var(--font-sans);
     font-size: 0.8125rem;
     color: var(--color-smoke);
   }
-  .rv-card__total {
+  .lv-card__total {
     border-bottom: 0;
     font-weight: 500;
   }
-  .rv-section-heading {
+  .lv-section-heading {
     font-family: var(--font-display);
     font-size: 1.75rem;
     line-height: 1.1;
   }
-  .rv-steps {
+  .lv-steps {
     display: grid;
     gap: 18px;
     margin-top: 20px;
     counter-reset: step;
   }
-  .rv-steps li {
+  .lv-steps li {
     position: relative;
     padding-left: 44px;
     font-family: var(--font-serif);
     line-height: 1.7;
     counter-increment: step;
   }
-  .rv-steps li::before {
+  .lv-steps li::before {
     content: counter(step);
     position: absolute;
     left: 0;
@@ -1658,23 +1658,23 @@
     font-family: var(--font-display);
     font-size: 0.9375rem;
   }
-  .rv-parcel {
+  .lv-parcel {
     display: grid;
     gap: 6px;
     margin-top: 16px;
     color: var(--color-smoke);
   }
-  .rv-parcel dd {
+  .lv-parcel dd {
     color: var(--color-ink);
   }
 
   /* ── Legal pages ───────────────────────────────────────────────── */
-  .rv-legal {
+  .lv-legal {
     max-width: 46rem;
     margin-inline: auto;
   }
   /* The seal heads every legal page: the favicon's own file. */
-  .rv-legal::before {
+  .lv-legal::before {
     content: "";
     display: block;
     width: 48px;
@@ -1682,76 +1682,76 @@
     margin-bottom: 28px;
     background: url("/icon.svg") center / contain no-repeat;
   }
-  .rv-legal__seal {
+  .lv-legal__seal {
     width: 48px;
     height: 48px;
     margin-bottom: 28px;
   }
-  .rv-legal__title {
+  .lv-legal__title {
     font-family: var(--font-display);
     font-size: clamp(2.375rem, 4.4vw, 3.5rem);
     line-height: 1.04;
     letter-spacing: -0.012em;
   }
-  .rv-legal__intro {
+  .lv-legal__intro {
     margin-top: 18px;
     font-family: var(--font-serif);
     font-size: 1.125rem;
     line-height: 1.7;
   }
-  .rv-legal__meta {
+  .lv-legal__meta {
     margin-top: 14px;
     font-size: 0.8125rem;
     color: var(--color-smoke);
   }
-  .rv-legal__toc {
+  .lv-legal__toc {
     margin-top: 48px;
     border-block: 1px solid var(--color-line);
     padding: 24px 0;
   }
-  .rv-legal__toc-heading {
+  .lv-legal__toc-heading {
     font-size: 0.6875rem;
     font-weight: 500;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--color-smoke);
   }
-  .rv-legal__toc-list {
+  .lv-legal__toc-list {
     margin-top: 14px;
     padding-left: 1.5rem;
     list-style: decimal;
     font-size: 0.9375rem;
   }
-  .rv-legal__toc-list li {
+  .lv-legal__toc-list li {
     break-inside: avoid;
     padding-block: 3px;
   }
   @media (min-width: 760px) {
-    .rv-legal__toc-list {
+    .lv-legal__toc-list {
       columns: 2;
       column-gap: 48px;
     }
   }
-  .rv-legal__toc-list li::marker {
+  .lv-legal__toc-list li::marker {
     color: var(--color-smoke);
     font-size: 0.8125rem;
   }
-  .rv-legal__section {
-    scroll-margin-top: calc(var(--rv-header-h) + 16px);
+  .lv-legal__section {
+    scroll-margin-top: calc(var(--lv-header-h) + 16px);
     border-bottom: 1px solid var(--color-line);
     padding-block: 36px;
   }
-  .rv-legal__heading {
+  .lv-legal__heading {
     font-family: var(--font-display);
     font-size: 1.625rem;
     line-height: 1.15;
   }
-  .rv-legal__foot {
+  .lv-legal__foot {
     margin-top: 40px;
     font-size: 0.875rem;
     color: var(--color-smoke);
   }
-  .rv-legal-body {
+  .lv-legal-body {
     margin-top: 16px;
   }
 
@@ -1769,45 +1769,45 @@
   }
 
   /* ── The cookie banner ─────────────────────────────────────────── */
-  .rv-cookies {
+  .lv-cookies {
     position: fixed;
     inset: auto 0 0 0;
     z-index: 60;
     padding: 12px;
   }
-  .rv-cookies__panel {
+  .lv-cookies__panel {
     max-width: 30rem;
     margin-left: auto;
     background: var(--color-chalk);
     padding: 24px;
     box-shadow: 0 20px 50px -20px rgb(30 23 20 / 0.4);
   }
-  .rv-cookies__heading {
+  .lv-cookies__heading {
     font-family: var(--font-display);
     font-size: 1.375rem;
     outline: none;
   }
-  .rv-cookies__text {
+  .lv-cookies__text {
     margin-top: 8px;
     font-size: 0.875rem;
     line-height: 1.6;
     color: var(--color-smoke);
   }
-  .rv-cookies__actions {
+  .lv-cookies__actions {
     display: flex;
     gap: 8px;
     margin-top: 18px;
   }
-  .rv-cookies__actions > * {
+  .lv-cookies__actions > * {
     flex: 1;
   }
 }
 
 @media print {
-  .rv-announce,
-  .rv-header,
-  .rv-footer,
-  .rv-drawer {
+  .lv-announce,
+  .lv-header,
+  .lv-footer,
+  .lv-drawer {
     display: none;
   }
 }

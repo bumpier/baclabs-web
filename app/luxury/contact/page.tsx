@@ -34,24 +34,24 @@ export default function ContactPage() {
   const inbox = brand.email.inbox;
   const company = brand.company ?? {};
   return (
-    <main id="main" className="rv-split">
+    <main id="main" className="lv-split">
       <JsonLd data={breadcrumbSchema(CONCIERGE.title, "/contact", brand.id)} />
-      <figure className="rv-split__photo">
+      <figure className="lv-split__photo">
         {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- next/image's attributes, alt included (components/photo.ts) */}
         <img {...photoProps(GALLERY[2]!, { sizes: "(min-width: 960px) 50vw, 100vw", priority: true })} />
       </figure>
 
-      <div className="rv-split__body">
-        <Seal className="rv-legal__seal" />
-        <h1 className="rv-page__heading">{CONCIERGE.heading}</h1>
-        <p className="rv-page__lede">{CONCIERGE.lede}</p>
-        <p className="rv-page__lede">
+      <div className="lv-split__body">
+        <Seal className="lv-legal__seal" />
+        <h1 className="lv-page__heading">{CONCIERGE.heading}</h1>
+        <p className="lv-page__lede">{CONCIERGE.lede}</p>
+        <p className="lv-page__lede">
           {CONCIERGE.how}
           {inbox ? (
             <>
               {" "}
               {CONCIERGE.orEmail}{" "}
-              <a href={`mailto:${inbox}`} className="rv-link">
+              <a href={`mailto:${inbox}`} className="lv-link">
                 {inbox}
               </a>
               .
@@ -66,23 +66,23 @@ export default function ContactPage() {
           defaultTopic={CONCIERGE.defaultTopic}
           text={CONCIERGE.form}
           classNames={{
-            form: "rv-form",
-            label: "rv-label",
-            input: "rv-input",
-            hint: "rv-hint",
-            error: "rv-alert",
-            button: "rv-button",
-            note: "rv-form__note",
-            link: "rv-link",
-            sent: "rv-sent",
-            sentHeading: "rv-sent__heading",
-            sentText: "rv-sent__text",
-            again: "rv-text-button mt-4",
+            form: "lv-form",
+            label: "lv-label",
+            input: "lv-input",
+            hint: "lv-hint",
+            error: "lv-alert",
+            button: "lv-button",
+            note: "lv-form__note",
+            link: "lv-link",
+            sent: "lv-sent",
+            sentHeading: "lv-sent__heading",
+            sentText: "lv-sent__text",
+            again: "lv-text-button mt-4",
           }}
         />
 
         {brand.legalName ? (
-          <p className="rv-aside">
+          <p className="lv-aside">
             {tradingAs(brand)}
             {company.number ? `, ${CONCIERGE.companyNo} ${company.number}` : ""}
             {company.registeredAddress ? `, ${company.registeredAddress}` : ""}
