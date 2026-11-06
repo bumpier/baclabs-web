@@ -54,7 +54,7 @@ export function HeaderNav() {
         <ul className="flex items-center gap-x-7">
           {LINKS.map((l) => (
             <li key={l.href}>
-              <Link href={l.href} className="au-nav" aria-current={current(l.page)}>
+              <Link href={l.href} className="bb-nav" aria-current={current(l.page)}>
                 {l.label}
               </Link>
             </li>
@@ -66,7 +66,7 @@ export function HeaderNav() {
         <button
           ref={button}
           type="button"
-          className="au-icon-btn -ml-2.5"
+          className="bb-icon-btn -ml-2.5"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((o) => !o)}
@@ -75,11 +75,11 @@ export function HeaderNav() {
           <span className="sr-only">{open ? NAV.closeMenu : NAV.menu}</span>
         </button>
         {open ? (
-          <nav id={panelId} aria-label={NAV.label} className="au-menu">
+          <nav id={panelId} aria-label={NAV.label} className="bb-menu">
             <ul>
               {[...LINKS, { href: "/contact", label: NAV.contact, full: NAV.menuLinks.contact, page: "/contact" }].map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="au-menu-link" aria-current={current(l.page)} onClick={() => setOpen(false)}>
+                  <Link href={l.href} className="bb-menu-link" aria-current={current(l.page)} onClick={() => setOpen(false)}>
                     {l.full}
                   </Link>
                 </li>
@@ -96,7 +96,7 @@ export function HeaderNav() {
 export function ContactLink() {
   const pathname = useBrandPathname();
   return (
-    <Link href="/contact" className="au-nav hidden lg:inline-flex" aria-current={pathname === "/contact" ? "page" : undefined}>
+    <Link href="/contact" className="bb-nav hidden lg:inline-flex" aria-current={pathname === "/contact" ? "page" : undefined}>
       {NAV.contact}
     </Link>
   );

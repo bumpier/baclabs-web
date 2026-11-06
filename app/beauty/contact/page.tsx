@@ -32,18 +32,18 @@ export default function ContactPage() {
   const inbox = brand.email.inbox;
   const company = brand.company ?? {};
   return (
-    <main id="main" className="au-wrap pt-8 md:pt-14">
+    <main id="main" className="bb-wrap pt-8 md:pt-14">
       <JsonLd data={breadcrumbSchema(CONTACT.title, "/contact", brand.id)} />
       <div className="grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
         <div>
-          <h1 className="au-display">{CONTACT.title}</h1>
-          <p className="au-lead mt-6">
+          <h1 className="bb-display">{CONTACT.title}</h1>
+          <p className="bb-lead mt-6">
             {CONTACT.lead}{" "}
             {inbox ? (
               <>
                 {CONTACT.byForm}
                 {CONTACT.orEmail}
-                <a href={`mailto:${inbox}`} className="au-link text-ink">
+                <a href={`mailto:${inbox}`} className="bb-link text-ink">
                   {inbox}
                 </a>
                 .
@@ -54,23 +54,23 @@ export default function ContactPage() {
           </p>
           <dl className="mt-10 space-y-6">
             <div>
-              <dt className="au-h3">{CONTACT.orderLead}</dt>
-              <dd className="au-small mt-1.5">{CONTACT.orderHint}</dd>
+              <dt className="bb-h3">{CONTACT.orderLead}</dt>
+              <dd className="bb-small mt-1.5">{CONTACT.orderHint}</dd>
             </div>
             <div>
-              <dt className="au-h3">{CONTACT.clinicsLead}</dt>
-              <dd className="au-small mt-1.5">
-                <Link href="/clinics" className="au-link text-ink">
+              <dt className="bb-h3">{CONTACT.clinicsLead}</dt>
+              <dd className="bb-small mt-1.5">
+                <Link href="/clinics" className="bb-link text-ink">
                   {CONTACT.clinicsLink}
                 </Link>
               </dd>
             </div>
           </dl>
-          <div className="au-frame mt-12 hidden aspect-[4/5] max-w-[20rem] lg:block">
+          <div className="bb-frame mt-12 hidden aspect-[4/5] max-w-[20rem] lg:block">
             <Photo image={IMAGES.vanity} fill sizes="20rem" className="object-[30%_18%]" alt="" />
           </div>
           {brand.legalName ? (
-            <p className="au-fine mt-10">
+            <p className="bb-fine mt-10">
               {tradingAs(brand)}
               {company.number ? `, no. ${company.number}` : ""}
               {company.registeredAddress ? `, ${company.registeredAddress}` : ""}
@@ -79,7 +79,7 @@ export default function ContactPage() {
           ) : null}
         </div>
 
-        <div className="au-panel self-start p-6 sm:p-10">
+        <div className="bb-panel self-start p-6 sm:p-10">
           <ContactForm
             topics={TOPICS}
             text={CONTACT.form}
@@ -87,14 +87,14 @@ export default function ContactPage() {
             messageMax={CONTACT_MESSAGE_MAX}
             classNames={{
               form: "space-y-5",
-              hint: "au-small mt-2",
-              note: "au-fine mt-3",
-              link: "au-link",
+              hint: "bb-small mt-2",
+              note: "bb-fine mt-3",
+              link: "bb-link",
               button: "btn-cta",
               sent: "rounded-[1.5rem] bg-blush px-6 py-7",
-              sentHeading: "au-h3 outline-none",
+              sentHeading: "bb-h3 outline-none",
               sentText: "mt-2 text-ink-soft",
-              again: "au-link mt-4 text-[0.9375rem]",
+              again: "bb-link mt-4 text-[0.9375rem]",
             }}
           />
         </div>

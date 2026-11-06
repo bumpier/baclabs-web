@@ -14,13 +14,13 @@ import { brand, STOREFRONT } from "./site";
  */
 export function SiteFooter() {
   const company = brand.company ?? {};
-  const link = "au-nav min-h-10 font-[450]";
+  const link = "bb-nav min-h-10 font-[450]";
   return (
-    <footer className="au-sheet au-blush no-print mb-2.5 mt-24 overflow-hidden px-6 pt-14 sm:mb-5 sm:px-12 sm:pt-16 lg:mt-32">
+    <footer className="bb-sheet bb-blush no-print mb-2.5 mt-24 overflow-hidden px-6 pt-14 sm:mb-5 sm:px-12 sm:pt-16 lg:mt-32">
       <div className="mx-auto grid max-w-[74rem] gap-12 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
         <div>
           <Mark className="h-12 w-12 text-ink" />
-          <p className="au-voice mt-5 max-w-[16rem] text-[1.625rem]">{FOOTER.tagline}</p>
+          <p className="bb-voice mt-5 max-w-[16rem] text-[1.625rem]">{FOOTER.tagline}</p>
         </div>
         <nav aria-label={FOOTER.navLabel} className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-3">
           <div>
@@ -83,7 +83,7 @@ export function SiteFooter() {
           </div>
         </nav>
       </div>
-      <div className="au-fine mx-auto mt-14 max-w-[74rem] space-y-2">
+      <div className="bb-fine mx-auto mt-14 max-w-[74rem] space-y-2">
         <p>{brand.disclaimer}</p>
         {brand.legalName ? (
           <p>
@@ -93,7 +93,8 @@ export function SiteFooter() {
           </p>
         ) : null}
       </div>
-      <Wordmark ring className="mx-auto mt-10 block h-auto w-full max-w-[74rem] translate-y-[8%] text-blush-deep" />
+      {/* Sunk into the sheet's edge by the y's tail, never by the letters. */}
+      <Wordmark ring className="mx-auto mt-10 block h-auto w-full max-w-[74rem] translate-y-[12%] text-blush-deep" />
     </footer>
   );
 }

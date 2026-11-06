@@ -49,20 +49,20 @@ export function ClinicPicker({ packs }: { packs: readonly PackView[] }) {
           setSaid("");
         }}
         legend={CLINICS.legend}
-        classNames={{ list: "grid gap-1.5", option: "au-row" }}
+        classNames={{ list: "grid gap-1.5", option: "bb-row" }}
         renderPack={(pack) => (
           <>
-            <span className="au-dot" aria-hidden="true" />
+            <span className="bb-dot" aria-hidden="true" />
             <span className="min-w-0">
               <span className="block font-display text-[1.375rem] leading-tight">{CLINICS.packName(pack.vials)}</span>
-              <span className="au-fine block">{CLINICS.packContents(pack.vials)}</span>
+              <span className="bb-fine block">{CLINICS.packContents(pack.vials)}</span>
               {freeOption && shipsFree(cart.storefront, pack.priceMinor) ? (
-                <span className="au-fine block">{CLINICS.freeDelivery(freeOption.label)}</span>
+                <span className="bb-fine block">{CLINICS.freeDelivery(freeOption.label)}</span>
               ) : null}
             </span>
             <span className="text-right">
-              <span className="au-price block text-[1.5rem]">{formatGbp(pack.priceMinor)}</span>
-              {pack.vials > 1 ? <span className="au-fine block">{perVial(pack.perVialMinor)}</span> : null}
+              <span className="bb-price block text-[1.5rem]">{formatGbp(pack.priceMinor)}</span>
+              {pack.vials > 1 ? <span className="bb-fine block">{perVial(pack.perVialMinor)}</span> : null}
             </span>
           </>
         )}
@@ -77,7 +77,7 @@ export function ClinicPicker({ packs }: { packs: readonly PackView[] }) {
           }}
           max={max}
           label={CLINICS.quantity}
-          classNames={{ root: "au-qty", button: "au-step", input: "au-count" }}
+          classNames={{ root: "bb-qty", button: "bb-step", input: "bb-count" }}
         />
         {/* On the narrowest phones the button keeps to one row beside the
             stepper by leaving the total to the price list above it. */}

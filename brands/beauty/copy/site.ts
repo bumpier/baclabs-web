@@ -1,5 +1,5 @@
 /**
- * Aurelle's words that appear on every page: the header, the basket, the
+ * BeautyBac's words that appear on every page: the header, the basket, the
  * footer, and the pages every shop has (contact, the order, the 404). Kept
  * here, not in the components, so `npm run check:brands` reads them in one
  * place against the brand's rules (lib/content-rules.ts BEAUTY_RULES): no
@@ -16,7 +16,7 @@ export const NAV = {
   ritual: "The ritual",
   clinics: "For clinics",
   contact: "Contact",
-  home: "Aurelle, home",
+  home: "BeautyBac, home",
   menu: "Menu",
   closeMenu: "Close menu",
   /** The phone's menu, in full words. */
@@ -51,7 +51,7 @@ export const BASKET = {
   heading: "Your basket",
   close: "Close the basket",
   empty: "Your basket is empty.",
-  emptyBody: "Every size of the Essentials comes in the Aurelle pouch.",
+  emptyBody: "Every vial of the Essentials is sealed, and sent by tracked delivery from the UK.",
   emptyCta: "Shop the Essentials",
   contents: (vials: number) => (vials === 1 ? "One sealed 10ml vial" : `${vials} sealed 10ml vials`),
   subtotal: "Subtotal",
@@ -135,8 +135,8 @@ export const ORDER = {
   free: "Free",
   totalPaid: "Total paid",
   total: "Total",
-  // TODO(confirm): the pouch, as copy/home.ts ESSENTIALS.pouch; stepPack names it too.
-  pouch: "Every set is packed in the Aurelle pouch.",
+  // TODO(confirm): the box, as copy/home.ts ESSENTIALS.box.
+  box: "Every set is packed in a plain white box.",
   parcel: "Your parcel",
   sentBy: "Sent by",
   tracking: "Tracking number",
@@ -148,8 +148,8 @@ export const ORDER = {
   stepEmailTo: "to",
   stepPack: (carrier: string | null, due: string | null, transit: string | null) =>
     carrier
-      ? `We pack your order in its pouch and send it by ${carrier} to the address you gave${due ? `. It is due ${due}` : transit ? ` (${transit})` : ""}.`
-      : "We pack your order in its pouch and send it to the address you gave.",
+      ? `We pack your order and send it by ${carrier} to the address you gave${due ? `. It is due ${due}` : transit ? ` (${transit})` : ""}.`
+      : "We pack your order and send it to the address you gave.",
   stepShips: (detail: string, text: string) => ` ${detail} It ships on ${text}.`,
   stepTracking: "You get a second email when it ships, with its tracking number.",
   help: "Something not right?",

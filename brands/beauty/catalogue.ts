@@ -1,5 +1,5 @@
 /**
- * Aurelle's catalogue: sets of 1, 5, 10 and 20 vials, the same four sizes
+ * BeautyBac's catalogue: sets of 1, 5, 10 and 20 vials, the same four sizes
  * as the gym and luxury brands sell, on the home page and on the "For
  * clinics" page alike. Delivery is BacLab's own options and threshold, by
  * the same ids.
@@ -14,7 +14,8 @@ import { PLAIN_BOX_SKU } from "../packaging";
 
 export const beautyCatalogue: BrandCatalogue = {
   parentSku: "BEA-10ML",
-  // TODO(confirm): the gift-ready pouch's SKU and its packed weight (scripts/seed-brand-skus.ts).
+  // The plain white box every brand shares (brands/packaging.ts); its weight
+  // is weighed once for all of them (scripts/seed-brand-skus.ts).
   boxSku: PLAIN_BOX_SKU,
   packs: [
     // TODO(confirm): all four prices.

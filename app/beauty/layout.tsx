@@ -56,10 +56,10 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
             ga4Id={ga4Id}
             className="no-print fixed inset-x-0 bottom-0 z-40 p-3 sm:p-5"
             classNames={{
-              panel: "au-panel mx-auto max-w-2xl p-6",
-              heading: "au-h3 outline-none",
-              text: "au-small mt-2",
-              link: "au-link",
+              panel: "bb-panel mx-auto max-w-2xl p-6",
+              heading: "bb-h3 outline-none",
+              text: "bb-small mt-2",
+              link: "bb-link",
               actions: "mt-5 flex flex-col gap-3 sm:flex-row",
               button: "btn-quiet flex-1",
             }}
