@@ -1,12 +1,19 @@
 /**
- * Every photograph on Reserve No.10's pages, with its size and its words.
+ * Every photograph on LuxeVial's pages, with its size and its words.
  *
  * TODO(launch): replace with real photography. Every image below is an
  * AI-generated stand-in (Figma, gpt-image-2.5-flare, 4 Nov 2026) of the
- * packaging concept: the claret box with a seal pressed into its lid, a
- * fitted tray, a card closed with wax, and the shared vial (clear glass,
- * royal blue flip-off cap, silver crimp, blank label). Shoot the real box to
- * the same briefs and keep the file names, sizes and alt text in step.
+ * shared vial (clear glass, royal blue flip-off cap, silver crimp, blank
+ * label) with round two's packaging concept: a claret box with a seal
+ * pressed into its lid, a fitted tray and a card closed with wax.
+ *
+ * TODO(launch): that packaging is NOT real. Every order ships in a plain,
+ * unprinted, matte white box with a card divider (the owner, 6 Nov 2026),
+ * so every photograph here that shows the claret box, the seal or the card
+ * is to be replaced with the plain box or the vial alone, in the same
+ * limestone and raking light. The page's words already describe the plain
+ * box; the alt text below still describes the photographs as they are.
+ * Keep the file names, sizes and alt text in step when they change.
  *
  * Each file sits in public/luxury/images/ at its full width under the name
  * below, with smaller WebP copies beside it at each of `widths`

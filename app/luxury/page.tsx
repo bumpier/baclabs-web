@@ -9,16 +9,14 @@ import { Purchase } from "./Purchase";
 import { brand, STOREFRONT } from "./site";
 
 /**
- * The house's one page of commerce, set like a maison's product page.
+ * The brand's one page of commerce, set like a maison's product page.
  *
- *  1. The hero: the box in a photograph the width of the screen, and one
- *     line over it.
+ *  1. The hero: a photograph the width of the screen, and one line over it.
  *  2. The product (#buy, where an unfinished payment returns): a column of
- *     tall photographs (box closed, box open with the vial, the seal and
- *     card, the vial itself) beside a sticky purchase column. On a phone
- *     the photographs become a strip to swipe, above the column.
- *  3. Three chapters (#house), photograph and short text in turn, the width
- *     of the page: the box, the packing, the arrival.
+ *     tall photographs beside a sticky purchase column. On a phone the
+ *     photographs become a strip to swipe, above the column.
+ *  3. Three chapters (#vial), photograph and short text in turn, the width
+ *     of the page: the vial, the packing (and the gift note), the arrival.
  *  4. The concierge, then the footer.
  *
  * Delivery is the catalogue's, through brands/luxury/service.ts. Left out
@@ -71,24 +69,24 @@ export default function Home() {
               </details>
               <details>
                 <summary>{PRODUCT.details.box.title}</summary>
-                <p>{PRODUCT.details.box.body(brand.name)}</p>
+                <p>{PRODUCT.details.box.body}</p>
               </details>
             </div>
           </Purchase>
         </div>
       </section>
 
-      <div id="house" className="rv-chapters">
-        <section aria-labelledby="chapter-box" className="rv-chapter rv-chapter--left">
+      <div id="vial" className="rv-chapters">
+        <section aria-labelledby="chapter-vial" className="rv-chapter rv-chapter--left">
           <figure className="rv-chapter__photo">
             {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- next/image's attributes, alt included */}
             <img {...photoProps(CHAPTER_BOX, { sizes: half })} className="rv-reveal" />
           </figure>
           <div className="rv-chapter__text">
-            <h2 id="chapter-box" className="rv-chapter__title">
-              {CHAPTERS.box.title}
+            <h2 id="chapter-vial" className="rv-chapter__title">
+              {CHAPTERS.vial.title}
             </h2>
-            <p>{CHAPTERS.box.body(brand.name)}</p>
+            <p>{CHAPTERS.vial.body}</p>
           </div>
         </section>
 
@@ -97,7 +95,7 @@ export default function Home() {
             <h2 id="chapter-hands" className="rv-chapter__title">
               {CHAPTERS.hands.title}
             </h2>
-            <p>{CHAPTERS.hands.body}</p>
+            <p>{CHAPTERS.hands.body(STOREFRONT.flags.giftNote)}</p>
           </div>
           <figure className="rv-chapter__photo">
             {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- next/image's attributes, alt included */}

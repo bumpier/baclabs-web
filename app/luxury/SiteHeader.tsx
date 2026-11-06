@@ -31,7 +31,7 @@ export function SiteHeader() {
               <Link href="/#buy">{NAV.shop}</Link>
             </li>
             <li className="rv-wide-only">
-              <Link href="/#house">{NAV.house}</Link>
+              <Link href="/#vial">{NAV.vial}</Link>
             </li>
           </ul>
           <Link href="/" className="rv-header__mark" aria-label={NAV.home(brand.name)}>

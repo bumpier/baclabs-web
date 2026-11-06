@@ -23,8 +23,8 @@ import { NAV } from "@/brands/luxury/copy/site";
 
 /**
  * The bag: a drawer that slides in from the right over every page, the
- * button in the header that opens it (its count is a wax seal, the house's
- * device), and what the two share with the purchase column: whether the
+ * button in the header that opens it (its count is the drawn seal, the
+ * site's one device), and what the two share with the purchase column: whether the
  * drawer is open, the gift option and its note, and a "press" that sets the
  * seal again whenever something is added.
  *

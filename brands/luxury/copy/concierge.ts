@@ -15,7 +15,7 @@ export const CONCIERGE = {
   vat: "VAT",
   /** The topic the form opens on: most who write before an order ask about the vials. */
   defaultTopic: "product",
-  /** The kit form's labels, in the house's words (ContactForm's `text`). */
+  /** The kit form's labels, in the brand's words (ContactForm's `text`). */
   form: {
     topic: "Your question concerns",
     topicPrompt: "Choose one",

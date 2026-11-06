@@ -18,7 +18,7 @@ import { GiftFields, sizeName, useBag } from "./Bag";
  * opens the drawer, where the order is paid for.
  *
  * Every figure comes from the storefront view the root layout gave the
- * basket. Prices are never a saving or a per-vial figure: this house does
+ * basket. Prices are never a saving or a per-vial figure: this brand does
  * not sell on price. The quiet service lines and the details below the
  * button are the server's (`children`), so they cost the browser nothing.
  */

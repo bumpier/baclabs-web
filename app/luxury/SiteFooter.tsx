@@ -8,9 +8,9 @@ import { tradingAs } from "@/lib/commerce/legal";
 import { brand, STOREFRONT } from "./site";
 
 /**
- * Every page's footer, set in small capitals: letters from the house (the
- * kit's signup form, while the brand keeps a list), the house's pages and
- * the legal ones, "Cookie settings" (which renders only while the site runs
+ * Every page's footer, set in small capitals: letters from the brand (the
+ * kit's signup form, while the brand keeps a list), its own pages under its
+ * name and the legal ones, "Cookie settings" (which renders only while the site runs
  * a tracker), the product disclaimer and, once it is filled in, the company
  * that trades as the brand. It ends on the wordmark, the width of the page.
  */
@@ -50,7 +50,7 @@ export function SiteFooter() {
 
         <nav aria-label={FOOTER.label} className="rv-footer__nav">
           <div>
-            <h2 className="rv-footer__heading">{FOOTER.houseHeading}</h2>
+            <h2 className="rv-footer__heading">{brand.name}</h2>
             <ul>
               <li>
                 <Link href="/#buy">{FOOTER.shop}</Link>

@@ -11,8 +11,9 @@ import { ORDER } from "@/brands/luxury/copy/order";
 import { brand } from "../../site";
 
 /**
- * The order confirmation, set as the card that goes in the box: the order
- * on chalk, closed with the house seal across its top edge. The order is
+ * The order confirmation, set as a card on the page: the order on chalk,
+ * with the drawn seal across its top edge (a web graphic: the parcel itself
+ * is a plain box). The order is
  * loaded on the server and shown only if it is this brand's: any other order
  * id, BacLab's included, is this site's 404 (brandOrderView). Per request,
  * never cached: it shows one customer's order.

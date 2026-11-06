@@ -10,7 +10,8 @@ import { brand, DESCRIPTION } from "./site";
 /**
  * The brand's 404, for every path its tree does not have (the catch-all in
  * [...missing] sends them here) and for its /admin, which middleware.ts
- * rewrites into this tree. The closed box beside it, the seal unbroken.
+ * rewrites into this tree. The first of the product's photographs beside
+ * it, and the seal.
  */
 export const metadata: Metadata = brandNotFoundMetadata(brand, DESCRIPTION);
 

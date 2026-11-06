@@ -1,4 +1,4 @@
-/* Reserve No.10's stylesheet, imported by app/luxury/layout.tsx. Its own
+/* LuxeVial's stylesheet, imported by app/luxury/layout.tsx. Its own
    Tailwind build: it never imports app/globals.css, and BacLab's stylesheet
    never scans this brand's folders (see the @source not lines there).
 
@@ -8,20 +8,22 @@
    it: the kit's default classes are built here, and themed by the tokens
    below.
 
-   THE HOUSE, as built (round two, 4 Nov 2026):
+   THE LOOK, as built (round two, 4 Nov 2026; the name LuxeVial from 6 Nov):
    - A maison selling one object: the page is a product page as a
-     fragrance or leather house sets one. A photograph the width of the
+     fragrance or leather maker sets one. A photograph the width of the
      screen; a column of tall photographs beside a sticky purchase column;
      three chapters, photograph and text in turn; the concierge; a footer in
      small capitals that ends on the wordmark.
    - World: claret, limestone and the vial's own silver and blue. Claret is
-     the box, so it owns whole fields (the delivery line, the second chapter,
-     the concierge, the button, the bag's count), never a hairline. The
-     ground is a cool grey limestone, the stone in the photographs.
-   - Type: Libre Caslon Display for the house's voice, Libre Caslon Text for
+     the brand's colour (never the packaging, a plain white box), so it owns
+     whole fields (the delivery line, the second chapter, the concierge, the
+     button, the bag's count), never a hairline. The ground is a cool grey
+     limestone, the stone in the photographs.
+   - Type: Libre Caslon Display for the brand's voice, Libre Caslon Text for
      reading, Hanken Grotesk for the counter (prices, forms, small capitals).
-   - The device: the wax seal (R over 10). It is the favicon, the bag's
-     count, the mark beside the chosen size, the order card's closure and the
+   - The device: the drawn wax seal (an L in a ring), a web graphic only:
+     nothing in the parcel carries one. It is the favicon, the bag's count,
+     the mark beside the chosen size, the order card's closure and the
      concierge's mark. Everything else is square: the seal is the only
      curve on the page.
    - Motion: the hero settles once as the page opens; the photographs come up
@@ -48,10 +50,10 @@
   --color-warn: #8e2232;
   --color-warn-tint: #f3e4e4;
 
-  /* The house's own. Claret is the box; wax the seal's brighter red; bone
-     the text on claret, foil its quieter second line (8:1 there); smoke the
-     second line on limestone (5.6:1); edge a control's border on limestone
-     or chalk (3.3:1); line a decorative hairline only. */
+  /* The brand's own. Claret is the brand's colour; wax the seal's brighter
+     red; bone the text on claret, foil its quieter second line (8:1 there);
+     smoke the second line on limestone (5.6:1); edge a control's border on
+     limestone or chalk (3.3:1); line a decorative hairline only. */
   --color-limestone: #e4e1dc;
   --color-chalk: #f2efeb;
   --color-claret: #4a1424;
@@ -68,7 +70,7 @@
   --font-sans: var(--font-rv-text), "Helvetica Neue", Arial, system-ui, sans-serif;
 
   /* Exponential ease-out: everything arrives fast and settles slowly. */
-  --ease-house: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @layer base {
@@ -181,7 +183,7 @@
     text-decoration-thickness: 1px;
     text-underline-offset: 0.22em;
     text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
-    transition: text-decoration-color 0.3s var(--ease-house);
+    transition: text-decoration-color 0.3s var(--ease-expo);
   }
   .rv-link:hover {
     text-decoration-color: currentColor;
@@ -244,7 +246,7 @@
     color: var(--color-warn);
   }
 
-  /* The house's button: claret, square, the width it is given. */
+  /* The brand's button: claret, square, the width it is given. */
   .rv-button {
     display: inline-flex;
     min-height: 52px;
@@ -263,10 +265,10 @@
     text-decoration: none;
     cursor: pointer;
     transition:
-      background-color 0.35s var(--ease-house),
-      border-color 0.35s var(--ease-house),
-      color 0.35s var(--ease-house),
-      transform 0.2s var(--ease-house);
+      background-color 0.35s var(--ease-expo),
+      border-color 0.35s var(--ease-expo),
+      color 0.35s var(--ease-expo),
+      transform 0.2s var(--ease-expo);
   }
   .rv-button:hover {
     background: var(--color-claret-deep);
@@ -417,7 +419,7 @@
     background: currentColor;
     transform: scaleX(0);
     transform-origin: right;
-    transition: transform 0.45s var(--ease-house);
+    transition: transform 0.45s var(--ease-expo);
   }
   .rv-header__links a:hover::after {
     transform: scaleX(1);
@@ -485,7 +487,7 @@
   }
   @media (prefers-reduced-motion: no-preference) {
     .rv-count-press {
-      animation: rv-press 0.7s var(--ease-house);
+      animation: rv-press 0.7s var(--ease-expo);
     }
   }
   @keyframes rv-press {
@@ -592,7 +594,7 @@
     height: 1px;
     background: currentColor;
     transform-origin: left;
-    transition: transform 0.6s var(--ease-house);
+    transition: transform 0.6s var(--ease-expo);
   }
   .rv-hero__action:hover::after {
     transform: scaleX(0.4);
@@ -603,10 +605,10 @@
 
   @media (prefers-reduced-motion: no-preference) {
     .rv-hero__img {
-      animation: rv-settle 2.6s var(--ease-house) both;
+      animation: rv-settle 2.6s var(--ease-expo) both;
     }
     .rv-hero__copy > * {
-      animation: rv-rise 1.4s var(--ease-house) both;
+      animation: rv-rise 1.4s var(--ease-expo) both;
       animation-delay: 0.45s;
     }
     .rv-hero__copy > :nth-child(2) {
@@ -700,7 +702,7 @@
     background: var(--color-edge);
     transition:
       background-color 0.3s,
-      height 0.3s var(--ease-house);
+      height 0.3s var(--ease-expo);
   }
   .rv-gallery__mark[aria-current="true"]::before {
     height: 2px;
@@ -794,7 +796,7 @@
     padding: 5px 2px;
     border-bottom: 1px solid var(--color-line);
     cursor: pointer;
-    transition: background-color 0.3s var(--ease-house);
+    transition: background-color 0.3s var(--ease-expo);
   }
   .rv-size:hover {
     background: color-mix(in srgb, var(--color-chalk) 60%, transparent);
@@ -817,9 +819,9 @@
     stroke-width: 5;
     transform-origin: 50% 50%;
     transition:
-      fill 0.3s var(--ease-house),
-      stroke 0.3s var(--ease-house),
-      transform 0.45s var(--ease-house);
+      fill 0.3s var(--ease-expo),
+      stroke 0.3s var(--ease-expo),
+      transform 0.45s var(--ease-expo);
   }
   .rv-size__seal path.is-on {
     fill: var(--color-claret);
@@ -986,7 +988,7 @@
     width: 11px;
     height: 1px;
     background: currentColor;
-    transition: transform 0.4s var(--ease-house);
+    transition: transform 0.4s var(--ease-expo);
   }
   .rv-details summary::after {
     transform: rotate(90deg);
@@ -1300,7 +1302,7 @@
     box-shadow: -24px 0 60px -20px rgb(30 23 20 / 0.35);
     transform: translateX(100%);
     transition:
-      transform 0.55s var(--ease-house),
+      transform 0.55s var(--ease-expo),
       overlay 0.55s allow-discrete,
       display 0.55s allow-discrete;
   }
@@ -1315,7 +1317,7 @@
   .rv-drawer::backdrop {
     background: rgb(30 23 20 / 0);
     transition:
-      background-color 0.55s var(--ease-house),
+      background-color 0.55s var(--ease-expo),
       overlay 0.55s allow-discrete,
       display 0.55s allow-discrete;
   }

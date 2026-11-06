@@ -1,7 +1,7 @@
 /**
- * Reserve No.10's catalogue: few choices (1, 5, 10 and 20 vials, the same
- * four sizes as the beauty and gym brands sell), a signature box, next-day
- * delivery included on every order, and never a promotion code.
+ * LuxeVial's catalogue: few choices (1, 5, 10 and 20 vials, the same four
+ * sizes as the beauty and gym brands sell), next-day delivery included on
+ * every order, and never a promotion code.
  *
  * Prices are illustrative until confirmed. TODO(confirm) every figure
  * marked so before launch. Per-vial price falls as the pack grows
@@ -14,7 +14,10 @@ const NEXT_DAY = deliveryOptionById("next_day")!;
 
 export const luxuryCatalogue: BrandCatalogue = {
   parentSku: "LUX-10ML",
-  // TODO(confirm): the signature box's SKU and its packed weight (scripts/seed-brand-skus.ts).
+  // TODO(confirm): the box's SKU and its packed weight (scripts/seed-brand-skus.ts).
+  // The packaging is the plain white box every brand ships in (the owner, 6 Nov
+  // 2026), not a box of this brand's own: whether a per-brand box SKU stays is
+  // the shared kit's question (lib/inventory/brand-skus.ts), not this file's.
   boxSku: "LUX-BOX",
   packs: [
     // TODO(confirm): all four prices.

@@ -22,9 +22,9 @@ export const metadata: Metadata = pageMetadata({
 const TOPICS = brandContactTopics(TRADE_TOPIC ? { trade: TRADE_TOPIC } : {});
 
 /**
- * The concierge: the kit's contact form in the house's words (its `text`),
+ * The concierge: the kit's contact form in the brand's words (its `text`),
  * opening on a question about the product (`defaultTopic`), set beside the
- * seal's photograph. It posts to /api/contact, which files the message under
+ * third of the product's photographs. It posts to /api/contact, which files the message under
  * this brand (from the Host) and sends it to this brand's inbox. No reply
  * time is promised: only the operator can make that promise (ContactForm's
  * replyTime). The address and the company line appear once the profile has

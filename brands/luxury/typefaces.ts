@@ -1,13 +1,13 @@
 import localFont from "next/font/local";
 
-// Reserve No.10's three faces, self-hosted from brands/luxury/fonts/ for the
+// LuxeVial's three faces, self-hosted from brands/luxury/fonts/ for the
 // same reason as app/fonts.ts: the CSP sets `font-src 'self'`, and
 // next/font/google once failed a deploy by fetching at build time. These are
 // the fontsource packages' latin files (v5.3.0, from jsDelivr), each under
 // the SIL Open Font License 1.1, whose text sits beside it. Glyphs outside
 // latin fall back to the system face.
 //
-// LIBRE CASLON DISPLAY (Pablo Impallari, OFL 1.1) is the house voice: a
+// LIBRE CASLON DISPLAY (Pablo Impallari, OFL 1.1) is the brand's voice: a
 // Caslon cut for large sizes, the English letter of engravers and
 // stationers. It sets the headlines, the product's name and the sizes, and
 // its outlines are the wordmark and the seal (components/mark-paths.ts).

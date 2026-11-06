@@ -17,7 +17,7 @@ export const NAV = {
   label: "Main",
   skip: "Skip to content",
   shop: "Shop",
-  house: "The house",
+  vial: "The vial",
   concierge: "Concierge",
   bag: "Bag",
   inBag: (n: number) => (n === 1 ? "1 box in your bag" : `${n} boxes in your bag`),
@@ -26,7 +26,6 @@ export const NAV = {
 
 export const FOOTER = {
   label: "Footer",
-  houseHeading: "The house",
   shop: "Shop",
   concierge: "Concierge",
   infoHeading: "Information",
@@ -40,7 +39,7 @@ export const FOOTER = {
 
 export const NOT_FOUND = {
   heading: "Page not found",
-  body: "This address leads nowhere in the house. It may have moved, or never existed.",
+  body: "This address leads nowhere. It may have moved, or never existed.",
   home: "Return to the home page",
   concierge: "Write to the concierge",
 };
