@@ -5,20 +5,16 @@
  * them without pulling a profile or config/ into the browser. The brand's
  * name is a parameter, never typed here, so it follows the profile.
  *
- * The voice: understated and particular, a house speaking of its box and its
- * service. Never price-led, no superlatives, nothing the catalogue cannot
- * back. Delivery is said in the catalogue's own terms (brands/luxury/
+ * The voice: understated and particular, speaking of the vial, its delivery
+ * and the service. Never price-led, no superlatives, nothing the catalogue
+ * cannot back. Delivery is said in the catalogue's own terms (brands/luxury/
  * service.ts), so the page never promises what the checkout does not sell.
+ *
+ * The packaging is a plain, unprinted white box, the same for every brand
+ * (the owner, 6 Nov 2026): no printed or branded box, no seal, no card. The
+ * words say so plainly where it helps and never dress it up. The drawn seal
+ * (components/Marks.tsx) is the site's graphic, not something in the parcel.
  */
-
-/**
- * TODO(confirm): the card closed with wax, shown in every photograph of the
- * open box, is the packaging concept, not yet in the catalogue or the box's
- * SKU (lib/inventory/brand-skus.ts). Confirm every box carries one before
- * launch. Set this to "" and every sentence that names the card renders
- * without it (the photographs would then need reshooting without it too).
- */
-export const CARD: string = "a card sealed with wax";
 
 /** The delivery facts the page reads (ServiceFacts in brands/luxury/service.ts). */
 interface Facts {
@@ -30,19 +26,17 @@ interface Facts {
 }
 
 export const HERO = {
-  heading: "Bacteriostatic water, boxed in claret.",
+  heading: "Bacteriostatic water, sealed in glass.",
   action: "Choose a size",
 };
 
 export const PRODUCT = {
   name: "Bacteriostatic Water",
-  lede: "10ml vials, in the claret box",
+  lede: "Sealed 10ml glass vials",
   intro: (name: string) =>
-    `Sterile water with a bacteriostatic preservative, in sealed 10ml glass vials. Every order is packed in the ${name} box${
-      CARD ? `, with ${CARD}` : ""
-    }. Supplied as a laboratory reagent.`,
+    `Sterile water with a bacteriostatic preservative, in sealed 10ml glass vials. Every ${name} order is sent in a plain white box. Supplied as a laboratory reagent.`,
   gallery: {
-    label: "Photographs of the box and the vial",
+    label: "Photographs of the vial and its box",
     showing: (n: number, of: number) => `Photograph ${n} of ${of}`,
   },
   sizes: "Size",
@@ -68,17 +62,14 @@ export const PRODUCT = {
   details: {
     vial: {
       title: "The vial",
-      body: "10ml of sterile water with a bacteriostatic preservative, in a clear glass vial sealed under a blue flip-off cap. Each vial and its label are plain: the house's name is on the box. Supplied as a laboratory reagent, not a medicine.",
+      body: "10ml of sterile water with a bacteriostatic preservative, in a clear glass vial sealed under a blue flip-off cap and a silver crimp. The vial and its label are plain. Supplied as a laboratory reagent, not a medicine.",
     },
-    // TODO(confirm): the box as the photographs show it (claret, the seal
-    // pressed into the lid, a fitted tray). Say nothing of its materials
-    // until the real box is made.
+    // The box as the owner describes it (6 Nov 2026): plain, unprinted,
+    // white card, the vials standing in a card divider. Say nothing more of
+    // it than that.
     box: {
       title: "The box",
-      body: (name: string) =>
-        `Every size, from a single vial to twenty, is packed in the ${name} box: deep claret, with the house seal pressed into the lid and the vials held in a fitted tray${
-          CARD ? `, beside ${CARD}` : ""
-        }.`,
+      body: "Every size, from a single vial to twenty, comes in a plain white card box with nothing printed on it, the vials standing upright inside.",
     },
   },
 };
@@ -87,24 +78,26 @@ export const PRODUCT = {
 export const GIFT = {
   option: "Include a gift note",
   label: "Your note",
-  hint: (max: number) => `Printed and packed in the box with the vials. Up to ${max} characters.`,
+  hint: (max: number) => `Printed on the packing slip, which goes in the box with the vials. Up to ${max} characters.`,
   summary: "Gift note",
 };
 
 /**
- * The three chapters, in the order a box lives them. TODO(confirm): that
- * every order is packed by hand, and the box's finish and pressed seal as
- * the photographs show them (copy/images.ts).
+ * The three chapters, in the order an order lives them: the vial, the
+ * packing (and the gift note, where the catalogue offers one), the
+ * delivery. TODO(confirm): that every order is packed by hand.
  */
 export const CHAPTERS = {
-  box: {
-    title: "The box",
-    body: (name: string) =>
-      `Every size, from a single vial to twenty, comes in the same box. Deep claret, the ${name} seal pressed into its lid, and nothing printed on the vials inside.`,
+  vial: {
+    title: "The vial",
+    body: "Ten millilitres of sterile water with a bacteriostatic preservative, in clear glass, sealed under a blue flip-off cap and a silver crimp. The label is plain, and so is the box it comes in.",
   },
   hands: {
     title: "Packed by hand",
-    body: `Each order is packed by hand: the vials set in their tray${CARD ? `, ${CARD} laid beside them` : ""}, the lid closed, the box wrapped for the journey.`,
+    body: (giftNote: boolean) =>
+      `Each order is packed by hand, the vials set upright in a plain white box.${
+        giftNote ? " If it is a gift, your note is printed on the packing slip and goes in with them." : ""
+      }`,
   },
   arrival: {
     title: "The next working day",

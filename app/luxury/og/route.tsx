@@ -20,7 +20,7 @@ const CLARET = "#4A1424";
 export function GET() {
   const photo = readFileSync(path.join(process.cwd(), "public/luxury", OG_PHOTO));
   const src = `data:image/jpeg;base64,${photo.toString("base64")}`;
-  const wordWidth = 470;
+  const wordWidth = 400;
   const wordHeight = Math.round((wordWidth * 108) / WORDMARK.width);
   return new ImageResponse(
     (
@@ -49,8 +49,7 @@ export function GET() {
           <svg width="84" height="84" viewBox="0 0 100 100">
             <path d={SEAL.edge} fill={BONE} />
             <path d={SEAL.ring} fill={CLARET} />
-            <path d={SEAL.r} fill={CLARET} />
-            <path d={SEAL.ten} fill={CLARET} />
+            <path d={SEAL.initial} fill={CLARET} />
           </svg>
           <svg width={wordWidth} height={wordHeight} viewBox={`0 -4 ${WORDMARK.width} 108`}>
             <path d={WORDMARK.d} fill={BONE} />

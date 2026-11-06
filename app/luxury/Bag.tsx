@@ -23,8 +23,8 @@ import { NAV } from "@/brands/luxury/copy/site";
 
 /**
  * The bag: a drawer that slides in from the right over every page, the
- * button in the header that opens it (its count is a wax seal, the house's
- * device), and what the two share with the purchase column: whether the
+ * button in the header that opens it (its count is the drawn seal, the
+ * site's one device), and what the two share with the purchase column: whether the
  * drawer is open, the gift option and its note, and a "press" that sets the
  * seal again whenever something is added.
  *
@@ -90,11 +90,11 @@ export function BagProvider({ thumb, children }: { thumb: ImgHTMLAttributes<HTML
 /** The seal with a number pressed into it: the bag's count. */
 function CountSeal({ count }: { count: number }) {
   return (
-    <span className="rv-count" aria-hidden="true">
-      <svg viewBox="0 0 100 100" className="rv-count__wax" focusable="false">
+    <span className="lv-count" aria-hidden="true">
+      <svg viewBox="0 0 100 100" className="lv-count__wax" focusable="false">
         <path d={SEAL.edge} />
       </svg>
-      <span className="rv-count__n">{count}</span>
+      <span className="lv-count__n">{count}</span>
     </span>
   );
 }
@@ -107,7 +107,7 @@ export function BagButton() {
   return (
     <button
       type="button"
-      className="rv-bag-button"
+      className="lv-bag-button"
       aria-haspopup="dialog"
       aria-controls={drawerId}
       onClick={() => setOpen(true)}
@@ -115,7 +115,7 @@ export function BagButton() {
       {NAV.bag}
       {shown ? (
         <>
-          <span key={pressed} className="rv-count-press">
+          <span key={pressed} className="lv-count-press">
             <CountSeal count={count} />
           </span>
           <span className="sr-only">, {NAV.inBag(count)}</span>
@@ -142,8 +142,8 @@ export function GiftFields({ maxLength }: { maxLength: number }) {
   }, [gift]);
 
   return (
-    <div className="rv-gift">
-      <label className="rv-check">
+    <div className="lv-gift">
+      <label className="lv-check">
         <input
           type="checkbox"
           checked={gift}
@@ -155,21 +155,21 @@ export function GiftFields({ maxLength }: { maxLength: number }) {
         {GIFT.option}
       </label>
       {gift ? (
-        <div className="rv-gift__note">
-          <label htmlFor={`${id}-note`} className="rv-label">
+        <div className="lv-gift__note">
+          <label htmlFor={`${id}-note`} className="lv-label">
             {GIFT.label}
           </label>
           <textarea
             ref={field}
             id={`${id}-note`}
-            className="rv-input rv-gift__field"
+            className="lv-input lv-gift__field"
             rows={3}
             value={note}
             maxLength={maxLength}
             onChange={(e) => setNote(e.target.value)}
             aria-describedby={`${id}-hint`}
           />
-          <p id={`${id}-hint`} className="rv-hint">
+          <p id={`${id}-hint`} className="lv-hint">
             {GIFT.hint(maxLength)}
           </p>
         </div>
@@ -227,7 +227,7 @@ function BagDrawer({ thumb }: { thumb: ImgHTMLAttributes<HTMLImageElement> }) {
     <dialog
       ref={dialog}
       id={drawerId}
-      className="rv-drawer"
+      className="lv-drawer"
       aria-labelledby={titleId}
       onClose={() => setOpen(false)}
       onClick={(e) => {
@@ -235,53 +235,53 @@ function BagDrawer({ thumb }: { thumb: ImgHTMLAttributes<HTMLImageElement> }) {
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
-      <div className="rv-drawer__panel">
-        <div className="rv-drawer__head">
-          <h2 id={titleId} className="rv-drawer__title">
+      <div className="lv-drawer__panel">
+        <div className="lv-drawer__head">
+          <h2 id={titleId} className="lv-drawer__title">
             {BAG.title}
           </h2>
-          <button type="button" className="rv-icon-button" onClick={() => setOpen(false)} aria-label={BAG.close}>
+          <button type="button" className="lv-icon-button" onClick={() => setOpen(false)} aria-label={BAG.close}>
             <CloseIcon />
           </button>
         </div>
 
-        <div className="rv-drawer__body">
+        <div className="lv-drawer__body">
           {!cart.hydrated ? null : empty ? (
-            <div className="rv-drawer__empty">
+            <div className="lv-drawer__empty">
               <p>{BAG.empty}</p>
-              <Link href="/#buy" className="rv-link" onClick={() => setOpen(false)}>
+              <Link href="/#buy" className="lv-link" onClick={() => setOpen(false)}>
                 {BAG.browse}
               </Link>
             </div>
           ) : (
             <>
-              <ul className="rv-lines">
+              <ul className="lv-lines">
                 {priced.items.map((item) => {
                   const name = item.kind === "pack" ? sizeName(item.pack) : item.addOn.name;
                   return (
-                    <li key={item.sku} className="rv-line">
+                    <li key={item.sku} className="lv-line">
                       {/* eslint-disable-next-line @next/next/no-img-element -- next/image's attributes, from the server (components/photo.ts) */}
-                      <img {...thumb} alt="" className="rv-line__thumb" />
-                      <div className="rv-line__main">
-                        <p className="rv-line__name">{name}</p>
+                      <img {...thumb} alt="" className="lv-line__thumb" />
+                      <div className="lv-line__main">
+                        <p className="lv-line__name">{name}</p>
                         {item.kind === "pack" && item.pack.label ? (
-                          <p className="rv-line__meta">{PRODUCT.vials(item.pack.vials)}</p>
+                          <p className="lv-line__meta">{PRODUCT.vials(item.pack.vials)}</p>
                         ) : null}
-                        <div className="rv-line__controls">
+                        <div className="lv-line__controls">
                           <QuantityStepper
                             value={item.qty}
                             onChange={(n) => cart.set(item.sku, n)}
                             max={storefront.limits.maxLineQty}
                             label={BAG.lineQty(name)}
-                            classNames={{ root: "rv-stepper rv-stepper--small", input: "rv-stepper__input", button: "rv-stepper__btn" }}
+                            classNames={{ root: "lv-stepper lv-stepper--small", input: "lv-stepper__input", button: "lv-stepper__btn" }}
                           />
-                          <button type="button" className="rv-text-button" onClick={() => cart.remove(item.sku)}>
+                          <button type="button" className="lv-text-button" onClick={() => cart.remove(item.sku)}>
                             {BAG.remove}
                             <span className="sr-only"> {name}</span>
                           </button>
                         </div>
                       </div>
-                      <p className="rv-line__price">{formatGbp(item.lineMinor)}</p>
+                      <p className="lv-line__price">{formatGbp(item.lineMinor)}</p>
                     </li>
                   );
                 })}
@@ -292,12 +292,12 @@ function BagDrawer({ thumb }: { thumb: ImgHTMLAttributes<HTMLImageElement> }) {
         </div>
 
         {cart.hydrated && !empty ? (
-          <div className="rv-drawer__foot">
+          <div className="lv-drawer__foot">
             {delivery.length > 1 ? (
-              <fieldset className="rv-choice">
-                <legend className="rv-label">{BAG.delivery}</legend>
+              <fieldset className="lv-choice">
+                <legend className="lv-label">{BAG.delivery}</legend>
                 {delivery.map(({ option, priceMinor }) => (
-                  <label key={option.id} className="rv-choice__row">
+                  <label key={option.id} className="lv-choice__row">
                     <span>
                       <input
                         type="radio"
@@ -313,40 +313,40 @@ function BagDrawer({ thumb }: { thumb: ImgHTMLAttributes<HTMLImageElement> }) {
                 ))}
               </fieldset>
             ) : null}
-            <dl className="rv-sum">
+            <dl className="lv-sum">
               {delivery.length === 1 && chosen ? (
                 <div>
                   <dt>
                     {BAG.delivery}
-                    <span className="rv-sum__detail">
+                    <span className="lv-sum__detail">
                       {chosen.option.label}, {chosen.option.carrier}
                     </span>
                   </dt>
                   <dd>{price(chosen.priceMinor)}</dd>
                 </div>
               ) : null}
-              <div className="rv-sum__total">
+              <div className="lv-sum__total">
                 <dt>{BAG.total}</dt>
                 <dd>{formatGbp(totalMinor)}</dd>
               </div>
             </dl>
-            {shortfall !== null && shortfall > 0 ? <p className="rv-hint">{BAG.shortfall(formatGbp(shortfall))}</p> : null}
+            {shortfall !== null && shortfall > 0 ? <p className="lv-hint">{BAG.shortfall(formatGbp(shortfall))}</p> : null}
           </div>
         ) : null}
 
         {message ? (
-          <p role="alert" className="rv-alert">
+          <p role="alert" className="lv-alert">
             {message}
           </p>
         ) : null}
 
         {cart.hydrated && !empty && methods.length > 0 ? (
-          <div className="rv-pay">
+          <div className="lv-pay">
             {methods.map((m) => (
               <button
                 key={m.id}
                 type="button"
-                className="rv-button rv-button--wide"
+                className="lv-button lv-button--wide"
                 disabled={pending}
                 aria-busy={pending}
                 onClick={() => pay(m.id)}
@@ -354,7 +354,7 @@ function BagDrawer({ thumb }: { thumb: ImgHTMLAttributes<HTMLImageElement> }) {
                 {pending ? BAG.paying : methods.length === 1 ? BAG.pay : BAG.payWith(m.label)}
               </button>
             ))}
-            {methods.length === 1 ? <p className="rv-hint">{BAG.payNote(methods[0]!.label)}</p> : null}
+            {methods.length === 1 ? <p className="lv-hint">{BAG.payNote(methods[0]!.label)}</p> : null}
           </div>
         ) : null}
       </div>

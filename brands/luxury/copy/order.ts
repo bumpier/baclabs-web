@@ -1,5 +1,5 @@
 /**
- * The order confirmation, set as the card in the box. Every status line says only what the order
+ * The order confirmation, set as a card on the page. Every status line says only what the order
  * record shows (lib/commerce/order-view.ts); nothing here promises a time
  * the order does not carry.
  */

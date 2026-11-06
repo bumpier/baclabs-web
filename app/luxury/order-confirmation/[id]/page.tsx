@@ -11,8 +11,9 @@ import { ORDER } from "@/brands/luxury/copy/order";
 import { brand } from "../../site";
 
 /**
- * The order confirmation, set as the card that goes in the box: the order
- * on chalk, closed with the house seal across its top edge. The order is
+ * The order confirmation, set as a card on the page: the order on chalk,
+ * with the drawn seal across its top edge (a web graphic: the parcel itself
+ * is a plain box). The order is
  * loaded on the server and shown only if it is this brand's: any other order
  * id, BacLab's included, is this site's 404 (brandOrderView). Per request,
  * never cached: it shows one customer's order.
@@ -58,21 +59,21 @@ export default async function OrderConfirmationPage({
   const parcel = order.parcel;
 
   return (
-    <main id="main" className="rv-wrap rv-page">
+    <main id="main" className="lv-wrap lv-page">
       <OrderStatusWatcher orderId={order.id} status={order.status} />
       {order.tracker ? <PurchaseTracker {...order.tracker} /> : null}
       <ClearBasket when={order.paid} />
 
-      <div className="rv-order">
-        <div role="status" className="rv-order__head">
-          <h1 className="rv-page__heading">{heading}</h1>
-          <p className="rv-page__lede">{status}</p>
+      <div className="lv-order">
+        <div role="status" className="lv-order__head">
+          <h1 className="lv-page__heading">{heading}</h1>
+          <p className="lv-page__lede">{status}</p>
         </div>
 
-        <div className="rv-card">
-          <Seal className="rv-card__seal" />
+        <div className="lv-card">
+          <Seal className="lv-card__seal" />
           <dl>
-            <div className="rv-card__meta">
+            <div className="lv-card__meta">
               <div>
                 <dt className="inline">{ORDER.number} </dt>
                 <dd className="inline">{order.id}</dd>
@@ -85,21 +86,21 @@ export default async function OrderConfirmationPage({
               </div>
             </div>
             {order.lines.map((line, i) => (
-              <div key={i} className="rv-card__row">
+              <div key={i} className="lv-card__row">
                 <dt>
                   {line.name} × {line.qty}
-                  {line.detail ? <span className="rv-card__detail">{line.detail}</span> : null}
+                  {line.detail ? <span className="lv-card__detail">{line.detail}</span> : null}
                 </dt>
                 <dd>{line.totalMinor === null ? ORDER.free : formatGbp(line.totalMinor)}</dd>
               </div>
             ))}
             {deliveryMinor !== null && deliveryMinor >= 0 ? (
-              <div className="rv-card__row">
+              <div className="lv-card__row">
                 <dt>{ORDER.delivery}</dt>
                 <dd>{deliveryMinor === 0 ? ORDER.free : formatGbp(deliveryMinor)}</dd>
               </div>
             ) : null}
-            <div className="rv-card__row rv-card__total">
+            <div className="lv-card__row lv-card__total">
               <dt>{order.paidMinor !== null ? ORDER.totalPaid : ORDER.total}</dt>
               <dd>{formatGbp(order.paidMinor ?? order.goodsMinor)}</dd>
             </div>
@@ -108,10 +109,10 @@ export default async function OrderConfirmationPage({
 
         {order.sent && parcel ? (
           <section aria-labelledby="parcel-heading" className="mt-16">
-            <h2 id="parcel-heading" className="rv-section-heading">
+            <h2 id="parcel-heading" className="lv-section-heading">
               {ORDER.parcelHeading}
             </h2>
-            <dl className="rv-parcel">
+            <dl className="lv-parcel">
               {parcel.carrier ? (
                 <div>
                   <dt className="inline">{ORDER.sentBy} </dt>
@@ -123,7 +124,7 @@ export default async function OrderConfirmationPage({
                   <dt className="inline">{ORDER.trackingNumber} </dt>
                   <dd className="inline">
                     {parcel.trackingUrl ? (
-                      <a href={parcel.trackingUrl} target="_blank" rel="noopener noreferrer" className="rv-link">
+                      <a href={parcel.trackingUrl} target="_blank" rel="noopener noreferrer" className="lv-link">
                         {parcel.trackingNumber}
                       </a>
                     ) : (
@@ -153,10 +154,10 @@ export default async function OrderConfirmationPage({
           </section>
         ) : order.paid || order.confirming ? (
           <section aria-labelledby="next-heading" className="mt-16">
-            <h2 id="next-heading" className="rv-section-heading">
+            <h2 id="next-heading" className="lv-section-heading">
               {ORDER.nextHeading}
             </h2>
-            <ol className="rv-steps">
+            <ol className="lv-steps">
               <li>
                 {ORDER.next.email}
                 {order.customerEmail ? (
@@ -182,13 +183,13 @@ export default async function OrderConfirmationPage({
 
         <p className="mt-16 text-smoke">
           {ORDER.help}{" "}
-          <Link href="/contact" className="rv-link">
+          <Link href="/contact" className="lv-link">
             {ORDER.helpLink}
           </Link>{" "}
           {ORDER.helpTail}
         </p>
         <p className="mt-4">
-          <Link href="/" className="rv-link">
+          <Link href="/" className="lv-link">
             {ORDER.home}
           </Link>
         </p>
