@@ -19,7 +19,8 @@ import { PLAIN_BOX_SKU } from "../packaging";
 
 export const gymCatalogue: BrandCatalogue = {
   parentSku: "GYM-10ML",
-  // TODO(confirm): the box's SKU and its packed weight (scripts/seed-brand-skus.ts).
+  // The plain white box every brand shares (brands/packaging.ts); its weight
+  // is weighed once for all of them (scripts/seed-brand-skus.ts).
   boxSku: PLAIN_BOX_SKU,
   packs: [
     // TODO(confirm): all four prices.
