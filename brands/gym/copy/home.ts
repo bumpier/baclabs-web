@@ -34,7 +34,7 @@ export const MARQUEE = {
 export const HERO = {
   /** The headline, one line each, set in capitals by CSS. */
   lines: ["Blast.", "Cruise.", "Restock."],
-  lead: "Bacteriostatic water in sealed 10ml vials, boxed in black and sent tracked.",
+  lead: "Bacteriostatic water in sealed 10ml vials, boxed plain and sent tracked.",
   /** "Packs of 1 to 20, from £4.50 a vial." */
   from: (smallest: number, largest: number, price: string) => `Packs of ${smallest} to ${largest}, from ${price} a vial.`,
   cta: "Shop the stack",
