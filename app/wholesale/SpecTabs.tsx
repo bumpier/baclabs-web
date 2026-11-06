@@ -42,8 +42,8 @@ export function SpecTabs({ label, tabs }: { label: string; tabs: readonly { id: 
   };
 
   return (
-    <div className="vh-tabs">
-      <div ref={listRef} role="tablist" aria-label={label} className="vh-tablist">
+    <div className="bk-tabs">
+      <div ref={listRef} role="tablist" aria-label={label} className="bk-tablist">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -56,7 +56,7 @@ export function SpecTabs({ label, tabs }: { label: string; tabs: readonly { id: 
             aria-selected={selected === t.id}
             aria-controls={t.id}
             tabIndex={selected === t.id ? 0 : -1}
-            className="vh-tab"
+            className="bk-tab"
             onClick={() => setSelected(t.id)}
             onKeyDown={onKey}
           >
@@ -65,7 +65,7 @@ export function SpecTabs({ label, tabs }: { label: string; tabs: readonly { id: 
         ))}
       </div>
       {tabs.map((t) => (
-        <div key={t.id} id={t.id} role="tabpanel" aria-labelledby={`${base}-${t.id}-tab`} hidden={selected !== t.id} tabIndex={0} className="vh-tabpanel">
+        <div key={t.id} id={t.id} role="tabpanel" aria-labelledby={`${base}-${t.id}-tab`} hidden={selected !== t.id} tabIndex={0} className="bk-tabpanel">
           {t.panel}
         </div>
       ))}

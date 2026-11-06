@@ -23,14 +23,14 @@ export function SiteFooter() {
   ].filter((d): d is { term: string; detail: string } => d !== null);
 
   return (
-    <footer className="vh-footer">
-      <div className="vh-wrap">
-        <div className="vh-footer-top">
-          <div className="vh-footer-brand">
-            <Lockup className="vh-lockup-footer" />
+    <footer className="bk-footer">
+      <div className="bk-wrap">
+        <div className="bk-footer-top">
+          <div className="bk-footer-brand">
+            <Lockup className="bk-lockup-footer" />
             <p>{FOOTER.summary}</p>
           </div>
-          <nav aria-label="Footer" className="vh-footer-nav">
+          <nav aria-label="Footer" className="bk-footer-nav">
             {FOOTER.columns.map((col) => (
               <div key={col.heading}>
                 <h2>{col.heading}</h2>
@@ -41,14 +41,14 @@ export function SiteFooter() {
                     </li>
                   ))}
                   {col.heading === "Legal" ? (
-                    <CookieSettingsButton asListItem ga4Id={STOREFRONT.tracking.ga4Id} className="vh-footer-cookie" />
+                    <CookieSettingsButton asListItem ga4Id={STOREFRONT.tracking.ga4Id} className="bk-footer-cookie" />
                   ) : null}
                 </ul>
               </div>
             ))}
           </nav>
           {details.length > 0 ? (
-            <dl className="vh-footer-company">
+            <dl className="bk-footer-company">
               {details.map((d) => (
                 <div key={d.term}>
                   <dt>{d.term}</dt>
@@ -58,7 +58,7 @@ export function SiteFooter() {
             </dl>
           ) : null}
         </div>
-        <p className="vh-footer-legal">{brand.disclaimer}</p>
+        <p className="bk-footer-legal">{brand.disclaimer}</p>
       </div>
     </footer>
   );

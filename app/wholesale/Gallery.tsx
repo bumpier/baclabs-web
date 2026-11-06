@@ -18,31 +18,31 @@ export function Gallery({ photos, label }: { photos: readonly PhotoData[]; label
   const current = photos[index];
 
   return (
-    <section className="vh-gallery" aria-label={label}>
-      <div className="vh-stage">
+    <section className="bk-gallery" aria-label={label}>
+      <div className="bk-stage">
         {photos.map((p, i) => (
-          <div key={p.src} className="vh-stage-frame" data-on={i === index ? "" : undefined} aria-hidden={i === index ? undefined : true}>
+          <div key={p.src} className="bk-stage-frame" data-on={i === index ? "" : undefined} aria-hidden={i === index ? undefined : true}>
             <Photo photo={p} priority={i === 0} sizes="(min-width: 1280px) 700px, (min-width: 1024px) 56vw, 100vw" />
           </div>
         ))}
-        <div className="vh-stage-nav">
-          <button type="button" className="vh-stage-btn" onClick={() => step(-1)} aria-label="Previous photo">
+        <div className="bk-stage-nav">
+          <button type="button" className="bk-stage-btn" onClick={() => step(-1)} aria-label="Previous photo">
             <Chevron dir="left" />
           </button>
-          <span className="vh-stage-count" aria-live="polite">
+          <span className="bk-stage-count" aria-live="polite">
             <span className="sr-only">Photo </span>
             {index + 1} of {photos.length}
             <span className="sr-only">: {current?.short}</span>
           </span>
-          <button type="button" className="vh-stage-btn" onClick={() => step(1)} aria-label="Next photo">
+          <button type="button" className="bk-stage-btn" onClick={() => step(1)} aria-label="Next photo">
             <Chevron dir="right" />
           </button>
         </div>
       </div>
-      <ul className="vh-thumbs">
+      <ul className="bk-thumbs">
         {photos.map((p, i) => (
           <li key={p.src}>
-            <button type="button" className="vh-thumb" aria-pressed={i === index} onClick={() => setIndex(i)}>
+            <button type="button" className="bk-thumb" aria-pressed={i === index} onClick={() => setIndex(i)}>
               <Photo photo={p} alt="" sizes="(min-width: 1024px) 160px, 25vw" />
               <span className="sr-only">Show photo {i + 1}: {p.short}</span>
             </button>

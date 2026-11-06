@@ -1,5 +1,5 @@
 /**
- * Vialhouse's catalogue: bulk packs at a tiered per-vial price, open to
+ * BulkBac's catalogue: bulk packs at a tiered per-vial price, open to
  * anyone, with the company name and VAT number asked for with the order.
  * Delivery is BacLab's own options and threshold, by the same ids (every
  * pack here is over the threshold, so next day is free on all of them).

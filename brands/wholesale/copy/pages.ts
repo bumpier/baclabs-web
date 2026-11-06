@@ -17,7 +17,7 @@ export const NAV: readonly { href: string; label: string }[] = [
 ];
 
 export const HEADER = {
-  home: "Vialhouse, product page",
+  home: "BulkBac, product page",
   menu: "Menu",
   nav: "Main",
 };

@@ -1,6 +1,7 @@
 /**
- * The bars on a Vialhouse label: a row of bars whose widths are taken from
- * a string (an order number, a page's name), so each label looks its own.
+ * The bars on BulkBac's on-screen labels (the order acknowledgement and the
+ * 404; the cartons themselves ship plain): a row of bars whose widths are
+ * taken from a string (an order number, a page's name), so each looks its own.
  * Decoration only. It follows no barcode standard, encodes nothing a
  * scanner could read, and carries no number under it.
  */

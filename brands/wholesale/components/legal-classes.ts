@@ -6,10 +6,10 @@
  */
 export const LEGAL_CLASSES = {
   root: "",
-  title: "vh-page-title",
-  intro: "vh-page-lede",
+  title: "bk-page-title",
+  intro: "bk-page-lede",
   meta: "mt-3 text-sm text-ink-soft",
-  toc: "vh-legal-toc mt-8",
+  toc: "bk-legal-toc mt-8",
   tocHeading: "text-sm font-bold text-spruce",
   tocList: "mt-3 list-decimal space-y-1.5 pl-5 text-sm md:columns-2 md:gap-10",
   sections: "mt-8",
@@ -21,5 +21,5 @@ export const LEGAL_CLASSES = {
 };
 
 /** The page around it. */
-export const LEGAL_MAIN = "vh-page vh-wrap pt-6 md:pt-10";
-export const LEGAL_SHEET = "vh-legal-sheet";
+export const LEGAL_MAIN = "bk-page bk-wrap pt-6 md:pt-10";
+export const LEGAL_SHEET = "bk-legal-sheet";

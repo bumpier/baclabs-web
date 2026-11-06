@@ -166,6 +166,7 @@ export const SPEC: { intro: string; rows: Row[] } = {
     { term: "Vial", detail: "Clear glass, sealed" },
     { term: "Closure", detail: "Royal blue flip-off cap over a silver aluminium crimp" },
     { term: "Label", detail: "Plain, unbranded" },
+    { term: "Packing", detail: "A plain box with no branding on it" },
     { term: "Supplied as", detail: "A laboratory reagent: a sterile diluent and solvent for laboratory and research use" },
     { term: "Status", detail: "Not a medicine and not a medical device. No therapeutic claim is made." },
   ],
@@ -182,8 +183,10 @@ export function packRows(view: StorefrontView): { sku: string; size: string; per
   }));
 }
 
+// The packing is a plain box with no branding (the owner, 6 Nov 2026), and
+// the specification says so; nothing else about it is stated yet.
 // TODO(confirm): carton sizes, packed weights and how the vials are held
-// inside. Nothing about the carton is stated until it is.
+// inside.
 export const PACKS = {
   intro: "Each code is one pack of that many vials. The vial is the same in every pack.",
   head: { code: "Code", size: "Pack", perVial: "Per vial", how: "Ordered" },

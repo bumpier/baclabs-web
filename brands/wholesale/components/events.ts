@@ -4,4 +4,4 @@
  * with this window event. Its own module, so the header does not pull the
  * desk into every page's bundle.
  */
-export const SHOW_ORDER_EVENT = "vh:show-order";
+export const SHOW_ORDER_EVENT = "bk:show-order";

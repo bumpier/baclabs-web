@@ -29,24 +29,24 @@ export function OrderButton() {
   }, [cart.hydrated, n]);
   const inner = (
     <>
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" className="vh-order-icon">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" className="bk-order-icon">
         <path d="M3.5 8.5 12 4l8.5 4.5v8L12 21l-8.5-4.5z M3.5 8.5 12 13l8.5-4.5 M12 13v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
       </svg>
-      <span className="vh-order-word">{ORDER.button}</span>
-      <span key={n} className="vh-order-count" data-empty={n === 0 ? "" : undefined}>
+      <span className="bk-order-word">{ORDER.button}</span>
+      <span key={n} className="bk-order-count" data-empty={n === 0 ? "" : undefined}>
         {count(n)}
       </span>
     </>
   );
   if (pathname === "/") {
     return (
-      <button type="button" className="vh-order-btn" data-live={live ? "" : undefined} aria-label={ORDER.buttonLabel(n)} onClick={() => window.dispatchEvent(new Event(SHOW_ORDER_EVENT))}>
+      <button type="button" className="bk-order-btn" data-live={live ? "" : undefined} aria-label={ORDER.buttonLabel(n)} onClick={() => window.dispatchEvent(new Event(SHOW_ORDER_EVENT))}>
         {inner}
       </button>
     );
   }
   return (
-    <Link href="/#order" className="vh-order-btn" data-live={live ? "" : undefined} aria-label={ORDER.buttonLabel(n)}>
+    <Link href="/#order" className="bk-order-btn" data-live={live ? "" : undefined} aria-label={ORDER.buttonLabel(n)}>
       {inner}
     </Link>
   );
