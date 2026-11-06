@@ -5,16 +5,16 @@
  * panel under a yellow rule. The quote form uses the same classes.
  */
 export const FORM_CLASSES = {
-  form: "vh-form grid gap-5",
+  form: "bk-form grid gap-5",
   label: "label",
   input: "field",
-  hint: "vh-form-hint mt-2",
+  hint: "bk-form-hint mt-2",
   error: "alert-error",
-  button: "btn-cta vh-btn-lg w-full sm:w-auto sm:min-w-56",
-  note: "vh-form-note mt-3",
+  button: "btn-cta bk-btn-lg w-full sm:w-auto sm:min-w-56",
+  note: "bk-form-note mt-3",
   link: "link",
-  sent: "vh-sent",
-  sentHeading: "vh-sent-title",
+  sent: "bk-sent",
+  sentHeading: "bk-sent-title",
   sentText: "mt-2 text-ink",
   again: "link mt-3 text-sm",
 };

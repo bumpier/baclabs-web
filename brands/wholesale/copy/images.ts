@@ -1,17 +1,17 @@
 /**
- * Vialhouse's photographs, every one an AI-generated stand-in (approved by
+ * BulkBac's photographs, every one an AI-generated stand-in (approved by
  * the owner for the redesign), in public/wholesale/images/ at three widths
  * each: <name>-640.webp, <name>-960.webp and <name>-<full>.webp.
  *
  * Every one keeps the product truth: a clear 10ml glass vial, a royal blue
- * flip-off cap over a silver aluminium crimp, a blank label, and the brand
- * only on the carton. The Vialhouse shipping label on the carton photo is
- * not the model's: it is drawn from the brand's own wordmark and the
- * catalogue's real code (WHL-10ML-X100) and laid onto a blank label, and
- * its bars encode nothing.
+ * flip-off cap over a silver aluminium crimp, a blank label, and plain
+ * brown cartons with no label, print or brand on them (the owner, 6 Nov
+ * 2026: "our packaging is just a box really ... just a plain box"). The
+ * brand is on the website only. The blank labels the model put on the
+ * cartons in the carton and stockroom photos were retouched out.
  *
  * TODO(launch): replace every image here with real photography of the
- * packed product and the real outer carton and label.
+ * packed product and the real outer carton.
  *
  * Plain data, imported by server and client components alike.
  */
@@ -48,11 +48,11 @@ export const GALLERY: readonly Photo[] = [
     "Shrink-wrapped tray"
   ),
   photo(
-    "/images/cartons-labelled-1280.webp",
+    "/images/cartons-1280.webp",
     1280,
     960,
-    "Three plain brown cartons stacked on a concrete floor, the front one carrying a Vialhouse label with the code WHL-10ML-X100 and the line 100 × 10ml vials.",
-    "Labelled cartons"
+    "Three plain brown cartons, unprinted and unlabelled, stacked on a concrete floor against a pale wall.",
+    "Cartons"
   ),
   photo(
     "/images/vial-packshot-1280.webp",
@@ -65,7 +65,7 @@ export const GALLERY: readonly Photo[] = [
     "/images/stockroom-1280.webp",
     1280,
     960,
-    "A tidy stockroom: grey steel shelving with rows of plain brown cartons and white trays of blue-capped vials.",
+    "A tidy stockroom: grey steel shelving with rows of plain, unlabelled brown cartons and white trays of blue-capped vials.",
     "Stockroom"
   ),
 ];

@@ -44,7 +44,7 @@ export default function Home() {
 
   return (
     <main id="main">
-      <nav aria-label="Breadcrumb" className="vh-wrap vh-crumbs">
+      <nav aria-label="Breadcrumb" className="bk-wrap bk-crumbs">
         <ol>
           <li>
             <Link href="/">{PRODUCT.crumbs.catalogue}</Link>
@@ -54,21 +54,21 @@ export default function Home() {
         </ol>
       </nav>
 
-      <section id="product" aria-labelledby="product-title" className="vh-wrap vh-product">
+      <section id="product" aria-labelledby="product-title" className="bk-wrap bk-product">
         <Gallery photos={GALLERY} label="Product photos" />
 
-        <div className="vh-buybox">
-          <h1 id="product-title" className="vh-title">
+        <div className="bk-buybox">
+          <h1 id="product-title" className="bk-title">
             {PRODUCT.title}
           </h1>
-          <p className="vh-standfirst">{PRODUCT.standfirst(view)}</p>
+          <p className="bk-standfirst">{PRODUCT.standfirst(view)}</p>
 
-          <div className="vh-codes">
-            <p className="vh-codes-label">{PRODUCT.codesLabel}</p>
+          <div className="bk-codes">
+            <p className="bk-codes-label">{PRODUCT.codesLabel}</p>
             <ul>
               {view.packs.map((p) => (
                 <li key={p.sku}>
-                  <span className="vh-sku" data-quote={p.available ? undefined : ""} title={PRODUCT.codeTitle(p)}>
+                  <span className="bk-sku" data-quote={p.available ? undefined : ""} title={PRODUCT.codeTitle(p)}>
                     {p.sku}
                   </span>
                   <span className="sr-only">: {PRODUCT.codeTitle(p)}</span>
@@ -77,7 +77,7 @@ export default function Home() {
             </ul>
           </div>
 
-          <dl className="vh-spec-mini">
+          <dl className="bk-spec-mini">
             {PRODUCT.summary.map((r) => (
               <div key={r.term}>
                 <dt>{r.term}</dt>
@@ -87,22 +87,22 @@ export default function Home() {
           </dl>
 
           {best ? (
-            <div className="vh-price">
-              <p className="vh-price-label">{PRODUCT.priceLabel}</p>
-              <p className="vh-price-main">
-                <span className="vh-price-figure">{best.price}</span> <span className="vh-price-note">{best.note}</span>
+            <div className="bk-price">
+              <p className="bk-price-label">{PRODUCT.priceLabel}</p>
+              <p className="bk-price-main">
+                <span className="bk-price-figure">{best.price}</span> <span className="bk-price-note">{best.note}</span>
               </p>
               {PRODUCT.others(view).map((o) => (
-                <p key={o} className="vh-price-other">
+                <p key={o} className="bk-price-other">
                   {o}
                 </p>
               ))}
-              <div className="vh-actions">
-                <a href="#buy" className="btn-cta vh-btn-lg">
+              <div className="bk-actions">
+                <a href="#buy" className="btn-cta bk-btn-lg">
                   {PRODUCT.choose}
                 </a>
                 {quote.length > 0 ? (
-                  <Link href="/quote" className="vh-btn-outline vh-btn-lg">
+                  <Link href="/quote" className="bk-btn-outline bk-btn-lg">
                     {PRODUCT.quote}
                   </Link>
                 ) : null}
@@ -110,7 +110,7 @@ export default function Home() {
             </div>
           ) : null}
 
-          <ul className="vh-checks">
+          <ul className="bk-checks">
             {PRODUCT.facts(view).map((f) => (
               <li key={f}>
                 <CheckIcon />
@@ -121,7 +121,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section aria-label={TABS.label} className="vh-wrap vh-details">
+      <section aria-label={TABS.label} className="bk-wrap bk-details">
         <SpecTabs
           label={TABS.label}
           tabs={[
@@ -129,8 +129,8 @@ export default function Home() {
               id: "specification",
               label: TABS.spec,
               panel: (
-                <div className="vh-panel-grid">
-                  <p className="vh-panel-intro">{SPEC.intro}</p>
+                <div className="bk-panel-grid">
+                  <p className="bk-panel-intro">{SPEC.intro}</p>
                   <SpecTable rows={SPEC.rows} />
                 </div>
               ),
@@ -139,15 +139,15 @@ export default function Home() {
               id: "packs",
               label: TABS.packs,
               panel: (
-                <div className="vh-panel-split">
+                <div className="bk-panel-split">
                   <div>
-                    <p className="vh-panel-intro">{PACKS.intro}</p>
-                    <table className="vh-table">
+                    <p className="bk-panel-intro">{PACKS.intro}</p>
+                    <table className="bk-table">
                       <thead>
                         <tr>
                           <th scope="col">{PACKS.head.code}</th>
                           <th scope="col">{PACKS.head.size}</th>
-                          <th scope="col" className="vh-num">
+                          <th scope="col" className="bk-num">
                             {PACKS.head.perVial}
                           </th>
                           <th scope="col">{PACKS.head.how}</th>
@@ -157,12 +157,12 @@ export default function Home() {
                         {packRows(view).map((r) => (
                           <tr key={r.sku}>
                             <td>
-                              <span className="vh-sku" data-quote={r.quote ? "" : undefined}>
+                              <span className="bk-sku" data-quote={r.quote ? "" : undefined}>
                                 {r.sku}
                               </span>
                             </td>
                             <th scope="row">{r.size}</th>
-                            <td className="vh-num">{r.perVial}</td>
+                            <td className="bk-num">{r.perVial}</td>
                             <td>
                               {r.quote ? (
                                 <Link href={`/quote?pack=${r.size.replace(/\D/g, "")}`} className="link">
@@ -176,9 +176,9 @@ export default function Home() {
                         ))}
                       </tbody>
                     </table>
-                    {PACKS.quoteNote(view) ? <p className="vh-panel-note">{PACKS.quoteNote(view)}</p> : null}
+                    {PACKS.quoteNote(view) ? <p className="bk-panel-note">{PACKS.quoteNote(view)}</p> : null}
                   </div>
-                  <figure className="vh-panel-figure">
+                  <figure className="bk-panel-figure">
                     <Photo photo={CARTON_OPEN} sizes="(min-width: 1024px) 480px, 100vw" />
                   </figure>
                 </div>
@@ -188,15 +188,15 @@ export default function Home() {
               id: "delivery",
               label: TABS.delivery,
               panel: (
-                <div className="vh-panel-grid">
-                  <p className="vh-panel-intro">{DELIVERY_TAB.intro}</p>
-                  <table className="vh-table">
+                <div className="bk-panel-grid">
+                  <p className="bk-panel-intro">{DELIVERY_TAB.intro}</p>
+                  <table className="bk-table">
                     <thead>
                       <tr>
                         <th scope="col">{DELIVERY_TAB.head.service}</th>
                         <th scope="col">{DELIVERY_TAB.head.carrier}</th>
                         <th scope="col">{DELIVERY_TAB.head.when}</th>
-                        <th scope="col" className="vh-num">
+                        <th scope="col" className="bk-num">
                           {DELIVERY_TAB.head.price}
                         </th>
                       </tr>
@@ -207,12 +207,12 @@ export default function Home() {
                           <th scope="row">{option.label}</th>
                           <td>{option.carrier}</td>
                           <td>{capitalise(option.transit)}</td>
-                          <td className="vh-num">{priceMinor === 0 ? DELIVERY_TAB.free : formatGbp(priceMinor)}</td>
+                          <td className="bk-num">{priceMinor === 0 ? DELIVERY_TAB.free : formatGbp(priceMinor)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  <ul className="vh-checks vh-checks-panel">
+                  <ul className="bk-checks bk-checks-panel">
                     {delivery
                       .filter((d) => d.option.cutoff)
                       .map((d) => (
@@ -239,12 +239,12 @@ export default function Home() {
               id: "documents",
               label: TABS.documents,
               panel: (
-                <div className="vh-panel-grid">
-                  <p className="vh-panel-intro">{DOCUMENTS.intro}</p>
-                  <div className="vh-docs">
+                <div className="bk-panel-grid">
+                  <p className="bk-panel-intro">{DOCUMENTS.intro}</p>
+                  <div className="bk-docs">
                     <div>
-                      <h3 className="vh-h3">{DOCUMENTS.availableHead}</h3>
-                      <ul className="vh-doc-list">
+                      <h3 className="bk-h3">{DOCUMENTS.availableHead}</h3>
+                      <ul className="bk-doc-list">
                         {DOCUMENTS.available.map((d) => (
                           <li key={d.href}>
                             <DocIcon />
@@ -260,8 +260,8 @@ export default function Home() {
                       </ul>
                     </div>
                     <div>
-                      <h3 className="vh-h3">{DOCUMENTS.pendingHead}</h3>
-                      <ul className="vh-doc-list" data-pending="">
+                      <h3 className="bk-h3">{DOCUMENTS.pendingHead}</h3>
+                      <ul className="bk-doc-list" data-pending="">
                         {DOCUMENTS.pending.map((d) => (
                           <li key={d}>
                             <DocIcon />
@@ -269,7 +269,7 @@ export default function Home() {
                           </li>
                         ))}
                       </ul>
-                      <p className="vh-panel-note">
+                      <p className="bk-panel-note">
                         {DOCUMENTS.pendingNote}{" "}
                         <Link href="/contact" className="link">
                           {DOCUMENTS.ask}
@@ -284,30 +284,30 @@ export default function Home() {
         />
       </section>
 
-      <section id="buy" aria-labelledby="buy-heading" className="vh-wrap vh-section">
-        <div className="vh-section-head">
-          <h2 id="buy-heading" className="vh-h2">
+      <section id="buy" aria-labelledby="buy-heading" className="bk-wrap bk-section">
+        <div className="bk-section-head">
+          <h2 id="buy-heading" className="bk-h2">
             {MATRIX.heading}
           </h2>
-          <p className="vh-section-lede">{MATRIX.lede}</p>
+          <p className="bk-section-lede">{MATRIX.lede}</p>
         </div>
         <OrderDesk />
       </section>
 
       {quote.length > 0 ? (
-        <section aria-labelledby="quote-heading" className="vh-quote-band">
-          <div className="vh-wrap vh-quote-inner">
-            <div className="vh-quote-copy">
-              <h2 id="quote-heading" className="vh-h2">
+        <section aria-labelledby="quote-heading" className="bk-quote-band">
+          <div className="bk-wrap bk-quote-inner">
+            <div className="bk-quote-copy">
+              <h2 id="quote-heading" className="bk-h2">
                 {QUOTE_BAND.heading}
               </h2>
               <p>{QUOTE_BAND.body(view)}</p>
-              <ul className="vh-quote-rows">
+              <ul className="bk-quote-rows">
                 {quote.map((p) => (
                   <li key={p.sku}>
-                    <span className="vh-quote-size">{QUOTE_BAND.row(p.vials)}</span>
-                    <span className="vh-sku vh-sku-dark">{p.sku}</span>
-                    <Link href={`/quote?pack=${p.vials}`} className="vh-quote-link">
+                    <span className="bk-quote-size">{QUOTE_BAND.row(p.vials)}</span>
+                    <span className="bk-sku bk-sku-dark">{p.sku}</span>
+                    <Link href={`/quote?pack=${p.vials}`} className="bk-quote-link">
                       {QUOTE_BAND.rowAction}
                       <span className="sr-only"> for {QUOTE_BAND.row(p.vials)}</span>
                       <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
@@ -317,25 +317,25 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <Link href="/quote" className="btn-cta vh-btn-lg">
+              <Link href="/quote" className="btn-cta bk-btn-lg">
                 {QUOTE_BAND.standing}
               </Link>
             </div>
-            <div className="vh-quote-photo">
+            <div className="bk-quote-photo">
               <Photo photo={PALLET} sizes="(min-width: 1024px) 50vw, 100vw" />
             </div>
           </div>
         </section>
       ) : null}
 
-      <section aria-labelledby="trade-heading" className="vh-wrap vh-section">
-        <div className="vh-section-head">
-          <h2 id="trade-heading" className="vh-h2">
+      <section aria-labelledby="trade-heading" className="bk-wrap bk-section">
+        <div className="bk-section-head">
+          <h2 id="trade-heading" className="bk-h2">
             {TRADE.heading}
           </h2>
-          <p className="vh-section-lede">{TRADE.lede}</p>
+          <p className="bk-section-lede">{TRADE.lede}</p>
         </div>
-        <dl className="vh-trade">
+        <dl className="bk-trade">
           {tradeTerms(view).map((r) => (
             <div key={r.term}>
               <dt>{r.term}</dt>
@@ -363,7 +363,7 @@ const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** A two-column specification table: the spec sheet's ruled rows. */
 function SpecTable({ rows }: { rows: Row[] }) {
   return (
-    <table className="vh-table vh-spec">
+    <table className="bk-table bk-spec">
       <tbody>
         {rows.map((r) => (
           <tr key={r.term}>
@@ -378,7 +378,7 @@ function SpecTable({ rows }: { rows: Row[] }) {
 
 function CheckIcon() {
   return (
-    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" className="vh-check-icon">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" className="bk-check-icon">
       <path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
     </svg>
   );
@@ -386,7 +386,7 @@ function CheckIcon() {
 
 function DocIcon() {
   return (
-    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" className="vh-doc-icon">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" className="bk-doc-icon">
       <path d="M3.5 1.5h6l3 3v10h-9z M9.5 1.5v3h3 M5.5 8h5 M5.5 10.5h5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
     </svg>
   );

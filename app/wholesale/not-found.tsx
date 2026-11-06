@@ -16,27 +16,27 @@ export const metadata: Metadata = brandNotFoundMetadata(brand, DESCRIPTION);
 
 export default function NotFound() {
   return (
-    <main id="main" className="vh-page vh-wrap pt-10 md:pt-20">
-      <div className="vh-label mx-auto max-w-xl">
-        <div className="vh-label-band">
-          <Lockup className="vh-lockup-footer" />
-          <span className="vh-label-band-title">{NOT_FOUND.code}</span>
-          <span className="vh-label-block" aria-hidden="true" />
+    <main id="main" className="bk-page bk-wrap pt-10 md:pt-20">
+      <div className="bk-label mx-auto max-w-xl">
+        <div className="bk-label-band">
+          <Lockup className="bk-lockup-footer" />
+          <span className="bk-label-band-title">{NOT_FOUND.code}</span>
+          <span className="bk-label-block" aria-hidden="true" />
         </div>
         <div className="px-5 pb-6 pt-7 md:px-7">
-          <h1 className="vh-page-title">{NOT_FOUND.title}</h1>
-          <p className="vh-page-lede">{NOT_FOUND.body}</p>
+          <h1 className="bk-page-title">{NOT_FOUND.title}</h1>
+          <p className="bk-page-lede">{NOT_FOUND.body}</p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link href="/" className="btn-cta vh-btn-lg">
+            <Link href="/" className="btn-cta bk-btn-lg">
               {NOT_FOUND.home}
             </Link>
-            <Link href="/contact" className="vh-btn-outline vh-btn-lg">
+            <Link href="/contact" className="bk-btn-outline bk-btn-lg">
               {NOT_FOUND.contact}
             </Link>
           </div>
         </div>
-        <div className="vh-label-foot border-t border-line">
-          <Bars seed="not-found" className="vh-bars" />
+        <div className="bk-label-foot border-t border-line">
+          <Bars seed="not-found" className="bk-bars" />
         </div>
       </div>
     </main>

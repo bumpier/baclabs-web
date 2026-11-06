@@ -18,23 +18,23 @@ export function SiteHeader() {
   const facts = utilityFacts(STOREFRONT);
   return (
     <>
-      <div className="vh-util">
-        <ul className="vh-wrap vh-util-row">
+      <div className="bk-util">
+        <ul className="bk-wrap bk-util-row">
           {facts.map((f) => (
             <li key={f.text}>
               <UtilIcon name={f.icon} />
-              <span className="vh-util-long">{f.text}</span>
-              <span className="vh-util-short">{f.short}</span>
+              <span className="bk-util-long">{f.text}</span>
+              <span className="bk-util-short">{f.short}</span>
             </li>
           ))}
         </ul>
       </div>
-      <header className="vh-header">
-        <div className="vh-wrap vh-header-row">
-          <Link href="/" className="vh-home" aria-label={HEADER.home}>
+      <header className="bk-header">
+        <div className="bk-wrap bk-header-row">
+          <Link href="/" className="bk-home" aria-label={HEADER.home}>
             <Lockup />
           </Link>
-          <nav aria-label={HEADER.nav} className="vh-nav">
+          <nav aria-label={HEADER.nav} className="bk-nav">
             <ul>
               {NAV.map((item) => (
                 <li key={item.href}>
@@ -43,16 +43,16 @@ export function SiteHeader() {
               ))}
             </ul>
           </nav>
-          <div className="vh-header-actions">
+          <div className="bk-header-actions">
             <OrderButton />
-            <details className="vh-menu">
-              <summary className="vh-menu-btn">
+            <details className="bk-menu">
+              <summary className="bk-menu-btn">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
                   <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" />
                 </svg>
                 <span className="sr-only">{HEADER.menu}</span>
               </summary>
-              <nav aria-label={HEADER.nav} className="vh-menu-panel">
+              <nav aria-label={HEADER.nav} className="bk-menu-panel">
                 <ul>
                   {NAV.map((item) => (
                     <li key={item.href}>
@@ -76,7 +76,7 @@ function UtilIcon({ name }: { name: "clock" | "truck" | "building" }) {
     building: "M2 14.5V3.5l6-2v13 M8 5.5h6v9 M1 14.5h14 M4.5 5.5h1 M4.5 8h1 M4.5 10.5h1 M10.5 8h1 M10.5 10.5h1",
   }[name];
   return (
-    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false" className="vh-util-icon">
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false" className="bk-util-icon">
       <path d={d} fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

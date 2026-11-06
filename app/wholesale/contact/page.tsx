@@ -32,9 +32,9 @@ export default function ContactPage() {
   const inbox = brand.email.inbox;
   const company = brand.company ?? {};
   return (
-    <main id="main" className="vh-page">
+    <main id="main" className="bk-page">
       <JsonLd data={breadcrumbSchema(CONTACT.title, "/contact", brand.id)} />
-      <nav aria-label="Breadcrumb" className="vh-wrap vh-crumbs">
+      <nav aria-label="Breadcrumb" className="bk-wrap bk-crumbs">
         <ol>
           <li>
             <Link href="/">{CRUMBS.catalogue}</Link>
@@ -42,27 +42,27 @@ export default function ContactPage() {
           <li aria-current="page">{CONTACT.title}</li>
         </ol>
       </nav>
-      <div className="vh-wrap">
-        <div className="vh-page-head">
-          <h1 className="vh-page-title">{CONTACT.title}</h1>
-          <p className="vh-page-lede">{CONTACT.lede}</p>
+      <div className="bk-wrap">
+        <div className="bk-page-head">
+          <h1 className="bk-page-title">{CONTACT.title}</h1>
+          <p className="bk-page-lede">{CONTACT.lede}</p>
         </div>
 
-        <div className="vh-two vh-two-flip">
-          <section aria-labelledby="form-heading" className="vh-panel">
-            <h2 id="form-heading" className="vh-panel-head">
+        <div className="bk-two bk-two-flip">
+          <section aria-labelledby="form-heading" className="bk-panel">
+            <h2 id="form-heading" className="bk-panel-head">
               {CONTACT.formHeading}
             </h2>
-            <div className="vh-panel-body">
+            <div className="bk-panel-body">
               <ContactForm topics={TOPICS} complaintAckDays={COMPLAINT_ACK_DAYS} messageMax={CONTACT_MESSAGE_MAX} classNames={FORM_CLASSES} />
             </div>
           </section>
 
           <aside aria-labelledby="side-heading">
-            <h2 id="side-heading" className="vh-h3">
+            <h2 id="side-heading" className="bk-h3">
               {CONTACT.sideHeading}
             </h2>
-            <ul className="vh-doc-list">
+            <ul className="bk-doc-list">
               <li>{CONTACT.orderAside}</li>
               <li>
                 <span>

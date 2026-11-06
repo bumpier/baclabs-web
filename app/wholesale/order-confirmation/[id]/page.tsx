@@ -12,7 +12,8 @@ import { Bars } from "@/brands/wholesale/components/bars";
 import { brand } from "../../site";
 
 /**
- * The order acknowledgement, set as the brand's shipping label: the spruce
+ * The order acknowledgement, set on screen as a shipping label (a web
+ * graphic only: the cartons themselves ship plain, with no brand): the spruce
  * band with the lockup and the yellow block, the order number large in the
  * label's mono, the date, status and delivery in ruled fields, the lines,
  * and the total beside the label's bars (decoration, drawn from the order
@@ -75,30 +76,30 @@ export default async function OrderConfirmationPage({
   const parcel = order.parcel;
 
   return (
-    <main id="main" className="vh-page vh-wrap pt-6 md:pt-12">
+    <main id="main" className="bk-page bk-wrap pt-6 md:pt-12">
       <OrderStatusWatcher orderId={order.id} status={order.status} />
       {order.tracker ? <PurchaseTracker {...order.tracker} /> : null}
       <ClearBasket when={order.paid} />
 
       <div className="mx-auto max-w-3xl">
         <div role="status" className="mb-7">
-          <h1 className="vh-page-title">{heading}</h1>
-          <p className="vh-page-lede">{status}</p>
+          <h1 className="bk-page-title">{heading}</h1>
+          <p className="bk-page-lede">{status}</p>
         </div>
 
-        <section aria-labelledby="ack-heading" className="vh-label">
-          <div className="vh-label-band">
-            <Lockup className="vh-lockup-footer" />
-            <h2 id="ack-heading" className="vh-label-band-title">
+        <section aria-labelledby="ack-heading" className="bk-label">
+          <div className="bk-label-band">
+            <Lockup className="bk-lockup-footer" />
+            <h2 id="ack-heading" className="bk-label-band-title">
               {ACK.sheet}
             </h2>
-            <span className="vh-label-block" aria-hidden="true" />
+            <span className="bk-label-block" aria-hidden="true" />
           </div>
-          <dl className="vh-label-id">
+          <dl className="bk-label-id">
             <dt>{ACK.order}</dt>
             <dd>{order.id}</dd>
           </dl>
-          <dl className="vh-label-fields">
+          <dl className="bk-label-fields">
             <div>
               <dt>{ACK.placed}</dt>
               <dd>
@@ -117,14 +118,14 @@ export default async function OrderConfirmationPage({
             ) : null}
           </dl>
 
-          <table className="vh-table">
+          <table className="bk-table">
             <thead>
               <tr>
                 <th scope="col">{ACK.item}</th>
-                <th scope="col" className="vh-num">
+                <th scope="col" className="bk-num">
                   {ACK.qty}
                 </th>
-                <th scope="col" className="vh-num">
+                <th scope="col" className="bk-num">
                   {ACK.amount}
                 </th>
               </tr>
@@ -136,22 +137,22 @@ export default async function OrderConfirmationPage({
                     {line.name}
                     {line.detail ? <span className="block text-xs font-normal text-ink-soft">{line.detail}</span> : null}
                   </th>
-                  <td className="vh-num">{line.qty}</td>
-                  <td className="vh-num font-bold">{line.totalMinor === null ? ACK.free : formatGbp(line.totalMinor)}</td>
+                  <td className="bk-num">{line.qty}</td>
+                  <td className="bk-num font-bold">{line.totalMinor === null ? ACK.free : formatGbp(line.totalMinor)}</td>
                 </tr>
               ))}
               {deliveryMinor !== null && deliveryMinor >= 0 ? (
                 <tr>
                   <th scope="row">{ACK.delivery}</th>
-                  <td className="vh-num" />
-                  <td className="vh-num font-bold">{deliveryMinor === 0 ? ACK.free : formatGbp(deliveryMinor)}</td>
+                  <td className="bk-num" />
+                  <td className="bk-num font-bold">{deliveryMinor === 0 ? ACK.free : formatGbp(deliveryMinor)}</td>
                 </tr>
               ) : null}
             </tbody>
           </table>
-          <div className="vh-label-foot">
-            <Bars seed={order.id} className="vh-bars" />
-            <dl className="vh-label-total">
+          <div className="bk-label-foot">
+            <Bars seed={order.id} className="bk-bars" />
+            <dl className="bk-label-total">
               <dt>{order.paidMinor !== null ? ACK.totalPaid : ACK.total}</dt>
               <dd>{formatGbp(order.paidMinor ?? order.goodsMinor)}</dd>
             </dl>
@@ -159,12 +160,12 @@ export default async function OrderConfirmationPage({
         </section>
 
         {order.sent && parcel ? (
-          <section aria-labelledby="parcel-heading" className="vh-panel mt-6">
-            <h2 id="parcel-heading" className="vh-panel-head">
+          <section aria-labelledby="parcel-heading" className="bk-panel mt-6">
+            <h2 id="parcel-heading" className="bk-panel-head">
               {ACK.parcel}
             </h2>
-            <div className="vh-panel-body">
-              <table className="vh-table vh-spec">
+            <div className="bk-panel-body">
+              <table className="bk-table bk-spec">
                 <tbody>
                   {parcel.carrier ? (
                     <tr>
@@ -208,12 +209,12 @@ export default async function OrderConfirmationPage({
             </div>
           </section>
         ) : order.paid || order.confirming ? (
-          <section aria-labelledby="next-heading" className="vh-panel mt-6">
-            <h2 id="next-heading" className="vh-panel-head">
+          <section aria-labelledby="next-heading" className="bk-panel mt-6">
+            <h2 id="next-heading" className="bk-panel-head">
               {ACK.next}
             </h2>
-            <div className="vh-panel-body">
-              <ol className="vh-steps mt-0">
+            <div className="bk-panel-body">
+              <ol className="bk-steps mt-0">
                 <li>
                   A confirmation email is on its way
                   {order.customerEmail ? (

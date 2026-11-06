@@ -59,7 +59,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
       <body>
         <BrandPathnameProvider id={brand.id}>
           <CartProvider storageKey={BASKET_KEY} storefront={STOREFRONT}>
-            <a href="#main" className="vh-skip">
+            <a href="#main" className="bk-skip">
               Skip to content
             </a>
             <SiteHeader />
@@ -69,9 +69,9 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
           <CookieBanner
             ga4Id={STOREFRONT.tracking.ga4Id}
             classNames={{
-              panel: "vh-banner",
-              heading: "vh-banner-title",
-              button: "vh-btn-outline flex-1",
+              panel: "bk-banner",
+              heading: "bk-banner-title",
+              button: "bk-btn-outline flex-1",
             }}
           />
           <Analytics ga4Id={STOREFRONT.tracking.ga4Id} />
