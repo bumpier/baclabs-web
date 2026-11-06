@@ -170,7 +170,7 @@ function hostsOf(b: BrandProfile): string[] {
   return [...out].filter((h) => !isGenericHost(h));
 }
 
-/** `host` is `domain` or a subdomain of it ("send.aurelle.co.uk" is on "www.aurelle.co.uk"'s apex). */
+/** `host` is `domain` or a subdomain of it ("send.beautybac.co.uk" is on "www.beautybac.co.uk"'s apex). */
 function isOn(host: string, domain: string): boolean {
   const apex = domain.replace(/^www\./, "");
   return host === domain || host === apex || host.endsWith(`.${apex}`);

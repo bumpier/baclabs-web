@@ -1,8 +1,8 @@
 /**
- * Reserve No.10, the `luxury` brand. A skeleton: the name is a working name,
- * the palette (claret and limestone, brands/luxury/styles.css) the house's, and
- * nothing here is live. Empty values render nothing, as
- * everywhere else.
+ * LuxeVial, the `luxury` brand (name chosen 6 Nov 2026; its domain,
+ * luxevial.co.uk, is still to buy). The palette is claret and limestone
+ * (brands/luxury/styles.css), and nothing here is live. Empty values render
+ * nothing, as everywhere else.
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
@@ -13,9 +13,9 @@ import { luxuryCatalogue } from "./catalogue";
 export function luxuryProfile(): BrandProfile {
   return {
     id: "luxury",
-    name: "Reserve No.10",
-    shortCode: "RS",
-    // TODO(launch): the brand's https:// apex. Until then, its development host.
+    name: "LuxeVial",
+    shortCode: "LV",
+    // TODO(launch): https://luxevial.co.uk, the brand's apex. Until then, its development host.
     origin: "http://luxury.localhost:3000",
     // TODO(launch): add the apex and www to brands/hosts.json, and to the
     // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
@@ -40,7 +40,7 @@ export function luxuryProfile(): BrandProfile {
     },
     email: {
       // TODO(launch): a mailbox on the brand's own domain, verified in Resend.
-      from: "Reserve No.10 <hello@luxury.invalid>",
+      from: "LuxeVial <hello@luxury.invalid>",
       contact: "",
       inbox: "",
     },
@@ -55,12 +55,11 @@ export function luxuryProfile(): BrandProfile {
     // TODO(confirm): the wording, with the signup form that shows it.
     mailingList: {
       consentText:
-        "By signing up you agree to receive marketing emails from Reserve No.10: news, restocks and new releases. Unsubscribe at any time from any email.",
+        "By signing up you agree to receive marketing emails from LuxeVial: news, restocks and new releases. Unsubscribe at any time from any email.",
     },
-    // TODO(launch): the final name's statement descriptor.
-    // Ten characters, so it prints whole after any shortened descriptor
+    // At most ten characters, so it prints whole after any shortened descriptor
     // Stripe allows (10 at most) and its "* ".
-    statementDescriptor: "RESERVE 10",
+    statementDescriptor: "LUXEVIAL",
     // Stripe, on BacLab's own account and key, as every brand is: the site
     // is declared to Stripe before it takes a payment. Moving to PayPal is
     // this list and PAYPAL_PAYMENT, plus PAYPAL_*__LUXURY

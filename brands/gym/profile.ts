@@ -1,6 +1,6 @@
 /**
- * Brute Lab, the `gym` brand. The name is a working name and nothing here is
- * live. The palette is the site's (black, steel and hazard yellow, see
+ * GymWater, the `gym` brand (name chosen 6 Nov 2026; its domain,
+ * gymwater.co.uk, is still to buy). Nothing here is live. The palette is the site's (black, steel and hazard yellow, see
  * brands/gym/styles.css). Empty values render nothing, as everywhere else.
  */
 import hosts from "../hosts.json";
@@ -12,9 +12,9 @@ import { gymCatalogue } from "./catalogue";
 export function gymProfile(): BrandProfile {
   return {
     id: "gym",
-    name: "Brute Lab",
-    shortCode: "BR",
-    // TODO(launch): the brand's https:// apex. Until then, its development host.
+    name: "GymWater",
+    shortCode: "GW",
+    // TODO(launch): https://gymwater.co.uk, the brand's apex. Until then, its development host.
     origin: "http://gym.localhost:3000",
     // TODO(launch): add the apex and www to brands/hosts.json, and to the
     // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
@@ -42,7 +42,7 @@ export function gymProfile(): BrandProfile {
     },
     email: {
       // TODO(launch): a mailbox on the brand's own domain, verified in Resend.
-      from: "Brute Lab <hello@gym.invalid>",
+      from: "GymWater <hello@gym.invalid>",
       contact: "",
       inbox: "",
     },
@@ -57,10 +57,9 @@ export function gymProfile(): BrandProfile {
     // TODO(confirm): the wording, with the signup form that shows it.
     mailingList: {
       consentText:
-        "By signing up you agree to receive marketing emails from Brute Lab: offers, restocks and new pack sizes. Unsubscribe at any time from any email.",
+        "By signing up you agree to receive marketing emails from GymWater: offers, restocks and new pack sizes. Unsubscribe at any time from any email.",
     },
-    // TODO(launch): the final name's statement descriptor.
-    statementDescriptor: "BRUTE LAB",
+    statementDescriptor: "GYMWATER",
     // Stripe, on BacLab's own account and key, as every brand is (the
     // owner's decision, 4 Nov 2026): the site is declared to Stripe before
     // it takes a payment, and only neutral words reach Stripe (the line

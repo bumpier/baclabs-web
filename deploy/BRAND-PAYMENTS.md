@@ -74,11 +74,11 @@ Once, on BacLab's Stripe account, before the first brand takes a payment:
 2. **The shortened descriptor: nothing to do.**
    - **What buyers see:** Stripe prints a brand's card payment as
      `<shortened descriptor>* <statementDescriptor>`. The account's
-     shortened descriptor is BacLab's, so a Brute Lab payment reads like
-     `BACLAB* BRUTE LAB`. The owner is content with that: the brands are a
+     shortened descriptor is BacLab's, so a GymWater payment reads like
+     `BACLAB* GYMWATER`. The owner is content with that: the brands are a
      front for BacLab, and any company reference may name it (5 Nov 2026).
    - **Length:** every brand descriptor today is 10 characters or fewer
-     (the longest is `RESERVE 10`), so each fits Stripe's 22 after any
+     (the longest is `BEAUTYBAC`), so each fits Stripe's 22 after any
      prefix Stripe allows (10 characters at most) and the `* `.
      `npm run check:brands` holds each descriptor to that longest prefix
      while `STRIPE_STATEMENT_PREFIX` (`lib/commerce/payments/stripe.ts`)

@@ -1,6 +1,6 @@
 /**
- * Vialhouse, the `wholesale` brand: a trade supplier's site (the name is a
- * working name, and nothing here is live). Spruce and white with one signal
+ * BulkBac, the `wholesale` brand: a trade supplier's site (name chosen
+ * 6 Nov 2026; its domain, bulkbac.co.uk, is still to buy; nothing here is live). Spruce and white with one signal
  * yellow, the vial-rack mark (brands/wholesale/components/logo.tsx); the
  * stylesheet's opening comment holds the whole direction. Empty values
  * render nothing, as everywhere else.
@@ -14,9 +14,9 @@ import { wholesaleCatalogue } from "./catalogue";
 export function wholesaleProfile(): BrandProfile {
   return {
     id: "wholesale",
-    name: "Vialhouse",
-    shortCode: "VH",
-    // TODO(launch): the brand's https:// apex. Until then, its development host.
+    name: "BulkBac",
+    shortCode: "BK",
+    // TODO(launch): https://bulkbac.co.uk, the brand's apex. Until then, its development host.
     origin: "http://wholesale.localhost:3000",
     // TODO(launch): add the apex and www to brands/hosts.json, and to the
     // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
@@ -37,7 +37,7 @@ export function wholesaleProfile(): BrandProfile {
     },
     email: {
       // TODO(launch): a mailbox on the brand's own domain, verified in Resend.
-      from: "Vialhouse <hello@wholesale.invalid>",
+      from: "BulkBac <hello@wholesale.invalid>",
       contact: "",
       inbox: "",
     },
@@ -51,8 +51,7 @@ export function wholesaleProfile(): BrandProfile {
     company: OPERATOR.company,
     // No mailingList: the trade site runs no list (no popups, no welcome
     // vial), so its signups are refused.
-    // TODO(launch): the final name's statement descriptor.
-    statementDescriptor: "VIALHOUSE",
+    statementDescriptor: "BULKBAC",
     // Stripe's page shows these (PNG: Stripe takes no SVG), rendered from
     // the same shapes as the site's lockup and icon.
     paymentPage: { logo: "/stripe-logo.png", icon: "/stripe-icon.png" },

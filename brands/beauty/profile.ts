@@ -1,7 +1,7 @@
 /**
- * Aurelle, the `beauty` brand. The name is a working name, the palette is
- * the storefront's (porcelain and blush with deep plum ink), and nothing
- * here is live. Empty values render nothing, as everywhere else.
+ * BeautyBac, the `beauty` brand (name chosen 6 Nov 2026; its domain,
+ * beautybac.co.uk, is still to buy). The palette is the storefront's
+ * (porcelain and blush with deep plum ink), and nothing here is live. Empty values render nothing, as everywhere else.
  */
 import hosts from "../hosts.json";
 import type { BrandProfile } from "../types";
@@ -12,9 +12,9 @@ import { beautyCatalogue } from "./catalogue";
 export function beautyProfile(): BrandProfile {
   return {
     id: "beauty",
-    name: "Aurelle",
-    shortCode: "AU",
-    // TODO(launch): the brand's https:// apex. Until then, its development host.
+    name: "BeautyBac",
+    shortCode: "BB",
+    // TODO(launch): https://beautybac.co.uk, the brand's apex. Until then, its development host.
     origin: "http://beauty.localhost:3000",
     // TODO(launch): add the apex and www to brands/hosts.json, and to the
     // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
@@ -40,7 +40,7 @@ export function beautyProfile(): BrandProfile {
     },
     email: {
       // TODO(launch): a mailbox on the brand's own domain, verified in Resend.
-      from: "Aurelle <hello@beauty.invalid>",
+      from: "BeautyBac <hello@beauty.invalid>",
       contact: "",
       inbox: "",
     },
@@ -55,10 +55,9 @@ export function beautyProfile(): BrandProfile {
     // TODO(confirm): the wording, with the signup form that shows it.
     mailingList: {
       consentText:
-        "By signing up you agree to receive marketing emails from Aurelle: offers, restocks and new sets. Unsubscribe at any time from any email.",
+        "By signing up you agree to receive marketing emails from BeautyBac: offers, restocks and new sets. Unsubscribe at any time from any email.",
     },
-    // TODO(launch): the final name's statement descriptor.
-    statementDescriptor: "AURELLE",
+    statementDescriptor: "BEAUTYBAC",
     // Stripe, on BacLab's own account and key, as every brand is: the site
     // is declared to Stripe before it takes a payment. Moving to PayPal is
     // this list and PAYPAL_PAYMENT, plus PAYPAL_*__BEAUTY

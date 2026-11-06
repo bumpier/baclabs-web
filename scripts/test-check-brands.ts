@@ -115,7 +115,7 @@ check("a brand must be in hosts.json", fails(identity(good, { hosts: {} }), /is 
 const noDev = { ...good, domains: DOMAINS.slice(0, 2) };
 check("a brand needs its development host", fails(identity(noDev), /no development host/));
 const sharing = { ...good, domains: [...DOMAINS, "luxury.localhost"] };
-check("a domain of another brand's fails", fails(identity(sharing), /domain luxury\.localhost is Reserve No\.10's/), show(identity(sharing)));
+check("a domain of another brand's fails", fails(identity(sharing), /domain luxury\.localhost is LuxeVial's/), show(identity(sharing)));
 const takingBacLab = { ...good, domains: [...DOMAINS, "baclab.co.uk"] };
 check("BacLab's domain fails", fails(identity(takingBacLab), /domain baclab\.co\.uk is BacLab's/), show(identity(takingBacLab)));
 const badHost = { ...good, domains: [...DOMAINS, "Fixture.co.uk:443"] };
@@ -124,7 +124,7 @@ check("the origin must be on its domains", fails(identity({ ...good, origin: "ht
 check("the origin has no path or trailing slash", fails(identity({ ...good, origin: "https://fixturebrand.co.uk/" }), /scheme and host only/));
 check("the origin must be a URL", fails(identity({ ...good, origin: "fixturebrand.co.uk" }), /is not a URL/));
 const mail = (field: "from" | "contact" | "inbox", value: string) => identity({ ...good, email: { ...good.email, [field]: value } });
-check("from: another brand's domain fails", fails(mail("from", "Fixture <hello@luxury.invalid>"), /email\.from .* is on Reserve No\.10's domain/), show(mail("from", "Fixture <hello@luxury.invalid>")));
+check("from: another brand's domain fails", fails(mail("from", "Fixture <hello@luxury.invalid>"), /email\.from .* is on LuxeVial's domain/), show(mail("from", "Fixture <hello@luxury.invalid>")));
 check("contact: BacLab's domain fails", fails(mail("contact", "hello@baclab.co.uk"), /email\.contact .* is on BacLab's domain/), show(mail("contact", "hello@baclab.co.uk")));
 check("inbox: a domain not the brand's fails", fails(mail("inbox", "fixture@gmail.com"), /email\.inbox .* is not on the brand's own domain/));
 check("from: no mailbox fails", fails(mail("from", "Fixture & Co"), /has no mailbox/));
@@ -237,7 +237,7 @@ const lower = withPacks([{ ...p1, sku: "fix-10ml-x1" }, p3, p5]);
 check("a lower-case SKU fails", fails(cataloguing(lower), /"fix-10ml-x1" is not written as the warehouse stores it/));
 check("a SKU off its stem fails", fails(cataloguing(withPacks([{ ...p1, sku: "FIX-10ML-X2" }, p3, p5])), /pack FIX-10ML-X2 should be FIX-10ML-X1/));
 check("a SKU the scanner would misread fails", fails(cataloguing(withPacks(catalogue.packs, { boxSku: "ORD-BOX" })), /cannot start with ORD-/));
-check("another brand's box SKU fails", fails(cataloguing(withPacks(catalogue.packs, { boxSku: "LUX-BOX" })), /SKU LUX-BOX is also Reserve No\.10's/));
+check("another brand's box SKU fails", fails(cataloguing(withPacks(catalogue.packs, { boxSku: "LUX-BOX" })), /SKU LUX-BOX is also LuxeVial's/));
 check("no catalogue fails", fails(cataloguing({ ...good, catalogue: undefined }), /has no catalogue/));
 
 // ── Assets ──────────────────────────────────────────────────────────
@@ -327,14 +327,14 @@ check("a CSS content string fails the rules", fails(checkCopy("luxury", "luxury"
 const markers = leakMarkers("luxury", [brandFor("baclab"), luxury, gym, brandFor("beauty")]);
 const src = (text: string): CopyString[] => [{ where: "app/luxury/x.tsx:1", text, kind: "source" }];
 const leaks = (strings: CopyString[]) => checkLeaks("luxury", strings, markers);
-check("another brand's name fails", fails(leaks(src("As worn at Brute Lab")), /names Brute Lab's name/));
-check("a name inside a longer word passes", noFailures(leaks(src("Brute Labrador"))));
-check("another brand's host fails", fails(leaks(src("http://gym.localhost:3000/x")), /names Brute Lab's host gym\.localhost/));
-check("another brand's mailbox domain fails", fails(leaks(src("hello@beauty.invalid")), /Aurelle's host beauty\.invalid/));
-check("another brand's SKU fails", fails(leaks(src("GYM-10ML-X10")), /Brute Lab's SKU GYM-10ML/));
+check("another brand's name fails", fails(leaks(src("As worn at GymWater")), /names GymWater's name/));
+check("a name inside a longer word passes", noFailures(leaks(src("GymWaterproof"))));
+check("another brand's host fails", fails(leaks(src("http://gym.localhost:3000/x")), /names GymWater's host gym\.localhost/));
+check("another brand's mailbox domain fails", fails(leaks(src("hello@beauty.invalid")), /BeautyBac's host beauty\.invalid/));
+check("another brand's SKU fails", fails(leaks(src("GYM-10ML-X10")), /GymWater's SKU GYM-10ML/));
 check("BacLab's name fails", fails(leaks(src("By BacLab")), /names BacLab/));
 check("BacLab's domain fails", fails(leaks(src("https://baclab.co.uk/terms")), /names BacLab/));
-check("the brand's own name passes", noFailures(leaks(src("Reserve No.10, sealed"))));
+check("the brand's own name passes", noFailures(leaks(src("LuxeVial, sealed"))));
 const asOperator = profileStrings({ ...luxury, legalName: OPERATOR.legalName, company: { ...OPERATOR.company, registeredAddress: "1 Fixture Street" } });
 check("the business behind the brands passes in legalName", asOperator.some((s) => s.kind === "operator" && s.text === OPERATOR.legalName) && noFailures(leaks(asOperator)), show(leaks(asOperator)));
 check("BacLab anywhere else in a profile fails", fails(leaks(profileStrings({ ...luxury, disclaimer: "Sold by BacLab." })), /profile disclaimer: names BacLab/));
@@ -344,7 +344,7 @@ const seeded = brandSkuSpecs([luxury])[0]!;
 check("the seed names the shared vial", seedStrings(seeded).some((s) => s.text.includes(VIAL_SKU_CODE)));
 check("the allow-list lets the shared vial code through in the seed", noFailures(leaks(seedStrings(seeded))), show(leaks(seedStrings(seeded))));
 check("but not on a page", fails(leaks(src(`Made from ${VIAL_SKU_CODE}`)), /names BacLab/));
-check("an SVG naming another brand fails", fails(leaks([{ where: "public/luxury/icon.svg", text: "<svg><text>Aurelle</text></svg>", kind: "asset" }]), /Aurelle's name/));
+check("an SVG naming another brand fails", fails(leaks([{ where: "public/luxury/icon.svg", text: "<svg><text>BeautyBac</text></svg>", kind: "asset" }]), /BeautyBac's name/));
 
 // ── Launch notes and the LIVE flag ──────────────────────────────────
 const site = sourceFacts(

@@ -171,7 +171,7 @@ function companyRows(brand: BrandProfile, opts: { vat: boolean; ico: boolean }):
 }
 
 /**
- * Who runs the brand, in one line for a footer or a contact page: "Aurelle
+ * Who runs the brand, in one line for a footer or a contact page: "BeautyBac
  * is a trading name of BacLab", or the name alone when it is the brand's
  * own. "" while the profile names no business. No full stop, so a page can
  * add the company number and office after it.
@@ -181,7 +181,7 @@ export function tradingAs(brand: Pick<BrandProfile, "name" | "legalName">): stri
   return brand.legalName === brand.name ? brand.legalName : `${brand.name} is a trading name of ${brand.legalName}`;
 }
 
-/** "Aurelle is a trading name of BacLab." once the business's name differs from the brand's. */
+/** "BeautyBac is a trading name of BacLab." once the business's name differs from the brand's. */
 function tradingName(brand: BrandProfile): LegalBlock[] {
   return brand.legalName && brand.legalName !== brand.name ? [p(`${tradingAs(brand)}.`)] : [];
 }

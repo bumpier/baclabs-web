@@ -104,7 +104,7 @@ export interface BrandProfile {
   };
   /**
    * The business that trades as the brand, as its legal lines name it
-   * ("Aurelle is a trading name of BacLab"): its registered name once it
+   * ("BeautyBac is a trading name of BacLab"): its registered name once it
    * has one. Every brand's is BacLab's, from brands/operator.ts (the
    * owner's decision, 5 Nov 2026). "" renders nothing.
    */

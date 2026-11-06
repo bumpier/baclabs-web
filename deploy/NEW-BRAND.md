@@ -41,8 +41,10 @@ design work.
    (https://www.gov.uk/search-for-trademark) in the classes the goods and
    the shop fall in (ask a trade mark attorney which), search the web and
    the marketplaces for anyone trading under it, and check the domain is
-   free. The working names in the code (Aurelle, Brute Lab, Vialhouse,
-   Reserve No.10) are placeholders until this is done.
+   free. The four brands' names were chosen on 6 Nov 2026 (BeautyBac,
+   GymWater, BulkBac, LuxeVial; domains `beautybac.co.uk`, `gymwater.co.uk`,
+   `bulkbac.co.uk`, `luxevial.co.uk`, unregistered that day, still to buy);
+   the trade mark search is still to do.
 2. **Domain.** Buy `<apex>` (and the `.com` if you want it parked).
 3. **Cloudflare zone.** In Cloudflare, *Add a site* → `<apex>` → Free plan.
    Change the nameservers at the registrar to the two Cloudflare gives you,

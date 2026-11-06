@@ -242,7 +242,7 @@ check("refused: the kit while it is switched off", refusal("gym", [{ sku: "GYM-1
   ];
   const mix = packMix(rows);
   check("finance: BacLab's ladder first, then the brand's", mix.map((l) => l.pack).join() === "five,ten,LUX-10ML-X5", mix.map((l) => l.pack).join());
-  check("finance: a brand pack is named from its catalogue", mix[2]?.label === "Reserve No.10 5-vial pack", mix[2]?.label);
+  check("finance: a brand pack is named from its catalogue", mix[2]?.label === "LuxeVial 5-vial pack", mix[2]?.label);
   check("finance: BacLab's names unchanged", packName("ten") === "10-vial pack" && packName("single") === "Single vial" && packName("loose") === "Single vials (before packs)");
   check(
     "finance: a brand's pack is named only for its own orders",

@@ -4,7 +4,7 @@
  * reference on them names BacLab. Each brand's profile takes its legal
  * identity from here, and this reads it from config/brand.ts, BacLab's own:
  * fill the company in there once and every brand's legal pages, footer and
- * contact page name it ("Aurelle is a trading name of …").
+ * contact page name it ("BeautyBac is a trading name of …").
  *
  * Until it is filled, the business is "BacLab", as BacLab's own legal pages
  * name it (lib/legal.ts legalName), and no company number, registered

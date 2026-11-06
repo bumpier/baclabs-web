@@ -20,7 +20,7 @@ function defaultBrand(): BrandProfile {
 }
 
 /**
- * "[Brute Lab] " before the subject of an email to the owner (new order,
+ * "[GymWater] " before the subject of an email to the owner (new order,
  * contact form), so one inbox can tell the brands apart. Nothing for BacLab:
  * its subjects stay exactly as they were, and so do the owner's inbox
  * filters on them.
