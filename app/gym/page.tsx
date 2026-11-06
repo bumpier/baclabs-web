@@ -12,7 +12,7 @@ import { STOREFRONT } from "./site";
 const BAR_VIALS = 10;
 
 /**
- * Brute Lab's home page, which is the whole shop, laid out the way a sports
+ * GymWater's home page, which is the whole shop, laid out the way a sports
  * nutrition store is: the photograph hero with one button, SHOP THE STACK
  * (a card per pack with quick add), the price a vial, what's true about
  * delivery and returns, straight answers, the restock list when the brand

@@ -1,6 +1,6 @@
 import localFont from "next/font/local";
 
-// Brute Lab's two families, self-hosted from brands/gym/fonts/ for the same
+// GymWater's two families, self-hosted from brands/gym/fonts/ for the same
 // reason as app/fonts.ts: the CSP sets `font-src 'self'`, and next/font/google
 // once failed a deploy by fetching from Google during `next build`. Both are
 // the latin variable subsets published by Fontsource (@fontsource-variable,
