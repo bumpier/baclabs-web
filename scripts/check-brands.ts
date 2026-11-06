@@ -52,6 +52,7 @@ import path from "node:path";
 import ts from "typescript";
 import hostsJson from "@/brands/hosts.json";
 import { OPERATOR } from "@/brands/operator";
+import { PLAIN_BOX_SKU } from "@/brands/packaging";
 import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { BRAND_IDS, type BrandId } from "@/brands/types";
 import { templateProfile } from "@/brands/_template/profile";
@@ -396,7 +397,7 @@ const pence = (minor: number) => `£${(minor / 100).toFixed(2)}`;
 
 /** Packs, prices and SKUs, against the seed and every other brand's codes. */
 export function checkCatalogue(b: BrandProfile, reg: Registry): Finding[] {
-  const { out, fail } = findings(b.id);
+  const { out, fail, warn } = findings(b.id);
   const c = b.catalogue;
   if (!c) {
     fail("has no catalogue, so there is nothing to sell");
@@ -423,6 +424,16 @@ export function checkCatalogue(b: BrandProfile, reg: Registry): Finding[] {
   }
   if (new Set(codes.map(normaliseCode)).size !== codes.length) fail("its catalogue uses one SKU code twice");
 
+  // Every brand ships in the shared plain box unless it has its own; the
+  // packer is told only about a box of the brand's own.
+  const ownBox = normaliseCode(c.boxSku) !== PLAIN_BOX_SKU;
+  if (ownBox && !b.shipping?.packingNote) {
+    warn(`its packs ship in a box of its own (${c.boxSku}), but no shipping.packingNote tells the packer so; or use the shared plain box (brands/packaging.ts)`);
+  }
+  if (!ownBox && b.shipping?.packingNote) {
+    warn(`shipping.packingNote says "${b.shipping.packingNote}", but its packs ship in the shared plain box: the slip would tell the packer something untrue`);
+  }
+
   const spec = reg.seeded.find((s) => s.brand === b.id);
   if (!spec) fail("scripts/seed-brand-skus.ts seeds nothing for it");
   else {
@@ -438,7 +449,8 @@ export function checkCatalogue(b: BrandProfile, reg: Registry): Finding[] {
   for (const o of reg.brands) {
     if (o.id === b.id || !o.catalogue) continue;
     const theirs = new Set([o.catalogue.boxSku, ...o.catalogue.packs.map((p) => p.sku), ...o.catalogue.addOns.map((a) => a.sku)].map(normaliseCode));
-    for (const code of codes) if (theirs.has(normaliseCode(code))) fail(`SKU ${code} is also ${o.name}'s`);
+    // The plain box is every brand's by design.
+    for (const code of codes) if (normaliseCode(code) !== PLAIN_BOX_SKU && theirs.has(normaliseCode(code))) fail(`SKU ${code} is also ${o.name}'s`);
   }
   return out;
 }
@@ -693,7 +705,8 @@ export function leakMarkers(self: string, brands: readonly BrandProfile[]): Leak
       if (!caught(h)) out.push({ re: new RegExp(`(?<![a-z0-9-])${escapeRegex(h)}(?![a-z0-9-])`, "i"), what: `${o.name}'s host ${h}` });
     }
     if (o.catalogue) {
-      for (const code of [o.catalogue.parentSku, o.catalogue.boxSku]) out.push({ re: new RegExp(escapeRegex(code), "i"), what: `${o.name}'s SKU ${code}` });
+      // The plain box is every brand's, so its code names none of them.
+      for (const code of [o.catalogue.parentSku, o.catalogue.boxSku].filter((c) => normaliseCode(c) !== PLAIN_BOX_SKU)) out.push({ re: new RegExp(escapeRegex(code), "i"), what: `${o.name}'s SKU ${code}` });
     }
   }
   return out;

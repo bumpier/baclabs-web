@@ -99,8 +99,10 @@ design work.
    `brands/operator.ts`, which reads BacLab's own `config/brand.ts`: fill
    a legal name, company number and registered office in there once, and
    all five sites show them.
-9. **Packaging.** The brand's box or insert, and the real packed weight of
-   every pack size in it (box included, read off a scale). Labels are
+9. **Packaging.** Every brand ships in the same plain, unprinted box
+   (`PLAIN-BOX`, brands/packaging.ts; the owner, 6 Nov 2026), so there is
+   nothing to design. What's needed is the real packed weight of every pack
+   size (box included, read off a scale). Labels are
    bought by weight, so a guessed weight buys the wrong service.
    - **Wholesale only:** packs of 250 vials and up weigh over 2 kg, the
      limit of today's Royal Mail and Amazon services. Add a heavier
@@ -161,8 +163,8 @@ host, by the host rewrite in `middleware.ts`.
 
 ## 3. Seed its SKUs and weigh them (once the code is deployed)
 
-Every pack is a warehouse kit: N × the shared vial + 1 × the brand's box
-(for example `LUX-10ML-X5` = 5 × `BACLAB-10ML` + 1 × `LUX-BOX`). In the
+Every pack is a warehouse kit: N × the shared vial + 1 × the shared plain box
+(for example `LUX-10ML-X5` = 5 × `BACLAB-10ML` + 1 × `PLAIN-BOX`). In the
 container, after a deploy that contains the brand's catalogue:
 
 ```bash
@@ -175,8 +177,8 @@ It creates only what is missing, never changes an existing SKU, and warns
 about anything that needs a person (a kit that differs from the catalogue,
 a missing Lab Kit SKU). Run it again whenever a pack is added.
 
-Then on **/admin/inventory**, enter the real weight and size of the box SKU
-and of every pack kit, from step 1.9. New SKUs start unmeasured, and the
+Then on **/admin/inventory**, enter the real weight and size of `PLAIN-BOX`
+(once: every brand shares it) and of every pack kit, from step 1.9. New SKUs start unmeasured, and the
 label buyer treats unmeasured as "not known".
 
 ## 4. Analytics and payment settings
@@ -247,7 +249,8 @@ placeholder:
    - `analytics`, from step 4;
    - `mailingList.consentText` if the brand runs a list, in exactly the
      words its signup form shows.
-4. **`brands/<id>/catalogue.ts`:** the confirmed prices, box SKU and packs.
+4. **`brands/<id>/catalogue.ts`:** the confirmed prices and packs. The box
+   stays `PLAIN_BOX_SKU` unless the brand ships in a box of its own.
 5. **`app/<id>/site.ts`:** the real `DESCRIPTION`. Leave `LIVE = false`;
    that is step 11.
 6. Delete every `TODO(launch)` and `TODO(confirm)` note you have resolved.
@@ -446,8 +449,8 @@ The site is reachable but still noindex. Before anyone else buys:
    receipt emails are off for the account (BRAND-PAYMENTS.md).
 3. **Admin:** at baclab.co.uk/admin, the order shows the brand's chip, its
    provider and its reference.
-   - **Packing slip:** prints the brand's logo, its thank-you line and
-     "Pack in: <the brand's box>".
+   - **Packing slip:** prints the brand's logo and its thank-you line, and
+     no "Pack in" line: the parcel is the shared plain box.
    - **Label:** has the brand's sender name and is bought at the pack's
      real weight.
 4. **Meta:** Events Manager shows the Purchase in the brand's own dataset,

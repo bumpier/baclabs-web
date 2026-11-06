@@ -99,7 +99,11 @@ export interface BrandProfile {
      * 25 characters or fewer (SmartTrack's limit). Unset: the warehouse's.
      */
     senderCompany?: string;
-    /** What the packer puts in with this brand's orders (its box or insert), for the slip and packing screen. */
+    /**
+     * Only for a brand that ships in something other than the shared plain
+     * box (a box or insert of its own): what to pack it in, for the slip and
+     * the packing screen. Unset: nothing to say, the parcel is the plain box.
+     */
     packingNote?: string;
   };
   /**
@@ -232,10 +236,10 @@ export interface BrandPayment {
 }
 
 // ── Catalogues ──────────────────────────────────────────────────────
-// Every brand sells the same neutral 10ml vial, packed in its own box. A
-// pack is therefore one SKU per brand and size, made up in the warehouse as
-// a kit: N × the shared vial + 1 × the brand's box (scripts/seed-brand-skus.ts).
-// Vial stock is shared; only the box is the brand's.
+// Every brand sells the same neutral 10ml vial, in the same plain box
+// (brands/packaging.ts). A pack is therefore one SKU per brand and size, made
+// up in the warehouse as a kit: N × the shared vial + 1 × the box
+// (scripts/seed-brand-skus.ts). Vial and box stock are shared.
 
 /** One pack a brand sells. */
 export interface CataloguePack {
@@ -283,7 +287,11 @@ export interface CatalogueAddOn {
 export interface BrandCatalogue {
   /** The stem of every pack SKU, and Meta's parent id for them ("LUX-10ML"). */
   parentSku: string;
-  /** The brand's box: the one non-vial component of every pack's kit SKU. */
+  /**
+   * The box every pack ships in: the one non-vial component of each pack's
+   * kit SKU. PLAIN_BOX_SKU (brands/packaging.ts), shared by every brand,
+   * unless the brand ships in a box of its own.
+   */
   boxSku: string;
   /** In the order the storefront lists them: smallest first. */
   packs: readonly CataloguePack[];

@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { PLAIN_BOX_SKU } from "@/brands/packaging";
 import { allBrands, type BrandProfile } from "@/brands/registry";
 import { PRODUCT } from "@/config/funnel";
 import { normaliseCode, skuCodeError } from "@/lib/inventory/codes";
@@ -6,9 +7,10 @@ import { LAB_KIT_SKU_CODE, VIAL_SKU_CODE } from "@/lib/inventory/demand";
 
 /**
  * The warehouse SKUs another brand's packs ship as (brands/<id>/catalogue.ts):
- * the brand's box, and one kit per pack of N × the shared vial + 1 × that box.
- * The vial is the one BacLab's packs are made up from (VIAL_SKU_CODE): vial
- * stock is shared, only the box is the brand's. scripts/seed-brand-skus.ts
+ * the box, and one kit per pack of N × the shared vial + 1 × that box. The
+ * vial is the one BacLab's packs are made up from (VIAL_SKU_CODE). The box is
+ * the plain one every brand shares (brands/packaging.ts), so vial and box
+ * stock are both shared; a brand with a box of its own gets that box here. scripts/seed-brand-skus.ts
  * writes them; checkout, allocation, the pick list and labels then treat a
  * brand's pack like any other kit.
  *
@@ -20,7 +22,7 @@ import { LAB_KIT_SKU_CODE, VIAL_SKU_CODE } from "@/lib/inventory/demand";
  *
  * Weights start at zero, which the service picker reads as "not measured
  * yet". A pack's weight as posted has to be read off a scale, box included.
- * TODO(confirm): weigh each brand's box and every pack before launch.
+ * TODO(confirm): weigh the plain box and every pack before launch.
  */
 
 export interface BrandSkuSpec {
@@ -43,7 +45,10 @@ export function brandSkuSpecs(brands: readonly BrandProfile[] = allBrands()): Br
         brand: b.id,
         // Staff see these names on the pick list. The kit names below go on
         // carrier labels and customs forms, so they never name the brand.
-        box: { code: box, name: `${b.name} box`, description: `The box every ${b.name} pack is packed in.` },
+        box:
+          box === PLAIN_BOX_SKU
+            ? { code: box, name: "Plain box", description: "The plain, unprinted box every brand's packs ship in." }
+            : { code: box, name: `${b.name} box`, description: `The box every ${b.name} pack is packed in.` },
         kits: cat.packs.map((p) => ({
           code: normaliseCode(p.sku),
           name: p.vials === 1 ? `${base} — single` : `${base} — ${p.vials}-pack`,
@@ -83,6 +88,8 @@ export async function seedBrandSkus(db: PrismaClient, opts: { apply: boolean }):
   if (report.warnings.length > 0) return report;
 
   const run = async (tx: Db) => {
+    // The plain box is every brand's: created, or reported, once.
+    const boxesSeen = new Set<string>();
     // The shared vial. Normally created with BacLab's packs on
     // /admin/inventory; created here the same way if it is not there yet,
     // since every brand's kit is made of it.
@@ -113,8 +120,11 @@ export async function seedBrandSkus(db: PrismaClient, opts: { apply: boolean }):
       }
 
       let box = await tx.sku.findUnique({ where: { code: spec.box.code } });
-      if (box) report.existing.push(box.code);
-      else {
+      const firstTime = !boxesSeen.has(spec.box.code);
+      boxesSeen.add(spec.box.code);
+      if (box) {
+        if (firstTime) report.existing.push(box.code);
+      } else if (firstTime) {
         report.created.push(spec.box.code);
         if (opts.apply) box = await tx.sku.create({ data: spec.box });
       }

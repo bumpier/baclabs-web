@@ -16,11 +16,12 @@
  */
 import { DELIVERY, DELIVERY_OPTIONS } from "@/config/funnel";
 import type { BrandCatalogue } from "../types";
+import { PLAIN_BOX_SKU } from "../packaging";
 
 export const wholesaleCatalogue: BrandCatalogue = {
   parentSku: "WHL-10ML",
   // TODO(confirm): the outer carton's SKU and its packed weight (scripts/seed-brand-skus.ts).
-  boxSku: "WHL-BOX",
+  boxSku: PLAIN_BOX_SKU,
   packs: [
     // TODO(confirm): all five prices.
     { id: "x50", sku: "WHL-10ML-X50", vials: 50, priceMinor: 19999, label: "", available: true },

@@ -10,11 +10,12 @@
  */
 import { DELIVERY, DELIVERY_OPTIONS } from "@/config/funnel";
 import type { BrandCatalogue } from "../types";
+import { PLAIN_BOX_SKU } from "../packaging";
 
 export const beautyCatalogue: BrandCatalogue = {
   parentSku: "BEA-10ML",
   // TODO(confirm): the gift-ready pouch's SKU and its packed weight (scripts/seed-brand-skus.ts).
-  boxSku: "BEA-BOX",
+  boxSku: PLAIN_BOX_SKU,
   packs: [
     // TODO(confirm): all four prices.
     { id: "x1", sku: "BEA-10ML-X1", vials: 1, priceMinor: 699, label: "", available: true },

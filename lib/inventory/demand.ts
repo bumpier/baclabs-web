@@ -71,7 +71,7 @@ export function soldLines(itemsJson: string): SoldLine[] {
     if (isKitLine(item)) {
       return { skuCode: LAB_KIT_SKU_CODE, quantity: item.qty, description, lineTotalMinor };
     }
-    // Another brand's pack names its own kit SKU (N vials + the brand's box,
+    // Another brand's pack names its own kit SKU (N vials + its box,
     // scripts/seed-brand-skus.ts), one unit per pack. Checked before
     // bundleId, which on these lines is that same SKU and no BacLab bundle.
     // BacLab's lines carry no sku, so nothing of theirs comes this way.

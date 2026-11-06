@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { brandFor, type BrandProfile } from "@/brands/registry";
 import { OPERATOR } from "@/brands/operator";
+import { PLAIN_BOX_SKU } from "@/brands/packaging";
 import { PAYPAL_PAYMENT, STRIPE_PAYMENT } from "@/brands/payment-methods";
 import type { BrandCatalogue } from "@/brands/types";
 import { DELIVERY, DELIVERY_OPTIONS } from "@/config/funnel";
@@ -237,7 +238,12 @@ const lower = withPacks([{ ...p1, sku: "fix-10ml-x1" }, p3, p5]);
 check("a lower-case SKU fails", fails(cataloguing(lower), /"fix-10ml-x1" is not written as the warehouse stores it/));
 check("a SKU off its stem fails", fails(cataloguing(withPacks([{ ...p1, sku: "FIX-10ML-X2" }, p3, p5])), /pack FIX-10ML-X2 should be FIX-10ML-X1/));
 check("a SKU the scanner would misread fails", fails(cataloguing(withPacks(catalogue.packs, { boxSku: "ORD-BOX" })), /cannot start with ORD-/));
-check("another brand's box SKU fails", fails(cataloguing(withPacks(catalogue.packs, { boxSku: "LUX-BOX" })), /SKU LUX-BOX is also LuxeVial's/));
+check("another brand's SKU as the box fails", fails(cataloguing(withPacks(catalogue.packs, { boxSku: "LUX-10ML-X5" })), /SKU LUX-10ML-X5 is also LuxeVial's/));
+const onPlainBox = { ...withPacks(catalogue.packs, { boxSku: PLAIN_BOX_SKU }), shipping: { senderCompany: "Fixture Co" } };
+check("the shared plain box passes", cataloguing(onPlainBox).length === 0, show(cataloguing(onPlainBox)));
+check("a packing note on the plain box warns", warns(cataloguing({ ...onPlainBox, shipping: { packingNote: "Fixture box" } }), /ship in the shared plain box/));
+check("a box of its own without a packing note warns", warns(cataloguing({ ...good, shipping: { senderCompany: "Fixture Co" } }), /box of its own \(FIX-BOX\)/));
+check("a box of its own with a packing note passes", !warns(cataloguing(good), /box of its own|plain box/));
 check("no catalogue fails", fails(cataloguing({ ...good, catalogue: undefined }), /has no catalogue/));
 
 // ── Assets ──────────────────────────────────────────────────────────
@@ -335,6 +341,7 @@ check("another brand's SKU fails", fails(leaks(src("GYM-10ML-X10")), /GymWater's
 check("BacLab's name fails", fails(leaks(src("By BacLab")), /names BacLab/));
 check("BacLab's domain fails", fails(leaks(src("https://baclab.co.uk/terms")), /names BacLab/));
 check("the brand's own name passes", noFailures(leaks(src("LuxeVial, sealed"))));
+check("the shared plain box's code passes", noFailures(leaks(src(`Packed in ${PLAIN_BOX_SKU}`))), show(leaks(src(`Packed in ${PLAIN_BOX_SKU}`))));
 const asOperator = profileStrings({ ...luxury, legalName: OPERATOR.legalName, company: { ...OPERATOR.company, registeredAddress: "1 Fixture Street" } });
 check("the business behind the brands passes in legalName", asOperator.some((s) => s.kind === "operator" && s.text === OPERATOR.legalName) && noFailures(leaks(asOperator)), show(leaks(asOperator)));
 check("BacLab anywhere else in a profile fails", fails(leaks(profileStrings({ ...luxury, disclaimer: "Sold by BacLab." })), /profile disclaimer: names BacLab/));

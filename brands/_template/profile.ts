@@ -58,8 +58,9 @@ export function templateProfile(): BrandProfile {
     shipping: {
       // No senderCompany: the carrier label names the warehouse's company,
       // as every brand's does (the owner, 5 Nov 2026). A name of the brand's
-      // own goes here, 25 characters at most.
-      packingNote: "Template Brand box",
+      // own goes here, 25 characters at most. No packingNote: the brand
+      // ships in the shared plain box (brands/packaging.ts), so the packer
+      // needs none; set one only for a box or insert of the brand's own.
     },
     // No mailingList: the brand runs no list until its consent wording is
     // agreed, so its signups are refused. Add { consentText } together with
