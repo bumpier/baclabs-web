@@ -4,6 +4,13 @@ import { soldLines, type SoldLine } from "@/lib/inventory/demand";
 import { parseAddress } from "@/lib/orderAddress";
 import { combineUnits, type Parcel } from "@/lib/shipping/parcel";
 import { selectService, toServiceRule, type ServiceSelection } from "@/lib/shipping/select-service";
+import { parseStandardParcel, usesStandardParcel, type StandardParcel } from "@/lib/shipping/standard-parcel";
+import { readSetting, SETTING_KEYS } from "@/lib/settings";
+
+/** The one box every order goes in, as set on the Shipping page. */
+export async function getStandardParcel(): Promise<StandardParcel> {
+  return parseStandardParcel(await readSetting(SETTING_KEYS.standardParcel));
+}
 
 /**
  * What an order will go out as: its SKUs, the parcel they make, and the
@@ -21,6 +28,8 @@ export interface ShipmentPlan {
   /** Codes on the order with no SKU. Blocks a label. */
   missingSkus: string[];
   parcel: Parcel;
+  /** The parcel is the standard box, not one sized from the SKUs. */
+  standardParcel: boolean;
   countryIso: string;
   selection: ServiceSelection;
   /** Every service on file, for the manual override list. */
@@ -50,16 +59,21 @@ function assignedService(skus: (Sku | null)[]): string | null {
 export async function planOrderShipment(order: Order): Promise<ShipmentPlan> {
   const sold = soldLines(order.items);
   const codes = [...new Set(sold.map((l) => l.skuCode))];
-  const [skus, services] = await Promise.all([
+  const [skus, services, standard] = await Promise.all([
     prisma.sku.findMany({ where: { code: { in: codes } } }),
     prisma.postalService.findMany({ orderBy: [{ priority: "asc" }, { name: "asc" }] }),
+    getStandardParcel(),
   ]);
   const byCode = new Map(skus.map((s) => [s.code, s]));
   const lines = sold.map((l) => ({ sold: l, sku: byCode.get(l.skuCode) ?? null }));
   const missingSkus = codes.filter((c) => !byCode.has(c));
 
-  const parcel: Parcel =
-    missingSkus.length > 0
+  // Every order goes in the standard box unless a SKU on it needs its own;
+  // only then do the SKUs' measurements decide the parcel.
+  const standardParcel = usesStandardParcel(codes, standard);
+  const parcel: Parcel = standardParcel
+    ? { ...standard.parcel }
+    : missingSkus.length > 0
       ? { weightGrams: 0, lengthMm: 0, widthMm: 0, heightMm: 0 }
       : combineUnits(lines.map((l) => ({ parcel: skuParcel(l.sku!), quantity: l.sold.quantity })));
 
@@ -72,5 +86,5 @@ export async function planOrderShipment(order: Order): Promise<ShipmentPlan> {
     order.deliveryOption
   );
 
-  return { lines, missingSkus, parcel, countryIso, selection, services };
+  return { lines, missingSkus, parcel, standardParcel, countryIso, selection, services };
 }

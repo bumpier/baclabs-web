@@ -6,6 +6,13 @@
  */
 import { combineUnits, chargeableGrams, declaredGrams } from "@/lib/shipping/parcel";
 import {
+  labelGrams,
+  parseStandardParcel,
+  serializeStandardParcel,
+  usesStandardParcel,
+  type StandardParcel,
+} from "@/lib/shipping/standard-parcel";
+import {
   checkService,
   evaluateSizeFormula,
   selectService,
@@ -513,6 +520,47 @@ const input: LabelInput = {
   }
   const dublin = { ...input.receiver, address: { ...belfast.address, city: "Dublin", country: "IE", postalCode: "D02 X285" } };
   check("an item going abroad without an HS code blocks the label", buildShipmentRequest({ ...input, receiver: dublin }).request === null);
+}
+
+// ── Standard parcel ──────────────────────────────────────────────
+// Every order goes in one box unless a SKU on it is listed as needing its
+// own. Order 13032f6f (two vials, 110 g) went to Royal Mail declared at
+// 20 kg, the synced service's maximum, and was refused "Not Match Product".
+{
+  const unset = parseStandardParcel(null);
+  check("unset: on by default", unset.on);
+  check(
+    "unset: 45 × 35 × 16 cm, 2 kg — Royal Mail's Small Parcel",
+    unset.parcel.lengthMm === 450 && unset.parcel.widthMm === 350 && unset.parcel.heightMm === 160 && unset.parcel.weightGrams === 2000,
+    JSON.stringify(unset.parcel)
+  );
+  check("unset: no SKU needs its own box", unset.ownBoxSkus.length === 0);
+  check("garbage in the setting falls back to the default", parseStandardParcel("not json").parcel.weightGrams === 2000);
+  check(
+    "a nonsense measurement falls back to the default for that field",
+    parseStandardParcel(JSON.stringify({ on: true, lengthMm: -5, widthMm: 300, heightMm: 100, weightGrams: 1500, ownBoxSkus: [] })).parcel.lengthMm === 450
+  );
+
+  const saved: StandardParcel = {
+    on: false,
+    parcel: { weightGrams: 1000, lengthMm: 400, widthMm: 300, heightMm: 100 },
+    ownBoxSkus: ["BACLAB-10ML-X100"],
+  };
+  const back = parseStandardParcel(serializeStandardParcel(saved));
+  check("round trip keeps everything", JSON.stringify(back) === JSON.stringify(saved), JSON.stringify(back));
+
+  const listed = { ...unset, ownBoxSkus: ["BACLAB-10ML-X100"] };
+  check("an ordinary order uses the standard parcel", usesStandardParcel(["BACLAB-10ML-X1", "BACLAB-10ML"], listed));
+  check("an order with a listed SKU is sized from its SKUs", !usesStandardParcel(["BACLAB-10ML", "BACLAB-10ML-X100"], listed));
+  check("the SKU list ignores case", !usesStandardParcel(["baclab-10ml-x100"], listed));
+  check("switched off, nothing uses it", !usesStandardParcel(["BACLAB-10ML-X1"], { ...unset, on: false }));
+
+  // Royal Mail Tracked 48 as SmartTrack syncs it: up to 20 kg.
+  check("the standard parcel states its own weight, not the service's 20 kg", labelGrams(2000, 20_000, true) === 2000);
+  check("a parcel sized from SKUs keeps the service-maximum rule", labelGrams(320, 2000, false) === 2000);
+
+  const smallParcel: ServiceRule = { ...base, maxWeightGrams: 2000, maxLengthMm: 450, maxWidthMm: 350, maxHeightMm: 160 };
+  check("the default fits a 45 × 35 × 16 cm, 2 kg service", checkService(smallParcel, unset.parcel, "GB").fits);
 }
 
 if (failures > 0) {

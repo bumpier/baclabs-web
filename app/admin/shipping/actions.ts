@@ -16,6 +16,8 @@ import {
 import { getServices, SmartTrackError, testConnection } from "@/lib/smarttrack/client";
 import { cleanDeliveryInstructions, LIMITS } from "@/lib/smarttrack/payload";
 import { SETTING_KEYS, writeSetting } from "@/lib/settings";
+import { normaliseCode, skuCodeError } from "@/lib/inventory/codes";
+import { serializeStandardParcel } from "@/lib/shipping/standard-parcel";
 import { syncTracking, type TrackingSyncResult } from "@/lib/shipping/tracking-sync";
 import { closeCatchUpGroup } from "@/lib/shipping/catch-up";
 import { deliveryOptionById } from "@/config/funnel";
@@ -233,6 +235,43 @@ export async function saveAutoLabelsAction(_prev: FormState, formData: FormData)
     success: on
       ? "Saved. Labels are bought as soon as an order is paid."
       : "Saved. Labels are only bought from the order page.",
+  };
+}
+
+// ── Standard parcel ──────────────────────────────────────────────
+
+const StandardParcelFields = z.object({
+  weightGrams: int(1, 30_000),
+  lengthMm: int(1, 2_000),
+  widthMm: int(1, 2_000),
+  heightMm: int(1, 2_000),
+});
+
+export async function saveStandardParcelAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdminRole("ADMIN");
+  const parsed = StandardParcelFields.safeParse({
+    weightGrams: formData.get("weightGrams"),
+    lengthMm: formData.get("lengthMm"),
+    widthMm: formData.get("widthMm"),
+    heightMm: formData.get("heightMm"),
+  });
+  if (!parsed.success) {
+    return { error: "Give the box's weight in grams and its sides in millimetres, whole numbers above 0" };
+  }
+  const ownBoxSkus = [
+    ...new Set(String(formData.get("ownBoxSkus") ?? "").split(/[\s,]+/).map(normaliseCode).filter(Boolean)),
+  ];
+  for (const code of ownBoxSkus) {
+    const problem = skuCodeError(code);
+    if (problem) return { error: `${code}: ${problem}` };
+  }
+  const on = formData.get("on") === "on";
+  await writeSetting(SETTING_KEYS.standardParcel, serializeStandardParcel({ on, parcel: parsed.data, ownBoxSkus }));
+  revalidatePath("/admin/shipping");
+  return {
+    success: on
+      ? "Saved. Every order's label states this box, unless a listed SKU is on it."
+      : "Saved. Every order is sized from its SKUs' measurements.",
   };
 }
 

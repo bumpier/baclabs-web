@@ -166,10 +166,11 @@ export async function OrderFulfilment({ order, isPacker }: { order: Order; isPac
               </p>
             )}
             <p className="text-ink-soft">
-              Parcel: {plan.parcel.weightGrams > 0 ? formatWeight(plan.parcel.weightGrams) : "weight not set"} ·{" "}
+              Parcel{plan.standardParcel ? " (standard box, set on the Shipping page)" : ""}:{" "}
+              {plan.parcel.weightGrams > 0 ? formatWeight(plan.parcel.weightGrams) : "weight not set"} ·{" "}
               {formatDimensions(plan.parcel)} · to {plan.countryIso}
             </p>
-            {suggested && suggested.maxWeightGrams > 0 && plan.parcel.weightGrams > 0 && (
+            {!plan.standardParcel && suggested && suggested.maxWeightGrams > 0 && plan.parcel.weightGrams > 0 && (
               <p className="text-ink-soft">
                 Declared on the label as {formatWeight(declaredGrams(plan.parcel.weightGrams, suggested.maxWeightGrams))}, the
                 most {suggested.name} takes.
