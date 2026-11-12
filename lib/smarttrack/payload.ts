@@ -99,6 +99,27 @@ export function wrapNarrowest(lines: readonly string[], widths: readonly number[
 }
 
 /**
+ * Split a town too long for SmartTrack's city field rather than cut it: the
+ * first part that fits stays the town and the rest is returned to go on the
+ * address lines. On 12 Nov 2026 a customer typed "Bearsden North, East
+ * Dunbartonshire" (35) for a 25-character field; that becomes the town
+ * "Bearsden North" with "East Dunbartonshire" moved up. Breaks after a comma
+ * where it can, else between words. `rest` is empty when the town already
+ * fits; null when even its first word is longer than the field.
+ */
+export function splitTown(town: string, max: number): { town: string; rest: string } | null {
+  const clean = town.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return { town: clean, rest: "" };
+  const comma = clean.lastIndexOf(",", max);
+  const cut = comma > 0 ? comma : clean.lastIndexOf(" ", max);
+  if (cut <= 0) return null;
+  return {
+    town: clean.slice(0, cut).replace(/,\s*$/, "").trim(),
+    rest: clean.slice(cut).replace(/^[,\s]+/, "").trim(),
+  };
+}
+
+/**
  * SmartTrack's order_reference for one label attempt: the order id without
  * its dashes, then the attempt number. As unique as `${id}-${n}`, but 34
  * characters rather than 38, inside LIMITS.reference.
@@ -229,11 +250,18 @@ export function buildShipmentRequest(input: LabelInput): BuiltRequest {
 
   // Receiver — the customer.
   const a = r.address;
-  const receiverLines = wrapNarrowest([a.line1, a.line2 ?? ""], RECEIVER_LINE_WIDTHS);
+  // A town over its field's limit keeps its first part as the town and moves
+  // the rest onto the address lines, when there is a line free for it.
+  const split = splitTown(a.city, LIMITS.receiverCity);
+  const moveUp = split?.rest && wrapNarrowest([a.line1, a.line2 ?? "", split.rest], RECEIVER_LINE_WIDTHS) ? split : null;
+  const receiverLines = wrapNarrowest([a.line1, a.line2 ?? "", moveUp?.rest ?? ""], RECEIVER_LINE_WIDTHS);
   if (!a.line1.trim()) problems.push("Delivery address line 1 is missing");
   else if (!receiverLines) problems.push(`Delivery address does not fit SmartTrack's three ${LIMITS.receiverLine}-character lines`);
   const receiverContact = bounded(r.name, LIMITS.receiverContact, "Customer name");
-  const receiverCity = bounded(a.city, LIMITS.receiverCity, "Delivery town or city");
+  const receiverCity = moveUp ? moveUp.town : bounded(a.city, LIMITS.receiverCity, "Delivery town or city");
+  if (moveUp) {
+    warnings.push(`town "${a.city.trim()}" is over ${LIMITS.receiverCity} characters, so "${moveUp.rest}" went on the address lines and "${moveUp.town}" is the town`);
+  }
   const receiverPostcode = bounded(a.postalCode ?? "", LIMITS.postcode, "Delivery postcode");
   const receiverCountry = iso(a.country, "Delivery country");
 

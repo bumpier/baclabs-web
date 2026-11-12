@@ -32,7 +32,7 @@ import {
   quotedDeliveryOption,
 } from "@/config/funnel";
 import { dispatchDelay, formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
-import { buildShipmentRequest, cleanDeliveryInstructions, labelReference, LIMITS, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
+import { buildShipmentRequest, cleanDeliveryInstructions, labelReference, LIMITS, splitTown, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
 
 let failures = 0;
 
@@ -445,6 +445,37 @@ const input: LabelInput = {
 {
   const { request } = buildShipmentRequest(input);
   check("a short address goes through as typed", request?.receiver_address_line_1 === "22 Acacia Avenue" && request.receiver_address_line_2 === undefined);
+}
+{
+  // The town refused on 12 Nov 2026: 35 characters for a 25-character field.
+  const { request, problems, warnings } = buildShipmentRequest({
+    ...input,
+    receiver: { ...input.receiver, address: { line1: "72 Dumgoyne Drive", line2: null, city: "Bearsden North, East Dunbartonshire", country: "GB", postalCode: "G61 3AW" } },
+  });
+  const lines = [request?.receiver_address_line_1, request?.receiver_address_line_2, request?.receiver_address_line_3];
+  check("a long town keeps its first part as the town", request?.receiver_city === "Bearsden North", (request?.receiver_city ?? "") + problems.join("; "));
+  check("…and the rest goes on the address lines", JSON.stringify(lines) === JSON.stringify(["72 Dumgoyne Drive", "East Dunbartonshire", undefined]), JSON.stringify(lines));
+  check("…with a note saying so", warnings.some((w) => w.includes("East Dunbartonshire")), warnings.join("; "));
+}
+check("a long town with no comma splits between words", JSON.stringify(splitTown("Newcastle upon Tyne City Centre", 25)) === JSON.stringify({ town: "Newcastle upon Tyne City", rest: "Centre" }));
+check("a town that fits is left alone", JSON.stringify(splitTown("  Leeds ", 25)) === JSON.stringify({ town: "Leeds", rest: "" }));
+check("a single word too long for the field cannot be split", splitTown("Llanfairpwllgwyngyllgogerychwyrndrobwll", 25) === null);
+{
+  // Three address lines already used: nowhere to move the rest, so it is refused as before.
+  const { request, problems } = buildShipmentRequest({
+    ...input,
+    receiver: {
+      ...input.receiver,
+      address: {
+        line1: "The Old Schoolhouse Annexe Upper Flat Twelve",
+        line2: "Great Northern Industrial Park and Business Centre West Entrance",
+        city: "Bearsden North, East Dunbartonshire",
+        country: "GB",
+        postalCode: "G61 3AW",
+      },
+    },
+  });
+  check("a long town with no free address line still blocks the label", request === null && problems.some((p) => p.includes("Delivery town or city is 35")), problems.join("; "));
 }
 {
   const { request, problems } = buildShipmentRequest({
