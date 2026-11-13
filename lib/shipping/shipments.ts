@@ -3,7 +3,7 @@ import { brandFor, type BrandProfile } from "@/brands/registry";
 import { parseAddress } from "@/lib/orderAddress";
 import { readSetting, SETTING_KEYS } from "@/lib/settings";
 import { planOrderShipment } from "@/lib/shipping/order-parcel";
-import { declaredGrams } from "@/lib/shipping/parcel";
+import { labelGrams } from "@/lib/shipping/standard-parcel";
 import { smartTrackConfig } from "@/lib/smarttrack/config";
 import {
   generateLabel,
@@ -191,7 +191,8 @@ export async function createShipmentLabel(input: {
 
   // The label, and the Shipment row that records it, carry the declared
   // weight — the most the service takes — rather than the packed weight.
-  const parcel = { ...plan.parcel, weightGrams: declaredGrams(plan.parcel.weightGrams, service.maxWeightGrams) };
+  // The standard box states its own weight (lib/shipping/standard-parcel.ts).
+  const parcel = { ...plan.parcel, weightGrams: labelGrams(plan.parcel.weightGrams, service.maxWeightGrams, plan.standardParcel) };
 
   const reference = labelReference(order.id, order.shipments.length + 1);
   const built = buildShipmentRequest({

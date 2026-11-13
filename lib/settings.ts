@@ -30,6 +30,8 @@ export const SETTING_KEYS = {
   trackingUpdates: "tracking_updates",
   // "" | a UK day, "2027-01-01": VAT-registered from then — lib/finance/rates.ts
   vatRegisteredFrom: "vat_registered_from",
+  // JSON: the one box every order goes in — lib/shipping/standard-parcel.ts
+  standardParcel: "standard_parcel",
 } as const;
 
 /**

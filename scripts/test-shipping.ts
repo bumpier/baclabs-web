@@ -6,6 +6,13 @@
  */
 import { combineUnits, chargeableGrams, declaredGrams } from "@/lib/shipping/parcel";
 import {
+  labelGrams,
+  parseStandardParcel,
+  serializeStandardParcel,
+  usesStandardParcel,
+  type StandardParcel,
+} from "@/lib/shipping/standard-parcel";
+import {
   checkService,
   evaluateSizeFormula,
   selectService,
@@ -25,7 +32,7 @@ import {
   quotedDeliveryOption,
 } from "@/config/funnel";
 import { dispatchDelay, formatDeliveryDay, nextDayDeadline } from "@/lib/delivery-date";
-import { buildShipmentRequest, cleanDeliveryInstructions, labelReference, LIMITS, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
+import { buildShipmentRequest, cleanDeliveryInstructions, labelReference, LIMITS, splitTown, truncateWords, wrapLines, wrapNarrowest, type LabelInput } from "@/lib/smarttrack/payload";
 import { labelSender } from "@/lib/shipping/shipments";
 import { brandFor } from "@/brands/registry";
 import { registerTestBrand } from "./fixtures/test-brand";
@@ -443,6 +450,37 @@ const input: LabelInput = {
   check("a short address goes through as typed", request?.receiver_address_line_1 === "22 Acacia Avenue" && request.receiver_address_line_2 === undefined);
 }
 {
+  // The town refused on 12 Nov 2026: 35 characters for a 25-character field.
+  const { request, problems, warnings } = buildShipmentRequest({
+    ...input,
+    receiver: { ...input.receiver, address: { line1: "72 Dumgoyne Drive", line2: null, city: "Bearsden North, East Dunbartonshire", country: "GB", postalCode: "G61 3AW" } },
+  });
+  const lines = [request?.receiver_address_line_1, request?.receiver_address_line_2, request?.receiver_address_line_3];
+  check("a long town keeps its first part as the town", request?.receiver_city === "Bearsden North", (request?.receiver_city ?? "") + problems.join("; "));
+  check("…and the rest goes on the address lines", JSON.stringify(lines) === JSON.stringify(["72 Dumgoyne Drive", "East Dunbartonshire", undefined]), JSON.stringify(lines));
+  check("…with a note saying so", warnings.some((w) => w.includes("East Dunbartonshire")), warnings.join("; "));
+}
+check("a long town with no comma splits between words", JSON.stringify(splitTown("Newcastle upon Tyne City Centre", 25)) === JSON.stringify({ town: "Newcastle upon Tyne City", rest: "Centre" }));
+check("a town that fits is left alone", JSON.stringify(splitTown("  Leeds ", 25)) === JSON.stringify({ town: "Leeds", rest: "" }));
+check("a single word too long for the field cannot be split", splitTown("Llanfairpwllgwyngyllgogerychwyrndrobwll", 25) === null);
+{
+  // Three address lines already used: nowhere to move the rest, so it is refused as before.
+  const { request, problems } = buildShipmentRequest({
+    ...input,
+    receiver: {
+      ...input.receiver,
+      address: {
+        line1: "The Old Schoolhouse Annexe Upper Flat Twelve",
+        line2: "Great Northern Industrial Park and Business Centre West Entrance",
+        city: "Bearsden North, East Dunbartonshire",
+        country: "GB",
+        postalCode: "G61 3AW",
+      },
+    },
+  });
+  check("a long town with no free address line still blocks the label", request === null && problems.some((p) => p.includes("Delivery town or city is 35")), problems.join("; "));
+}
+{
   const { request, problems } = buildShipmentRequest({
     ...input,
     receiver: { ...input.receiver, address: { ...input.receiver.address, postalCode: "" } },
@@ -539,6 +577,47 @@ const input: LabelInput = {
     `${fxLabel?.order_reference} vs ${baclabLabel?.order_reference}`
   );
   check("a blank sender company falls back to the warehouse's", labelSender(warehouse, { ...fx, shipping: { senderCompany: "  " } }).company === "BacLab");
+}
+
+// ── Standard parcel ──────────────────────────────────────────────
+// Every order goes in one box unless a SKU on it is listed as needing its
+// own. Order 13032f6f (two vials, 110 g) went to Royal Mail declared at
+// 20 kg, the synced service's maximum, and was refused "Not Match Product".
+{
+  const unset = parseStandardParcel(null);
+  check("unset: on by default", unset.on);
+  check(
+    "unset: 45 × 35 × 16 cm, 2 kg — Royal Mail's Small Parcel",
+    unset.parcel.lengthMm === 450 && unset.parcel.widthMm === 350 && unset.parcel.heightMm === 160 && unset.parcel.weightGrams === 2000,
+    JSON.stringify(unset.parcel)
+  );
+  check("unset: no SKU needs its own box", unset.ownBoxSkus.length === 0);
+  check("garbage in the setting falls back to the default", parseStandardParcel("not json").parcel.weightGrams === 2000);
+  check(
+    "a nonsense measurement falls back to the default for that field",
+    parseStandardParcel(JSON.stringify({ on: true, lengthMm: -5, widthMm: 300, heightMm: 100, weightGrams: 1500, ownBoxSkus: [] })).parcel.lengthMm === 450
+  );
+
+  const saved: StandardParcel = {
+    on: false,
+    parcel: { weightGrams: 1000, lengthMm: 400, widthMm: 300, heightMm: 100 },
+    ownBoxSkus: ["BACLAB-10ML-X100"],
+  };
+  const back = parseStandardParcel(serializeStandardParcel(saved));
+  check("round trip keeps everything", JSON.stringify(back) === JSON.stringify(saved), JSON.stringify(back));
+
+  const listed = { ...unset, ownBoxSkus: ["BACLAB-10ML-X100"] };
+  check("an ordinary order uses the standard parcel", usesStandardParcel(["BACLAB-10ML-X1", "BACLAB-10ML"], listed));
+  check("an order with a listed SKU is sized from its SKUs", !usesStandardParcel(["BACLAB-10ML", "BACLAB-10ML-X100"], listed));
+  check("the SKU list ignores case", !usesStandardParcel(["baclab-10ml-x100"], listed));
+  check("switched off, nothing uses it", !usesStandardParcel(["BACLAB-10ML-X1"], { ...unset, on: false }));
+
+  // Royal Mail Tracked 48 as SmartTrack syncs it: up to 20 kg.
+  check("the standard parcel states its own weight, not the service's 20 kg", labelGrams(2000, 20_000, true) === 2000);
+  check("a parcel sized from SKUs keeps the service-maximum rule", labelGrams(320, 2000, false) === 2000);
+
+  const smallParcel: ServiceRule = { ...base, maxWeightGrams: 2000, maxLengthMm: 450, maxWidthMm: 350, maxHeightMm: 160 };
+  check("the default fits a 45 × 35 × 16 cm, 2 kg service", checkService(smallParcel, unset.parcel, "GB").fits);
 }
 
 if (failures > 0) {

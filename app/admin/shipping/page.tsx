@@ -8,6 +8,7 @@ import { formatWeight } from "@/lib/shipping/parcel";
 import { toServiceRule } from "@/lib/shipping/select-service";
 import { getAutoLabels, getDeliveryInstructions } from "@/lib/shipping/shipments";
 import { getTrackingUpdates } from "@/lib/shipping/tracking-sync";
+import { getStandardParcel } from "@/lib/shipping/order-parcel";
 import { LIMITS } from "@/lib/smarttrack/payload";
 import { DELIVERY_OPTIONS, deliveryOptionById } from "@/config/funnel";
 import {
@@ -15,6 +16,7 @@ import {
   saveTrackingUpdatesAction,
   saveDeliveryInstructionsAction,
   saveServiceAction,
+  saveStandardParcelAction,
   syncServicesAction,
   testConnectionAction,
 } from "@/app/admin/shipping/actions";
@@ -119,11 +121,12 @@ export default async function ShippingPage() {
   await requireAdminRole("ADMIN");
   const cfg = smartTrackConfig();
   const env = smartTrackEnv();
-  const [services, deliveryInstructions, autoLabels, trackingUpdates] = await Promise.all([
+  const [services, deliveryInstructions, autoLabels, trackingUpdates, standard] = await Promise.all([
     prisma.postalService.findMany({ orderBy: [{ active: "desc" }, { priority: "asc" }, { name: "asc" }] }),
     getDeliveryInstructions(),
     getAutoLabels(),
     getTrackingUpdates(),
+    getStandardParcel(),
   ]);
   const lastSync = services.map((s) => s.syncedAt).filter((d): d is Date => !!d).sort((a, b) => b.getTime() - a.getTime())[0];
 
@@ -246,6 +249,48 @@ export default async function ShippingPage() {
               page, go on that order&rsquo;s label instead. Sent to the carrier in SmartTrack&rsquo;s description field,
               up to {LIMITS.description} characters.
             </p>
+          </div>
+        </ActionForm>
+      </section>
+
+      {/* ── Standard box ── */}
+      <section className="card mt-4 p-6">
+        <ActionForm action={saveStandardParcelAction} submitLabel="Save" submitClassName="btn-secondary" className="space-y-4">
+          <div className="max-w-2xl">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" name="on" defaultChecked={standard.on} className="h-4 w-4 accent-[var(--color-brand)]" />
+              Every order goes in one standard box
+            </label>
+            <p className="mt-1.5 text-xs text-ink-soft/70">
+              Labels state this box&rsquo;s size and weight whatever was ordered, and SKU measurements are not used.
+              45 &times; 35 &times; 16 cm at 2 kg is Royal Mail&rsquo;s Small Parcel. An order holding a SKU listed
+              below is sized from its SKUs instead. Switched off, every order is sized from its SKUs.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-4">
+            {(
+              [
+                ["lengthMm", "Length (mm)", standard.parcel.lengthMm],
+                ["widthMm", "Width (mm)", standard.parcel.widthMm],
+                ["heightMm", "Height (mm)", standard.parcel.heightMm],
+                ["weightGrams", "Weight on the label (g)", standard.parcel.weightGrams],
+              ] as const
+            ).map(([name, label, value]) => (
+              <div key={name}>
+                <label className="label" htmlFor={`standard-${name}`}>{label}</label>
+                <input id={`standard-${name}`} name={name} type="number" min="1" step="1" required defaultValue={value} className="field tabular" />
+              </div>
+            ))}
+          </div>
+          <div>
+            <label className="label" htmlFor="standard-ownBoxSkus">SKUs that need their own box</label>
+            <input
+              id="standard-ownBoxSkus"
+              name="ownBoxSkus"
+              defaultValue={standard.ownBoxSkus.join(", ")}
+              className="field font-mono uppercase"
+              placeholder="None — e.g. BACLAB-10ML-X100"
+            />
           </div>
         </ActionForm>
       </section>
