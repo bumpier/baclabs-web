@@ -4,8 +4,8 @@
  * clinics" page alike. Delivery is BacLab's own options and threshold, by
  * the same ids.
  *
- * Prices are illustrative until confirmed. TODO(confirm) every figure
- * marked so before launch. Per-vial price falls as the pack grows
+ * The prices are the owner's (confirmed 13 Nov 2026). Per-vial price falls
+ * as the pack grows
  * (scripts/test-brand-checkout.ts holds every catalogue to that).
  */
 import { DELIVERY, DELIVERY_OPTIONS } from "@/config/funnel";
@@ -18,7 +18,6 @@ export const beautyCatalogue: BrandCatalogue = {
   // is weighed once for all of them (scripts/seed-brand-skus.ts).
   boxSku: PLAIN_BOX_SKU,
   packs: [
-    // TODO(confirm): all four prices.
     { id: "x1", sku: "BEA-10ML-X1", vials: 1, priceMinor: 699, label: "", available: true },
     { id: "x5", sku: "BEA-10ML-X5", vials: 5, priceMinor: 2999, label: "", available: true },
     { id: "x10", sku: "BEA-10ML-X10", vials: 10, priceMinor: 5499, label: "", available: true },

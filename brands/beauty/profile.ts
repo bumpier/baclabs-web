@@ -60,7 +60,7 @@ export function beautyProfile(): BrandProfile {
     // owner's decision, 5 Nov 2026. Its company details live in config/brand.ts.
     legalName: OPERATOR.legalName,
     company: OPERATOR.company,
-    // TODO(confirm): the wording, with the signup form that shows it.
+    // The signup form's own words (the owner, 13 Nov 2026).
     mailingList: {
       consentText:
         "By signing up you agree to receive marketing emails from BeautyBac: offers, restocks and new sets. Unsubscribe at any time from any email.",

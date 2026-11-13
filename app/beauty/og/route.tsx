@@ -12,7 +12,7 @@ export const revalidate = 300;
 // The photograph: the still life cropped to the card, its empty wall on the
 // left. JPEG, because next/og cannot read WebP. Read from public/ on disk
 // (the server runs from the repo's root, where public/ is), never fetched.
-// TODO(launch): replace with real photography, as copy/images.ts.
+// A stand-in, to replace with real photography, as copy/images.ts.
 const PHOTO = path.join(process.cwd(), "public/beauty/images/og-still-life.jpg");
 
 // Literal colours: next/og reads no CSS variables. The plum of the ink, the

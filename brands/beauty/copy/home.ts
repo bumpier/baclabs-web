@@ -129,8 +129,8 @@ export const DETAILS = {
   capTerm: "The cap",
   cap: "Every vial is sealed under a blue flip-off cap and a silver crimp, and the label is left plain. Our name is on the packing slip, not on the vial or its box.",
   boxTerm: "The box",
-  // TODO(confirm): that the vials sit in a card divider. The plain white box is settled.
-  box: "Plain white card, with the vials held upright in a card divider inside.",
+  // The box is foam-padded inside (the owner, 13 Nov 2026).
+  box: "Plain white card, with foam padding inside so every vial arrives unbroken.",
   sentTerm: "From the UK",
   sent: "Packed and sent from the UK by tracked delivery. When it ships, we email you its tracking number.",
 } as const;

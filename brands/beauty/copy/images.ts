@@ -5,11 +5,13 @@
  * in middleware.ts, as /icon.svg is), and drawn by next/image with its
  * intrinsic size, so nothing shifts as it loads.
  *
- * TODO(launch): replace with real photography, every image below. Keep the
+ * Stand-ins the owner is content to launch on (13 Nov 2026). When there is
+ * real photography, replace every image below, and keep the
  * product as it is in these stand-ins: the clear 10ml vial with its blue
  * flip-off cap and silver crimp and a blank label, in the plain, unprinted
  * white box every brand's sets go out in (a slim one for a single vial, a
- * wider, shallow one for a set, the vials upright in a card divider). The
+ * wider, shallow one for a set). The real box is padded with foam; the
+ * stand-ins show a card divider, which the words never mention. The
  * name is on neither: it lives on the site and the packing slip.
  *
  * Each was checked by eye against the product truth: blue caps, silver
@@ -26,56 +28,56 @@ export interface BrandImage {
 }
 
 export const IMAGES = {
-  // TODO(launch): replace with real photography. The hero, and the OG card's crop (public/beauty/images/og-still-life.jpg).
+  // Stand-in, to replace with real photography. The hero, and the OG card's crop (public/beauty/images/og-still-life.jpg).
   stillLife: {
     src: "/images/still-life.webp",
     width: 1536,
     height: 1024,
     alt: "A sealed vial with a blue cap on a white marble plinth, blush silk falling beside it and a plain white box leaning against its base",
   },
-  // TODO(launch): replace with real photography. The packshot: the gallery's first picture and the basket's thumbnail (cropped in by BOX_THUMB).
+  // Stand-in, to replace with real photography. The packshot: the gallery's first picture and the basket's thumbnail (cropped in by BOX_THUMB).
   box: {
     src: "/images/box.webp",
     width: 1024,
     height: 1024,
     alt: "A plain white box standing beside a sealed vial with a blue cap, on blush",
   },
-  // TODO(launch): replace with real photography.
+  // Stand-in, to replace with real photography.
   setOfFive: {
     src: "/images/set-of-five.webp",
     width: 1024,
     height: 1024,
-    alt: "Five sealed vials with blue caps standing in a card divider inside an open plain white box, on marble",
+    alt: "Five sealed vials with blue caps standing upright inside an open plain white box, on marble",
   },
-  // TODO(launch): replace with real photography.
+  // Stand-in, to replace with real photography.
   vial: {
     src: "/images/vial.webp",
     width: 1024,
     height: 1024,
     alt: "One sealed 10ml vial on marble: clear glass, a blank label, a blue flip-off cap over a silver crimp",
   },
-  // TODO(launch): replace with real photography.
+  // Stand-in, to replace with real photography.
   hands: {
     src: "/images/hands.webp",
     width: 1024,
     height: 1536,
     alt: "Two hands holding a plain white box",
   },
-  // TODO(launch): replace with real photography.
+  // Stand-in, to replace with real photography.
   vanity: {
     src: "/images/vanity.webp",
     width: 1024,
     height: 1536,
     alt: "A marble vanity in morning light: pink ranunculus in a glass vase, folded blush towels, two plain white boxes, one of them open, and two sealed vials",
   },
-  // TODO(launch): replace with real photography. /clinics and the home page's clinic panel.
+  // Stand-in, to replace with real photography. /clinics and the home page's clinic panel.
   clinicCounter: {
     src: "/images/clinic-counter.webp",
     width: 1536,
     height: 1024,
     alt: "A salon reception counter in pink plaster and marble, with a stack of plain white boxes and a tray of sealed vials",
   },
-  // TODO(launch): replace with real photography.
+  // Stand-in, to replace with real photography.
   clinicShelf: {
     src: "/images/clinic-shelf.webp",
     width: 1024,
