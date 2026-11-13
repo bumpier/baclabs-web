@@ -19,7 +19,7 @@ export const CLINICS = {
     { term: "Delivery", detail: "Tracked, from the UK" },
   ],
   priceTitle: "The price list",
-  // TODO(confirm): the box, as copy/home.ts ESSENTIALS.box.
+  // The box, as copy/home.ts ESSENTIALS.box.
   priceLead: (count: number) =>
     `One product in ${count === 4 ? "four" : count} pack sizes, each pack in a plain white box. Choose a pack and how many, and it goes into your basket.`,
   legend: "Pack",

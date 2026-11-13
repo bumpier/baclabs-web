@@ -376,7 +376,19 @@ for (const b of NEW_BRANDS) {
   check(`${at}: business details are taken on our page, not Stripe's`, s.tax_id_collection === undefined);
   check(`${at}: no dispatch notice midweek`, s.custom_text === undefined);
   check(`${at}: Stripe's 24 hours, no recovery`, s.expires_at === undefined && s.after_expiration === undefined && s.customer_email === undefined);
-  check(`${at}: no branding while the origin is http`, s.branding_settings === undefined);
+  // A brand on its own https domain shows its name and images on Stripe's
+  // page, fetched from that domain; one still on a development host cannot.
+  if (b.origin.startsWith("https://")) {
+    check(`${at}: its own name on Stripe's page`, s.branding_settings?.display_name === b.name);
+    check(
+      `${at}: its logo and icon, from its own domain`,
+      JSON.stringify(s.branding_settings?.logo) === JSON.stringify({ type: "url", url: `${b.origin}${b.paymentPage?.logo}` }) &&
+        JSON.stringify(s.branding_settings?.icon) === JSON.stringify({ type: "url", url: `${b.origin}${b.paymentPage?.icon}` }),
+      JSON.stringify(s.branding_settings)
+    );
+  } else {
+    check(`${at}: no branding while the origin is http`, s.branding_settings === undefined);
+  }
   check(`${at}: success URL on the brand's origin`, s.success_url === `${b.origin}/order-confirmation/ord-fixture?session_id={CHECKOUT_SESSION_ID}`);
   check(`${at}: cancel URL on the brand's origin`, s.cancel_url === `${b.origin}/#buy`);
   // Everything Stripe receives as text, branding aside: never the brand's

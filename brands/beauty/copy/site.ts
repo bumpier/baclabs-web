@@ -135,7 +135,7 @@ export const ORDER = {
   free: "Free",
   totalPaid: "Total paid",
   total: "Total",
-  // TODO(confirm): the box, as copy/home.ts ESSENTIALS.box.
+  // The box, as copy/home.ts ESSENTIALS.box.
   box: "Every set is packed in a plain white box.",
   parcel: "Your parcel",
   sentBy: "Sent by",

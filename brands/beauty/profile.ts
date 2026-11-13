@@ -14,9 +14,8 @@ export function beautyProfile(): BrandProfile {
     id: "beauty",
     name: "BeautyBac",
     shortCode: "BB",
-    // TODO(launch): https://beautybac.co.uk, the brand's apex. Until then, its development host.
-    origin: "http://beauty.localhost:3000",
-    // TODO(launch): add the apex and www to brands/hosts.json, and to the
+    origin: "https://beautybac.co.uk",
+    // The apex, www and the development host: brands/hosts.json, and the
     // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
     domains: [...hosts.beauty],
     logo: "/icon.svg",
@@ -41,10 +40,11 @@ export function beautyProfile(): BrandProfile {
       onCta: "#FBF6F5",
     },
     email: {
-      // TODO(launch): a mailbox on the brand's own domain, verified in Resend.
-      from: "BeautyBac <hello@beauty.invalid>",
-      contact: "",
-      inbox: "",
+      // One mailbox on the brand's own domain: verified in Resend to send
+      // from, and forwarded by Cloudflare Email Routing to be written to.
+      from: "BeautyBac <hello@beautybac.co.uk>",
+      contact: "hello@beautybac.co.uk",
+      inbox: "hello@beautybac.co.uk",
       // The wordmark Stripe's page shows, 960 by 213, at a quarter size:
       // centred, as the storefront's header has it. Headings take a serif a
       // mail client has, in place of the site's Rosarivo.

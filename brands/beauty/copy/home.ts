@@ -71,7 +71,7 @@ export const ESSENTIALS = {
   sizeName: (vials: number) =>
     vials === 1 ? "Single vial" : vials === 5 ? "Set of five" : vials === 10 ? "Set of ten" : vials === 20 ? "Set of twenty" : `Set of ${vials}`,
   contents: (vials: number) => (vials === 1 ? "One sealed vial" : `${vials} sealed vials`),
-  // TODO(confirm): the box. Every brand's sets go out in the same plain,
+  // The box (the owner, 6 Nov 2026): every brand's sets go out in the same plain,
   // unprinted white box (brands/beauty/catalogue.ts boxSku).
   box: "Every size comes in a plain white box, with nothing printed on it.",
   quantity: "Quantity",
@@ -102,7 +102,7 @@ export const RITUAL = {
   title: "The ritual",
   voice: "The right thing, kept well, and in its place for when you want it.",
   /** A sequence: it arrives, it is kept, it comes again. */
-  // TODO(confirm): the box, as ESSENTIALS.box.
+  // The box, as ESSENTIALS.box.
   moments: [
     {
       title: "It arrives",
@@ -129,7 +129,7 @@ export const DETAILS = {
   capTerm: "The cap",
   cap: "Every vial is sealed under a blue flip-off cap and a silver crimp, and the label is left plain. Our name is on the packing slip, not on the vial or its box.",
   boxTerm: "The box",
-  // TODO(confirm): the box, as ESSENTIALS.box.
+  // TODO(confirm): that the vials sit in a card divider. The plain white box is settled.
   box: "Plain white card, with the vials held upright in a card divider inside.",
   sentTerm: "From the UK",
   sent: "Packed and sent from the UK by tracked delivery. When it ships, we email you its tracking number.",

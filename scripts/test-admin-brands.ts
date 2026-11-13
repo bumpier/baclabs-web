@@ -336,7 +336,14 @@ async function main() {
     const real = slip(id);
     const inlined = `data:image/svg+xml;base64,${readFileSync(path.join(process.cwd(), "public", id, b.logo.slice(1))).toString("base64")}`;
     check(`${id}'s slip inlines its own logo`, real.includes(`src="${inlined}"`));
-    check(`${id}'s slip loads nothing from its domain`, !real.includes(b.origin) && !b.domains.some((d) => real.includes(d)));
+    // What the page fetches: image sources and CSS urls. The brand's contact
+    // address is printed on the slip and is on its domain, which loads nothing.
+    const fetched = [...real.matchAll(/\b(?:src|srcset)="([^"]*)"|url\(([^)]*)\)/g)].map((m) => m[1] ?? m[2] ?? "");
+    check(
+      `${id}'s slip loads nothing from its domain`,
+      fetched.every((u) => !u.includes(b.origin) && !b.domains.some((d) => u.includes(d))),
+      fetched.filter((u) => !u.startsWith("data:")).join(" ")
+    );
   }
   check("a logo path cannot leave the brand's folder", brandLogoDataUri({ id: "luxury", logo: "/../baclab-logo.svg" }) === null);
   check("a logo that is not an image type is refused", brandLogoDataUri({ id: "luxury", logo: "/icon.txt" }) === null);
