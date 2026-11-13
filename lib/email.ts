@@ -61,12 +61,13 @@ export async function send(
   }
 ) {
   const from = (opts?.brand ?? defaultBrand()).email.from;
+  const replyTo = opts?.replyTo ?? (opts?.brand ?? defaultBrand()).email.replyTo;
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     if (process.env.NODE_ENV !== "production") {
       // Dev: surface the email body so flows are testable without a mail provider.
       console.log(
-        `[dev email] to=${to}${opts?.bcc ? ` bcc=${opts.bcc}` : ""}${opts?.replyTo ? ` reply-to=${opts.replyTo}` : ""} subject="${subject}"\n${html}`
+        `[dev email] to=${to}${opts?.bcc ? ` bcc=${opts.bcc}` : ""}${replyTo ? ` reply-to=${replyTo}` : ""} subject="${subject}"\n${html}`
       );
     }
     // Blank in production → email intentionally disabled → stay silent.
@@ -89,7 +90,7 @@ export async function send(
       subject,
       html,
       ...(opts?.bcc ? { bcc: opts.bcc } : {}),
-      ...(opts?.replyTo ? { replyTo: opts.replyTo } : {}),
+      ...(replyTo ? { replyTo } : {}),
       ...(opts?.headers ? { headers: opts.headers } : {}),
       ...(opts?.attachments?.length ? { attachments: opts.attachments } : {}),
     });
@@ -155,6 +156,7 @@ export async function sendBatch(
         to: e.to,
         subject: e.subject,
         html: e.html,
+        ...(b.email.replyTo ? { replyTo: b.email.replyTo } : {}),
         ...(e.headers ? { headers: e.headers } : {}),
       })),
       { idempotencyKey }

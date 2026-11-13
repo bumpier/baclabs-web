@@ -66,6 +66,12 @@ export interface BrandProfile {
   email: {
     /** `Name <address>`, on a domain verified in Resend. */
     from: string;
+    /**
+     * Where a customer's reply goes, when `from` is on a sending subdomain
+     * with no mailbox of its own (mail.<apex>). Unset: replies go to `from`.
+     * A sender that names its own reply-to (the contact form) wins.
+     */
+    replyTo?: string;
     /** The address shown to customers in email footers and receipts. "" renders nothing. */
     contact: string;
     /**

@@ -40,9 +40,10 @@ export function beautyProfile(): BrandProfile {
       onCta: "#FBF6F5",
     },
     email: {
-      // One mailbox on the brand's own domain: verified in Resend to send
-      // from, and forwarded by Cloudflare Email Routing to be written to.
-      from: "BeautyBac <hello@beautybac.co.uk>",
+      // Sent from mail.beautybac.co.uk, the subdomain verified in Resend; it
+      // has no mailbox, so replies go to hello@ on the apex (Hostinger mail).
+      from: "BeautyBac <hello@mail.beautybac.co.uk>",
+      replyTo: "hello@beautybac.co.uk",
       contact: "hello@beautybac.co.uk",
       inbox: "hello@beautybac.co.uk",
       // The wordmark Stripe's page shows, 960 by 213, at a quarter size:

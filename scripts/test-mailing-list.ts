@@ -42,7 +42,7 @@ import {
   unsubscribeSig,
   unsubscribeUrl,
 } from "@/lib/customer-email";
-import { ctaButton, layout, ownerSubjectPrefix } from "@/lib/email";
+import { ctaButton, layout, ownerSubjectPrefix, send } from "@/lib/email";
 import { renderCampaign } from "@/lib/campaigns";
 import { buildContactAlert, contactInbox } from "@/lib/contact-inbox";
 import { ALL_BRANDS, optOutScope } from "@/lib/opt-outs";
@@ -327,6 +327,23 @@ check("layout: the brand's header and text colours", fxShell.includes(`backgroun
 check("layout: the brand's contact and disclaimer", fxShell.includes("mailto:help@fixture.example") && fxShell.includes("Fixture disclaimer line."));
 leaks("layout", fxShell);
 check("layout: BacLab by default", layout("<p>x</p>").includes("<title>BacLab</title>"));
+{
+  // A brand that sends from a subdomain with no mailbox: replies go to its reply-to.
+  const logged: string[] = [];
+  const keep = console.log;
+  const keepKey = process.env.RESEND_API_KEY;
+  delete process.env.RESEND_API_KEY;
+  console.log = (...a: unknown[]) => void logged.push(a.join(" "));
+  // send() logs synchronously before its first await when no key is set.
+  void send("a@example.com", "Hi", "<p>x</p>", { brand: { ...fx, email: { ...fx.email, replyTo: "hello@fixture.example" } } });
+  void send("a@example.com", "Hi", "<p>x</p>", { brand: { ...fx, email: { ...fx.email, replyTo: "hello@fixture.example" } }, replyTo: "customer@example.com" });
+  void send("a@example.com", "Hi", "<p>x</p>", { brand: fx });
+  console.log = keep;
+  if (keepKey !== undefined) process.env.RESEND_API_KEY = keepKey;
+  check("send: a brand's reply-to is used", logged[0]?.includes("reply-to=hello@fixture.example") === true, logged[0]);
+  check("send: a sender's own reply-to wins", logged[1]?.includes("reply-to=customer@example.com") === true, logged[1]);
+  check("send: no reply-to when the brand sets none", logged[2]?.includes("reply-to") === false, logged[2]);
+}
 check("layout: no wordmark set, the name in type", fxShell.includes(`letter-spacing:0.02em">Fixture &amp; Co</span>`) && !fxShell.includes("<img"));
 // A brand with a wordmark: the image from its own origin, at the stated size,
 // the name as its alt text; centred when asked, and a rule under a header
