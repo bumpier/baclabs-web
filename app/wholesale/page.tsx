@@ -21,6 +21,7 @@ import { CARTON_OPEN, GALLERY, PALLET } from "@/brands/wholesale/copy/images";
 import { STOREFRONT } from "./site";
 import { Gallery } from "./Gallery";
 import { Photo } from "./Photo";
+import { quoteMailto } from "@/brands/wholesale/mailbox";
 import { SpecTabs } from "./SpecTabs";
 import { OrderDesk } from "./OrderDesk";
 
@@ -102,9 +103,9 @@ export default function Home() {
                   {PRODUCT.choose}
                 </a>
                 {quote.length > 0 ? (
-                  <Link href="/quote" className="bk-btn-outline bk-btn-lg">
+                  <a href={quoteMailto()} className="bk-btn-outline bk-btn-lg">
                     {PRODUCT.quote}
-                  </Link>
+                  </a>
                 ) : null}
               </div>
             </div>
@@ -165,9 +166,10 @@ export default function Home() {
                             <td className="bk-num">{r.perVial}</td>
                             <td>
                               {r.quote ? (
-                                <Link href={`/quote?pack=${r.size.replace(/\D/g, "")}`} className="link">
+                                <a href={quoteMailto(r.vials)} className="link">
                                   {r.how}
-                                </Link>
+                                  <span className="sr-only"> for {r.size}</span>
+                                </a>
                               ) : (
                                 r.how
                               )}
@@ -307,19 +309,19 @@ export default function Home() {
                   <li key={p.sku}>
                     <span className="bk-quote-size">{QUOTE_BAND.row(p.vials)}</span>
                     <span className="bk-sku bk-sku-dark">{p.sku}</span>
-                    <Link href={`/quote?pack=${p.vials}`} className="bk-quote-link">
+                    <a href={quoteMailto(p.vials)} className="bk-quote-link">
                       {QUOTE_BAND.rowAction}
                       <span className="sr-only"> for {QUOTE_BAND.row(p.vials)}</span>
                       <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
                         <path d="M7.5 4.5 13 10l-5.5 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
                       </svg>
-                    </Link>
+                    </a>
                   </li>
                 ))}
               </ul>
-              <Link href="/quote" className="btn-cta bk-btn-lg">
+              <a href={QUOTE_BAND.standingHref} className="btn-cta bk-btn-lg">
                 {QUOTE_BAND.standing}
-              </Link>
+              </a>
             </div>
             <div className="bk-quote-photo">
               <Photo photo={PALLET} sizes="(min-width: 1024px) 50vw, 100vw" />
@@ -344,9 +346,9 @@ export default function Home() {
                 {r.link ? (
                   <>
                     {" "}
-                    <Link href={r.link.href} className="link">
+                    <a href={r.link.href} className="link">
                       {r.link.text}
-                    </Link>
+                    </a>
                   </>
                 ) : null}
               </dd>

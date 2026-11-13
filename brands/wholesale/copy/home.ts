@@ -19,6 +19,7 @@
  *  - TODO(launch): a VAT invoice, once a VAT number is configured. Until
  *    then nothing here offers one.
  */
+import { MAILBOX, quoteMailto } from "@/brands/wholesale/mailbox";
 import { deliveryQuote, formatGbp, packSavingMinor, type DeliveryOptionView, type PackView, type StorefrontView } from "@/lib/commerce/view";
 
 /** "1,000". */
@@ -121,7 +122,7 @@ export const PRODUCT = {
       .map((p) => `${formatGbp(p.perVialMinor)} a vial in packs of ${count(p.vials)}`);
   },
   choose: "Choose quantities",
-  quote: "Request a quote",
+  quote: "Get a quote",
   /** The checks under the actions. Only facts the view or the terms back. */
   facts(view: StorefrontView): string[] {
     const d = packDelivery(view)[0];
@@ -173,12 +174,13 @@ export const SPEC: { intro: string; rows: Row[] } = {
 };
 
 /** One row of the packs table: what each code is and how it is bought. */
-export function packRows(view: StorefrontView): { sku: string; size: string; perVial: string; how: string; quote: boolean }[] {
+export function packRows(view: StorefrontView): { sku: string; vials: number; size: string; perVial: string; how: string; quote: boolean }[] {
   return view.packs.map((p) => ({
     sku: p.sku,
+    vials: p.vials,
     size: vials(p.vials),
     perVial: p.available ? formatGbp(p.perVialMinor) : "On request",
-    how: p.available ? "Online" : "By quote",
+    how: p.available ? "Online" : "Get a quote",
     quote: !p.available,
   }));
 }
@@ -194,7 +196,7 @@ export const PACKS = {
   quoteNote(view: StorefrontView): string {
     const quote = byQuote(view);
     if (quote.length === 0) return "";
-    return `Packs of ${sizeList(quote.map((p) => p.vials))} vials are heavier than the parcel services we book online carry, so we quote them with their delivery.`;
+    return `Packs of ${sizeList(quote.map((p) => p.vials))} vials are heavier than the parcel services we book online carry, so we quote them with their delivery, by email to ${MAILBOX}.`;
   },
 };
 
@@ -247,15 +249,15 @@ export const MATRIX = {
   baseRate: "Base rate",
   save: (minor: number) => `Save ${formatGbp(minor)}`,
   saveDetail: (base: number) => `against ${count(base)}-vial packs`,
-  byQuote: "Priced on request, with delivery",
-  requestQuote: "Request a quote",
+  byQuote: `Get a quote: email ${MAILBOX}`,
+  requestQuote: "Get a quote",
   quantityLabel: (pack: PackView) => `Number of ${count(pack.vials)}-vial packs`,
   /** The notes under the table. */
   notes(view: StorefrontView): string[] {
     const base = onSale(view)[0];
     return [
       base ? `Savings compare the same number of vials bought in ${count(base.vials)}-vial packs.` : "",
-      `One online order holds up to ${vials(view.limits.maxVials)}. For more, request a quote.`,
+      `One online order holds up to ${vials(view.limits.maxVials)}. For more, get a quote by email.`,
     ].filter(Boolean);
   },
   /** A typed quantity past what fits. */
@@ -272,12 +274,13 @@ export const QUOTE_BAND = {
   heading: "Larger volumes and standing orders",
   body(view: StorefrontView): string {
     const quote = byQuote(view);
-    const sizes = quote.length > 0 ? `Packs of ${sizeList(quote.map((p) => p.vials))} vials are priced on request, with delivery quoted for the weight. ` : "";
-    return `${sizes}For a recurring order, tell us how often and we price the schedule.`;
+    const sizes = quote.length > 0 ? `Packs of ${sizeList(quote.map((p) => p.vials))} vials are quoted by email, with delivery priced for the weight. ` : "";
+    return `${sizes}For a recurring order, tell us how often and we price the schedule. Email ${MAILBOX}.`;
   },
   row: (n: number) => `${count(n)} vials`,
-  rowAction: "Request a quote",
-  standing: "Ask about a standing order",
+  rowAction: "Get a quote",
+  standing: "Email about a standing order",
+  standingHref: quoteMailto(),
 };
 
 // ── Trade information ──────────────────────────────────────────────
@@ -298,7 +301,7 @@ export function tradeTerms(view: StorefrontView): Row[] {
     {
       term: "Online order limit",
       detail: `${vials(view.limits.maxVials)} an order.${quote.length > 0 ? ` ${sizeList(quote.map((p) => p.vials))}-vial packs by quote.` : ""}`,
-      link: quote.length > 0 ? { href: "/quote", text: "Request a quote" } : undefined,
+      link: quote.length > 0 ? { href: quoteMailto(), text: "Get a quote by email" } : undefined,
     },
     methods.length > 0
       ? {

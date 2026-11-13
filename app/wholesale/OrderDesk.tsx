@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useCart } from "@/components/commerce/cart";
 import { useBrandCheckout } from "@/components/commerce/useBrandCheckout";
@@ -21,8 +20,8 @@ import {
   perVialMinor,
 } from "@/brands/wholesale/components/order-math";
 import { SHOW_ORDER_EVENT } from "@/brands/wholesale/components/events";
+import { quoteMailto } from "@/brands/wholesale/mailbox";
 
-const QUOTE_HREF = "/quote";
 const DESKTOP = "(min-width: 1024px)";
 
 /**
@@ -32,7 +31,7 @@ const DESKTOP = "(min-width: 1024px)";
  * The table lists every pack the catalogue has. A pack sold online takes a
  * typed number of packs (with a step either side) and shows its per-vial
  * price, its pack price, its saving against the base rate and its line
- * total; a pack sold by quote links to the quote form for that size.
+ * total; a pack sold by quote opens an email asking for a quote on that size.
  *
  * The summary is one element in two shapes. On a desktop it sits beside the
  * table and stays in view as the page scrolls. On a phone it is a bottom
@@ -268,8 +267,8 @@ export function OrderDesk() {
                       {MATRIX.byQuote}
                     </td>
                     <td role="cell" colSpan={2} className="bk-c-quote">
-                      <Link
-                        href={`${QUOTE_HREF}?pack=${pack.vials}`}
+                      <a
+                        href={quoteMailto(pack.vials)}
                         className="bk-btn-outline bk-btn-sm"
                       >
                         {MATRIX.requestQuote}
@@ -277,7 +276,7 @@ export function OrderDesk() {
                           {" "}
                           for {vials(pack.vials)}
                         </span>
-                      </Link>
+                      </a>
                     </td>
                   </tr>
                 );
@@ -574,9 +573,9 @@ export function OrderDesk() {
           {atLimit ? (
             <p className="bk-summary-note">
               {ORDER.atLimit(view.limits.maxVials)} {ORDER.moreThanLimit}{" "}
-              <Link href={QUOTE_HREF} className="link">
+              <a href={quoteMailto()} className="link">
                 {ORDER.quote}
-              </Link>
+              </a>
               .
             </p>
           ) : null}

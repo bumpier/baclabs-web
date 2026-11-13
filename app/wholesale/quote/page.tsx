@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
-import { CONTACT_MESSAGE_MAX } from "@/lib/commerce/contact";
 import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
 import { byQuote, sizeList, vials } from "@/brands/wholesale/copy/home";
 import { CRUMBS, QUOTE } from "@/brands/wholesale/copy/pages";
 import { brand, STOREFRONT } from "../site";
-import { QuoteForm } from "./QuoteForm";
+import { MAILBOX, quoteMailto } from "@/brands/wholesale/mailbox";
 
 const quotePacks = byQuote(STOREFRONT);
 const sizes = sizeList(quotePacks.map((p) => p.vials));
@@ -19,11 +18,10 @@ export const metadata: Metadata = pageMetadata({
 });
 
 /**
- * The quote page: the packs sold by quote, from the catalogue, how a quote
- * works, and the request form (QuoteForm), which sends the quote's facts to
- * /api/contact as a wholesale enquiry for this brand's inbox. The price
- * table links each quote row here with ?pack=<vials>, which presets the
- * form.
+ * The quote page: the packs sold by quote, from the catalogue, and how a
+ * quote works. Quotes are done by email (brands/wholesale/mailbox.ts): each
+ * pack's "Get a quote" opens an email to the brand's mailbox with its size
+ * already written, as the price table's quote rows do.
  */
 export default function QuotePage() {
   return (
@@ -55,6 +53,7 @@ export default function QuotePage() {
                     <tr>
                       <th scope="col">{QUOTE.packsHead.size}</th>
                       <th scope="col">{QUOTE.packsHead.code}</th>
+                      <th scope="col">{QUOTE.packsHead.action}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -63,6 +62,12 @@ export default function QuotePage() {
                         <th scope="row">{vials(p.vials)}</th>
                         <td>
                           <span className="bk-sku">{p.sku}</span>
+                        </td>
+                        <td>
+                          <a href={quoteMailto(p.vials)} className="link font-semibold text-spruce">
+                            {QUOTE.packAction}
+                            <span className="sr-only"> for {vials(p.vials)}</span>
+                          </a>
                         </td>
                       </tr>
                     ))}
@@ -93,13 +98,20 @@ export default function QuotePage() {
 
           <section aria-labelledby="form-heading" className="bk-panel">
             <h2 id="form-heading" className="bk-panel-head">
-              {QUOTE.formHeading}
+              {QUOTE.emailHeading}
             </h2>
             <div className="bk-panel-body">
-              <QuoteForm
-                packs={quotePacks.map((p) => ({ sku: p.sku, vials: p.vials, label: vials(p.vials) }))}
-                messageMax={CONTACT_MESSAGE_MAX}
-              />
+              <p className="text-ink">{QUOTE.emailBody}</p>
+              <p className="mt-3">
+                <a href={`mailto:${MAILBOX}`} className="link font-semibold text-spruce">
+                  {MAILBOX}
+                </a>
+              </p>
+              <p className="mt-5">
+                <a href={quoteMailto()} className="btn-cta bk-btn-lg">
+                  {QUOTE.emailButton}
+                </a>
+              </p>
             </div>
           </section>
         </div>

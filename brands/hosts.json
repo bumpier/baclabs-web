@@ -1,6 +1,6 @@
 {
   "beauty": ["beauty.localhost", "beautybac.co.uk", "www.beautybac.co.uk"],
   "gym": ["gym.localhost"],
-  "wholesale": ["wholesale.localhost"],
+  "wholesale": ["wholesale.localhost", "bulkbac.co.uk", "www.bulkbac.co.uk"],
   "luxury": ["luxury.localhost"]
 }

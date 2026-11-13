@@ -29,7 +29,7 @@ export const ORDER = {
   switchTo: "Switch packs",
   atLimit: (max: number) => `That is the ${vials(max)} one online order holds.`,
   moreThanLimit: "Need more?",
-  quote: "Request a quote",
+  quote: "Get a quote by email",
   businessHeading: "Add company details (optional)",
   company: "Company name",
   vat: "VAT number",

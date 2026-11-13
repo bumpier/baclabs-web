@@ -123,7 +123,7 @@ export const config = {
       has: [
         {
           type: "host",
-          value: "(?:beauty\\.localhost|beautybac\\.co\\.uk|www\\.beautybac\\.co\\.uk|gym\\.localhost|wholesale\\.localhost|luxury\\.localhost)",
+          value: "(?:beauty\\.localhost|beautybac\\.co\\.uk|www\\.beautybac\\.co\\.uk|gym\\.localhost|wholesale\\.localhost|bulkbac\\.co\\.uk|www\\.bulkbac\\.co\\.uk|luxury\\.localhost)",
         },
       ],
     },

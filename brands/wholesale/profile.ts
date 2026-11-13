@@ -1,6 +1,6 @@
 /**
  * BulkBac, the `wholesale` brand: a trade supplier's site (name chosen
- * 6 Nov 2026; its domain, bulkbac.co.uk, is still to buy; nothing here is live). Spruce and white with one signal
+ * 6 Nov 2026; on bulkbac.co.uk from 13 Nov 2026). Spruce and white with one signal
  * yellow, the vial-rack mark (brands/wholesale/components/logo.tsx); the
  * stylesheet's opening comment holds the whole direction. Empty values
  * render nothing, as everywhere else.
@@ -10,16 +10,16 @@ import type { BrandProfile } from "../types";
 import { OPERATOR } from "../operator";
 import { STRIPE_PAYMENT } from "../payment-methods";
 import { wholesaleCatalogue } from "./catalogue";
+import { MAILBOX } from "./mailbox";
 
 export function wholesaleProfile(): BrandProfile {
   return {
     id: "wholesale",
     name: "BulkBac",
     shortCode: "BK",
-    // TODO(launch): https://bulkbac.co.uk, the brand's apex. Until then, its development host.
-    origin: "http://wholesale.localhost:3000",
-    // TODO(launch): add the apex and www to brands/hosts.json, and to the
-    // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
+    origin: "https://bulkbac.co.uk",
+    // brands/hosts.json, and the matcher literal in middleware.ts (npm run
+    // test:hosts checks the two agree).
     domains: [...hosts.wholesale],
     logo: "/icon.svg",
     colours: {
@@ -36,10 +36,15 @@ export function wholesaleProfile(): BrandProfile {
       onCta: "#0D3B35",
     },
     email: {
-      // TODO(launch): a mailbox on the brand's own domain, verified in Resend.
-      from: "BulkBac <hello@wholesale.invalid>",
-      contact: "",
-      inbox: "",
+      // Sent through Resend from mail.bulkbac.co.uk, which has no mailbox:
+      // replies go to the Hostinger one on the apex.
+      from: "BulkBac <hello@mail.bulkbac.co.uk>",
+      replyTo: MAILBOX,
+      contact: MAILBOX,
+      inbox: MAILBOX,
+      // The lockup in white and signal yellow on its own spruce, for the
+      // spruce header band (rendered from components/logo.tsx's shapes).
+      logo: { src: "/email-logo.png", width: 200, height: 28 },
     },
     reviews: { url: "", inviteBcc: null },
     disclaimer:
