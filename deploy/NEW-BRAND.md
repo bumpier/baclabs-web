@@ -2,7 +2,7 @@
 
 One brand at a time, from a name to a live site taking orders. Every brand
 runs in the same `baclab` container as BacLab, on the same VPS, behind the
-same nginx and Cloudflare, and takes cards on BacLab's Stripe account, which
+same Caddy and Cloudflare, and takes cards on BacLab's Stripe account, which
 is told about every brand. What it must never share is anything a customer
 or a crawler can see: its domain, certificate, mailbox, tracking, statement
 wording, payment page and copy are its own, and no page, email, header or
@@ -26,9 +26,9 @@ The four brands already in the code (`beauty`, `gym`, `wholesale`, `luxury`)
 skip step 2.
 
 Order matters. A domain must reach the app only once the app knows it: the
-app serves BacLab to any host it does not know, and nginx serves its
-default site to any name it has no server block for. So DNS records for the
-site come last, after the deploy and the nginx block (step 9).
+app serves BacLab to any host it does not know, and Caddy has nothing to
+serve for a name it has no site block for. So DNS records for the site
+come last, after the deploy and the Caddy block (step 9).
 
 ---
 
@@ -85,9 +85,9 @@ design work.
      the company listed so that no other processor will take it on.
    - **Then:** keep Stripe's written confirmation with the brand's records.
    - **The first brand only:** the account's one-off settings in
-     BRAND-PAYMENTS.md. Since 5 Nov 2026 none is required: statements may
-     start with BacLab's shortened descriptor, and turning Stripe's receipt
-     emails off is optional.
+     BRAND-PAYMENTS.md. Statements may start with BacLab's shortened
+     descriptor. Stripe's own receipt emails must be off (the owner,
+     13 Nov 2026): every site sends its own receipt, in its own look.
    - **A brand on PayPal instead** has an account and credentials of its
      own, declared to PayPal the same way ("Switching a brand to PayPal
      later" in BRAND-PAYMENTS.md).
@@ -233,6 +233,10 @@ placeholder:
    - `origin: "https://<apex>"`;
    - `email.from` on `<apex>`, plus `contact` and `inbox` (the Email
      Routing addresses from step 1.3);
+   - `email.logo`, the wordmark at the top of every email the brand sends
+     (receipts, shipping updates, marketing): a PNG or JPG in
+     `public/<id>/`, at least twice the size it is shown at. It should
+     read on `colours.header`, the band it sits on;
    - `legalName` and `company` stay `OPERATOR`'s (step 1.8);
    - `shipping.senderCompany` only if the label should name something
      other than the warehouse's company (25 characters at most). Unset is
@@ -288,20 +292,26 @@ because it has no DNS records.
 
 ## 7. Deploy (you)
 
-On the VPS, as the `baclab` user:
+On the VPS. Back the database up first when the deploy carries a
+migration (the first multi-brand deploy carries two, which the container
+applies as it starts):
 
 ```bash
+cd /srv/baclab
+sqlite3 data/baclab.db ".backup 'data/baclab-before-brands.db'"
 bash /srv/baclab/deploy/scripts/baclab-deploy.sh
 ```
 
 A build that fails leaves the old container running. After it is healthy,
 check the app now knows the host, straight at the container and before
-nginx is involved:
+Caddy is involved. `<PORT>` is the container's port on the box:
+`BACLAB_HOST_PORT` in `/srv/baclab/.env.local` (3010 on today's box), or
+3001 where it is unset.
 
 ```bash
-curl -s -H 'Host: <apex>' http://127.0.0.1:3001/ | grep -o '<title>[^<]*</title>'   # the brand's name, not BacLab's
-curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: <apex>' http://127.0.0.1:3001/admin   # 404
-curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: baclab.co.uk' http://127.0.0.1:3001/   # 200: BacLab unchanged
+curl -s -H 'Host: <apex>' http://127.0.0.1:<PORT>/ | grep -o '<title>[^<]*</title>'   # the brand's name, not BacLab's
+curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: <apex>' http://127.0.0.1:<PORT>/admin   # 404
+curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: baclab.co.uk' http://127.0.0.1:<PORT>/   # 200: BacLab unchanged
 ```
 
 Then seed the SKUs and weigh them (step 3).
@@ -326,94 +336,75 @@ provider is configured, pressing it answers "Checkout is not available
 right now." A brand on Stripe needs no env of its own: it takes payment
 while BacLab's cards are on.
 
-## 9. nginx, the certificate, then DNS (VPS operator)
+## 9. Caddy, the certificate, then DNS (VPS operator)
 
-The brand gets **its own nginx server block and its own certificate**.
+The box's web server is Caddy (`/etc/caddy/Caddyfile`), which it shares
+with other sites. nginx is installed there and switched off: never start
+it. The brand gets **its own site block and its own certificate**.
 
-- **Never run `deploy/scripts/baclab-add-domain.sh` for a brand.** It
-  adds the domain to the `baclab` certificate with `--expand`, which would
-  publish every brand's domain on one certificate (certificate logs, such
-  as crt.sh, are public), and it adds the domain to BacLab's server block.
-- **Never add a second `upstream` for `127.0.0.1:3001`.** The brand's
-  block proxies to `baclab_app`, the upstream that `baclab.conf` already
-  defines.
+- **Never add the brand's domain to BacLab's site block**, and never put
+  it on a certificate that names another brand. One certificate naming two
+  brands ties them together for anyone who looks.
+- **Never let Caddy fetch a certificate for it by itself.** Its automatic
+  HTTPS cannot pass a challenge behind Cloudflare's proxy, and a public
+  certificate is published in the certificate logs. The `tls` line below,
+  with the brand's own files, is what turns that off.
 
-**The certificate: a Cloudflare Origin CA certificate (recommended).**
+**The certificate: a Cloudflare Origin CA certificate.**
 
 - **Why:** it is not published in the certificate logs, needs no
   challenge, and lasts 15 years. It is trusted only by Cloudflare, so the
-  domain must stay proxied, which it must anyway.
+  domain must stay proxied, which it must anyway. BacLab's own is one.
 - **Create it:** in the brand's Cloudflare zone, *SSL/TLS → Origin
   Server → Create Certificate*, for `<apex>` and `*.<apex>`, RSA, 15 years.
-- **Install it:** on the VPS, as root:
+  Copy the certificate and the private key as they are shown: the key is
+  shown once.
+- **Install it:** on the VPS, as root. Caddy runs as the user `caddy`, so
+  the files are readable by the group `caddy` and by nobody else:
 
   ```bash
-  install -d -m 700 /etc/ssl/brands
-  sudoedit /etc/ssl/brands/<id>.pem     # paste the origin certificate
-  sudoedit /etc/ssl/brands/<id>.key     # paste the private key
-  chmod 600 /etc/ssl/brands/<id>.key
+  install -d -m 750 -o root -g caddy /etc/ssl/brands
+  nano /etc/ssl/brands/<id>.pem     # paste the origin certificate, from -----BEGIN CERTIFICATE-----
+  nano /etc/ssl/brands/<id>.key     # paste the private key, from -----BEGIN PRIVATE KEY-----
+  chown root:caddy /etc/ssl/brands/<id>.pem /etc/ssl/brands/<id>.key
+  chmod 640 /etc/ssl/brands/<id>.pem /etc/ssl/brands/<id>.key
+  openssl x509 -in /etc/ssl/brands/<id>.pem -noout -subject -ext subjectAltName   # the brand's names only
   ```
 
-**Or Let's Encrypt, with its own cert name.**
+**The site block.** As root, add to the end of `/etc/caddy/Caddyfile`,
+leaving every other block as it is:
 
-- **How:** use the DNS challenge through Cloudflare's API:
-  `certbot certonly --dns-cloudflare --dns-cloudflare-credentials /root/.secrets/cloudflare-<id>.ini --cert-name <id> -d <apex> -d www.<apex>`.
-  This needs the `python3-certbot-dns-cloudflare` package and an API token
-  limited to that zone's DNS. Point the two `ssl_` lines below at
-  `/etc/letsencrypt/live/<id>/`.
-- **Never** take the zone off Cloudflare's proxy to pass an HTTP
-  challenge: for those minutes the records show the server's IP, which is
-  every brand's IP, and DNS history sites keep it.
-
-**The server block.** As root, write `/etc/nginx/sites-available/<id>.conf`:
-
-```nginx
-# <Name> (<id>). Its own server block and certificate; the upstream is
-# baclab_app from baclab.conf, the same container as every brand.
-server {
-    listen 80;
-    listen [::]:80;
-    server_name <apex> www.<apex>;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    server_name <apex> www.<apex>;
-
-    ssl_certificate     /etc/ssl/brands/<id>.pem;
-    ssl_certificate_key /etc/ssl/brands/<id>.key;
-
-    client_max_body_size 1m;
-
-    location / {
-        proxy_pass http://baclab_app;
-        proxy_http_version 1.1;
-        # The app picks the brand from Host. It must be the visitor's host.
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host  $host;
-        proxy_set_header Upgrade           $http_upgrade;
-        proxy_set_header Connection        "upgrade";
-        proxy_read_timeout 300s;
-    }
-
-    # Security headers come from the app (next.config.js), not from here.
+```
+# <Name> (<id>). Its own block and certificate; the same container as every brand.
+<apex>, www.<apex> {
+	tls /etc/ssl/brands/<id>.pem /etc/ssl/brands/<id>.key
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:<PORT>
 }
 ```
 
-Enable it and check, still before any DNS record exists:
+- **The host:** Caddy passes the visitor's `Host` to the app unchanged,
+  which is how the app picks the brand. Add no `header_up Host`.
+- **www:** the app redirects `www.<apex>` to `<apex>` itself.
+- **Port 80:** Caddy redirects it to https by itself.
+- **Security headers** come from the app (`next.config.js`), not from here.
+
+Check and reload, still before any DNS record exists:
 
 ```bash
-ln -sf /etc/nginx/sites-available/<id>.conf /etc/nginx/sites-enabled/<id>.conf
-nginx -t && systemctl reload nginx
+caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
 curl -sk --resolve <apex>:443:127.0.0.1 https://<apex>/robots.txt          # the brand's robots.txt
 curl -sk -o /dev/null -w '%{http_code}\n' --resolve <apex>:443:127.0.0.1 https://<apex>/admin   # 404
-certbot certificates | grep -E 'Certificate Name|Domains'                  # baclab's cert still lists only BacLab's names
+curl -sk -o /dev/null -w '%{http_code}\n' --resolve baclab.co.uk:443:127.0.0.1 https://baclab.co.uk/   # 200: BacLab unchanged
 ```
+
+A reload that fails leaves Caddy serving the old file, so the other sites
+on the box stay up; fix the block and reload again.
+
+**On a box that runs nginx instead** (the first VPS did), the same three
+rules hold: the brand's own server block, its own certificate, the app's
+existing upstream. Never run `deploy/scripts/baclab-add-domain.sh` for a
+brand: it adds the domain to BacLab's certificate and server block.
 
 **DNS, last.** In the brand's Cloudflare zone add, both **proxied** (orange
 cloud):
@@ -428,7 +419,7 @@ curl -sI https://<apex>/ | head -1                      # 200
 curl -sI https://www.<apex>/ | grep -i '^location'      # https://<apex>/
 curl -s https://<apex>/robots.txt                       # Disallow: / until step 11
 curl -s -o /dev/null -w '%{http_code}\n' https://<apex>/admin    # 404
-echo | openssl s_client -connect <apex>:443 -servername <apex> 2>/dev/null | openssl x509 -noout -ext subjectAltName   # this zone's names only
+echo | openssl s_client -connect <apex>:443 -servername <apex> 2>/dev/null | openssl x509 -noout -ext subjectAltName   # Cloudflare's edge certificate: this zone's names only
 curl -s https://<apex>/ | grep -o -i -E 'baclab|<each other brand name, separated by |>' | sort -u   # nothing
 curl -sI https://baclab.co.uk/ | head -1                # 200: BacLab unchanged
 ```
@@ -443,10 +434,13 @@ The site is reachable but still noindex. Before anyone else buys:
 
 1. **Order:** place a real order on `https://<apex>` with a real payment.
    The order confirmation page shows it paid.
-2. **Email:** the confirmation arrives from the brand's own address. In
-   the message source, SPF and DKIM pass for `<apex>`, and nothing in it
-   names BacLab or another brand. No receipt arrives from Stripe: its
-   receipt emails are off for the account (BRAND-PAYMENTS.md).
+2. **Email:** the confirmation arrives from the brand's own address, with
+   its wordmark at the top (it is fetched from `https://<apex>`, so it
+   shows only once the site is reachable). It is the customer's receipt:
+   the items, delivery and the total charged. In the message source, SPF
+   and DKIM pass for `<apex>`, and nothing in it names BacLab or another
+   brand. No receipt arrives from Stripe: its receipt emails are off for
+   the account (BRAND-PAYMENTS.md).
 3. **Admin:** at baclab.co.uk/admin, the order shows the brand's chip, its
    provider and its reference.
    - **Packing slip:** prints the brand's logo and its thank-you line, and
@@ -485,8 +479,8 @@ backup already cover every brand's orders.
 ## Rollback
 
 - **Take the site offline at once:** in the brand's Cloudflare zone, delete
-  the `@` and `www` A records, or change the server block's `location /` to
-  `return 503;` and reload nginx. Do one of these **before** any code
+  the `@` and `www` A records, or change the site block's `reverse_proxy`
+  line to `respond 503` and reload Caddy. Do one of these **before** any code
   rollback. A domain the app no longer knows is served BacLab's site, which
   is the one thing that must never happen.
 - **Stop taking payment, nothing else:** set the brand's

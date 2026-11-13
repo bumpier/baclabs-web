@@ -361,7 +361,7 @@ export default async function OrderConfirmationPage({
                       to <span className="font-medium text-ink">{order.customerEmail}</span>
                     </>
                   ) : null}
-                  . Stripe also emails its own payment receipt.
+                  , with your receipt.
                 </span>
               </li>
             )}

@@ -45,4 +45,6 @@ docker image prune -f >/dev/null
 
 echo
 echo "Deployed. Verify from the box:"
-echo "  curl -sS -o /dev/null -w '%{http_code}\\n' http://127.0.0.1:3001"
+# The host port is the box's own (docker-compose.yml): 3001 unless .env.local says otherwise.
+port="$(sed -n 's/^BACLAB_HOST_PORT=//p' .env.local | tail -1)"
+echo "  curl -sS -o /dev/null -w '%{http_code}\\n' http://127.0.0.1:${port:-3001}"

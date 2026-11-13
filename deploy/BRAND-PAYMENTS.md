@@ -90,18 +90,21 @@ Once, on BacLab's Stripe account, before the first brand takes a payment:
      calculated statement descriptor: BacLab's sessions send no suffix, and
      Stripe's page does not say what such a payment prints once a prefix is
      set.
-3. **Turn Stripe's own receipt emails off (optional).**
-   - **Why:** each brand already sends its own confirmation, from its own
-     address. Stripe's receipt would be a second email, in the account's
-     name and branding, which are BacLab's. BacLab's name is acceptable
-     (above), so this only spares buyers the duplicate.
+3. **Turn Stripe's own receipt emails off (required: the owner, 13 Nov 2026).**
+   - **Why:** every customer's receipt is to be in the look of the site
+     they bought from. Each brand already sends one: its order
+     confirmation, from its own address, with its wordmark, the items and
+     the total. Stripe's receipt would be a second email in the account's
+     name and branding, which are BacLab's, and Stripe cannot brand it per
+     site.
    - **Where:** *Settings → Business → Customer emails*: turn off
      "Successful payments" (and "Refunds").
    - **BacLab too:** this is account-wide, so BacLab's customers stop
-     getting Stripe's receipt as well. BacLab's order confirmation page
-     still says "Stripe also emails its own payment receipt"
-     (`app/(baclab)/(store)/order-confirmation/[id]/page.tsx`); that line
-     needs removing in a BacLab change when this is switched off.
+     getting Stripe's receipt as well. Their receipt is BacLab's own order
+     confirmation, as each brand's is, and BacLab's order confirmation page
+     no longer promises one from Stripe.
+   - **With the setting off**, Stripe sends a receipt only for a payment
+     that names a `receipt_email`. No session of ours does.
 
 Nothing else is configured: no key, no webhook, no env var.
 
