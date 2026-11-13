@@ -2,7 +2,7 @@
 
 One brand at a time, from a name to a live site taking orders. Every brand
 runs in the same `baclab` container as BacLab, on the same VPS, behind the
-same Caddy and Cloudflare, and takes cards on BacLab's Stripe account, which
+same Caddy, and takes cards on BacLab's Stripe account, which
 is told about every brand. What it must never share is anything a customer
 or a crawler can see: its domain, certificate, mailbox, tracking, statement
 wording, payment page and copy are its own, and no page, email, header or
@@ -10,13 +10,24 @@ certificate names another brand.
 
 Throughout, `<id>` is the brand's internal id (`luxury`), `<ID>` the same in
 capitals (`LUXURY`), `<Name>` its public name, `<apex>` its domain without
-`www` (`reserve10.co.uk`) and `<VPS_IP>` the server's address: the one
+`www` (`beautybac.co.uk`) and `<VPS_IP>` the server's address: the one
 baclab.co.uk's A record points at in Cloudflare. Never write the IP into the
-repo or a public page; Cloudflare's proxy is what keeps it private.
+repo or a public page.
+
+**Where the brand's DNS lives decides its certificate** (step 9):
+
+- **Hostinger's own DNS** (the owner's choice, 13 Nov 2026; BeautyBac is
+  set up this way). The domain points straight at the server and Caddy
+  fetches its certificate by itself. Nothing hides the server's address:
+  every brand set up this way shows the same IP in public DNS, so anyone
+  who looks can tell those brands share a server.
+- **Cloudflare, proxied.** BacLab's own domain is. The server's address
+  stays private and the certificate is one Cloudflare issues. A domain
+  bought at Hostinger can still use it, by changing its nameservers.
 
 Who does what:
 
-- **You:** names, accounts, Cloudflare, Resend, Meta, the payment
+- **You:** names, accounts, DNS, Resend, Meta, the payment
   processor, every push and deploy.
 - **The developer:** the code steps (2 and 6), in a branch, built in a
   scratch copy first.
@@ -27,8 +38,8 @@ skip step 2.
 
 Order matters. A domain must reach the app only once the app knows it: the
 app serves BacLab to any host it does not know, and Caddy has nothing to
-serve for a name it has no site block for. So DNS records for the site
-come last, after the deploy and the Caddy block (step 9).
+serve for a name it has no site block for. So the domain is pointed at
+the server only after the deploy that teaches the app its name (step 9).
 
 ---
 
@@ -46,22 +57,26 @@ design work.
    `bulkbac.co.uk`, `luxevial.co.uk`, unregistered that day, still to buy);
    the trade mark search is still to do.
 2. **Domain.** Buy `<apex>` (and the `.com` if you want it parked).
-3. **Cloudflare zone.** In Cloudflare, *Add a site* → `<apex>` → Free plan.
-   Change the nameservers at the registrar to the two Cloudflare gives you,
-   and wait until the zone shows *Active*. Then, in the zone:
-   - **Do not add the A records for `<apex>` and `www` yet.** They are step 9.
-   - **SSL/TLS → Overview:** *Full (strict)*.
-   - **SSL/TLS → Edge Certificates:** *Always Use HTTPS* on. The app sends
-     HSTS with `includeSubDomains; preload` on every host, so every
-     subdomain you ever add to this zone must serve HTTPS too.
-   - **Email → Email Routing:** enable it, add the addresses the brand will
-     publish (for example `hello@<apex>` and `contact@<apex>`) and forward
-     them to your inbox. Let Cloudflare add its MX and SPF records.
-   - **DNS:** add a DMARC record: `TXT _dmarc "v=DMARC1; p=none; rua=mailto:<your address>"`.
+3. **DNS.** In Hostinger's hPanel, *Domains → <apex> → DNS / Nameservers*,
+   on Hostinger's own nameservers:
+   - **Do not point `<apex>` and `www` at the server yet.** That is step 9.
+     Hostinger gives a new domain parking records; leave them for now.
+   - **A mailbox.** The addresses the brand publishes (for example
+     `hello@<apex>`) must reach an inbox: set up a mailbox or a forwarder
+     for each in hPanel's *Emails*, and let it add its MX and SPF records.
+   - **DMARC:** add `TXT _dmarc "v=DMARC1; p=none; rua=mailto:<your address>"`.
+   - The app sends HSTS with `includeSubDomains; preload` on every host,
+     so every subdomain you ever add to the domain must serve HTTPS too.
+   - **On Cloudflare instead:** *Add a site* → `<apex>` → Free plan, change
+     the nameservers at Hostinger to the two Cloudflare gives, wait for
+     *Active*, set *SSL/TLS* to *Full (strict)* and *Always Use HTTPS* on,
+     and use *Email → Email Routing* for the mailbox.
 4. **Resend.** In Resend, *Domains → Add domain* → `<apex>`, region EU.
-   Add exactly the records Resend lists to the Cloudflare zone (DNS only,
-   never proxied) and press *Verify*. They sit on their own names (a DKIM
-   key and a sending subdomain), so they live alongside Email Routing's.
+   Add exactly the records Resend lists to the domain's DNS zone (on
+   Cloudflare: DNS only, never proxied) and press *Verify*. They sit on
+   their own names (a DKIM key and a sending subdomain), so they live
+   alongside the mailbox's. If the zone already has an SPF record on the
+   name Resend asks for, merge the two into one: a name may hold only one.
    The app's existing `RESEND_API_KEY` sends for every verified domain.
 5. **Meta.** In Events Manager, create a pixel (dataset) for the brand and a
    Conversions API access token for it. **The gym brand goes in its own
@@ -70,7 +85,7 @@ design work.
    *Brand safety → Domains* by DNS TXT record. Note the pixel id and the token.
 6. **Google.** Create a GA4 property if the brand will use one (note its
    `G-…` id). In Search Console add a **Domain** property for `<apex>` and
-   verify it with the TXT record it gives you, in Cloudflare DNS. No code
+   verify it with the TXT record it gives you, in the domain's DNS. No code
    or deploy is needed for that.
 7. **Payment.** The brand takes cards through Stripe, on BacLab's own
    Stripe account, with no key or account of its own
@@ -336,25 +351,81 @@ provider is configured, pressing it answers "Checkout is not available
 right now." A brand on Stripe needs no env of its own: it takes payment
 while BacLab's cards are on.
 
-## 9. Caddy, the certificate, then DNS (VPS operator)
+## 9. DNS, Caddy and the certificate (VPS operator)
 
 The box's web server is Caddy (`/etc/caddy/Caddyfile`), which it shares
 with other sites. nginx is installed there and switched off: never start
 it. The brand gets **its own site block and its own certificate**.
 
 - **Never add the brand's domain to BacLab's site block**, and never put
-  it on a certificate that names another brand. One certificate naming two
-  brands ties them together for anyone who looks.
-- **Never let Caddy fetch a certificate for it by itself.** Its automatic
-  HTTPS cannot pass a challenge behind Cloudflare's proxy, and a public
-  certificate is published in the certificate logs. The `tls` line below,
-  with the brand's own files, is what turns that off.
+  two brands' domains in one block. Caddy fetches one certificate per
+  name, so a brand's certificate names nothing but itself; one block for
+  two brands would still tie their settings together.
+- The app must already know the domain (step 7) before any of this.
 
-**The certificate: a Cloudflare Origin CA certificate.**
+### A. The domain on Hostinger's DNS (BeautyBac)
 
-- **Why:** it is not published in the certificate logs, needs no
-  challenge, and lasts 15 years. It is trusted only by Cloudflare, so the
-  domain must stay proxied, which it must anyway. BacLab's own is one.
+**1. Point the domain at the server.** In hPanel, *Domains → <apex> → DNS /
+Nameservers → DNS records*:
+
+- delete the parking records Hostinger made: every `A` and `AAAA` record
+  on `@`, and the `CNAME` (or `A`) on `www`. A leftover `AAAA` record sends
+  some visitors, and the certificate check, to Hostinger's parking page;
+- add `A  @    <VPS_IP>` and `A  www  <VPS_IP>`, TTL 300;
+- leave the mail, Resend and verification records as they are.
+
+Wait until both names answer with the server's address, and nothing else:
+
+```bash
+dig +short A <apex> @1.1.1.1; dig +short A www.<apex> @1.1.1.1; dig +short AAAA <apex> @1.1.1.1
+```
+
+Until the next step the domain answers nothing: Caddy has no site for it.
+
+**2. The site block.** As root, add to the end of `/etc/caddy/Caddyfile`,
+leaving every other block as it is:
+
+```
+# <Name> (<id>). Its own block; Caddy fetches and renews its certificate.
+<apex>, www.<apex> {
+	encode zstd gzip
+	# Nothing in front of Caddy vouches for this header on this domain.
+	request_header -CF-Connecting-IP
+	reverse_proxy 127.0.0.1:<PORT>
+}
+```
+
+- **The certificate:** with no `tls` line, Caddy gets one from Let's
+  Encrypt for each name as soon as the block is loaded, and renews it by
+  itself. It needs ports 80 and 443 open to the internet, which the other
+  sites on the box already use.
+- **`request_header -CF-Connecting-IP`:** the app trusts that header for
+  the visitor's address (its rate limits use it), because BacLab's domain
+  is behind Cloudflare, which sets it. On a domain with nothing in front,
+  a visitor could send their own; this line drops it, and the app falls
+  back to the address Caddy reports.
+- **The host:** Caddy passes the visitor's `Host` to the app unchanged,
+  which is how the app picks the brand. Add no `header_up Host`.
+- **www:** the app redirects `www.<apex>` to `<apex>` itself.
+- **Port 80:** Caddy redirects it to https by itself.
+- **Security headers** come from the app (`next.config.js`), not from here.
+
+```bash
+caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+journalctl -u caddy --since "2 minutes ago" | grep -i -E "certificate obtained|error" | tail
+```
+
+A reload that fails leaves Caddy serving the old file, so the other sites
+on the box stay up; fix the block and reload again. "certificate obtained
+successfully" should show for both names within a minute. If it shows an
+error instead, the usual causes are a DNS record that has not spread yet
+or a leftover `AAAA` record; fix it and Caddy tries again by itself.
+
+### B. The domain on Cloudflare, proxied
+
+Caddy cannot fetch a certificate behind Cloudflare's proxy, so the brand
+uses a Cloudflare Origin CA certificate, as BacLab's own domain does.
+
 - **Create it:** in the brand's Cloudflare zone, *SSL/TLS → Origin
   Server → Create Certificate*, for `<apex>` and `*.<apex>`, RSA, 15 years.
   Copy the certificate and the private key as they are shown: the key is
@@ -368,65 +439,41 @@ it. The brand gets **its own site block and its own certificate**.
   nano /etc/ssl/brands/<id>.key     # paste the private key, from -----BEGIN PRIVATE KEY-----
   chown root:caddy /etc/ssl/brands/<id>.pem /etc/ssl/brands/<id>.key
   chmod 640 /etc/ssl/brands/<id>.pem /etc/ssl/brands/<id>.key
-  openssl x509 -in /etc/ssl/brands/<id>.pem -noout -subject -ext subjectAltName   # the brand's names only
   ```
 
-**The site block.** As root, add to the end of `/etc/caddy/Caddyfile`,
-leaving every other block as it is:
+- **The site block:** as in A, with a `tls` line in place of the
+  `request_header` one, and loaded **before** the DNS records exist:
 
-```
-# <Name> (<id>). Its own block and certificate; the same container as every brand.
-<apex>, www.<apex> {
-	tls /etc/ssl/brands/<id>.pem /etc/ssl/brands/<id>.key
-	encode zstd gzip
-	reverse_proxy 127.0.0.1:<PORT>
-}
-```
+  ```
+  <apex>, www.<apex> {
+  	tls /etc/ssl/brands/<id>.pem /etc/ssl/brands/<id>.key
+  	encode zstd gzip
+  	reverse_proxy 127.0.0.1:<PORT>
+  }
+  ```
 
-- **The host:** Caddy passes the visitor's `Host` to the app unchanged,
-  which is how the app picks the brand. Add no `header_up Host`.
-- **www:** the app redirects `www.<apex>` to `<apex>` itself.
-- **Port 80:** Caddy redirects it to https by itself.
-- **Security headers** come from the app (`next.config.js`), not from here.
+- **DNS, last:** in the Cloudflare zone, `A @ <VPS_IP>` and
+  `A www <VPS_IP>`, both **proxied** (orange cloud).
 
-Check and reload, still before any DNS record exists:
-
-```bash
-caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
-curl -sk --resolve <apex>:443:127.0.0.1 https://<apex>/robots.txt          # the brand's robots.txt
-curl -sk -o /dev/null -w '%{http_code}\n' --resolve <apex>:443:127.0.0.1 https://<apex>/admin   # 404
-curl -sk -o /dev/null -w '%{http_code}\n' --resolve baclab.co.uk:443:127.0.0.1 https://baclab.co.uk/   # 200: BacLab unchanged
-```
-
-A reload that fails leaves Caddy serving the old file, so the other sites
-on the box stay up; fix the block and reload again.
-
-**On a box that runs nginx instead** (the first VPS did), the same three
-rules hold: the brand's own server block, its own certificate, the app's
-existing upstream. Never run `deploy/scripts/baclab-add-domain.sh` for a
-brand: it adds the domain to BacLab's certificate and server block.
-
-**DNS, last.** In the brand's Cloudflare zone add, both **proxied** (orange
-cloud):
-
-- `A  @    <VPS_IP>`
-- `A  www  <VPS_IP>`
-
-Then, from your own machine:
+### Check it, from your own machine
 
 ```bash
 curl -sI https://<apex>/ | head -1                      # 200
 curl -sI https://www.<apex>/ | grep -i '^location'      # https://<apex>/
 curl -s https://<apex>/robots.txt                       # Disallow: / until step 11
 curl -s -o /dev/null -w '%{http_code}\n' https://<apex>/admin    # 404
-echo | openssl s_client -connect <apex>:443 -servername <apex> 2>/dev/null | openssl x509 -noout -ext subjectAltName   # Cloudflare's edge certificate: this zone's names only
-curl -s https://<apex>/ | grep -o -i -E 'baclab|<each other brand name, separated by |>' | sort -u   # nothing
+echo | openssl s_client -connect <apex>:443 -servername <apex> 2>/dev/null | openssl x509 -noout -issuer -ext subjectAltName   # the brand's own names only
+curl -s https://<apex>/ | grep -o -i -E '<each other brand name, separated by |>' | sort -u   # nothing
 curl -sI https://baclab.co.uk/ | head -1                # 200: BacLab unchanged
 ```
 
-Check https://crt.sh/?q=<apex> lists only the brand's own names. With an
-Origin CA certificate it lists only Cloudflare's edge certificate for the
-zone.
+https://crt.sh/?q=<apex> should list the brand's own names and no other
+brand's.
+
+**On a box that runs nginx instead** (the first VPS did), the same rules
+hold: the brand's own server block, its own certificate, the app's
+existing upstream. Never run `deploy/scripts/baclab-add-domain.sh` for a
+brand: it adds the domain to BacLab's certificate and server block.
 
 ## 10. A live order and a refund
 
@@ -478,9 +525,10 @@ backup already cover every brand's orders.
 
 ## Rollback
 
-- **Take the site offline at once:** in the brand's Cloudflare zone, delete
-  the `@` and `www` A records, or change the site block's `reverse_proxy`
-  line to `respond 503` and reload Caddy. Do one of these **before** any code
+- **Take the site offline at once:** change the site block's
+  `reverse_proxy` line to `respond 503` and reload Caddy (immediate), or
+  delete the domain's `@` and `www` A records (slower: DNS takes time to
+  spread). Do one of these **before** any code
   rollback. A domain the app no longer knows is served BacLab's site, which
   is the one thing that must never happen.
 - **Stop taking payment, nothing else:** set the brand's
