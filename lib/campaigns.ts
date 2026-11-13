@@ -182,7 +182,8 @@ export function markdownToEmailHtml(md: string, b: BrandProfile = brandFor(DEFAU
       const heading = text.match(/^(#{1,2})\s+(.+)$/);
       if (heading) {
         const size = heading[1].length === 1 ? 22 : 18;
-        return `<h2 style="margin:24px 0 8px;font-size:${size}px;line-height:1.3;color:${C.ink}">${inline(heading[2])}</h2>`;
+        const face = b.email.headingFont ? `;font-family:${b.email.headingFont};font-weight:400` : "";
+        return `<h2 style="margin:24px 0 8px;font-size:${size}px;line-height:1.3;color:${C.ink}${face}">${inline(heading[2])}</h2>`;
       }
       const lines = text.split("\n");
       if (lines.every((l) => /^\s*[-*]\s+/.test(l))) {

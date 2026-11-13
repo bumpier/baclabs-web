@@ -327,6 +327,25 @@ check("layout: the brand's header and text colours", fxShell.includes(`backgroun
 check("layout: the brand's contact and disclaimer", fxShell.includes("mailto:help@fixture.example") && fxShell.includes("Fixture disclaimer line."));
 leaks("layout", fxShell);
 check("layout: BacLab by default", layout("<p>x</p>").includes("<title>BacLab</title>"));
+check("layout: no wordmark set, the name in type", fxShell.includes(`letter-spacing:0.02em">Fixture &amp; Co</span>`) && !fxShell.includes("<img"));
+// A brand with a wordmark: the image from its own origin, at the stated size,
+// the name as its alt text; centred when asked, and a rule under a header
+// that is the card's own colour.
+const fxMarked = {
+  ...fx,
+  colours: { ...fx.colours, header: fx.colours.paper },
+  email: { ...fx.email, logo: { src: "/email-logo.png", width: 180, height: 40 }, headerAlign: "center" as const, headingFont: "Georgia,serif" },
+};
+const markedShell = layout("<p>Body</p>", { brand: fxMarked });
+check(
+  "layout: the brand's wordmark, from its own origin",
+  markedShell.includes(`<img src="${fx.origin}/email-logo.png" width="180" height="40" alt="Fixture &amp; Co"`) && !markedShell.includes("</span>\n</td>"),
+  markedShell.slice(markedShell.indexOf("<img"), markedShell.indexOf("<img") + 120)
+);
+check("layout: a centred header", markedShell.includes(`<td align="center" style="background:${fx.colours.paper}`) && markedShell.includes("margin:0 auto;"));
+check("layout: a rule under a header in the card's colour", markedShell.includes(`padding:24px 32px;border-bottom:1px solid ${fx.colours.line}">`) && !fxShell.includes("32px;border-bottom"));
+leaks("layout with a wordmark", markedShell);
+check("campaign headings: the brand's heading font", markdownToEmailHtml("# Hello", fxMarked).includes("font-family:Georgia,serif") && !markdownToEmailHtml("# Hello", fx).includes("font-family"));
 const fxButton = ctaButton("https://fixture.example/x", "Go", fx);
 check("button: the brand's colours", fxButton.includes(`background:${fx.colours.cta}`) && fxButton.includes(`color:${fx.colours.onCta}`));
 

@@ -81,6 +81,7 @@ const good: BrandProfile = {
     contact: "help@fixturebrand.co.uk",
     // A subdomain of the brand's own apex is the brand's own.
     inbox: "contact@send.fixturebrand.co.uk",
+    logo: { src: "/email-logo.png", width: 180, height: 40 },
   },
   legalName: "Fixture Trading Ltd",
   company: { number: "01234567", registeredAddress: "1 Test Street, London" },
@@ -259,6 +260,14 @@ const stripeImages = (paymentPage: { logo?: string; icon?: string }, ...files: s
 check("Stripe's images present pass", stripeImages({ logo: "/pay-logo.png", icon: "/pay-icon.jpg" }, "public/fixture/pay-logo.png", "public/fixture/pay-icon.jpg").length === 0);
 check("an SVG for Stripe's page fails", fails(stripeImages({ logo: "/icon.svg" }), /paymentPage\.logo "\/icon\.svg" must be a PNG or JPG site path: Stripe takes no SVG/));
 check("a missing image for Stripe's page fails", fails(stripeImages({ icon: "/pay-icon.png" }), /paymentPage\.icon \/pay-icon\.png is not in public\/fixture\//));
+// The wordmark in the emails: the same rules, and it must fit the column.
+const emailMark = (logo: { src: string; width: number; height: number }, ...files: string[]) =>
+  checkAssets({ id: TEST_BRAND_ID, logo: "/icon.svg", email: { logo } }, [], roots, have(icon, ...files));
+check("an email wordmark present passes", emailMark({ src: "/email-logo.png", width: 180, height: 40 }, "public/fixture/email-logo.png").length === 0);
+check("an SVG email wordmark fails", fails(emailMark({ src: "/icon.svg", width: 180, height: 40 }), /email\.logo "\/icon\.svg" must be a PNG or JPG site path: mail clients show no SVG/));
+check("a missing email wordmark fails", fails(emailMark({ src: "/email-logo.png", width: 180, height: 40 }), /email\.logo \/email-logo\.png is not in public\/fixture\//));
+check("an email wordmark wider than the column fails", fails(emailMark({ src: "/email-logo.png", width: 600, height: 133 }, "public/fixture/email-logo.png"), /must fit the email's 536px column/));
+check("warns: no email wordmark", warns(identity({ ...good, email: { ...good.email, logo: undefined } }), /has no email\.logo/));
 const page = sourceFacts("app/fixture/page.tsx", `export default function P() { return <main><img src="/hero.jpg" alt="Box" /><a href="/sitemap.xml">Map</a></main>; }`);
 check("a page's site paths are read", page.assets.some((a) => a.site === "/hero.jpg") && page.assets.some((a) => a.site === "/sitemap.xml"));
 const pageAssets = (exists: (p: string) => boolean) => checkAssets({ id: TEST_BRAND_ID, logo: "/icon.svg" }, page.assets, roots, exists);

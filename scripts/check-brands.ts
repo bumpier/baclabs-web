@@ -240,6 +240,9 @@ export function checkIdentity(b: BrandProfile, reg: Registry): Finding[] {
     if (url.protocol !== "https:" || isPlaceholderHost(host)) warn(`origin is ${b.origin}, a development origin: set the brand's https:// apex`);
   }
 
+  // Every brand's emails are to carry its own wordmark (the owner, 13 Nov 2026).
+  if (!b.email.logo) warn("has no email.logo: its receipts and marketing emails show the name in plain type, not its wordmark");
+
   const boxes: [field: string, value: string][] = [
     ["email.from", b.email.from],
     ["email.contact", b.email.contact],
@@ -463,7 +466,7 @@ export interface BrandRoots {
 
 /** The logo, the icon and every file the brand's pages name exist. */
 export function checkAssets(
-  b: Pick<BrandProfile, "logo" | "paymentPage"> & { id: string },
+  b: Pick<BrandProfile, "logo" | "paymentPage"> & { id: string; email?: Pick<BrandProfile["email"], "logo"> },
   refs: readonly AssetRef[],
   roots: BrandRoots,
   exists: (repoPath: string) => boolean
@@ -474,11 +477,19 @@ export function checkAssets(
   if (!b.logo.startsWith("/")) fail(`logo "${b.logo}" is not a site path`);
   else if (!exists(`${roots.public}${b.logo}`)) fail(`logo ${b.logo} is not in ${roots.public}/`);
   if (!exists(`${roots.public}${BRAND_ICON_PATH}`)) fail(`${roots.public}${BRAND_ICON_PATH} is missing: every page's icon and the web manifest point at it`);
-  // Stripe fetches these from the brand's origin, and takes PNG or JPG only.
-  for (const [field, site] of [["paymentPage.logo", b.paymentPage?.logo], ["paymentPage.icon", b.paymentPage?.icon]] as const) {
+  // Stripe and mail clients fetch these from the brand's origin, and take PNG or JPG only.
+  for (const [field, site, reader] of [
+    ["paymentPage.logo", b.paymentPage?.logo, "Stripe takes"],
+    ["paymentPage.icon", b.paymentPage?.icon, "Stripe takes"],
+    ["email.logo", b.email?.logo?.src, "mail clients show"],
+  ] as const) {
     if (!site) continue;
-    if (!/^\/[A-Za-z0-9._/-]+\.(?:png|jpe?g)$/.test(site)) fail(`${field} "${site}" must be a PNG or JPG site path: Stripe takes no SVG`);
+    if (!/^\/[A-Za-z0-9._/-]+\.(?:png|jpe?g)$/.test(site)) fail(`${field} "${site}" must be a PNG or JPG site path: ${reader} no SVG`);
     else if (!exists(`${roots.public}${site}`)) fail(`${field} ${site} is not in ${roots.public}/`);
+  }
+  const mark = b.email?.logo;
+  if (mark && !(mark.width > 0 && mark.width <= 536 && mark.height > 0)) {
+    fail(`email.logo is ${mark.width} by ${mark.height}: it must fit the email's 536px column`);
   }
   for (const r of refs) {
     if (r.file && !exists(r.file)) fail(`${r.where} imports ${r.file}, which does not exist`);

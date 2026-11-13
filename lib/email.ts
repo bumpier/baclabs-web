@@ -210,6 +210,16 @@ export function layout(body: string, opts?: { preheader?: string; brand?: BrandP
   // Escaped: a brand name can hold an "&".
   const name = escapeHtml(b.name);
   const contact = b.email.contact;
+  const onHeader = c.onHeader ?? "#ffffff";
+  const centred = b.email.headerAlign === "center";
+  // The brand's wordmark when it has one. Its alt text is the name, styled
+  // as the name is, for a client that has images switched off.
+  const logo = b.email.logo;
+  const mark = logo
+    ? `<img src="${b.origin}${logo.src}" width="${logo.width}" height="${logo.height}" alt="${name}" style="display:block;${centred ? "margin:0 auto;" : ""}border:0;outline:none;text-decoration:none;max-width:100%;height:auto;color:${onHeader};font-size:18px;font-weight:700;letter-spacing:0.02em" />`
+    : `<span style="color:${onHeader};font-size:18px;font-weight:700;letter-spacing:0.02em">${name}</span>`;
+  // A header in the card's own colour has no band, so a rule closes it.
+  const headerRule = c.header === c.paper ? `;border-bottom:1px solid ${c.line}` : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -222,8 +232,8 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;c
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${c.neutral}">
 <tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:${c.paper};border-radius:12px;overflow:hidden">
-<tr><td style="background:${c.header};padding:24px 32px">
-<span style="color:${c.onHeader ?? "#ffffff"};font-size:18px;font-weight:700;letter-spacing:0.02em">${name}</span>
+<tr><td${centred ? ` align="center"` : ""} style="background:${c.header};padding:24px 32px${headerRule}">
+${mark}
 </td></tr>
 <tr><td style="padding:32px;color:${c.ink};font-size:15px;line-height:1.6">
 ${body}

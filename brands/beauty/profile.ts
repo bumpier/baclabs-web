@@ -34,7 +34,9 @@ export function beautyProfile(): BrandProfile {
       line: "#E6D0CC",
       primary: "#3B1730",
       cta: "#3B1730",
-      header: "#F2DFDC",
+      // The email header is the card's own porcelain, with the wordmark on
+      // it: a blush band would vanish into the blush behind the card.
+      header: "#F8F3F3",
       onHeader: "#3B1730",
       onCta: "#FBF6F5",
     },
@@ -43,6 +45,12 @@ export function beautyProfile(): BrandProfile {
       from: "BeautyBac <hello@beauty.invalid>",
       contact: "",
       inbox: "",
+      // The wordmark Stripe's page shows, 960 by 213, at a quarter size:
+      // centred, as the storefront's header has it. Headings take a serif a
+      // mail client has, in place of the site's Rosarivo.
+      logo: { src: "/payment-logo.png", width: 180, height: 40 },
+      headerAlign: "center",
+      headingFont: "Georgia,'Times New Roman',Times,serif",
     },
     reviews: { url: "", inviteBcc: null },
     disclaimer:

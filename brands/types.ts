@@ -74,6 +74,20 @@ export interface BrandProfile {
      * the latter for every brand).
      */
     inbox: string;
+    /**
+     * The wordmark at the top of every email, in place of the name in type.
+     * A PNG or JPG site path, served on the brand's own domain (mail clients
+     * drop SVG). `width` and `height` are the size it is shown at, in CSS
+     * pixels: make the file at least twice that. Unset keeps the name.
+     */
+    logo?: { src: string; width: number; height: number };
+    /** Centres the header. Unset is left-aligned. */
+    headerAlign?: "center";
+    /**
+     * A font stack for headings, of fonts a mail client already has: none
+     * loads a web font. Unset keeps the body's.
+     */
+    headingFont?: string;
   };
   reviews: {
     /** Where a review request sends the customer. "" asks for a reply by email instead. */
