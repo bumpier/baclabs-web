@@ -250,19 +250,21 @@ export interface BrandPayment {
 }
 
 // ── Catalogues ──────────────────────────────────────────────────────
-// Every brand sells the same neutral 10ml vial, in the same plain box
-// (brands/packaging.ts). A pack is therefore one SKU per brand and size, made
-// up in the warehouse as a kit: N × the shared vial + 1 × the box
-// (scripts/seed-brand-skus.ts). Vial and box stock are shared.
+// Every brand sells the same neutral 10ml vial, in the same plain box. It is
+// the same product as BacLab's (the owner, 13 Nov 2026), so a pack ships as
+// BacLab's own pack of that many vials: the same warehouse SKU, stock,
+// weight and shipping rules (lib/inventory/demand.ts sharedPackSku). A
+// brand's own pack code is its storefront's name for the pack, nothing more.
 
 /** One pack a brand sells. */
 export interface CataloguePack {
   /** Stable within the brand ("x10"). Never shown. */
   id: string;
   /**
-   * The pack's SKU, `${parentSku}-X${vials}`: what the storefront sends to
-   * the checkout, the warehouse kit it ships as, the line's `sku` on the
-   * order and the brand's Meta content id. Unique across every brand.
+   * The pack's code, `${parentSku}-X${vials}`: what the storefront sends to
+   * the checkout, the line's `sku` on the order and the brand's Meta content
+   * id. Unique across every brand. Never a warehouse SKU: the pack ships as
+   * BacLab's pack of the same size.
    */
   sku: string;
   vials: number;
@@ -299,14 +301,8 @@ export interface CatalogueAddOn {
 }
 
 export interface BrandCatalogue {
-  /** The stem of every pack SKU, and Meta's parent id for them ("LUX-10ML"). */
+  /** The stem of every pack code, and Meta's parent id for them ("LUX-10ML"). */
   parentSku: string;
-  /**
-   * The box every pack ships in: the one non-vial component of each pack's
-   * kit SKU. PLAIN_BOX_SKU (brands/packaging.ts), shared by every brand,
-   * unless the brand ships in a box of its own.
-   */
-  boxSku: string;
   /** In the order the storefront lists them: smallest first. */
   packs: readonly CataloguePack[];
   addOns: readonly CatalogueAddOn[];

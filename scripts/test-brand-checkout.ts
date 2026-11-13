@@ -37,9 +37,7 @@ import { GIFT_NOTE_MAX, cleanGiftNote, giftNoteFrom, giftNoteLine } from "@/lib/
 import { MAX_LINE_QTY, priceBrandLines, type PricedBrandOrder } from "@/lib/commerce/pricing";
 import { brandBuyLink, parseBuyParam } from "@/lib/commerce/links";
 import { buildBrandOrderItems, buildOrderItems, isKitLine } from "@/lib/order-items";
-import { LAB_KIT_SKU_CODE, VIAL_SKU_CODE, soldLines } from "@/lib/inventory/demand";
-import { brandSkuSpecs } from "@/lib/inventory/brand-skus";
-import { PLAIN_BOX_SKU } from "@/brands/packaging";
+import { LAB_KIT_SKU_CODE, VIAL_SKU_CODE, sharedPackSku, soldLines, storefrontSkuCodes } from "@/lib/inventory/demand";
 import { skuCodeError } from "@/lib/inventory/codes";
 import { selectService } from "@/lib/shipping/select-service";
 import { vialsOnOrder } from "@/lib/vial-stock";
@@ -94,11 +92,9 @@ for (const b of NEW_BRANDS) {
     check(`${b.id}: ${p.sku} costs something`, Number.isInteger(p.priceMinor) && p.priceMinor > 0);
   }
   for (const a of c.addOns) check(`${b.id}: ${a.sku} is a valid SKU code`, skuCodeError(a.sku) === null);
-  check(`${b.id}: the box is a valid SKU code`, skuCodeError(c.boxSku) === null);
-  check(`${b.id}: ships in the shared plain box`, c.boxSku === PLAIN_BOX_SKU, c.boxSku);
   allSkus.push(...c.packs.map((p) => p.sku), ...c.addOns.map((a) => a.sku));
   // Every code is the storefront's and its Meta dataset's: never BacLab's name.
-  check(`${b.id}: no code names BacLab`, ![...c.packs.map((p) => p.sku), ...c.addOns.map((a) => a.sku), c.boxSku].some((s) => /baclab/i.test(s)));
+  check(`${b.id}: no code names BacLab`, ![...c.packs.map((p) => p.sku), ...c.addOns.map((a) => a.sku)].some((s) => /baclab/i.test(s)));
   check(`${b.id}: no promotion codes in v1`, c.allowPromotionCodes === false);
   check(`${b.id}: business details only for wholesale`, c.collectBusinessDetails === (b.id === "wholesale"));
   check(`${b.id}: a gift note only for luxury`, c.collectGiftNote === (b.id === "luxury"));
@@ -140,18 +136,26 @@ check(
 check("gym: the Lab Kit ships as BacLab's kit", cat("gym").addOns.length === 1 && cat("gym").addOns[0]!.ships === "lab-kit");
 check("lookups ignore case and space", catalogueItem(cat("luxury"), "  lux-10ml-x5 ")?.kind === "pack");
 
-// SKU seed: each pack is N × the shared vial + 1 × the shared plain box.
-const specs = brandSkuSpecs();
-check("seed: one spec per brand with a catalogue", specs.map((s) => s.brand).join() === NEW_BRANDS.map((b) => b.id).join());
-for (const s of specs) {
-  const c = cat(s.brand);
-  check(`seed ${s.brand}: a kit per pack`, s.kits.map((k) => k.code).join() === c.packs.map((p) => p.sku).join());
-  check(`seed ${s.brand}: kits say N vials + the box`, s.kits.every((k) => k.description.includes(`${k.vials} × ${VIAL_SKU_CODE} + 1 × ${c.boxSku}`)));
-  // Kit names go on carrier labels and customs forms.
-  check(`seed ${s.brand}: kit names never name the brand`, s.kits.every((k) => !k.name.includes(brandFor(s.brand).name)));
-  check(`seed ${s.brand}: needs BacLab's kit only for a kit add-on`, (s.needs.length > 0) === c.addOns.some((a) => a.ships === "lab-kit"));
+// The warehouse: every pack is the same product as BacLab's, so it ships as
+// BacLab's own pack of that size (one SKU, one stock count, one weight, one
+// set of shipping rules), or as single vials where BacLab sells no such pack.
+for (const b of NEW_BRANDS) {
+  for (const p of cat(b.id).packs) {
+    const shared = sharedPackSku(p.vials);
+    const bacLab = storefrontSkuCodes().find((c) => c.vials === p.vials);
+    check(
+      `${p.sku}: ships as BacLab's ${p.vials}-pack, or as ${p.vials} single vials`,
+      bacLab ? shared.skuCode === bacLab.code && shared.unitsPerPack === 1 : shared.skuCode === VIAL_SKU_CODE && shared.unitsPerPack === p.vials,
+      JSON.stringify(shared)
+    );
+  }
 }
-check("seed: one plain box for every brand, named for no brand", specs.every((s) => s.box.code === PLAIN_BOX_SKU && s.box.name === "Plain box"));
+check("warehouse: BeautyBac's packs are all sizes BacLab sells", cat("beauty").packs.every((p) => sharedPackSku(p.vials).unitsPerPack === 1));
+check("warehouse: a size BacLab does not sell ships as single vials", JSON.stringify(sharedPackSku(3)) === JSON.stringify({ skuCode: VIAL_SKU_CODE, unitsPerPack: 3 }));
+{
+  const odd = soldLines(JSON.stringify([{ slug: "baclab-10ml", qty: 6, bundleId: "FIX-10ML-X3", bundleQty: 2, sku: "FIX-10ML-X3", lineTotal: "30.00" }]));
+  check("warehouse: two 3-packs are six single vials", odd[0]!.skuCode === VIAL_SKU_CODE && odd[0]!.quantity === 6, JSON.stringify(odd));
+}
 
 // ── Pricing ───────────────────────────────────────────────────────────
 {
@@ -209,8 +213,8 @@ check("refused: the kit while it is switched off", refusal("gym", [{ sku: "GYM-1
   const json = JSON.stringify(lines);
   const sold = soldLines(json);
   check(
-    "items: the warehouse ships each pack as its kit SKU, the kit as BacLab's",
-    JSON.stringify(sold.map((s) => [s.skuCode, s.quantity])) === `[["GYM-10ML-X5",1],["GYM-10ML-X10",2],["${LAB_KIT_SKU_CODE}",4]]`,
+    "items: the warehouse ships each pack as BacLab's pack of that size, the kit as BacLab's",
+    JSON.stringify(sold.map((s) => [s.skuCode, s.quantity])) === `[["BACLAB-10ML-X5",1],["BACLAB-10ML-X10",2],["${LAB_KIT_SKU_CODE}",4]]`,
     JSON.stringify(sold.map((s) => [s.skuCode, s.quantity]))
   );
   check("items: vial stock counts the vials, not the kits", vialsOnOrder(json) === 25);
@@ -790,27 +794,20 @@ async function databaseChecks() {
     console.error("Refusing the database checks: the database already has orders. Use a fresh one.");
     process.exit(1);
   }
-  const { seedBrandSkus } = await import("@/lib/inventory/brand-skus");
+  const { createStorefrontSkus } = await import("@/lib/inventory/store");
   const { POST: checkout } = await import("@/app/api/checkout/route");
 
   await prisma.product.create({
     data: { slug: "baclab-10ml", name: `${PRODUCT.name} ${PRODUCT.size}`, description: "x", priceGbp: SINGLE_BUNDLE.priceMinor / 100, stock: 200, supplyDays: 30 },
   });
   await prisma.product.create({ data: { slug: LAB_KIT.sku, name: LAB_KIT.name, description: "x", priceGbp: 5.99, stock: 20 } });
-  const seeded = await seedBrandSkus(prisma, { apply: true });
+  // BacLab's own SKUs ("Create storefront SKUs" on /admin/inventory): the
+  // only ones there are. No brand has a SKU of its own.
+  const made = await createStorefrontSkus();
+  check("db: BacLab's packs and the shared vial exist", made.includes(VIAL_SKU_CODE) && made.includes("BACLAB-10ML-X5"), JSON.stringify(made));
   check(
-    "db: the seed creates the plain box once, and every pack",
-    seeded.created.filter((c) => c === PLAIN_BOX_SKU).length === 1 && seeded.created.includes("GYM-10ML-X10"),
-    JSON.stringify(seeded.created)
-  );
-  check("db: one box SKU in all", (await prisma.sku.count({ where: { code: { endsWith: "-BOX" } } })) === 1);
-  check("db: the seed is idempotent", (await seedBrandSkus(prisma, { apply: true })).created.length === 0);
-  const luxKit = await prisma.sku.findUnique({ where: { code: "LUX-10ML-X5" }, include: { components: { include: { component: true } } } });
-  check(
-    "db: a pack's kit is N shared vials + the plain box",
-    JSON.stringify(Object.fromEntries(luxKit?.components.map((c) => [c.component.code, c.quantity]) ?? [])) ===
-      JSON.stringify(Object.fromEntries([[VIAL_SKU_CODE, 5], [PLAIN_BOX_SKU, 1]].sort())),
-    JSON.stringify(luxKit?.components.map((c) => [c.component.code, c.quantity]))
+    "db: no SKU carries a brand's code",
+    (await prisma.sku.count({ where: { OR: NEW_BRANDS.map((b) => ({ code: { startsWith: b.catalogue!.parentSku } })) } })) === 0
   );
 
   let ip = 0;
@@ -899,28 +896,26 @@ async function databaseChecks() {
   check("db: and leaves the order unpaid, with no payment attached", (await prisma.order.count({ where: { brand: "luxury", paymentRef: null, status: "pending" } })) === 1);
   __registerTestPaymentAdapter(standInAdapter(asked));
 
-  // Warehouse mode: the pack is allocated as its kit, from the shared vials and the plain boxes.
+  // Warehouse mode: the pack is allocated as BacLab's pack of that size, from the shared vials.
   const warehouse = await prisma.warehouse.create({ data: { code: "MAIN", name: "Main" } });
   const shelf = await prisma.location.create({ data: { warehouseId: warehouse.id, code: "A1" } });
-  for (const [code, quantity] of [[VIAL_SKU_CODE, 40], [PLAIN_BOX_SKU, 5]] as const) {
-    const sku = await prisma.sku.findUniqueOrThrow({ where: { code } });
-    await receiveStock({ skuId: sku.id, locationId: shelf.id, quantity, reference: "test", actor: "test" });
-  }
+  const vialSku = await prisma.sku.findUniqueOrThrow({ where: { code: VIAL_SKU_CODE } });
+  await receiveStock({ skuId: vialSku.id, locationId: shelf.id, quantity: 40, reference: "test", actor: "test" });
   await setInventoryMode("warehouse");
   const shelfRes = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X5", qty: 2 }] });
   check("db: luxury checks out against the shelves", shelfRes.status === 200);
-  const tooMany = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X5", qty: 6 }] });
-  check("db: the plain boxes limit what it can sell", tooMany.status === 409);
+  const tooMany = await post("luxury.localhost:3000", { lines: [{ sku: "LUX-10ML-X5", qty: 9 }] });
+  check("db: the shared vials limit what it can sell (40 on the shelf, 45 asked)", tooMany.status === 409, String(tooMany.status));
   const shelfOrder = await prisma.order.findFirst({ where: { brand: "luxury", paymentRef: `stand-in-${asked.length}` } });
   await fulfillPaidOrder(shelfOrder!.id, { paymentRef: "pi_stand_in_shelf", provider: "stripe", deliveryMinor: 0 });
   const picks = await prisma.pickLine.findMany({ where: { orderId: shelfOrder!.id }, include: { sku: true } });
   const picked = Object.fromEntries(picks.map((p) => [p.sku.code, p.quantity]));
-  check("db: allocated as 10 shared vials and 2 plain boxes", picked[VIAL_SKU_CODE] === 10 && picked[PLAIN_BOX_SKU] === 2, JSON.stringify(picked));
-  // One box for every brand: luxury's two came off the shelf gym's packs draw on too.
-  const gymOver = await post("gym.localhost:3000", { lines: [{ sku: "GYM-10ML-X1", qty: 4 }], deliveryOption: "standard" });
-  check("db: another brand draws on the same boxes (3 left, 4 asked)", gymOver.status === 409, String(gymOver.status));
-  const gymFits = await post("gym.localhost:3000", { lines: [{ sku: "GYM-10ML-X1", qty: 3 }], deliveryOption: "standard" });
-  check("db: and can sell the boxes that are left", gymFits.status === 200, String(gymFits.status));
+  check("db: allocated as 10 shared vials and nothing else", picked[VIAL_SKU_CODE] === 10 && Object.keys(picked).length === 1, JSON.stringify(picked));
+  // One shelf for every brand: luxury's ten came off the vials gym's packs draw on too.
+  const gymOver = await post("gym.localhost:3000", { lines: [{ sku: "GYM-10ML-X10", qty: 4 }] });
+  check("db: another brand draws on the same vials (30 left, 40 asked)", gymOver.status === 409, String(gymOver.status));
+  const gymFits = await post("gym.localhost:3000", { lines: [{ sku: "GYM-10ML-X10", qty: 3 }] });
+  check("db: and can sell the vials that are left", gymFits.status === 200, String(gymFits.status));
   await setInventoryMode("legacy");
   __clearTestPaymentAdapters();
 

@@ -9,12 +9,9 @@
  */
 import { DELIVERY, DELIVERY_OPTIONS } from "@/config/funnel";
 import type { BrandCatalogue } from "../types";
-import { PLAIN_BOX_SKU } from "../packaging";
 
 export const templateCatalogue: BrandCatalogue = {
   parentSku: "TPL-10ML",
-  // TODO(confirm): the box's SKU and its packed weight (scripts/seed-brand-skus.ts).
-  boxSku: PLAIN_BOX_SKU,
   packs: [
     // TODO(confirm): all four prices.
     { id: "x1", sku: "TPL-10ML-X1", vials: 1, priceMinor: 699, label: "", available: true },

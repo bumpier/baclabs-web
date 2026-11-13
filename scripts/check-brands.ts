@@ -13,9 +13,8 @@
  *    must itself be Stripe's 2 to 10 characters; unrecorded, the longest),
  *    a Stripe brand has its own PNG or JPG logo and icon for Stripe's page,
  *    and the label's sender name fits SmartTrack;
- *  - catalogue: the per-vial price falls as the packs grow, and every pack
- *    and box is a SKU that scripts/seed-brand-skus.ts creates, unique across
- *    the brands;
+ *  - catalogue: the per-vial price falls as the packs grow, and every
+ *    pack's code is its own, unique across the brands;
  *  - assets: its logo, its icon and every file its pages name are in
  *    public/<id>/, and next/image is never left on its default loader,
  *    which cannot fetch them (checkImages);
@@ -52,7 +51,6 @@ import path from "node:path";
 import ts from "typescript";
 import hostsJson from "@/brands/hosts.json";
 import { OPERATOR } from "@/brands/operator";
-import { PLAIN_BOX_SKU } from "@/brands/packaging";
 import { brandFor, DEFAULT_BRAND, type BrandProfile } from "@/brands/registry";
 import { BRAND_IDS, type BrandId } from "@/brands/types";
 import { templateProfile } from "@/brands/_template/profile";
@@ -60,9 +58,7 @@ import { checkBrandCopy } from "@/lib/content-rules";
 import { paymentAdapter } from "@/lib/commerce/payments";
 import { STRIPE_STATEMENT_PREFIX } from "@/lib/commerce/payments/stripe";
 import { BRAND_ICON_PATH } from "@/lib/brand/site";
-import { brandSkuSpecs, type BrandSkuSpec } from "@/lib/inventory/brand-skus";
 import { normaliseCode, skuCodeError } from "@/lib/inventory/codes";
-import { LAB_KIT_SKU_CODE, VIAL_SKU_CODE } from "@/lib/inventory/demand";
 import { LIMITS } from "@/lib/smarttrack/payload";
 
 export type Level = "fail" | "warn";
@@ -80,7 +76,7 @@ export interface CopyString {
   where: string;
   text: string;
   /** Where it came from. The leak allow-list is scoped by it. */
-  kind: "source" | "profile" | "seed" | "asset" | "operator";
+  kind: "source" | "profile" | "asset" | "operator";
 }
 
 /** A file a page names: a static import, or a site path such as "/hero.jpg". */
@@ -115,8 +111,6 @@ export interface Registry {
   hosts: Readonly<Record<string, readonly string[]>>;
   /** Every registered brand, BacLab first. */
   brands: readonly BrandProfile[];
-  /** What scripts/seed-brand-skus.ts creates (lib/inventory/brand-skus.ts). */
-  seeded: readonly BrandSkuSpec[];
   hasAdapter(provider: string): boolean;
   /**
    * BacLab's Stripe account's shortened descriptor, as recorded in
@@ -419,7 +413,7 @@ export function checkCatalogue(b: BrandProfile, reg: Registry): Finding[] {
     }
   }
 
-  const codes = [c.boxSku, ...c.packs.map((p) => p.sku), ...c.addOns.map((a) => a.sku)];
+  const codes = [...c.packs.map((p) => p.sku), ...c.addOns.map((a) => a.sku)];
   for (const code of codes) {
     if (normaliseCode(code) !== code) fail(`SKU "${code}" is not written as the warehouse stores it (${normaliseCode(code)})`);
     const problem = skuCodeError(normaliseCode(code));
@@ -427,33 +421,23 @@ export function checkCatalogue(b: BrandProfile, reg: Registry): Finding[] {
   }
   if (new Set(codes.map(normaliseCode)).size !== codes.length) fail("its catalogue uses one SKU code twice");
 
-  // Every brand ships in the shared plain box unless it has its own; the
-  // packer is told only about a box of the brand's own.
-  const ownBox = normaliseCode(c.boxSku) !== PLAIN_BOX_SKU;
-  if (ownBox && !b.shipping?.packingNote) {
-    warn(`its packs ship in a box of its own (${c.boxSku}), but no shipping.packingNote tells the packer so; or use the shared plain box (brands/packaging.ts)`);
-  }
-  if (!ownBox && b.shipping?.packingNote) {
-    warn(`shipping.packingNote says "${b.shipping.packingNote}", but its packs ship in the shared plain box: the slip would tell the packer something untrue`);
+  // A pack is packed exactly as BacLab's is (the owner, 13 Nov 2026), so a
+  // packing note would tell the packer something untrue.
+  if (b.shipping?.packingNote) {
+    warn(`shipping.packingNote says "${b.shipping.packingNote}", but its packs ship as BacLab's own do: the slip would tell the packer something untrue`);
   }
 
-  const spec = reg.seeded.find((s) => s.brand === b.id);
-  if (!spec) fail("scripts/seed-brand-skus.ts seeds nothing for it");
-  else {
-    if (spec.box.code !== normaliseCode(c.boxSku)) fail(`the seed's box is ${spec.box.code}, not the catalogue's ${c.boxSku}`);
-    for (const p of c.packs) {
-      if (p.sku !== `${c.parentSku}-X${p.vials}`) fail(`pack ${p.sku} should be ${c.parentSku}-X${p.vials}`);
-      if (!spec.kits.some((k) => k.code === normaliseCode(p.sku) && k.vials === p.vials)) {
-        fail(`pack ${p.sku} is not a kit that scripts/seed-brand-skus.ts creates`);
-      }
-    }
+  // A pack's code is the storefront's alone. In the warehouse it is BacLab's
+  // pack of that size, or that many single vials (lib/inventory/demand.ts
+  // sharedPackSku), so there is nothing of the brand's to create or weigh.
+  for (const p of c.packs) {
+    if (p.sku !== `${c.parentSku}-X${p.vials}`) fail(`pack ${p.sku} should be ${c.parentSku}-X${p.vials}`);
   }
 
   for (const o of reg.brands) {
     if (o.id === b.id || !o.catalogue) continue;
-    const theirs = new Set([o.catalogue.boxSku, ...o.catalogue.packs.map((p) => p.sku), ...o.catalogue.addOns.map((a) => a.sku)].map(normaliseCode));
-    // The plain box is every brand's by design.
-    for (const code of codes) if (normaliseCode(code) !== PLAIN_BOX_SKU && theirs.has(normaliseCode(code))) fail(`SKU ${code} is also ${o.name}'s`);
+    const theirs = new Set([...o.catalogue.packs.map((p) => p.sku), ...o.catalogue.addOns.map((a) => a.sku)].map(normaliseCode));
+    for (const code of codes) if (theirs.has(normaliseCode(code))) fail(`SKU ${code} is also ${o.name}'s`);
   }
   return out;
 }
@@ -664,18 +648,6 @@ export function profileStrings(b: BrandProfile): CopyString[] {
   return out;
 }
 
-/** The warehouse SKUs seeded for a brand. Kit names reach carrier labels and customs forms. */
-export function seedStrings(spec: BrandSkuSpec): CopyString[] {
-  const s = (where: string, text: string): CopyString => ({ where: `seed ${where}`, text, kind: "seed" });
-  return [
-    s(`${spec.box.code} code`, spec.box.code),
-    s(`${spec.box.code} name`, spec.box.name),
-    s(`${spec.box.code} description`, spec.box.description),
-    ...spec.kits.flatMap((k) => [s(`${k.code} code`, k.code), s(`${k.code} name`, k.name), s(`${k.code} description`, k.description)]),
-    ...spec.needs.map((n) => s("needs", n)),
-  ];
-}
-
 // ── Copy and leaks ──────────────────────────────────────────────────
 
 /** Every string against one brand's copy rules. */
@@ -716,42 +688,18 @@ export function leakMarkers(self: string, brands: readonly BrandProfile[]): Leak
       if (!caught(h)) out.push({ re: new RegExp(`(?<![a-z0-9-])${escapeRegex(h)}(?![a-z0-9-])`, "i"), what: `${o.name}'s host ${h}` });
     }
     if (o.catalogue) {
-      // The plain box is every brand's, so its code names none of them.
-      for (const code of [o.catalogue.parentSku, o.catalogue.boxSku].filter((c) => normaliseCode(c) !== PLAIN_BOX_SKU)) out.push({ re: new RegExp(escapeRegex(code), "i"), what: `${o.name}'s SKU ${code}` });
+      out.push({ re: new RegExp(escapeRegex(o.catalogue.parentSku), "i"), what: `${o.name}'s SKU ${o.catalogue.parentSku}` });
     }
   }
   return out;
 }
 
-/**
- * Internal identifiers that may appear where a marker would otherwise
- * catch them, each with the only kind of string it may appear in and why it
- * never reaches a customer there.
- */
-export const LEAK_ALLOW: readonly { token: string; in: CopyString["kind"]; reason: string }[] = [
-  {
-    token: VIAL_SKU_CODE,
-    in: "seed",
-    reason: "the shared vial's warehouse code, named in each kit's description for staff (pick list, /admin/inventory); never on a page, email or label",
-  },
-  {
-    token: LAB_KIT_SKU_CODE,
-    in: "seed",
-    reason: "the Lab Kit's warehouse code, which a brand's Lab Kit add-on ships as; staff only",
-  },
-];
-
-/**
- * No string names another brand or BacLab, bar LEAK_ALLOW's tokens where
- * they are allowed and the business behind the brands in a legal field.
- */
+/** No string names another brand or BacLab, bar the business behind the brands in a legal field. */
 export function checkLeaks(brand: string, strings: readonly CopyString[], markers: readonly LeakMarker[]): Finding[] {
   const { out, fail } = findings(brand);
   for (const s of strings) {
     if (s.kind === "operator") continue;
-    let text = s.text;
-    for (const a of LEAK_ALLOW) if (a.in === s.kind) text = text.split(a.token).join("·");
-    const named = markers.filter((m) => m.re.test(text)).map((m) => m.what);
+    const named = markers.filter((m) => m.re.test(s.text)).map((m) => m.what);
     if (named.length > 0) fail(`${s.where}: names ${named.join(", ")} in ${JSON.stringify(s.text.length > 90 ? `${s.text.slice(0, 87)}...` : s.text)}`);
   }
   return out;
@@ -788,7 +736,6 @@ export function diskRegistry(): Registry {
   return {
     hosts: hostsJson as Record<string, readonly string[]>,
     brands,
-    seeded: brandSkuSpecs(brands),
     hasAdapter: (p) => paymentAdapter(p) !== null,
     stripePrefix: STRIPE_STATEMENT_PREFIX,
   };
@@ -844,7 +791,6 @@ export function runChecks(reg: Registry = diskRegistry()): { registry: Finding[]
     if (b.id === DEFAULT_BRAND) continue;
     const files = readBrandFiles([`brands/${b.id}`, `app/${b.id}`, `public/${b.id}`], `app/${b.id}/site.ts`);
     const strings = [...files.strings, ...profileStrings(b)];
-    const spec = reg.seeded.find((s) => s.brand === b.id);
     const out: Finding[] = [
       ...checkIdentity(b, reg),
       ...checkPayments(b, reg),
@@ -852,7 +798,7 @@ export function runChecks(reg: Registry = diskRegistry()): { registry: Finding[]
       ...checkAssets(b, files.assets, { app: `app/${b.id}`, public: `public/${b.id}` }, existsInRepo),
       ...checkImages(b.id, files.defaultImageLoader),
       ...checkCopy(b.id, b.id, strings.filter((s) => s.kind !== "asset")),
-      ...checkLeaks(b.id, [...strings, ...(spec ? seedStrings(spec) : [])], leakMarkers(b.id, reg.brands)),
+      ...checkLeaks(b.id, strings, leakMarkers(b.id, reg.brands)),
       ...checkNotes(b.id, files.notes),
     ];
     if (!files.siteFound) out.push({ brand: b.id, level: "fail", message: `app/${b.id}/site.ts is missing or has no exported LIVE flag` });
@@ -898,9 +844,8 @@ export function checkTemplate(reg: Registry): Finding[] {
 
   const strings = [...files.strings, ...profileStrings(t)];
   for (const id of BRAND_IDS) out.push(...checkCopy(TEMPLATE.id, id, strings.filter((s) => s.kind !== "asset")));
-  const seeded = brandSkuSpecs([t]);
-  out.push(...checkLeaks(TEMPLATE.id, [...strings, ...seeded.flatMap(seedStrings)], leakMarkers(TEMPLATE.id, reg.brands)));
-  out.push(...checkCatalogue(t, { ...reg, brands: [...reg.brands, t], seeded }));
+  out.push(...checkLeaks(TEMPLATE.id, strings, leakMarkers(TEMPLATE.id, reg.brands)));
+  out.push(...checkCatalogue(t, { ...reg, brands: [...reg.brands, t] }));
   out.push(...checkPayments(t, reg).filter((f) => f.level === "fail"));
   out.push(...checkAssets(t, files.assets, { app: TEMPLATE.app, public: TEMPLATE.public }, existsInRepo));
   out.push(...checkImages(TEMPLATE.id, files.defaultImageLoader));

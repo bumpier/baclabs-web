@@ -50,7 +50,7 @@ import { choosePaymentAdapter } from "@/lib/commerce/payments";
 import { attributionFor } from "@/lib/meta-capi-event";
 import { getInventoryMode } from "@/lib/inventory/mode";
 import { canSupply } from "@/lib/inventory/store";
-import { LAB_KIT_SKU_CODE } from "@/lib/inventory/demand";
+import { LAB_KIT_SKU_CODE, sharedPackSku } from "@/lib/inventory/demand";
 import { priceIn } from "@/lib/fx";
 import { fetchFxRates } from "@/lib/fx-rates";
 
@@ -175,14 +175,18 @@ export async function brandCheckout(req: Request, brand: BrandProfile): Promise<
       return fail(`${LAB_KIT.name}s are not available right now.`, 400);
     }
     if ((await getInventoryMode()) === "warehouse") {
-      // Each pack is its kit SKU (scripts/seed-brand-skus.ts); a kit add-on
-      // is the shared Lab Kit. Checked together: every pack draws on the
-      // same shelf of vials.
-      const shelf = priced.lines.map((l) => ({ code: l.kind === "pack" ? l.sku : LAB_KIT_SKU_CODE, quantity: l.quantity }));
+      // Each pack ships as BacLab's own pack of that size (sharedPackSku); a
+      // kit add-on is the shared Lab Kit. Checked together: every pack draws
+      // on the same shelf of vials.
+      const shelf = priced.lines.map((l) => {
+        if (l.kind !== "pack") return { code: LAB_KIT_SKU_CODE, quantity: l.quantity };
+        const shared = sharedPackSku(l.vials);
+        return { code: shared.skuCode, quantity: l.quantity * shared.unitsPerPack };
+      });
       const supply = await canSupply(shelf);
       if (supply === "unavailable") {
         console.error(
-          `[internal] brand checkout (${brand.id}) rejected: no active SKU for ${shelf.map((l) => `"${l.code}"`).join(" or ")} in warehouse mode. Run: npm run db:seed:brand-skus -- --apply`
+          `[internal] brand checkout (${brand.id}) rejected: no active SKU for ${shelf.map((l) => `"${l.code}"`).join(" or ")} in warehouse mode. Create BacLab's packs with "Create storefront SKUs" on /admin/inventory`
         );
         return fail("This product is not available for purchase right now.", 400);
       }

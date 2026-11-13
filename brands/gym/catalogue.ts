@@ -15,13 +15,9 @@
  */
 import { DELIVERY, DELIVERY_OPTIONS, LAB_KIT } from "@/config/funnel";
 import type { BrandCatalogue } from "../types";
-import { PLAIN_BOX_SKU } from "../packaging";
 
 export const gymCatalogue: BrandCatalogue = {
   parentSku: "GYM-10ML",
-  // The plain white box every brand shares (brands/packaging.ts); its weight
-  // is weighed once for all of them (scripts/seed-brand-skus.ts).
-  boxSku: PLAIN_BOX_SKU,
   packs: [
     // TODO(confirm): all four prices.
     { id: "x1", sku: "GYM-10ML-X1", vials: 1, priceMinor: 649, label: "", available: true },

@@ -114,14 +114,16 @@ design work.
    `brands/operator.ts`, which reads BacLab's own `config/brand.ts`: fill
    a legal name, company number and registered office in there once, and
    all five sites show them.
-9. **Packaging.** Every brand ships in the same plain, unprinted box
-   (`PLAIN-BOX`, brands/packaging.ts; the owner, 6 Nov 2026), so there is
-   nothing to design. What's needed is the real packed weight of every pack
-   size (box included, read off a scale). Labels are
-   bought by weight, so a guessed weight buys the wrong service.
-   - **Wholesale only:** packs of 250 vials and up weigh over 2 kg, the
-     limit of today's Royal Mail and Amazon services. Add a heavier
-     SmartTrack service on `/admin/shipping` before those packs go on sale.
+9. **Packaging and stock: nothing to set up.** Every brand sells the same
+   product as BacLab, in the same plain, unprinted box (the owner, 6 and
+   13 Nov 2026). A brand's pack is therefore BacLab's own pack of that
+   size in the warehouse: the same SKU, the same stock, the same weight
+   and the same shipping rules (step 3). There is nothing to design, seed
+   or weigh.
+   - **Wholesale only:** packs of 250 vials and up are sizes BacLab does
+     not sell and weigh over 2 kg, the limit of today's Royal Mail and
+     Amazon services. Add a heavier SmartTrack service on
+     `/admin/shipping` before those packs go on sale.
 
 ## 2. Make the brand in the code (developer, a new brand only)
 
@@ -176,25 +178,23 @@ host, by the host rewrite in `middleware.ts`.
   (and the template) that imports `next/image` and sets neither a `loader`
   nor `unoptimized`.
 
-## 3. Seed its SKUs and weigh them (once the code is deployed)
+## 3. Stock, weights and shipping: BacLab's own
 
-Every pack is a warehouse kit: N × the shared vial + 1 × the shared plain box
-(for example `LUX-10ML-X5` = 5 × `BACLAB-10ML` + 1 × `PLAIN-BOX`). In the
-container, after a deploy that contains the brand's catalogue:
+Nothing to run. A brand's pack codes (`BEA-10ML-X5`) are its storefront's
+names for its packs: they reach its pages, the order line and its Meta
+dataset, and nothing else. In the warehouse the pack is BacLab's pack of
+the same size (`BACLAB-10ML-X5`), or that many single vials (`BACLAB-10ML`)
+for a size BacLab does not sell (`lib/inventory/demand.ts` `sharedPackSku`).
 
-```bash
-cd /srv/baclab
-docker compose exec baclab npx tsx scripts/seed-brand-skus.ts            # dry run: lists what it would create
-docker compose exec baclab npx tsx scripts/seed-brand-skus.ts --apply
-```
+So for every brand, without any setup:
 
-It creates only what is missing, never changes an existing SKU, and warns
-about anything that needs a person (a kit that differs from the catalogue,
-a missing Lab Kit SKU). Run it again whenever a pack is added.
-
-Then on **/admin/inventory**, enter the real weight and size of `PLAIN-BOX`
-(once: every brand shares it) and of every pack kit, from step 1.9. New SKUs start unmeasured, and the
-label buyer treats unmeasured as "not known".
+- **stock** is BacLab's: one count of vials, whichever site sells them;
+- **weight, size and the parcel** are BacLab's: the standard parcel on
+  `/admin/shipping`, and any SKU listed there as needing its own box;
+- **the service and the label** are chosen exactly as for a BacLab order
+  of the same packs;
+- **the pick list** shows BacLab's SKU codes, with the brand's chip on
+  the order.
 
 ## 4. Analytics and payment settings
 
@@ -268,8 +268,7 @@ placeholder:
    - `analytics`, from step 4;
    - `mailingList.consentText` if the brand runs a list, in exactly the
      words its signup form shows.
-4. **`brands/<id>/catalogue.ts`:** the confirmed prices and packs. The box
-   stays `PLAIN_BOX_SKU` unless the brand ships in a box of its own.
+4. **`brands/<id>/catalogue.ts`:** the confirmed prices and packs.
 5. **`app/<id>/site.ts`:** the real `DESCRIPTION`. Leave `LIVE = false`;
    that is step 11.
 6. Delete every `TODO(launch)` and `TODO(confirm)` note you have resolved.
@@ -328,8 +327,6 @@ curl -s -H 'Host: <apex>' http://127.0.0.1:<PORT>/ | grep -o '<title>[^<]*</titl
 curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: <apex>' http://127.0.0.1:<PORT>/admin   # 404
 curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: baclab.co.uk' http://127.0.0.1:<PORT>/   # 200: BacLab unchanged
 ```
-
-Then seed the SKUs and weigh them (step 3).
 
 ## 8. Env vars on the VPS
 
@@ -491,9 +488,9 @@ The site is reachable but still noindex. Before anyone else buys:
 3. **Admin:** at baclab.co.uk/admin, the order shows the brand's chip, its
    provider and its reference.
    - **Packing slip:** prints the brand's logo and its thank-you line, and
-     no "Pack in" line: the parcel is the shared plain box.
-   - **Label:** has the brand's sender name and is bought at the pack's
-     real weight.
+     no "Pack in" line: it is packed as a BacLab order is.
+   - **Label:** bought exactly as for a BacLab order of the same packs:
+     the same parcel, weight and service.
 4. **Meta:** Events Manager shows the Purchase in the brand's own dataset,
    once, with the value charged.
 5. **Stripe's page:** it showed the brand's name, logo and icon, on

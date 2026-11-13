@@ -9,15 +9,11 @@
  */
 import { deliveryOptionById } from "@/config/funnel";
 import type { BrandCatalogue } from "../types";
-import { PLAIN_BOX_SKU } from "../packaging";
 
 const NEXT_DAY = deliveryOptionById("next_day")!;
 
 export const luxuryCatalogue: BrandCatalogue = {
   parentSku: "LUX-10ML",
-  // The plain white box every brand shares (brands/packaging.ts); its weight
-  // is weighed once for all of them (scripts/seed-brand-skus.ts).
-  boxSku: PLAIN_BOX_SKU,
   packs: [
     // TODO(confirm): all four prices.
     { id: "x1", sku: "LUX-10ML-X1", vials: 1, priceMinor: 799, label: "Single", available: true },

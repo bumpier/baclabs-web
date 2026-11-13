@@ -11,7 +11,6 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:seed:articles": "tsx scripts/seed-articles.ts",
-    "db:seed:brand-skus": "tsx scripts/seed-brand-skus.ts",
     "check:guides": "tsx scripts/check-guides.ts",
     "check:packs": "tsx scripts/check-packs.ts",
     "check:brands": "tsx scripts/check-brands.ts",

@@ -154,8 +154,10 @@ export type BrandPricedLine =
  *
  *  - a pack is a line of the SHARED vial's Product row, qty in vials, priced
  *    by the pack. Legacy stock takes the vials off that row, vial stock and
- *    finance count them, the packing slip prints its neutral name. Its
- *    bundleId is its SKU, never one of BacLab's BundleIds, so nothing that
+ *    finance count them, the packing slip prints its neutral name. In
+ *    the warehouse it is BacLab's pack of that size (lib/inventory/demand.ts
+ *    sharedPackSku). Its bundleId is its own code, never one of BacLab's
+ *    BundleIds, so nothing that
  *    looks packs up in config/funnel.ts (plan upgrades, BacLab's reorder
  *    offer, its pack names) mistakes it for one of BacLab's;
  *  - the Lab Kit add-on is BacLab's kit line: the kit's Product row, `kit`,

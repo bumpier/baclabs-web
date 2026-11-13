@@ -30,6 +30,18 @@ export function storefrontSkuCodes(): { bundleId: string; code: string; vials: n
   return BUNDLES.map((b) => ({ bundleId: b.id, code: normaliseCode(b.sku), vials: b.vials }));
 }
 
+/**
+ * What another brand's pack of `vials` ships as. It is the same product as
+ * BacLab's (the owner, 13 Nov 2026), so it is BacLab's own pack of that many
+ * vials: one SKU, one stock count, one weight, one set of shipping rules,
+ * whichever site sold it. A size BacLab does not sell ships as that many
+ * single vials.
+ */
+export function sharedPackSku(vials: number): { skuCode: string; unitsPerPack: number } {
+  const same = storefrontSkuCodes().find((c) => c.vials === vials);
+  return same ? { skuCode: same.code, unitsPerPack: 1 } : { skuCode: VIAL_SKU_CODE, unitsPerPack: vials };
+}
+
 /** The shape app/api/checkout/route.ts writes into Order.items. */
 interface StoredOrderItem {
   slug?: string;
@@ -71,17 +83,16 @@ export function soldLines(itemsJson: string): SoldLine[] {
     if (isKitLine(item)) {
       return { skuCode: LAB_KIT_SKU_CODE, quantity: item.qty, description, lineTotalMinor };
     }
-    // Another brand's pack names its own kit SKU (N vials + its box,
-    // scripts/seed-brand-skus.ts), one unit per pack. Checked before
-    // bundleId, which on these lines is that same SKU and no BacLab bundle.
-    // BacLab's lines carry no sku, so nothing of theirs comes this way.
+    // Another brand's pack ships as BacLab's own pack of that many vials
+    // (sharedPackSku). Its own code (item.sku) is the storefront's name for
+    // it, never the warehouse's. Checked before bundleId, which on these
+    // lines is the brand's code and no BacLab bundle. BacLab's lines carry
+    // no sku, so nothing of theirs comes this way.
     if (typeof item.sku === "string" && item.sku) {
-      return {
-        skuCode: normaliseCode(item.sku),
-        quantity: item.bundleQty && item.bundleQty > 0 ? item.bundleQty : item.qty,
-        description,
-        lineTotalMinor,
-      };
+      const packs = item.bundleQty && item.bundleQty > 0 ? item.bundleQty : 0;
+      if (packs === 0) return { skuCode: VIAL_SKU_CODE, quantity: item.qty, description, lineTotalMinor };
+      const shared = sharedPackSku(item.qty / packs);
+      return { skuCode: shared.skuCode, quantity: packs * shared.unitsPerPack, description, lineTotalMinor };
     }
     if (item.bundleId && item.bundleQty && item.bundleQty > 0) {
       const bundle = bundleById(item.bundleId);

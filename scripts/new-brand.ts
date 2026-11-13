@@ -36,7 +36,6 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { PLAIN_BOX_SKU } from "@/brands/packaging";
 import { brandFor } from "@/brands/registry";
 import { BRAND_IDS } from "@/brands/types";
 import { descriptorProblems, TEMPLATE } from "./check-brands";
@@ -241,7 +240,7 @@ function settle(root: string, opts: NewBrandOptions): Required<NewBrandOptions> 
   }
   if (/BACLAB/.test(skuStem) || ["ORD", "LOC"].includes(skuStem)) throw new Refusal(`SKU stem "${skuStem}" is reserved. Pass --sku STEM.`);
   for (const b of brands) {
-    const stems = b.catalogue ? [b.catalogue.parentSku, b.catalogue.boxSku].filter((c) => c !== PLAIN_BOX_SKU).map((c) => c.split("-")[0]) : [];
+    const stems = b.catalogue ? [b.catalogue.parentSku.split("-")[0]] : [];
     if (stems.includes(skuStem)) throw new Refusal(`SKU stem ${skuStem} is ${b.name}'s. Pass --sku STEM with another.`);
   }
 
@@ -363,7 +362,7 @@ function main() {
   try {
     const args = parseArgs(process.argv.slice(2));
     const plan = planNewBrand(root, args);
-    console.log(`${args.apply ? "Creating" : "Dry run: would create"} ${plan.name} (${plan.id}): short code ${plan.shortCode}, SKUs ${plan.skuStem}-10ML-X…, box ${PLAIN_BOX_SKU} (shared), statement descriptor "${plan.descriptor}", development host ${plan.id}.localhost, mailbox hello@${plan.domain}.`);
+    console.log(`${args.apply ? "Creating" : "Dry run: would create"} ${plan.name} (${plan.id}): short code ${plan.shortCode}, pack codes ${plan.skuStem}-10ML-X…, statement descriptor "${plan.descriptor}", development host ${plan.id}.localhost, mailbox hello@${plan.domain}.`);
     console.log(`\nFiles (${plan.creates.length}):`);
     for (const c of plan.creates) console.log(`  + ${c.path}`);
     console.log(`\nEdits (${plan.edits.length}):`);

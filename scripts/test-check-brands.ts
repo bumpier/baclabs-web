@@ -12,11 +12,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { brandFor, type BrandProfile } from "@/brands/registry";
 import { OPERATOR } from "@/brands/operator";
-import { PLAIN_BOX_SKU } from "@/brands/packaging";
 import { PAYPAL_PAYMENT, STRIPE_PAYMENT } from "@/brands/payment-methods";
 import type { BrandCatalogue } from "@/brands/types";
 import { DELIVERY, DELIVERY_OPTIONS } from "@/config/funnel";
-import { brandSkuSpecs } from "@/lib/inventory/brand-skus";
 import { VIAL_SKU_CODE } from "@/lib/inventory/demand";
 import {
   checkAssets,
@@ -34,7 +32,6 @@ import {
   leakMarkers,
   profileStrings,
   runChecks,
-  seedStrings,
   sourceFacts,
   type CopyString,
   type Finding,
@@ -58,7 +55,6 @@ const noFailures = (fs: readonly Finding[]) => fs.every((f) => f.level !== "fail
 // ── A launch-ready fixture ──────────────────────────────────────────
 const catalogue: BrandCatalogue = {
   parentSku: "FIX-10ML",
-  boxSku: "FIX-BOX",
   packs: [
     { id: "x1", sku: "FIX-10ML-X1", vials: 1, priceMinor: 699, label: "", available: true },
     { id: "x3", sku: "FIX-10ML-X3", vials: 3, priceMinor: 1899, label: "", available: true },
@@ -88,7 +84,7 @@ const good: BrandProfile = {
   paymentProviders: ["paypal"],
   payment: PAYPAL_PAYMENT,
   statementDescriptor: "FIXTURE CO",
-  shipping: { senderCompany: "Fixture Co", packingNote: "Fixture box" },
+  shipping: { senderCompany: "Fixture Co" },
   catalogue,
 };
 const luxury = brandFor("luxury");
@@ -98,7 +94,6 @@ function registry(b: BrandProfile, over: Partial<Registry> = {}): Registry {
   return {
     hosts: { [TEST_BRAND_ID]: b.domains, luxury: luxury.domains, gym: gym.domains },
     brands: [brandFor("baclab"), luxury, gym, b],
-    seeded: brandSkuSpecs([luxury, gym, b]),
     hasAdapter: (p) => p === "paypal" || p === "stripe",
     stripePrefix: "FIXCO",
     ...over,
@@ -232,19 +227,12 @@ const rising = withPacks([p1, { ...p3, priceMinor: 2199 }, p5]);
 check("per-vial price rising fails", fails(cataloguing(rising), /does not fall from the 1-pack \(£6\.99\) to the 3-pack \(£7\.33\)/), show(cataloguing(rising)));
 check("per-vial price level fails", fails(cataloguing(withPacks([p1, { ...p3, priceMinor: 2097 }])), /does not fall from the 1-pack/));
 check("two packs of one size fail", fails(cataloguing(withPacks([p1, { ...p1, id: "x1b", sku: "FIX-10ML-X1B" }])), /two packs hold 1 vials/));
-const notSeeded = registry(good, { seeded: brandSkuSpecs([luxury, gym, withPacks([p1, p3])]) });
-check("a pack the seed does not create fails", fails(checkCatalogue(good, notSeeded), /pack FIX-10ML-X5 is not a kit that scripts\/seed-brand-skus\.ts creates/));
-check("no seed at all fails", fails(cataloguing(good, { seeded: [] }), /seeds nothing for it/));
 const lower = withPacks([{ ...p1, sku: "fix-10ml-x1" }, p3, p5]);
 check("a lower-case SKU fails", fails(cataloguing(lower), /"fix-10ml-x1" is not written as the warehouse stores it/));
 check("a SKU off its stem fails", fails(cataloguing(withPacks([{ ...p1, sku: "FIX-10ML-X2" }, p3, p5])), /pack FIX-10ML-X2 should be FIX-10ML-X1/));
-check("a SKU the scanner would misread fails", fails(cataloguing(withPacks(catalogue.packs, { boxSku: "ORD-BOX" })), /cannot start with ORD-/));
-check("another brand's SKU as the box fails", fails(cataloguing(withPacks(catalogue.packs, { boxSku: "LUX-10ML-X5" })), /SKU LUX-10ML-X5 is also LuxeVial's/));
-const onPlainBox = { ...withPacks(catalogue.packs, { boxSku: PLAIN_BOX_SKU }), shipping: { senderCompany: "Fixture Co" } };
-check("the shared plain box passes", cataloguing(onPlainBox).length === 0, show(cataloguing(onPlainBox)));
-check("a packing note on the plain box warns", warns(cataloguing({ ...onPlainBox, shipping: { packingNote: "Fixture box" } }), /ship in the shared plain box/));
-check("a box of its own without a packing note warns", warns(cataloguing({ ...good, shipping: { senderCompany: "Fixture Co" } }), /box of its own \(FIX-BOX\)/));
-check("a box of its own with a packing note passes", !warns(cataloguing(good), /box of its own|plain box/));
+check("another brand's pack code fails", fails(cataloguing(withPacks([p1, p3, { ...p5, sku: "LUX-10ML-X5" }])), /SKU LUX-10ML-X5 is also LuxeVial's/));
+check("a packing note warns: packs are packed as BacLab's are", warns(cataloguing({ ...good, shipping: { packingNote: "Fixture box" } }), /ship as BacLab's own do/));
+check("no packing note passes", !warns(cataloguing(good), /packingNote/));
 check("no catalogue fails", fails(cataloguing({ ...good, catalogue: undefined }), /has no catalogue/));
 
 // ── Assets ──────────────────────────────────────────────────────────
@@ -351,16 +339,12 @@ check("another brand's SKU fails", fails(leaks(src("GYM-10ML-X10")), /GymWater's
 check("BacLab's name fails", fails(leaks(src("By BacLab")), /names BacLab/));
 check("BacLab's domain fails", fails(leaks(src("https://baclab.co.uk/terms")), /names BacLab/));
 check("the brand's own name passes", noFailures(leaks(src("LuxeVial, sealed"))));
-check("the shared plain box's code passes", noFailures(leaks(src(`Packed in ${PLAIN_BOX_SKU}`))), show(leaks(src(`Packed in ${PLAIN_BOX_SKU}`))));
 const asOperator = profileStrings({ ...luxury, legalName: OPERATOR.legalName, company: { ...OPERATOR.company, registeredAddress: "1 Fixture Street" } });
 check("the business behind the brands passes in legalName", asOperator.some((s) => s.kind === "operator" && s.text === OPERATOR.legalName) && noFailures(leaks(asOperator)), show(leaks(asOperator)));
 check("BacLab anywhere else in a profile fails", fails(leaks(profileStrings({ ...luxury, disclaimer: "Sold by BacLab." })), /profile disclaimer: names BacLab/));
 check("a legalName naming BacLab that is not the business's fails", fails(leaks(profileStrings({ ...luxury, legalName: "BacLab Imitation Ltd" })), /profile legalName: names BacLab/));
 check("a company field that is not the business's is still scanned", fails(leaks(profileStrings({ ...luxury, company: { registeredAddress: "c/o baclab.co.uk" } })), /profile company\.registeredAddress: names BacLab/));
-const seeded = brandSkuSpecs([luxury])[0]!;
-check("the seed names the shared vial", seedStrings(seeded).some((s) => s.text.includes(VIAL_SKU_CODE)));
-check("the allow-list lets the shared vial code through in the seed", noFailures(leaks(seedStrings(seeded))), show(leaks(seedStrings(seeded))));
-check("but not on a page", fails(leaks(src(`Made from ${VIAL_SKU_CODE}`)), /names BacLab/));
+check("BacLab's warehouse code on a page fails", fails(leaks(src(`Made from ${VIAL_SKU_CODE}`)), /names BacLab/));
 check("an SVG naming another brand fails", fails(leaks([{ where: "public/luxury/icon.svg", text: "<svg><text>BeautyBac</text></svg>", kind: "asset" }]), /BeautyBac's name/));
 
 // ── Launch notes and the LIVE flag ──────────────────────────────────

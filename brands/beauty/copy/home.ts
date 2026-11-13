@@ -72,7 +72,7 @@ export const ESSENTIALS = {
     vials === 1 ? "Single vial" : vials === 5 ? "Set of five" : vials === 10 ? "Set of ten" : vials === 20 ? "Set of twenty" : `Set of ${vials}`,
   contents: (vials: number) => (vials === 1 ? "One sealed vial" : `${vials} sealed vials`),
   // The box (the owner, 6 Nov 2026): every brand's sets go out in the same plain,
-  // unprinted white box (brands/beauty/catalogue.ts boxSku).
+  // unprinted white box, as BacLab's do.
   box: "Every size comes in a plain white box, with nothing printed on it.",
   quantity: "Quantity",
   add: "Add to basket",

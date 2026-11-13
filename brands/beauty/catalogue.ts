@@ -10,13 +10,9 @@
  */
 import { DELIVERY, DELIVERY_OPTIONS } from "@/config/funnel";
 import type { BrandCatalogue } from "../types";
-import { PLAIN_BOX_SKU } from "../packaging";
 
 export const beautyCatalogue: BrandCatalogue = {
   parentSku: "BEA-10ML",
-  // The plain white box every brand shares (brands/packaging.ts); its weight
-  // is weighed once for all of them (scripts/seed-brand-skus.ts).
-  boxSku: PLAIN_BOX_SKU,
   packs: [
     { id: "x1", sku: "BEA-10ML-X1", vials: 1, priceMinor: 699, label: "", available: true },
     { id: "x5", sku: "BEA-10ML-X5", vials: 5, priceMinor: 2999, label: "", available: true },

@@ -16,14 +16,9 @@
  */
 import { DELIVERY, DELIVERY_OPTIONS } from "@/config/funnel";
 import type { BrandCatalogue } from "../types";
-import { PLAIN_BOX_SKU } from "../packaging";
 
 export const wholesaleCatalogue: BrandCatalogue = {
   parentSku: "WHL-10ML",
-  // The plain box every brand shares (brands/packaging.ts). TODO(confirm):
-  // whether bulk packs ship in it or in an outer carton of their own, which
-  // would be its own SKU here (scripts/seed-brand-skus.ts).
-  boxSku: PLAIN_BOX_SKU,
   packs: [
     // TODO(confirm): all five prices.
     { id: "x50", sku: "WHL-10ML-X50", vials: 50, priceMinor: 19999, label: "", available: true },
