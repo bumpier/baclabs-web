@@ -121,7 +121,7 @@ check("the origin must be on its domains", fails(identity({ ...good, origin: "ht
 check("the origin has no path or trailing slash", fails(identity({ ...good, origin: "https://fixturebrand.co.uk/" }), /scheme and host only/));
 check("the origin must be a URL", fails(identity({ ...good, origin: "fixturebrand.co.uk" }), /is not a URL/));
 const mail = (field: "from" | "contact" | "inbox", value: string) => identity({ ...good, email: { ...good.email, [field]: value } });
-check("from: another brand's domain fails", fails(mail("from", "Fixture <hello@luxury.invalid>"), /email\.from .* is on LuxeVial's domain/), show(mail("from", "Fixture <hello@luxury.invalid>")));
+check("from: another brand's domain fails", fails(mail("from", "Fixture <hello@mail.luxevial.co.uk>"), /email\.from .* is on LuxeVial's domain/), show(mail("from", "Fixture <hello@mail.luxevial.co.uk>")));
 check("contact: BacLab's domain fails", fails(mail("contact", "hello@baclab.co.uk"), /email\.contact .* is on BacLab's domain/), show(mail("contact", "hello@baclab.co.uk")));
 check("inbox: a domain not the brand's fails", fails(mail("inbox", "fixture@gmail.com"), /email\.inbox .* is not on the brand's own domain/));
 check("from: no mailbox fails", fails(mail("from", "Fixture & Co"), /has no mailbox/));

@@ -1,7 +1,7 @@
 /**
- * LuxeVial, the `luxury` brand (name chosen 6 Nov 2026; its domain,
- * luxevial.co.uk, is still to buy). The palette is claret and limestone
- * (brands/luxury/styles.css), and nothing here is live. Empty values render
+ * LuxeVial, the `luxury` brand (name chosen 6 Nov 2026), on luxevial.co.uk from
+ * 16 Nov 2026. The palette is claret and limestone
+ * (brands/luxury/styles.css). Empty values render
  * nothing, as everywhere else.
  */
 import hosts from "../hosts.json";
@@ -15,10 +15,9 @@ export function luxuryProfile(): BrandProfile {
     id: "luxury",
     name: "LuxeVial",
     shortCode: "LV",
-    // TODO(launch): https://luxevial.co.uk, the brand's apex. Until then, its development host.
-    origin: "http://luxury.localhost:3000",
-    // TODO(launch): add the apex and www to brands/hosts.json, and to the
-    // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
+    origin: "https://luxevial.co.uk",
+    // brands/hosts.json, and the matcher literal in middleware.ts (npm run
+    // test:hosts checks the two agree).
     domains: [...hosts.luxury],
     logo: "/icon.svg",
     // Stripe's page shows these (PNG: Stripe takes no SVG), rendered from
@@ -39,10 +38,16 @@ export function luxuryProfile(): BrandProfile {
       onCta: "#F1E9E6",
     },
     email: {
-      // TODO(launch): a mailbox on the brand's own domain, verified in Resend.
-      from: "LuxeVial <hello@luxury.invalid>",
-      contact: "",
-      inbox: "",
+      // Sent through Resend from mail.luxevial.co.uk, which has no mailbox:
+      // replies go to the Hostinger one on the apex.
+      from: "LuxeVial <hello@mail.luxevial.co.uk>",
+      replyTo: "hello@luxevial.co.uk",
+      contact: "hello@luxevial.co.uk",
+      inbox: "hello@luxevial.co.uk",
+      // The seal inverted (cream wax, claret impression) and the wordmark in
+      // cream, on the claret header band (rendered from components/mark-paths.ts).
+      logo: { src: "/email-logo.png", width: 200, height: 37 },
+      headingFont: "Georgia,'Times New Roman',Times,serif",
     },
     reviews: { url: "", inviteBcc: null },
     disclaimer:
