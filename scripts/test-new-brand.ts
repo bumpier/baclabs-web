@@ -123,7 +123,7 @@ refuses("BacLab's name", { name: "BacLab Plus" }, /never names BacLab/);
 refuses("a name too long for the label", { name: "A".repeat(26) }, /2 to 25 characters/);
 refuses("a name with a quote", { name: 'Demo "X"' }, /letters, digits, spaces/);
 refuses("another brand's host", { domain: "luxury.localhost" }, /LuxeVial \(luxury\) uses it/);
-refuses("another brand's mailbox domain", { domain: "gym.invalid" }, /GymWater \(gym\) uses it/);
+refuses("another brand's mailbox domain", { domain: "mail.gymwater.co.uk" }, /GymWater \(gym\) uses it/);
 refuses("BacLab's domain", { domain: "baclab.co.uk" }, /never on BacLab's domain/);
 refuses("a www host", { domain: "www.demo.co.uk" }, /without www/);
 refuses("a URL", { domain: "https://demo.co.uk" }, /lower-case host name/);

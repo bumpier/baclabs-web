@@ -1,6 +1,6 @@
 /**
- * GymWater, the `gym` brand (name chosen 6 Nov 2026; its domain,
- * gymwater.co.uk, is still to buy). Nothing here is live. The palette is the site's (black, steel and hazard yellow, see
+ * GymWater, the `gym` brand (name chosen 6 Nov 2026), on gymwater.co.uk from 16 Nov
+ * 2026. The palette is the site's (black, steel and hazard yellow, see
  * brands/gym/styles.css). Empty values render nothing, as everywhere else.
  */
 import hosts from "../hosts.json";
@@ -14,10 +14,9 @@ export function gymProfile(): BrandProfile {
     id: "gym",
     name: "GymWater",
     shortCode: "GW",
-    // TODO(launch): https://gymwater.co.uk, the brand's apex. Until then, its development host.
-    origin: "http://gym.localhost:3000",
-    // TODO(launch): add the apex and www to brands/hosts.json, and to the
-    // matcher literal in middleware.ts (npm run test:hosts checks the two agree).
+    origin: "https://gymwater.co.uk",
+    // brands/hosts.json, and the matcher literal in middleware.ts (npm run
+    // test:hosts checks the two agree).
     domains: [...hosts.gym],
     logo: "/icon.svg",
     // Stripe's page shows these (PNG: Stripe takes no SVG), rendered from
@@ -41,10 +40,15 @@ export function gymProfile(): BrandProfile {
       onCta: "#000000",
     },
     email: {
-      // TODO(launch): a mailbox on the brand's own domain, verified in Resend.
-      from: "GymWater <hello@gym.invalid>",
-      contact: "",
-      inbox: "",
+      // Sent through Resend from mail.gymwater.co.uk, which has no mailbox:
+      // replies go to the Hostinger one on the apex.
+      from: "GymWater <hello@mail.gymwater.co.uk>",
+      replyTo: "hello@gymwater.co.uk",
+      contact: "hello@gymwater.co.uk",
+      inbox: "hello@gymwater.co.uk",
+      // The lockup in hazard yellow on black, for the black header band
+      // (rendered from components/Logo.tsx's shapes).
+      logo: { src: "/email-logo.png", width: 200, height: 42 },
     },
     reviews: { url: "", inviteBcc: null },
     disclaimer:

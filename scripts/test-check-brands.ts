@@ -333,7 +333,7 @@ const leaks = (strings: CopyString[]) => checkLeaks("luxury", strings, markers);
 check("another brand's name fails", fails(leaks(src("As worn at GymWater")), /names GymWater's name/));
 check("a name inside a longer word passes", noFailures(leaks(src("GymWaterproof"))));
 check("another brand's host fails", fails(leaks(src("http://gym.localhost:3000/x")), /names GymWater's host gym\.localhost/));
-check("another brand's mailbox domain fails", fails(leaks(src("hello@gym.invalid")), /GymWater's host gym\.invalid/));
+check("another brand's mailbox domain fails", fails(leaks(src("hello@mail.gymwater.co.uk")), /GymWater's host mail\.gymwater\.co\.uk/));
 check("another brand's live domain fails", fails(leaks(src("hello@beautybac.co.uk")), /BeautyBac's host beautybac\.co\.uk/));
 check("another brand's SKU fails", fails(leaks(src("GYM-10ML-X10")), /GymWater's SKU GYM-10ML/));
 check("BacLab's name fails", fails(leaks(src("By BacLab")), /names BacLab/));
